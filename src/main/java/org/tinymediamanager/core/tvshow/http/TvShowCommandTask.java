@@ -108,7 +108,7 @@ class TvShowCommandTask extends TmmThreadPool {
 
   private void updateDataSources() {
     Set<String> dataSources = new TreeSet<>();
-    Set<TvShow> tvShowFolders = new TreeSet<>();
+    Set<TvShow> tvShowFolders = new HashSet<>();
 
     List<TvShow> existingTvShows = new ArrayList<>(tvShowList.getTvShows());
     List<TvShowEpisode> existingEpisodes = new ArrayList<>();
