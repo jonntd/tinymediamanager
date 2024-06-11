@@ -79,9 +79,14 @@ public interface IAddon {
     String[] pathDirs = systemPath.split(File.pathSeparator);
 
     for (String pathDir : pathDirs) {
-      executable = Paths.get(pathDir, executableFilename).toAbsolutePath();
-      if (Files.exists(executable)) {
-        return executable.toString();
+      try {
+        executable = Paths.get(pathDir, executableFilename).toAbsolutePath();
+        if (Files.exists(executable)) {
+          return executable.toString();
+        }
+      }
+      catch (Exception ignored) {
+        // faulty PATH entry - just ignore
       }
     }
     return "";
