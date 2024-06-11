@@ -458,10 +458,12 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     if (foundEpisode == null && releaseDate != null) {
       // we did not find the episode via season/episode number - search via release date
       for (MediaMetadata episode : episodes) {
-        LocalDate epdate = LocalDate.ofInstant(episode.getReleaseDate().toInstant(), ZoneId.systemDefault());
-        if (epdate.equals(releaseDate)) {
-          foundEpisode = episode;
-          break;
+        if (episode.getReleaseDate() != null) {
+          LocalDate epdate = LocalDate.ofInstant(episode.getReleaseDate().toInstant(), ZoneId.systemDefault());
+          if (epdate.equals(releaseDate)) {
+            foundEpisode = episode;
+            break;
+          }
         }
       }
     }
