@@ -4,6 +4,7 @@ x major performance enhancement of upgrade tasks
 x (HTTP API) fix updating of TV shows
 x do not crash on startup with faulty PATH entries #2598
 x improve episodegroup display if we encounter duplicated aired dates #2599
+x [NFO] fix trailer plugin url format #2594
 
 
 Version 5.0.6

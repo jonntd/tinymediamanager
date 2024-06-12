@@ -1597,21 +1597,29 @@ public class MovieNfoParser {
     for (Element element : getMultipleElements(root, "trailer")) {
       // the trailer can come as a plain http link or prepared for kodi
       String trailer = "";
-      // try to parse out youtube trailer plugin
-      Pattern pattern = Pattern.compile("plugin://plugin.video.youtube/\\?action=play_video&videoid=(.*)$");
+      // try to parse out new youtube trailer plugin
+      Pattern pattern = Pattern.compile("plugin://plugin.video.youtube/play/\\?video_id=(.*)$");
       Matcher matcher = pattern.matcher(element.ownText());
       if (matcher.matches()) {
-        trailer = "http://www.youtube.com/watch?v=" + matcher.group(1);
+        trailer = "https://www.youtube.com/watch?v=" + matcher.group(1);
       }
       else {
-        pattern = Pattern.compile("plugin://plugin.video.hdtrailers_net/video/.*\\?/(.*)$");
+        // try to parse out old youtube trailer plugin
+        pattern = Pattern.compile("plugin://plugin.video.youtube/\\?action=play_video&videoid=(.*)$");
         matcher = pattern.matcher(element.ownText());
         if (matcher.matches()) {
-          try {
-            trailer = URLDecoder.decode(matcher.group(1), "UTF-8");
-          }
-          catch (UnsupportedEncodingException ignored) {
-            // just ignore
+          trailer = "https://www.youtube.com/watch?v=" + matcher.group(1);
+        }
+        else {
+          pattern = Pattern.compile("plugin://plugin.video.hdtrailers_net/video/.*\\?/(.*)$");
+          matcher = pattern.matcher(element.ownText());
+          if (matcher.matches()) {
+            try {
+              trailer = URLDecoder.decode(matcher.group(1), "UTF-8");
+            }
+            catch (UnsupportedEncodingException ignored) {
+              // just ignore
+            }
           }
         }
       }
