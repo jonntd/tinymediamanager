@@ -127,8 +127,9 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
           }
 
           // same with matching date
-          if (episodeContainer.tvShowEpisode.getFirstAired() != null && md.getReleaseDate() != null) {
-            LocalDate epdate = LocalDate.ofInstant(episodeContainer.tvShowEpisode.getFirstAired().toInstant(), ZoneId.systemDefault());
+          if (!(episodeContainer.tvShowEpisode.getSeason() > 0 && episodeContainer.tvShowEpisode.getEpisode() > 0)
+              && episodeContainer.tvShowEpisode.getFirstAired() != null && md.getReleaseDate() != null) {
+            LocalDate epdate = episodeContainer.getFirstAired();
             LocalDate mddate = LocalDate.ofInstant(md.getReleaseDate().toInstant(), ZoneId.systemDefault());
             if (epdate.equals(mddate)) {
               episodeContainer.setTitle(md.getTitle());
