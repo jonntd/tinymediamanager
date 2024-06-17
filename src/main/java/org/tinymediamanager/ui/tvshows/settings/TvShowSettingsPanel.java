@@ -41,6 +41,7 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.TvShowSettingsDefaults;
 import org.tinymediamanager.thirdparty.trakttv.TvShowClearTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.components.CollapsiblePanel;
 import org.tinymediamanager.ui.components.DocsButton;
 import org.tinymediamanager.ui.components.JHintCheckBox;
@@ -100,14 +101,46 @@ class TvShowSettingsPanel extends JPanel {
       }
     });
 
-    btnPresetXbmc.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForXbmc());
-    btnPresetKodi.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForKodi());
-    btnPresetJellyfin.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForJellyfin());
-    btnPresetEmby.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForEmby());
-    btnPresetPlex.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForPlex());
-    btnPresetMediaPig.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForMediaPig());
-    btnPresetMediaPortal1.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForMediaPortal());
-    btnPresetMediaPortal2.addActionListener(evt -> TvShowSettingsDefaults.setDefaultSettingsForMediaPortal());
+    btnPresetXbmc.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForXbmc();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "XBMC"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetKodi.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForKodi();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Kodi"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetJellyfin.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForJellyfin();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Jellyfin"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetEmby.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForEmby();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Emby"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetPlex.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForPlex();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Plex"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPig.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForMediaPig();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPIG"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPortal1.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForMediaPortal();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPortal 1.x"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPortal2.addActionListener(evt -> {
+      TvShowSettingsDefaults.setDefaultSettingsForMediaPortal();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPortal 2.x"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
   }
 
   private void initComponents() {

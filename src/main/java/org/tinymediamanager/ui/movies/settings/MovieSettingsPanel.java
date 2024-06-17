@@ -41,6 +41,7 @@ import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.thirdparty.trakttv.MovieClearTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.components.CollapsiblePanel;
 import org.tinymediamanager.ui.components.DocsButton;
 import org.tinymediamanager.ui.components.JHintCheckBox;
@@ -97,14 +98,46 @@ public class MovieSettingsPanel extends JPanel {
       }
     });
 
-    btnPresetXbmc.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForXbmc());
-    btnPresetKodi.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForKodi());
-    btnPresetJellyfin.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForJellyfin());
-    btnPresetEmby.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForEmby());
-    btnPresetPlex.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForPlex());
-    btnPresetMediaPig.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForMediaPig());
-    btnPresetMediaPortal1.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForMediaPortal1());
-    btnPresetMediaPortal2.addActionListener(evt -> MovieSettingsDefaults.setDefaultSettingsForMediaPortal2());
+    btnPresetXbmc.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForXbmc();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "XBMC"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetKodi.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForKodi();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Kodi"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetJellyfin.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForJellyfin();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Jellyfin"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetEmby.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForEmby();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Emby"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetPlex.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForPlex();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "Plex"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPig.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForMediaPig();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPIG"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPortal1.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForMediaPortal1();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPortal 1.x"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
+    btnPresetMediaPortal2.addActionListener(evt -> {
+      MovieSettingsDefaults.setDefaultSettingsForMediaPortal2();
+      JOptionPane.showMessageDialog(MainWindow.getFrame(), TmmResourceBundle.getString("Settings.preset.message").replace("{}", "MediaPortal 2.x"),
+          TmmResourceBundle.getString("Settings.preset"), JOptionPane.INFORMATION_MESSAGE);
+    });
   }
 
   private void initComponents() {
