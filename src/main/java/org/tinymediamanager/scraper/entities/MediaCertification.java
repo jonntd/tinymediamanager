@@ -77,7 +77,9 @@ public enum MediaCertification {
     NL_6(CountryCode.NL, "6", new String[] { "6" }),
     NL_9(CountryCode.NL, "9", new String[] { "9" }),
     NL_12(CountryCode.NL, "12", new String[] { "12" }),
+    NL_14(CountryCode.NL, "14", new String[] { "14" }),
     NL_16(CountryCode.NL, "16", new String[] { "16" }),
+    NL_18(CountryCode.NL, "18", new String[] { "18" }),
 
     JP_G(CountryCode.JP, "G", new String[] { "G" }),
     JP_PG12(CountryCode.JP, "PG-12", new String[] { "PG-12" }),
