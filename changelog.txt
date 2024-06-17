@@ -8,6 +8,7 @@ x [NFO] fix trailer plugin url format #2594
 x [presets] fix our default preset buttons for Jellyfin NFO #2608
 x [presets] added a response when a preset has been chosen #2604
 x [certifications] add missing NL 14/18 #2606
+x added a column for HDR format #2586
 
 
 Version 5.0.6

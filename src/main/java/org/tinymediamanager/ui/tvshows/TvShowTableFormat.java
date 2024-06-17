@@ -322,6 +322,16 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
+     * HDR format (hidden per default)
+     */
+    col = new Column(TmmResourceBundle.getString("metatag.hdrformat"), "hdrFormat", this::getVideoHDRFormat, String.class);
+    col.setColumnComparator(stringComparator);
+    col.setHeaderIcon(IconManager.HDR);
+    col.setMinWidth(fontMetrics.stringWidth("HDR10") + getCellPadding());
+    col.setDefaultHidden(true);
+    addColumn(col);
+
+    /*
      * video codec (hidden per default)
      */
     col = new Column(TmmResourceBundle.getString("metatag.videocodec"), "videoCodec", this::getVideoCodec, String.class);
@@ -782,6 +792,14 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShowEpisode episode) {
       return getCheckIcon(StringUtils.isNotEmpty(episode.getVideoHDRFormat()));
+    }
+    return null;
+  }
+
+  private String getVideoHDRFormat(TmmTreeNode node) {
+    Object userObject = node.getUserObject();
+    if (userObject instanceof TvShowEpisode episode) {
+      return episode.getVideoHDRFormat();
     }
     return null;
   }
