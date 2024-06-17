@@ -365,7 +365,7 @@ public class TvShowSettingsDefaults {
     tvShowSettings.episodeThumbFilenames.add(TvShowEpisodeThumbNaming.FILENAME);
 
     // other settings
-    tvShowSettings.setTvShowConnector(TvShowConnectors.KODI);
+    tvShowSettings.setTvShowConnector(TvShowConnectors.JELLYFIN);
     tvShowSettings.setCertificationStyle(CertificationStyle.SHORT);
 
     tvShowSettings.firePropertyChange("preset", false, true);

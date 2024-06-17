@@ -589,7 +589,7 @@ public class MovieSettingsDefaults {
     movieSettings.addTrailerFilename(MovieTrailerNaming.FILENAME_TRAILER);
 
     // other settings
-    movieSettings.setMovieConnector(MovieConnectors.KODI);
+    movieSettings.setMovieConnector(MovieConnectors.JELLYFIN);
     movieSettings.setCertificationStyle(CertificationStyle.SHORT);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);

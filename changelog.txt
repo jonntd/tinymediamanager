@@ -5,6 +5,7 @@ x (HTTP API) fix updating of TV shows
 x do not crash on startup with faulty PATH entries #2598
 x improve episodegroup display if we encounter duplicated aired dates #2599
 x [NFO] fix trailer plugin url format #2594
+x fix our default preset buttons for Jellyfin NFO #2608
 
 
 Version 5.0.6
