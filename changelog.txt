@@ -6,7 +6,7 @@ x do not crash on startup with faulty PATH entries #2598
 x improve episodegroup display if we encounter duplicated aired dates #2599
 x [NFO] fix trailer plugin url format #2594
 x [presets] fix our default preset buttons for Jellyfin NFO #2608
-x [presets] added a response when a preset has been chosen #2608
+x [presets] added a response when a preset has been chosen #2604
 x [certifications] add missing NL 14/18 #2606
 
 
