@@ -1,5 +1,6 @@
 Version 5.0.8
 =======================
+x (Linux) use "gio open" for opening paths/urls
 
 
 Version 5.0.7
