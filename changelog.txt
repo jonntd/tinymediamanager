@@ -1,3 +1,7 @@
+Version 5.0.8
+=======================
+
+
 Version 5.0.7
 =======================
 x major performance enhancement of upgrade tasks
