@@ -1,5 +1,6 @@
 Version 5.0.8
 =======================
++ added the hotkey CTRL+S for direct saving/closing in the editors
 x (Linux) use "gio open" for opening paths/urls
 
 
