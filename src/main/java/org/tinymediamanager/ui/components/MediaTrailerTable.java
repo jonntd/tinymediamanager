@@ -143,7 +143,12 @@ public class MediaTrailerTable extends TmmEditorTable {
   private boolean isDownloadUrlAvailable(int row) {
     if (row >= 0 && row < trailerEventList.size()) {
       String url = getTrailer(row).getUrl();
-      return url != null && url.startsWith("http");
+      if (url != null && url.startsWith("http")) {
+        return true;
+      }
+      if (!StringUtils.isBlank(getTrailer(row).getId())) {
+        return true;
+      }
     }
     return false;
   }
@@ -223,7 +228,8 @@ public class MediaTrailerTable extends TmmEditorTable {
        */
       if (!editable && downloadEnabled) {
         col = new Column("", "download", trailer -> {
-          if (StringUtils.isNotBlank(trailer.getUrl()) && trailer.getUrl().toLowerCase(Locale.ROOT).startsWith("http")) {
+          if ((StringUtils.isNotBlank(trailer.getUrl()) && trailer.getUrl().toLowerCase(Locale.ROOT).startsWith("http"))
+              || !StringUtils.isBlank(trailer.getId())) {
             return IconManager.DOWNLOAD;
           }
           return null;

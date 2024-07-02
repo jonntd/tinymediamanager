@@ -1104,8 +1104,8 @@ public abstract class ImdbParser {
    * @return
    * @throws Exception
    */
-  protected String getFreshUrlForTrailer(MediaTrailer trailer) throws Exception {
-    Callable<Document> worker = new ImdbWorker(constructUrl("video/", trailer.getId()), "", "", true);
+  protected String getFreshUrlForTrailer(MediaTrailer trailer, String language, String country) throws Exception {
+    Callable<Document> worker = new ImdbWorker(constructUrl("video/", trailer.getId()), language, country, true);
     Future<Document> futureVid = executor.submit(worker);
     Document doc = futureVid.get();
 
