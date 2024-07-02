@@ -73,6 +73,9 @@ public class TvShowChangeToAbsoluteAction extends TmmAction {
         episode.saveToDb();
       }
 
+      // second check: are the EPs in ascending order, if we ignore the season?
+      // https://www.reddit.com/r/tinyMediaManager/comments/1dfr88n/episode_count_doesnt_reset_back_to_e01/
+
       for (TvShow show : selectedObjects.getTvShows()) {
         if (!show.getEpisodeGroups().contains(MediaEpisodeGroup.DEFAULT_ABSOLUTE)) {
           show.addEpisodeGroup(MediaEpisodeGroup.DEFAULT_ABSOLUTE);

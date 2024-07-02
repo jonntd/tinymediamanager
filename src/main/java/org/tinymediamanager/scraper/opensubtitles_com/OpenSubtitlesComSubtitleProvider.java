@@ -151,6 +151,8 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
     // languages need to be sent along with the country code
     String language;
 
+    // https://opensubtitles.stoplight.io/docs/opensubtitles-api/1de776d20e873-languages
+
     switch (options.getLanguage()) {
       case pt -> language = "pt-PT";
       case pt_BR -> language = "pt-BR";
