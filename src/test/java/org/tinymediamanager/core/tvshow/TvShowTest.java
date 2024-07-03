@@ -124,7 +124,7 @@ public class TvShowTest extends BasicTvShowTest {
     // various real world examples
     assertEqual("S:2024", detectEpisode("The.Daily.Show.2024.04.23.Stephanie.Kelton.1080p.HEVC.x265"));
     assertEqual("S:4 E:11", detectEpisode("TV French\\Unite 9\\Season 04\\S04E11 - Episode 84.mkv"));
-    assertEqual("S:-1 E:1", detectEpisode("[DB]Haven't You Heard I'm Sakamoto_-_01_(Dual Audio_10bit_BD1080p_x265).mkv"));
+    assertEqual("S:-1 E:1", detectEpisode("[DB]Haven't You Heard I'm Sakamoto_-_01_(Dual Audio_10bit_BD1080p_x265).mkv")); // Anime
     assertEqual("S:3 E:50", detectEpisode("[HorribleSubs] Shingeki no Kyojin S3 - 50 [1080p].mkv"));
     assertEqual("S:5 E:22", detectEpisode("Quincy.S05E22.Gefaehrlicher.Krankentransport.GERMAN.FS.dTV.X264-SQUiZZiEs\\s-quincy-s0522.mkv"));
     assertEqual("S:-1", detectEpisode("Specials\\Bye.Bye.Big.Bang.Theory.Das.Special.GERMAN.1080p.HDTV.x264-VoDTv.mkv"));
@@ -164,7 +164,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:-1 E:11", detectEpisode("Episode.11.Ocean.Deep.BluRay.720p.x264-x264Crew.mkv"));
     assertEqual("S:1 E:1", detectEpisode("tvs-castle-dl-ituneshd-xvid-101.avi"));
     assertEqual("S:2 E:9", detectEpisode("440 - 2x09 - .avi"));
-    assertEqual("S:-1 E:2", detectEpisode("\\Good L G (1 - 13)\\[CBM]_Good_L_G!_-_02_-_The_Battle_Begins_[720p]_[4A34853E].mkv"));
+    assertEqual("S:1 E:2", detectEpisode("\\Good L G (1 - 13)\\[CBM]_Good_L_G!_-_02_-_The_Battle_Begins_[720p]_[4A34853E].mkv")); // Anime
     assertEqual("S:3 E:1", detectEpisode("s8-vierfrauen-s03e01-repack.avi"));
     assertEqual("S:-1 E:3", detectEpisode("tvp-wildesskandinavien-e03-720p.mkv"));
     assertEqual("S:4 E:13", detectEpisode("s800The Mentalist_S04E13_Die goldene Feder.avi"));
@@ -190,6 +190,32 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:4 E:101", detectEpisode("Season 4 Episode 101.avi"));
     assertEqual("S:4 E:204", detectEpisode("4x204.avi"));
     assertEqual("S:1 E:13 E:14 E:15", detectEpisode("Peter Pan S01E13_1x14_1x15 - El Hookato.ts"));
+
+    // ANIME - https://kodi.wiki/view/Anime
+    // PREPEND
+    assertEqual("S:0 E:1", detectEpisode("[SHiN-gx] Fight Ippatsu! Juuden-chan!! - Special 1 [720x480 AR h.264 FLAC][v2][FF09021F].mkv"));
+    assertEqual("S:0 E:1", detectEpisode("[gleam] Kurenai OVA - 01 [OAD][0e73f000].mkv"));
+    assertEqual("S:0 E:1", detectEpisode("[Jarzka] Saki Picture Drama 1 [480p 10bit DVD FLAC] [BA3CE364]"));
+    assertEqual("S:1 E:1", detectEpisode("Saki/Season 1/Saki [Jarzka]/[Jarzka] Saki 01 - Encounter [480p 10bit DVD FLAC] [9EED32CB]"));
+    assertEqual("S:3 E:1", detectEpisode("Saki/Season 3/[Underwater-FFF] Saki Zenkoku-hen - The Nationals - 01 (720p) [AF65724D]"));
+    assertEqual("S:2 E:5", detectEpisode("[CoalGuys] K-ON!! S2 - 05 [4B19B10F]"));
+    assertEqual("S:1 E:1", detectEpisode("[avatar-nyanko] Koikoi 7 - 01 (DVD) [5E95FA4A]"));
+    assertEqual("S:1 E:1", detectEpisode("[gg]_Chuunibyou_Demo_Koi_ga_Shitai!_-_01_[5B6EFD1F]"));
+    assertEqual("S:1 E:1", detectEpisode("[Eclipse] Akane-iro ni Somaru Saka - 01 (1024x576 h264) [39920E63].mkv"));
+    assertEqual("S:1 E:1", detectEpisode("[gg]_Bakemonogatari_-_01_[CC0CF5D2].mkv "));
+    assertEqual("S:1 E:3", detectEpisode("[Doki]_Asobi_ni_Iku_yo!_-_03v2_(1280x720_h264_AAC)_[B5B9C6F3].mkv"));
+    assertEqual("S:1 E:2", detectEpisode("[Coalgirls]_Yuru_Yuri_02_(1280x720_Blu-Ray_FLAC)_[43E5A6B4]"));
+    assertEqual("S:1 E:1", detectEpisode("Touch 01(DVD) - (112ceb61) Central Anime"));
+    assertEqual("S:1 E:2", detectEpisode("Cross Game 02 - Central Anime (1280x720) [BF23052D].mp4"));
+    assertEqual("S:1 E:135", detectEpisode("[Taka]_Naruto_Shippuuden_135_[480p][9073B8C2]"));
+    // APPEND (no hash!)
+    assertEqual("S:2 E:14", detectEpisode("Saki/Season 2/[HorribleSubs] Saki Episode of Side A - 14 [720p]"));
+    assertEqual("S:2 E:1", detectEpisode("[DeadFish] Toaru Kagaku no Railgun S - S2 - 01 [720p][AAC].mp4"));
+    assertEqual("S:0 E:1", detectEpisode("[DeadFish] Jinrui wa Suitai Shimashita - Special 01 [BD][720p][AAC].mp4"));
+    // should be Season 1 as per Anime definition - unfortunately this clashes with our -1 approach
+    assertEqual("S:-1 E:1", detectEpisode("[a.f.k.] Lucky Star - 01.avi"));
+    assertEqual("S:-1 E:4", detectEpisode("Air Master - 04 [HQA&N!].avi"));
+    assertEqual("S:-1 E:1", detectEpisode("[ANE] Yosuga no Sora - Ep01v2 [BDRip 1080p x264 FLAC]"));
 
     // special case - show with only number like "24"
     assertEqual("S:1 E:1", detectEpisode("24 S01E01 1080p BluRay.mkv", "24"));

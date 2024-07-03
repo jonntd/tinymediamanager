@@ -65,6 +65,34 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern NUMBERS_2_PATTERN = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
   private static final Pattern NUMBERS_3_PATTERN = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
+  // https://kodi.wiki/view/Anime - PREP should run before any default Kodi regex
+  private static final Pattern ANIME_PREPEND1    = Pattern.compile(
+      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_PREPEND2    = Pattern.compile(
+      "[\\/](?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_PREPEND3    = Pattern.compile(
+      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][_.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_PREPEND4    = Pattern.compile(
+      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      Pattern.CASE_INSENSITIVE);
+
+  private static final Pattern ANIME_APPEND1     = Pattern.compile(
+      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_APPEND2     = Pattern.compile(
+      "[\\\\/](?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*?$",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_APPEND3     = Pattern.compile(
+      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      Pattern.CASE_INSENSITIVE);
+  // not possible - would interfere with our default detection
+  // private static final Pattern ANIME_APPEND4 = Pattern.compile(
+  // "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+  // Pattern.CASE_INSENSITIVE);
+
   private TvShowEpisodeAndSeasonParser() {
     throw new IllegalAccessError();
   }
@@ -144,8 +172,18 @@ public class TvShowEpisodeAndSeasonParser {
    * @return result the calculated result
    */
   public static EpisodeMatchingResult detectEpisodeFromFilename(String name, String showname) {
+
+    // parse ANIME exclusively in front, unmodified
+    EpisodeMatchingResult result = new EpisodeMatchingResult();
+    String nameNoExt = name.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
+    result = parseAnimeExclusive(result, nameNoExt);
+    if (!result.episodes.isEmpty()) {
+      LOGGER.debug("parsed as Anime '{}'", name);
+      return result;
+    }
+
     // first check ONLY filename!
-    EpisodeMatchingResult result = detect(FilenameUtils.getName(name), showname);
+    result = detect(FilenameUtils.getName(name), showname);
 
     // only EPs found, but no season
     if (!result.episodes.isEmpty() && result.season == -1) {
@@ -158,7 +196,9 @@ public class TvShowEpisodeAndSeasonParser {
       }
       else {
         // take season only - rely on former filename only detection
-        result.season = result2.season;
+        result.season = result2.season; // could also be -1, so here's a good point for checking Anime2
+        // parse ANIME in workflow - w/o hashes regex
+        result = parseAnimeNoHash(result, name);
       }
     }
     else if (result.episodes.isEmpty() && result.date == null) {
@@ -628,6 +668,133 @@ public class TvShowEpisodeAndSeasonParser {
         LOGGER.trace("add found season '{}'", s);
       }
     }
+    return result;
+  }
+
+  private static EpisodeMatchingResult parseAnimeExclusive(EpisodeMatchingResult result, String name) {
+    Matcher m;
+    // Anything with the filename marked as Special/OVA/OAV/etc goes to season 0, regardless of what the directory may say
+    m = ANIME_PREPEND1.matcher(name);
+    if (m.find()) {
+      try {
+        int ep = Integer.parseInt(m.group(2));
+        result.episodes.add(ep);
+        result.season = 0;
+      }
+      catch (NumberFormatException nfe) {
+      }
+    }
+
+    if (result.episodes.isEmpty()) {
+      // Inside a directory that specifies the season. May include any number of subdirectories. Doesn't try to find season markers in the file name
+      m = ANIME_PREPEND2.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          result.episodes.add(ep);
+          result.season = Integer.parseInt(m.group(1));
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
+
+    if (result.episodes.isEmpty()) {
+      // Include season marker in the filename
+      m = ANIME_PREPEND3.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          result.episodes.add(ep);
+          result.season = Integer.parseInt(m.group(1));
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
+
+    if (result.episodes.isEmpty()) {
+      // Anything else gets the default blank first capture, which sets the file to season 1
+      m = ANIME_PREPEND4.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          result.episodes.add(ep);
+          result.season = 1;
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
+    return result;
+  }
+
+  private static EpisodeMatchingResult parseAnimeNoHash(EpisodeMatchingResult result, String name) {
+    Matcher m;
+    // Anything with the filename marked as Special/OVA/OAV/etc goes to season 0, regardless of what the directory may say
+    m = ANIME_APPEND1.matcher(name);
+    if (m.find()) {
+      try {
+        int ep = Integer.parseInt(m.group(2));
+        if (!result.episodes.contains(ep)) {
+          result.episodes.add(ep);
+        }
+        result.season = 0;
+      }
+      catch (NumberFormatException nfe) {
+      }
+    }
+
+    if (result.episodes.isEmpty() || result.season == -1) {
+      // Inside a directory that specifies the season. May include any number of subdirectories. Doesn't try to find season markers in the file name
+      m = ANIME_APPEND2.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          if (!result.episodes.contains(ep)) {
+            result.episodes.add(ep);
+          }
+          result.season = Integer.parseInt(m.group(1));
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
+
+    if (result.episodes.isEmpty() || result.season == -1) {
+      // Include season marker in the filename
+      m = ANIME_APPEND3.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          if (!result.episodes.contains(ep)) {
+            result.episodes.add(ep);
+          }
+          result.season = Integer.parseInt(m.group(1));
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
+
+    // as ANINE it would set episode 1 on undetectable
+    // but that interferes with our -1 approach
+    // so we must not use the append4 pattern!
+    // if (result.episodes.isEmpty() || result.season == -1) {
+    // // Anything else gets the default blank first capture, which sets the file to season 1
+    // m = ANIME_APPEND4.matcher(name);
+    // if (m.find()) {
+    // try {
+    // int ep = Integer.parseInt(m.group(2));
+    // if (!result.episodes.contains(ep)) {
+    // result.episodes.add(ep);
+    // }
+    // result.season = 1;
+    // }
+    // catch (NumberFormatException nfe) {
+    // }
+    // }
+    // }
     return result;
   }
 
