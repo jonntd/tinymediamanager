@@ -161,7 +161,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:25", detectEpisode("Cowboy Bebop - S01E25 - The Real Folk Blues Part II.mkv")); // roman mixed with normal
     assertEqual("S:1 E:3", detectEpisode("The.Odd.Couple.2015.S01E03.720p.HDTV"));
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("Stargate Universe (01x01_01x02_01x03) - Air (1)(2)(3)"));
-    assertEqual("S:-1 E:11", detectEpisode("Episode.11.Ocean.Deep.BluRay.720p.x264-x264Crew.mkv"));
+    assertEqual("S:1 E:11", detectEpisode("Episode.11.Ocean.Deep.BluRay.720p.x264-x264Crew.mkv"));
     assertEqual("S:1 E:1", detectEpisode("tvs-castle-dl-ituneshd-xvid-101.avi"));
     assertEqual("S:2 E:9", detectEpisode("440 - 2x09 - .avi"));
     assertEqual("S:1 E:2", detectEpisode("\\Good L G (1 - 13)\\[CBM]_Good_L_G!_-_02_-_The_Battle_Begins_[720p]_[4A34853E].mkv")); // Anime
@@ -215,7 +215,7 @@ public class TvShowTest extends BasicTvShowTest {
     // should be Season 1 as per Anime definition - unfortunately this clashes with our -1 approach
     assertEqual("S:-1 E:1", detectEpisode("[a.f.k.] Lucky Star - 01.avi"));
     assertEqual("S:-1 E:4", detectEpisode("Air Master - 04 [HQA&N!].avi"));
-    assertEqual("S:-1 E:1", detectEpisode("[ANE] Yosuga no Sora - Ep01v2 [BDRip 1080p x264 FLAC]"));
+    assertEqual("S:1 E:1", detectEpisode("[ANE] Yosuga no Sora - Ep01v2 [BDRip 1080p x264 FLAC]"));
 
     // special case - show with only number like "24"
     assertEqual("S:1 E:1", detectEpisode("24 S01E01 1080p BluRay.mkv", "24"));
@@ -272,8 +272,9 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:2", detectEpisode("name.102.ext"));
 
     // without season
-    assertEqual("S:-1 E:2", detectEpisode("name.ep02.ext"));
-    assertEqual("S:-1 E:2", detectEpisode("name.ep_02.ext"));
+    // Even if there is no "season", Kodi will just assume all episodes are "Season 1" when using EP##.
+    assertEqual("S:1 E:2", detectEpisode("name.ep02.ext"));
+    assertEqual("S:1 E:2", detectEpisode("name.ep_02.ext"));
     assertEqual("S:-1 E:2", detectEpisode("name.part.II.ext"));
     assertEqual("S:-1 E:2", detectEpisode("name.pt.II.ext"));
     assertEqual("S:-1 E:2", detectEpisode("name.pt_II.ext"));
@@ -287,7 +288,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 E:2", detectEpisode("name.1x01_1x02.ext")); // works but shouldn't ;) _1 is detected as e1
     assertEqual("S:2 E:11 E:12 E:13", detectEpisode("name.2x11_2x12_2x13.ext")); // worst case: _2 is always being detected as e2
     assertEqual("S:1 E:1 E:2", detectEpisode("name.s01e01 1x02.ext"));
-    assertEqual("S:-1 E:1 E:2", detectEpisode("name.ep01.ep02.ext"));
+    assertEqual("S:1 E:1 E:2", detectEpisode("name.ep01.ep02.ext"));
     assertEqual("S:1 E:2 E:4 E:345", detectEpisode("name.s01e02e04ep345.ext")); // non consecutive episodes
 
     // multi episode short
@@ -295,7 +296,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("name.s01e01e02e03.ext"));
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("name.s01e01-02-03.ext"));
     assertEqual("S:1 E:1 E:2", detectEpisode("name.1x01x02.ext"));
-    assertEqual("S:-1 E:1", detectEpisode("name.ep01_02.ext"));
+    assertEqual("S:1 E:1", detectEpisode("name.ep01_02.ext"));
 
     // multi episode mixed; weird, but valid :p - we won't detect that now because the
     // regexp would cause too much false positives
@@ -307,9 +308,9 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 Split", detectEpisode("name.s01e01.a.ext"));
     assertEqual("S:1 E:1 Split", detectEpisode("name.1x01.part1.ext"));
     assertEqual("S:1 E:1 Split", detectEpisode("name.1x01.pt1.ext"));
-    assertEqual("S:-1 E:1", detectEpisode("name.ep01.1.ext")); // do not detect that one
+    assertEqual("S:1 E:1", detectEpisode("name.ep01.1.ext")); // do not detect that one
     assertEqual("S:1 E:1", detectEpisode("name.101.1.ext"));
-    assertEqual("S:-1 E:1 Split", detectEpisode("name.ep01a_01.discb.ext"));
+    assertEqual("S:1 E:1 Split", detectEpisode("name.ep01a_01.discb.ext"));
     assertEqual("S:1 E:1 Split", detectEpisode("name.s01e01.1.s01e01.2.of.2.ext"));
     assertEqual("S:1 E:1", detectEpisode("name.1x01.1x01.2.ext")); // do not detect that one
   }
