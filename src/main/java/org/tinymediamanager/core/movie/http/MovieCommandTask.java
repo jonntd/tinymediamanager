@@ -43,6 +43,7 @@ import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.tasks.MovieFetchRatingsTask;
 import org.tinymediamanager.core.movie.tasks.MovieRenameTask;
 import org.tinymediamanager.core.movie.tasks.MovieScrapeTask;
 import org.tinymediamanager.core.movie.tasks.MovieSubtitleSearchAndDownloadTask;
@@ -55,6 +56,7 @@ import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 
 /**
@@ -161,7 +163,9 @@ class MovieCommandTask extends TmmThreadPool {
 
   private void scrape() {
     for (AbstractCommandHandler.Command command : commands) {
+
       if ("scrape".equals(command.action)) {
+        // scrape
         List<Movie> moviesToScrape = getMoviesForScope(command.scope);
 
         if (!moviesToScrape.isEmpty()) {
@@ -185,6 +189,32 @@ class MovieCommandTask extends TmmThreadPool {
           movieScrapeParams.setOverwriteExistingItems(!movieSettings.isDoNotOverwriteExistingData());
           MovieScrapeTask task = new MovieScrapeTask(movieScrapeParams);
           task.setRunInBackground(true); // to avoid smart scrape dialog
+
+          activeTask = task;
+          activeTask.run(); // blocking
+
+          // wait for other tmm threads (artwork download et all)
+          while (TmmTaskManager.getInstance().poolRunning()) {
+            try {
+              Thread.sleep(2000);
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+          }
+
+          // done
+          activeTask = null;
+        }
+      }
+      else if ("fetchRatings".equals(command.action)) {
+        // fetchRatings
+        List<Movie> moviesToScrape = getMoviesForScope(command.scope);
+        if (!moviesToScrape.isEmpty()) {
+          setTaskName(TmmResourceBundle.getString("movie.fetchratings"));
+          publishState(TmmResourceBundle.getString("movie.fetchratings"), getProgressDone());
+
+          MovieFetchRatingsTask task = new MovieFetchRatingsTask(moviesToScrape, RatingProvider.RatingSource.getRatingSourcesForMovies());
 
           activeTask = task;
           activeTask.run(); // blocking
