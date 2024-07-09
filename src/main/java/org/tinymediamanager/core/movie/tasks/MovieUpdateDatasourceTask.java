@@ -281,7 +281,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       List<Path> existingMovieDirs = new ArrayList<>();
       List<Path> rootList = listFilesAndDirs(dsAsPath);
 
-      LOGGER.debug("Found '{}' folders in the data source", rootList.size());
+      LOGGER.debug("Found '{}' files/folders in the data source", rootList.size());
 
       // when there is _nothing_ found in the ds root, it might be offline - skip further processing
       // not in Windows since that won't happen there

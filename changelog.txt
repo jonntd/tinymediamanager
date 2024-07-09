@@ -1,6 +1,8 @@
 Version 5.0.8
 =======================
++ (Anime) greatly improve episode detection from file names
 + added the hotkey CTRL+S for direct saving/closing in the editors
++ (JMTE) Added a "split(x)" renderer for getting a single entry
 x (IMDB) fix trailer handling / download
 x (Linux) use "gio open" for opening paths/urls
 x (TV shows) added ${note} to the renamer preview #2616
