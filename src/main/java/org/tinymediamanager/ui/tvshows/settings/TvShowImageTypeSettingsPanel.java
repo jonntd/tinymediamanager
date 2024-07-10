@@ -205,7 +205,7 @@ class TvShowImageTypeSettingsPanel extends JPanel {
         panelFileNaming.add(chckbxSeasonFanart1, "cell 5 14");
 
         chckbxSeasonPoster2 = new JCheckBox(
-            "<season_folder>" + File.separator + "seasonXX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+            "<season_folder>" + File.separator + "seasonXX-poster." + TmmResourceBundle.getString("Settings.artwork.extension"));
         panelFileNaming.add(chckbxSeasonPoster2, "cell 2 15");
 
         chckbxSeasonFanart2 = new JCheckBox("<season_folder>/seasonXX-fanart." + TmmResourceBundle.getString("Settings.artwork.extension"));
