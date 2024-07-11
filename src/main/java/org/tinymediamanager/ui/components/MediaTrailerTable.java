@@ -51,16 +51,17 @@ public class MediaTrailerTable extends TmmEditorTable {
   private static final Logger           LOGGER = LoggerFactory.getLogger(MediaTrailerTable.class);
 
   private final EventList<MediaTrailer> trailerEventList;
+  private final boolean                 editable;
 
   public MediaTrailerTable(EventList<MediaTrailer> trailerEventList) {
     this(trailerEventList, false);
-
   }
 
   public MediaTrailerTable(EventList<MediaTrailer> trailerEventList, boolean editable) {
     super();
 
     this.trailerEventList = trailerEventList;
+    this.editable = editable;
 
     setModel(new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(trailerEventList),
         new TrailerTableFormat(editable, License.getInstance().isValidLicense())));
@@ -94,6 +95,22 @@ public class MediaTrailerTable extends TmmEditorTable {
     return trailer.getUrl();
   }
 
+  protected void nfoButtonClicked(MediaTrailer trailer) {
+    if (!this.editable) {
+      return;
+    }
+
+    for (MediaTrailer mediaTrailer : trailerEventList) {
+      if (mediaTrailer.equals(trailer)) {
+        mediaTrailer.setInNfo(true);
+      }
+      else {
+        mediaTrailer.setInNfo(false);
+      }
+    }
+
+  }
+
   protected void playTrailer(MediaTrailer trailer) {
     String url = trailer.getUrl();
 
@@ -115,7 +132,8 @@ public class MediaTrailerTable extends TmmEditorTable {
 
   @Override
   protected boolean isLinkCell(int row, int column) {
-    return isEditorColumn(column) || (isDownloadColumn(column) && isDownloadUrlAvailable(row)) || isPlayColumn(column);
+    return this.editable && isNfoColumn(column) || isEditorColumn(column) || (isDownloadColumn(column) && isDownloadUrlAvailable(row))
+        || isPlayColumn(column);
   }
 
   /**
@@ -151,6 +169,21 @@ public class MediaTrailerTable extends TmmEditorTable {
       }
     }
     return false;
+  }
+
+  /**
+   * check if this column is the NFO column
+   *
+   * @param column
+   *          the column index
+   * @return true/false
+   */
+  private boolean isNfoColumn(int column) {
+    if (column < 0) {
+      return false;
+    }
+
+    return "nfo".equals(getColumnModel().getColumn(column).getIdentifier());
   }
 
   /**
@@ -190,6 +223,9 @@ public class MediaTrailerTable extends TmmEditorTable {
       }
       else if (isPlayColumn(column)) {
         playTrailer(trailer);
+      }
+      else if (isNfoColumn(column)) {
+        nfoButtonClicked(trailer);
       }
     }
   }
