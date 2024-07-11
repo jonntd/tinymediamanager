@@ -116,7 +116,12 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
       tvdb.setUserApiKey(userApiKey);
       tvdb.setUserPin(userPin);
 
-      return TheTvDbController.login(userApiKey, userPin);
+      try {
+        return TheTvDbController.login(userApiKey, userPin);
+      }
+      catch (Exception e) {
+        LOGGER.debug("Could not get auth token for user key/pin - '{}", e.getMessage());
+      }
     }
 
     return getApiKey();
