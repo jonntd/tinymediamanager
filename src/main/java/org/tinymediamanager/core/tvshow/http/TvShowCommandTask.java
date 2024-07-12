@@ -322,15 +322,6 @@ class TvShowCommandTask extends TmmThreadPool {
       }
     }
 
-    // if we scrape already the whole show, no need to scrape dedicated episodes for it
-    Set<TvShowEpisode> removedEpisode = new HashSet<>(); // no dupes
-    for (TvShowEpisode ep : episodesToScrape) {
-      if (tvShowsToScrape.contains(ep.getTvShow())) {
-        removedEpisode.add(ep);
-      }
-    }
-    episodesToScrape.removeAll(removedEpisode);
-
     if (!tvShowsToScrape.isEmpty() || !episodesToScrape.isEmpty()) {
       setTaskName(TmmResourceBundle.getString("tvshow.fetchratings"));
       publishState(TmmResourceBundle.getString("tvshow.fetchratings"), getProgressDone());
