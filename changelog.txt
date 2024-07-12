@@ -9,6 +9,8 @@ x (TV shows) added ${note} to the renamer preview #2616
 x (Specials) also replace the filename inside season folders #2629
 x (TVDB) do not abort scraping when the user entered API key/PIN is invalid
 x (movie/TV show) fixed choosing the right trailer for the NFO #2634
+x (HTTP API) added an action for downloading ratings #2623
+x (HTTP API) added an action for downloading missing artwork #2622
 
 
 Version 5.0.7
