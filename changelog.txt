@@ -11,6 +11,7 @@ x (TVDB) do not abort scraping when the user entered API key/PIN is invalid
 x (movie/TV show) fixed choosing the right trailer for the NFO #2634
 x (HTTP API) added an action for downloading ratings #2623
 x (HTTP API) added an action for downloading missing artwork #2622
+x enhanced the SSL bypass to disable hostname verification #2638
 
 
 Version 5.0.7
