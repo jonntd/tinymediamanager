@@ -167,7 +167,7 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     if (color != null) {
       rootPanel.setBackground(color);
     }
-    rootPanel.setLayout(new MigLayout("insets 0", "[]0lp[900lp:n,grow]", "[300lp:400lp,grow,shrink 0]0[shrink 0]"));
+    rootPanel.setLayout(new MigLayout("insets 0", "[]0lp[900lp:n,grow]", "[300lp:400lp,grow,shrink 0]"));
 
     // to draw the shadow beneath the toolbar, encapsulate the panel
     JLayer<JComponent> rootLayer = new JLayer<>(rootPanel, new ShadowLayerUI()); // $hide$ - do not parse this in wbpro
@@ -195,7 +195,7 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     HintManager.getInstance().addHint(TmmResourceBundle.getString("hintmanager.tabs"), detailPanel, SwingConstants.LEFT);
 
     JPanel panelStatusBar = new StatusBarPanel();
-    rootPanel.add(panelStatusBar, "cell 0 1 2 1,grow");
+    getContentPane().add(panelStatusBar, BorderLayout.SOUTH);
 
     LOGGER.debug("Initializing MovieUIModule...");
     addModule(MovieUIModule.getInstance());
