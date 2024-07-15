@@ -272,7 +272,7 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
   public void closeTmmAndStart(ProcessBuilder pb) {
     int confirm = JOptionPane.YES_OPTION;
     // if there are some threads running, display exit confirmation
-    if (TmmTaskManager.getInstance().poolRunning()) {
+    if (TmmTaskManager.getInstance().isPoolRunning()) {
       Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
       confirm = JOptionPane.showOptionDialog(MainWindow.this, TmmResourceBundle.getString("tmm.exit.runningtasks"),
           TmmResourceBundle.getString("tmm.exit.confirmation"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null); // $NON-NLS-1$
