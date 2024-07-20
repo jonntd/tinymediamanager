@@ -1,3 +1,7 @@
+Version 5.0.9
+=======================
+
+
 Version 5.0.8
 =======================
 + (Anime) greatly improve episode detection from file names
