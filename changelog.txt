@@ -1,5 +1,6 @@
 Version 5.0.9
 =======================
+x fixed scaling of long season plots/overviews #2584
 
 
 Version 5.0.8
