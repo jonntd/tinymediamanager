@@ -1,5 +1,7 @@
 Version 5.0.9
 =======================
++ (TV shows) added a column for missing episode count #2642
+  only available if you enabled displaying of missing episodes !
 x fixed scaling of long season plots/overviews #2584
 
 
