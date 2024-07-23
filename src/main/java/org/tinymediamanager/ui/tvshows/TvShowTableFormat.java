@@ -135,7 +135,7 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
-     * missing episode count
+     * missing episode count (hidden per default)
      */
     col = new Column(TmmResourceBundle.getString("metatag.missingepisode.count"), "missingEpisodes", this::getMissingEpisodes, Integer.class);
     col.setHeaderIcon(IconManager.MISSING);
@@ -143,6 +143,15 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     col.setColumnResizeable(false);
     col.setMinWidth(fontMetrics.stringWidth("999") + getCellPadding());
     col.setColumnComparator(integerComparator);
+    col.setDefaultHidden(true);
+    addColumn(col);
+
+    /*
+     * TV show status (hidden per default)
+     */
+    col = new Column(TmmResourceBundle.getString("metatag.status"), "status", this::getStatus, String.class);
+    col.setMinWidth(fontMetrics.stringWidth("Continuing") + getCellPadding());
+    col.setColumnComparator(stringComparator);
     col.setDefaultHidden(true);
     addColumn(col);
 
@@ -542,6 +551,14 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     }
     if (userObject instanceof TvShowSeason season) {
       return season.getDummyEpisodeCount();
+    }
+    return null;
+  }
+
+  private String getStatus(TmmTreeNode node) {
+    Object userObject = node.getUserObject();
+    if (userObject instanceof TvShow tvShow) {
+      return tvShow.getStatus().getLocalizedName();
     }
     return null;
   }
