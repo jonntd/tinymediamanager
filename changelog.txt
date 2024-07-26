@@ -5,6 +5,7 @@ Version 5.0.9
 + (TV shows/movie sets) loading previous sort state is now possible #2305
 + (TV show) added TV show status column #2582
 x fixed scaling of long season plots/overviews #2584
++ (Anime) fix episode detection from file names regex
 
 
 Version 5.0.8
