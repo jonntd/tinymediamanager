@@ -7,6 +7,7 @@ Version 5.0.9
 x fixed scaling of long season plots/overviews #2584
 x (Anime) fix episode detection from file names regex
 x (TV show) fixed a crash when searching in TV shows while scanning data sources #2562
+x fixed hiding of the file chooser with the popup menu #2648
 
 
 Version 5.0.8
