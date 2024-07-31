@@ -192,12 +192,13 @@ public class MovieJmteTests extends BasicMovieTest {
       compare("${movie.country;split(1,0)}", "US DE, Vereinigte Staaten, Germany"); // invalid
       compare("${movie.country;split(a,Z)}", "US DE, Vereinigte Staaten, Germany"); // invalid
       compare("${movie.country;split(0,1)}", "US DE, Vereinigte Staaten");
-      compare("${movie.country;split(1,2)}", "Vereinigte Staaten, Germany");
-      compare("${movie.country;split(1,2)}", "Vereinigte Staaten, Germany");
+      compare("${movie.country;split(2,3)}", "Germany");
       compare("${movie.country;split(2 , 3)}", "Germany");
+      compare("${movie.country;split(1,2)}", "Vereinigte Staaten, Germany");
       compare("${movie.country;split(0,17)}", "US DE, Vereinigte Staaten, Germany");
       compare("${movie.country;split(1,17)}", "Vereinigte Staaten, Germany");
       compare("${movie.country;split(2,17)}", "Germany");
+      compare("${movie.country;split(3,17)}", ""); // empty or all?
 
     }
     catch (Exception e) {
