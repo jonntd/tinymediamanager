@@ -88,6 +88,7 @@
         <jre.version>21.0.1</jre.version>
         <ffmpeg.version>6.0</ffmpeg.version>
         <launcher.version>5.0.5</launcher.version>
+        <flatlaf.version>3.5</flatlaf.version>
         <jackson.version>2.15.2</jackson.version>
         <sonar.java.source>17</sonar.java.source>
     </properties>
@@ -300,7 +301,7 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.5</version>
+            <version>${flatlaf.version}</version>
         </dependency>
         <dependency>
             <groupId>com.formdev</groupId>
@@ -1039,6 +1040,41 @@
                                     <outputDirectory>${project.build.directory}/launcher</outputDirectory>
                                     <overWriteReleases>false</overWriteReleases>
                                     <overWriteSnapshots>true</overWriteSnapshots>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>copy-flatlaf</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>com.formdev</groupId>
+                                            <artifactId>flatlaf</artifactId>
+                                            <version>${flatlaf.version}</version>
+                                            <classifier>no-natives</classifier>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>com.formdev</groupId>
+                                            <artifactId>flatlaf</artifactId>
+                                            <version>${flatlaf.version}</version>
+                                            <classifier>macos-arm64</classifier>
+                                            <type>dylib</type>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>com.formdev</groupId>
+                                            <artifactId>flatlaf</artifactId>
+                                            <version>${flatlaf.version}</version>
+                                            <classifier>macos-x86_64</classifier>
+                                            <type>dylib</type>
+                                        </artifactItem>
+                                    </artifactItems>
+                                    <outputDirectory>${project.build.directory}/flatlaf</outputDirectory>
+                                    <overWriteReleases>true</overWriteReleases>
+                                    <overWriteSnapshots>true</overWriteSnapshots>
+                                    <stripVersion>true</stripVersion>
                                 </configuration>
                             </execution>
                         </executions>
