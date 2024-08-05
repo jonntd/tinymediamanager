@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.Test;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.entities.MediaType;
 
 public class ITMdbListRatingTest {
 
@@ -17,10 +18,10 @@ public class ITMdbListRatingTest {
 
     Map<String, Object> ids = new HashMap<>();
 
-    ids.put(MediaMetadata.IMDB, "tt6718170");
+    ids.put(MediaMetadata.TMDB, 8475);
 
     MdbListRating ratings = new MdbListRating();
-    List<MediaRating> mediaRatings = ratings.getRatings(ids); // Super Mario Bros Movie
+    List<MediaRating> mediaRatings = ratings.getRatings(MediaType.TV_SHOW, ids); 
 
     assertThat(mediaRatings).isNotEmpty();
   }
