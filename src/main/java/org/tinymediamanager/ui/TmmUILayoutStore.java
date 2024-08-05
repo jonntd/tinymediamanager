@@ -163,16 +163,16 @@ public class TmmUILayoutStore {
           rect.width = screenBounds.width - screenInsets.left - screenInsets.right;
         }
 
-        if (rect.x < screenInsets.left) {
-          rect.x = screenInsets.left;
+        if (rect.x < screenBounds.x + screenInsets.left) {
+          rect.x = screenBounds.x + screenInsets.left;
         }
 
         if (rect.height > screenBounds.height - screenInsets.top - screenInsets.bottom) {
           rect.height = screenBounds.height - screenInsets.top - screenInsets.bottom;
         }
 
-        if (rect.y < screenInsets.top) {
-          rect.y = screenInsets.top;
+        if (rect.y < screenBounds.y + screenInsets.top) {
+          rect.y = screenBounds.y + screenInsets.top;
         }
 
         frame.setBounds(rect);
@@ -412,14 +412,6 @@ public class TmmUILayoutStore {
     }
     catch (Exception e) {
       return rect;
-    }
-
-    // prevent from moving out of the screen (can happen in Docker/VNC)
-    if (rect.x < 0) {
-      rect.x = 0;
-    }
-    if (rect.y < 0) {
-      rect.y = 0;
     }
 
     // check if the stored sizes fit to any screen
