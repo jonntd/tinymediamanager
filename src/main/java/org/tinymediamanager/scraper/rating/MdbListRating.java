@@ -60,6 +60,11 @@ class MdbListRating {
       return mediaRatingList;
     }
 
+    // MDBList does only has show ratings
+    if (mediaType == MediaType.TV_EPISODE) {
+      return mediaRatingList;
+    }
+
     for (Map.Entry<String, Object> entry : ids.entrySet()) {
       // Fetch the ratings with the first found ID
       try {
