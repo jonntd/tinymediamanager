@@ -4,6 +4,7 @@ Version 5.0.10
 x (MDBList) use correct mediaType to overcome duplicate IDs #2660
 x improved restoring of window positions #2649
 x do not clip filter dialog after loading #2655
+x upgraded FlatLaf to 3.5.1 to avoid the "UnsupportedOperationException: PERPIXEL_TRANSLUCENT" error
 
 
 Version 5.0.9
