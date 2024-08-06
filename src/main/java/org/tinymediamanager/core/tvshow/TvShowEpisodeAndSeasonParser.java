@@ -88,10 +88,9 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern ANIME_APPEND3     = Pattern.compile(
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
-  // not possible - would interfere with our default detection
-  // private static final Pattern ANIME_APPEND4 = Pattern.compile(
-  // "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
-  // Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_APPEND4     = Pattern.compile(
+      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      Pattern.CASE_INSENSITIVE);
 
   private TvShowEpisodeAndSeasonParser() {
     throw new IllegalAccessError();
@@ -204,6 +203,11 @@ public class TvShowEpisodeAndSeasonParser {
     else if (result.episodes.isEmpty() && result.date == null) {
       // nothing found - check whole string as such
       result = detect(name, showname);
+    }
+
+    // we have found some valid episodes, but w/o season -> upgrade them for season 1
+    if (!result.episodes.isEmpty() && !result.episodes.contains(-1) && result.season == -1) {
+      result.season = 1;
     }
 
     return result;
@@ -789,21 +793,22 @@ public class TvShowEpisodeAndSeasonParser {
     // as ANINE it would set episode 1 on undetectable
     // but that interferes with our -1 approach
     // so we must not use the append4 pattern!
-    // if (result.episodes.isEmpty() || result.season == -1) {
-    // // Anything else gets the default blank first capture, which sets the file to season 1
-    // m = ANIME_APPEND4.matcher(name);
-    // if (m.find()) {
-    // try {
-    // int ep = Integer.parseInt(m.group(2));
-    // if (!result.episodes.contains(ep)) {
-    // result.episodes.add(ep);
-    // }
-    // result.season = 1;
-    // }
-    // catch (NumberFormatException nfe) {
-    // }
-    // }
-    // }
+    // changed as of 20240803
+    if (result.episodes.isEmpty() || result.season == -1) {
+      // Anything else gets the default blank first capture, which sets the file to season 1
+      m = ANIME_APPEND4.matcher(name);
+      if (m.find()) {
+        try {
+          int ep = Integer.parseInt(m.group(2));
+          if (!result.episodes.contains(ep)) {
+            result.episodes.add(ep);
+          }
+          result.season = 1;
+        }
+        catch (NumberFormatException nfe) {
+        }
+      }
+    }
     return result;
   }
 
