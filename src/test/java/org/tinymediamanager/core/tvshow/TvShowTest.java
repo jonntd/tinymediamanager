@@ -280,6 +280,9 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:2", detectEpisode("name.part.II.ext"));
     assertEqual("S:1 E:2", detectEpisode("name.pt.II.ext"));
     assertEqual("S:1 E:2", detectEpisode("name.pt_II.ext"));
+    assertEqual("S:1 E:1", detectEpisode("EP01.avi"));
+    assertEqual("S:3 E:1", detectEpisode("season 3/EP01.avi"));
+    assertEqual("S:3 E:3", detectEpisode("season 3 EP01 EP02 EP03/EP03.avi"));
 
     // multi episode
     assertEqual("S:1 E:1 E:2", detectEpisode("name.s01e01.s01e02.ext"));
@@ -298,7 +301,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("name.s01e01e02e03.ext"));
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("name.s01e01-02-03.ext"));
     assertEqual("S:1 E:1 E:2", detectEpisode("name.1x01x02.ext"));
-    assertEqual("S:1 E:1", detectEpisode("name.ep01_02.ext"));
+    assertEqual("S:1 E:1 E:2", detectEpisode("name.ep01_02.ext"));
 
     // multi episode mixed; weird, but valid :p - we won't detect that now because the
     // regexp would cause too much false positives

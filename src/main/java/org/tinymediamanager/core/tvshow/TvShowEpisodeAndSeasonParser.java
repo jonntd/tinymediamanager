@@ -532,9 +532,6 @@ public class TvShowEpisodeAndSeasonParser {
           result.episodes.add(ep);
           LOGGER.trace("add found EP '{}'", ep);
         }
-        if (result.season == -1) {
-          result.season = 1;
-        }
       }
     }
     return result;
@@ -568,9 +565,6 @@ public class TvShowEpisodeAndSeasonParser {
           if (ep > 0 && !result.episodes.contains(ep)) {
             result.episodes.add(ep);
             LOGGER.trace("add found EP '{}'", ep);
-          }
-          if (result.season == -1) {
-            result.season = 1;
           }
         }
       }
@@ -611,9 +605,6 @@ public class TvShowEpisodeAndSeasonParser {
           if (ep > -1 && !result.episodes.contains(ep)) {
             result.episodes.add(ep);
             LOGGER.trace("add found EP '{}'", ep);
-          }
-          if (result.season == -1) {
-            result.season = 1;
           }
         }
       }
