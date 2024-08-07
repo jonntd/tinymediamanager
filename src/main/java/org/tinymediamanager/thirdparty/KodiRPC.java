@@ -16,6 +16,7 @@
 
 package org.tinymediamanager.thirdparty;
 
+import java.io.File;
 import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -274,7 +275,17 @@ public class KodiRPC {
       LOGGER.warn("Datasource was null? Ignoring {}", entity.toString());
       return fileMap;
     }
-    String dsName = ds.getFileName().toString();
+    // get the name of the datasource folder
+    // unfortunately, for UNC paths like \\server\share i cannot get the share name from Path?!?
+    String dsName = "";
+    if (ds.getFileName() != null) {
+      dsName = ds.getFileName().toString();
+    }
+    else {
+      // try with good old file, which is not so bitchy
+      File f = ds.toFile();
+      dsName = f.getName();
+    }
 
     MediaFile main = entity.getMainFile();
     if (isDisc) {
