@@ -268,15 +268,10 @@ public class KodiRPC {
     return fileMap;
   }
 
-  private Map<String, UUID> parseEntity(MediaEntity entity, boolean isDisc) {
-    Map<String, UUID> fileMap = new HashMap<>();
-    Path ds = Paths.get(entity.getDataSource());
-    if (ds == null || ds.toString().isBlank()) {
-      LOGGER.warn("Datasource was null? Ignoring {}", entity.toString());
-      return fileMap;
-    }
+  private String parseDatasourceName(Path ds) {
     // get the name of the datasource folder
-    // unfortunately, for UNC paths like \\server\share i cannot get the share name from Path?!?
+    // unfortunately, for UNC paths like \\server\share i cannot get the share name from Path
+    // and URI is so slow
     String dsName = "";
     if (ds.getFileName() != null) {
       dsName = ds.getFileName().toString();
@@ -286,7 +281,18 @@ public class KodiRPC {
       File f = ds.toFile();
       dsName = f.getName();
     }
+    return dsName;
+  }
 
+  private Map<String, UUID> parseEntity(MediaEntity entity, boolean isDisc) {
+    Map<String, UUID> fileMap = new HashMap<>();
+    Path ds = Paths.get(entity.getDataSource());
+    if (ds == null || ds.toString().isBlank()) {
+      LOGGER.warn("Datasource was null? Ignoring {}", entity.toString());
+      return fileMap;
+    }
+
+    String dsName = parseDatasourceName(ds);
     MediaFile main = entity.getMainFile();
     if (isDisc) {
       // Kodi RPC sends what we call the main disc identifier, but we have disc folder only
@@ -355,7 +361,7 @@ public class KodiRPC {
       for (TvShow tmmShow : TvShowModuleManager.getInstance().getTvShowList().getTvShows()) {
         try {
           Path ds = Paths.get(tmmShow.getDataSource());
-          String dsName = ds.getFileName().toString();
+          String dsName = parseDatasourceName(ds);
           String rel = Utils.relPath(ds, tmmShow.getPathNIO());
           rel = rel.replaceAll(SEPARATOR_REGEX, "/"); // normalize separators
 
