@@ -7,6 +7,7 @@ x improved restoring of window positions #2649
 x do not clip filter dialog after loading #2655
 x upgraded FlatLaf to 3.5.1 to avoid the "UnsupportedOperationException: PERPIXEL_TRANSLUCENT" error
 x [KodiRPC] fix mapping of TMM <-> Kodi #2664
+x [UDS] fix parsing season artwork numbers on import #2669
 
 
 Version 5.0.9
