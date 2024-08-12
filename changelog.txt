@@ -9,6 +9,7 @@ x upgraded FlatLaf to 3.5.1 to avoid the "UnsupportedOperationException: PERPIXE
 x [KodiRPC] fix mapping of TMM <-> Kodi #2664
 x [UDS] fix parsing season artwork numbers on import #2669
 x [UI] display correct "missing" for trailer metadata #2668
+x [UI] do not exhaust visible space when adding many filter values #2655
 
 
 Version 5.0.9
