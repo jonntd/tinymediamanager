@@ -13,6 +13,7 @@ x [UI] display correct "missing" for trailer metadata #2668
 x [UI] do not exhaust visible space when adding many filter values #2655
 x [UniversalScraper] fix scraping season name/plot from EpisodeGroups #2659
 x [Subtitles] fix parsing language/flags when in own directory u/Baldish
+x fixed an issue of not updating the season artwork correctly #2671
 
 
 Version 5.0.9
