@@ -1063,14 +1063,13 @@ public class MovieArtworkHelper {
     int size = 0;
     switch (ma.getType()) {
       case POSTER:
+      case KEYART:
         size = MovieModuleManager.getInstance().getSettings().getImagePosterSize().getOrder();
         break;
 
-      case BACKGROUND:
-        size = MovieModuleManager.getInstance().getSettings().getImageFanartSize().getOrder();
-        break;
-
+      // all other use fanart size (as seen in Fanart.Tv metadata provider imageType mapping
       default:
+        size = MovieModuleManager.getInstance().getSettings().getImageFanartSize().getOrder();
         break;
     }
 

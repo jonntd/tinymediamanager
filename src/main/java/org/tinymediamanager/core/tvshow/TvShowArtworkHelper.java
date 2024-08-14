@@ -387,18 +387,19 @@ public class TvShowArtworkHelper {
     int size = 0;
     switch (ma.getType()) {
       case POSTER:
+      case KEYART:
+      case SEASON_POSTER:
         size = TvShowModuleManager.getInstance().getSettings().getImagePosterSize().getOrder();
         break;
 
-      case BACKGROUND:
-        size = TvShowModuleManager.getInstance().getSettings().getImageFanartSize().getOrder();
-        break;
-
       case THUMB:
+      case SEASON_THUMB:
         size = TvShowModuleManager.getInstance().getSettings().getImageThumbSize().getOrder();
         break;
 
+      // all other use fanart size (as seen in Fanart.Tv metadata provider imageType mapping
       default:
+        size = TvShowModuleManager.getInstance().getSettings().getImageFanartSize().getOrder();
         break;
     }
     boolean preferFanartWoText = TvShowModuleManager.getInstance().getSettings().isImageScraperPreferFanartWoText();

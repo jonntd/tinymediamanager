@@ -740,6 +740,10 @@ public class ImageChooserDialog extends TmmDialog {
         // same score - sort by likes descending
         result = Integer.compare(artwork2.getLikes(), artwork1.getLikes());
       }
+      if (result == 0) {
+        // last resort
+        result = artwork2.getBiggestArtwork().compareTo(artwork1.getBiggestArtwork());
+      }
 
       return result;
     });
