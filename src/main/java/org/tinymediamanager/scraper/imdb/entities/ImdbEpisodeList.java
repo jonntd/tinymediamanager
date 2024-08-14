@@ -9,8 +9,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
@@ -24,8 +22,6 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class ImdbEpisodeList {
-  private static final Logger    LOGGER               = LoggerFactory.getLogger(ImdbEpisodeList.class);
-
   public String                  currentSeason        = "";
   public String                  currentYear          = "";
   public ImdbEpisodeListEpisodes episodes             = null;
@@ -87,25 +83,5 @@ public class ImdbEpisodeList {
       }
     }
     return eps;
-  }
-
-  public class ImdbEpisodeListImage {
-
-    public String               caption              = "";
-    public String               url                  = "";
-    public Integer              maxHeight            = 0;
-    public Integer              maxWidth             = 0;
-
-    @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<>();
-
-    @JsonAnySetter
-    public void setAdditionalProperty(String name, Object value) {
-      this.additionalProperties.put(name, value);
-    }
-
-    public String toString() {
-      return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
-    }
   }
 }

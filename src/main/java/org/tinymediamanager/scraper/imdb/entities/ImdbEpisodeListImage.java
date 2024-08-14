@@ -9,13 +9,14 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class ImdbImage {
+// same as ImdbImage, but slightly different :/
+public class ImdbEpisodeListImage {
 
   public String               id                   = "";
   public String               url                  = "";
-  public Integer              height               = 0;
-  public Integer              width                = 0;
-  public ImdbCaption          caption              = null;
+  public Integer              maxHeight            = 0;
+  public Integer              maxWidth             = 0;
+  public String               caption              = "";
 
   @JsonIgnore
   private Map<String, Object> additionalProperties = new HashMap<>();
