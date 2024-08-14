@@ -20,7 +20,7 @@ public class ImdbEpisodeListEpisode {
   public int                  voteCount            = 0;
   public ImdbReleaseDate      releaseDate          = null;
   public int                  releaseYear          = 0;
-  public ImdbEpisodeListImage     image                = null;
+  public ImdbImageString      image                = null;
 
   @JsonIgnore
   private Map<String, Object> additionalProperties = new HashMap<>();

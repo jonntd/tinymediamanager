@@ -62,7 +62,7 @@ public class ImdbEpisodeList {
           MediaArtwork img = new MediaArtwork(MediaMetadata.IMDB, THUMB);
           img.setOriginalUrl(ep.image.url);
           img.setSeason(s);
-          // img.addImageSize(ep.image.maxWidth, ep.image.maxHeight, ep.image.url);
+          img.addImageSize(ep.image.getWidth(), ep.image.getHeight(), ep.image.url, MediaArtwork.ThumbSizes.getSizeOrder(ep.image.getWidth()));
           md.addMediaArt(img);
         }
 

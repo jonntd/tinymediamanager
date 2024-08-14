@@ -9,12 +9,10 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class ImdbSearchResultImages {
+public class ImdbRatingSummary {
+  public double               aggregateRating      = 0.0;
+  public int                  voteCount            = 0;
 
-  public String               url                  = "";
-  public Integer              maxHeight            = 0;
-  public Integer              maxWidth             = 0;
-  public String               caption              = "";
   @JsonIgnore
   private Map<String, Object> additionalProperties = new HashMap<>();
 
