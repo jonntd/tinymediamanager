@@ -15,6 +15,7 @@ x [UniversalScraper] fix scraping season name/plot from EpisodeGroups #2659
 x [Subtitles] fix parsing language/flags when in own directory u/Baldish
 x fixed an issue of not updating the season artwork correctly #2671
 x [ImageChooser] also adhere user preferences for sorting u/JMcClane1972
+x [Fanart.tv] remove long deprecated clearlogo/clearart images #2585
 
 
 Version 5.0.9
