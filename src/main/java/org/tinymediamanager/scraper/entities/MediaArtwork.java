@@ -663,7 +663,7 @@ public class MediaArtwork {
 
     @Override
     public String toString() {
-      return width + "x" + height + " (" + sizeOrder + ")";
+      return width + "x" + height;
     }
   }
 }
