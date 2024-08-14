@@ -1057,6 +1057,29 @@ public class MovieArtworkHelper {
     return sortedArtwork;
   }
 
+  public static int getMatchingScoreAccordingPreferences(MediaArtwork ma) {
+
+    List<MediaLanguages> languages = MovieModuleManager.getInstance().getSettings().getImageScraperLanguages();
+    int size = 0;
+    switch (ma.getType()) {
+      case POSTER:
+        size = MovieModuleManager.getInstance().getSettings().getImagePosterSize().getOrder();
+        break;
+
+      case BACKGROUND:
+        size = MovieModuleManager.getInstance().getSettings().getImageFanartSize().getOrder();
+        break;
+
+      default:
+        break;
+    }
+
+    boolean preferFanartWoText = MovieModuleManager.getInstance().getSettings().isImageScraperPreferFanartWoText();
+    boolean otherResolutions = MovieModuleManager.getInstance().getSettings().isImageScraperOtherResolutions();
+    int score = ma.getMatchingScoreAccordingPreferences(size, languages, preferFanartWoText, otherResolutions);
+    return score;
+  }
+
   /**
    * choose the best artwork for this movie
    * 
