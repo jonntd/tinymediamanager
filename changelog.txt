@@ -14,6 +14,7 @@ x [UI] display correct "missing" for trailer metadata #2668
 x [UI] do not exhaust visible space when adding many filter values #2655
 x [UI] also adhere user preferences for sorting in the image chooser thx @u/JMcClane1972
 x [UniversalScraper] fix scraping season name/plot from EpisodeGroups #2659
+x [UniversalScraper] re-enabled fallback for episodes #2667
 x [MDBList] use correct mediaType to overcome duplicate IDs #2660
 x [Fanart.tv] remove long deprecated clearlogo/clearart images #2585
 x [IMDB] further improve scraper
