@@ -86,6 +86,12 @@ public class YtDlp {
       cmdList.add("res:" + width);
     }
 
+    cmdList.add("--concurrent-fragments");
+    cmdList.add("4");
+    cmdList.add("--abort-on-unavailable-fragment");
+    cmdList.add("--fragment-retries");
+    cmdList.add("99");
+
     cmdList.add(url);
     cmdList.add("-o");
     cmdList.add(trailerFile.toAbsolutePath().toString());

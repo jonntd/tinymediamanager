@@ -19,6 +19,7 @@ x [UniversalScraper] re-enabled fallback for episodes #2667
 x [MDBList] use correct mediaType to overcome duplicate IDs #2660
 x [Fanart.tv] remove long deprecated clearlogo/clearart images #2585
 x [IMDB] further improve scraper
+x [Trailer] enhanced the yt-dlp download command (thx @Casual_Tea_94)
 x [KodiRPC] fix mapping of TMM <-> Kodi #2664
 x [Docker] massive rework of the Docker image (thx @ithcy)
 
