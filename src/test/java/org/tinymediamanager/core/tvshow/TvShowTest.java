@@ -169,7 +169,7 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:3", detectEpisode("tvp-wildesskandinavien-e03-720p.mkv"));
     assertEqual("S:4 E:13", detectEpisode("s800The Mentalist_S04E13_Die goldene Feder.avi"));
     assertEqual("S:1 E:1", detectEpisode("AwesomeTvShow.S01E01-480p.mkv"));
-    assertEqual("S:7 E:9 E:10", detectEpisode("stv-s7ep9-10.avi"));
+    assertEqual("S:7 E:9 E:10", detectEpisode("stvs7ep9-10.avi"));
     assertEqual("S:1 E:545", detectEpisode("s01e545 - Steamtown USA.mkv")); // http://thetvdb.com/?tab=season&seriesid=188331&seasonid=311381&lid=7
     assertEqual("S:13 E:2 Split", detectEpisode("Doctor.Who.S13.E2.Part4.Planet.of.Evil.DVDRip.XviD-m00tv.avi"));
     assertEqual("S:3 E:5", detectEpisode("vs-once-upon-a-time-_S03XE05_dd51-ded-dl-7p-bd-x264-305.mkv"));
@@ -296,6 +296,9 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 E:2", detectEpisode("name.s01e01 1x02.ext"));
     assertEqual("S:1 E:1 E:2", detectEpisode("name.ep01.ep02.ext"));
     assertEqual("S:1 E:2 E:4 E:345", detectEpisode("name.s01e02e04ep345.ext")); // non consecutive episodes
+    // multi with season change - invalid
+    assertEqual("S:1 E:1", detectEpisode("name.s01e01.s05e02.ext"));
+    assertEqual("S:1 E:1 E:3", detectEpisode("name.01x01_03x02_01x03.ext"));
 
     // multi episode short
     assertEqual("S:1 E:1 E:2", detectEpisode("name.s01e01e02.ext"));
