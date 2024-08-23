@@ -42,13 +42,13 @@ public class ParserUtils {
   // hard stopwords are words which will always be cleaned
   protected static final String[] HARD_STOPWORDS  = { "1080", "1080i", "1080p", "2160p", "2160i", "3d", "480i", "480p", "576i", "576p", "360p",
       "10bit", "12bit", "360i", "720", "720i", "720p", "8bit", "ac3", "ac3ld", "ac3d", "ac3md", "amzn", "aoe", "atmos", "avc", "bd5", "bdrip",
-      "bdrip", "blueray", "bluray", "brrip", "cam", "cd1", "cd2", "cd3", "cd4", "cd5", "cd6", "cd7", "cd8", "cd9", "dd20", "dd51", "disc1", "disc2",
-      "disc3", "disc4", "disc5", "disc6", "disc7", "disc8", "disc9", "divx", "divx5", "dl", "dsr", "dsrip", "dts", "dtv", "dubbed", "dvd", "dvd1",
-      "dvd2", "dvd3", "dvd4", "dvd5", "dvd6", "dvd7", "dvd8", "dvd9", "dvdivx", "dvdrip", "dvdscr", "dvdscreener", "emule", "etm", "fs", "fps",
-      "h264", "h265", "hd", "hddvd", "hdr", "hdr10", "hdr10+", "hdrip", "hdtv", "hdtvrip", "hevc", "hrhd", "hrhdtv", "ind", "ituneshd", "ld", "md",
-      "microhd", "multisubs", "mp3", "netflixhd", "nfo", "nfofix", "ntg", "ntsc", "ogg", "ogm", "pal", "pdtv", "pso", "r3", "r5", "remastered",
-      "repack", "rerip", "remux", "roor", "rs", "rsvcd", "screener", "sd", "subbed", "subs", "svcd", "tc", "telecine", "telesync", "ts", "truehd",
-      "uhd", "uncut", "unrated", "vcf", "vhs", "vhsrip", "webdl", "webrip", "workprint", "ws", "x264", "x265", "xf", "xvid", "xvidvd", };
+      "bdrip", "blueray", "bluray", "brrip", "cam", "cd1", "cd2", "cd3", "cd4", "cd5", "cd6", "cd7", "cd8", "cd9", "dd20", "dd51", "ddp5", "disc1",
+      "disc2", "disc3", "disc4", "disc5", "disc6", "disc7", "disc8", "disc9", "divx", "divx5", "dl", "dsr", "dsrip", "dts", "dts5", "dtv", "dubbed",
+      "dvd", "dvd1", "dvd2", "dvd3", "dvd4", "dvd5", "dvd6", "dvd7", "dvd8", "dvd9", "dvdivx", "dvdrip", "dvdscr", "dvdscreener", "emule", "etm",
+      "fs", "fps", "h264", "h265", "hd", "hddvd", "hdr", "hdr10", "hdr10+", "hdrip", "hdtv", "hdtvrip", "hevc", "hrhd", "hrhdtv", "ind", "ituneshd",
+      "ld", "md", "microhd", "multisubs", "mp3", "netflixhd", "nfo", "nfofix", "ntg", "ntsc", "ogg", "ogm", "pal", "pdtv", "pso", "r3", "r5",
+      "remastered", "repack", "rerip", "remux", "roor", "rs", "rsvcd", "screener", "sd", "subbed", "subs", "svcd", "tc", "telecine", "telesync", "ts",
+      "truehd", "uhd", "uncut", "unrated", "vcf", "vhs", "vhsrip", "webdl", "webrip", "workprint", "ws", "x264", "x265", "xf", "xvid", "xvidvd", };
 
   // soft stopwords are well known words which _may_ occur before the year token and will be cleaned conditionally
   protected static final String[] SOFT_STOPWORDS  = { "complete", "custom", "dc", "docu", "doku", "extended", "fragment", "internal", "limited",
@@ -91,10 +91,10 @@ public class ParserUtils {
     // remove extension (if found) and split (keep var)
     String fname = filename.replaceFirst("\\.\\w{2,4}$", "");
     // replaces any resolution 1234x1234 (must start and end with a non-word (else too global)
-    fname = fname.replaceFirst("(?i)" + DELIMITER + "\\d{3,4}x\\d{3,4}" + "(" + DELIMITER + "|$)", " ");
+    fname = fname.replaceFirst("(?i)(" + DELIMITER + ")\\d{3,4}x\\d{3,4}" + "(" + DELIMITER + "|$)", "$1");
     // replace FPS specific words (must start with a non-word (else too global)
     for (String cw : CLEANWORDS) {
-      fname = fname.replaceFirst("(?i)" + DELIMITER + cw, " ");
+      fname = fname.replaceFirst("(?i)(" + DELIMITER + ")" + cw, "$1");
     }
 
     LOGGER.trace("--------------------");
@@ -343,12 +343,11 @@ public class ParserUtils {
     String basename = before;
 
     // replaces any resolution 1234x1234 (must start with a non-word (else too global)
-    basename = basename.replaceFirst("(?i)" + DELIMITER + "\\d{3,4}x\\d{3,4}" + "(" + DELIMITER + "|$)", " ");
+    basename = basename.replaceFirst("(?i)(" + DELIMITER + ")\\d{3,4}x\\d{3,4}" + "(" + DELIMITER + "|$)", "$1");
 
     for (String s : HARD_STOPWORDS) {
-      basename = basename.replaceAll("(?i)" + DELIMITER + s + "(" + DELIMITER + "|$)", " "); // TV stop words must start AND END with a non-word (else
-                                                                                             // too global) or line
-      // end
+      // TV stop words must start AND END with a non-word (else too global) or line end (replaced by SAME delimiter)
+      basename = basename.replaceAll("(?i)(" + DELIMITER + ")" + s + "(" + DELIMITER + "|$)", "$1");
       if (LOGGER.isTraceEnabled() && basename.length() != before.length()) {
         // TODO: (ts): VIDEO_TS -> VIDEO - noooo
         LOGGER.trace("Removed some TV stopword (" + s + "): " + before + " -> " + basename);
@@ -358,8 +357,8 @@ public class ParserUtils {
 
     // also remove bad words
     for (String s : TvShowModuleManager.getInstance().getSettings().getBadWord()) {
-      basename = basename.replaceAll("(?i)" + DELIMITER + s + "(" + DELIMITER + "|$)", " "); // TV bad words must start AND END with a non-word (else
-                                                                                             // too global) or line end
+      // TV bad words must start AND END with a non-word (else too global) or line end (replaced by SAME delimiter)
+      basename = basename.replaceAll("(?i)(" + DELIMITER + ")" + s + "(" + DELIMITER + "|$)", "$1");
       if (LOGGER.isTraceEnabled() && basename.length() != before.length()) {
         LOGGER.trace("Removed some TV bad word (" + s + "): " + before + " -> " + basename);
         before = basename;
