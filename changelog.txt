@@ -7,6 +7,7 @@ x [Libs] updated Java to 21.0.4
 x [Libs] upgraded FlatLaf to 3.5.1 to avoid the "UnsupportedOperationException: PERPIXEL_TRANSLUCENT" error
 x [Movies] fix creating of movie sets when "Do not overwrite existing data" is selected #2672
 x [TV shows] fixed an issue of not updating the season artwork correctly #2671
+x [TV shows] filter season artwork when choosing manually via search & scrape
 x [UDS] fix parsing season artwork numbers on import #2669
 x [UDS] enhanced parsing of season and episode numbers
 x [Subtitles] fix parsing language/flags when in own directory (thx @u/Baldish)
