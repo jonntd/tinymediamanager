@@ -1,3 +1,7 @@
+Version 5.0.11
+=======================
+
+
 Version 5.0.10
 =======================
 + [TV shows] Treat episodes w/o season as "Season 1" upon importing!
