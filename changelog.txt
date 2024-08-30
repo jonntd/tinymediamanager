@@ -1,5 +1,6 @@
 Version 5.0.11
 =======================
+💄 [UI] able to sort TvShows by "dateAdded of episodes" #2677
 
 
 Version 5.0.10
