@@ -1,6 +1,7 @@
 Version 5.0.11
 =======================
-💄 [UI] able to sort TvShows by "dateAdded of episodes" #2677
++ [UI] able to sort TvShows by "dateAdded of episodes" #2677
++ [UI] do not store the window size bigger than visible #2688
 ♻️ [IMDB] try second search on error
 
 
