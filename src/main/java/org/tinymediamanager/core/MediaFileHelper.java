@@ -1762,7 +1762,7 @@ public class MediaFileHelper {
     }
 
     List<Map<String, String>> stream = miSnapshot.get(streamKind);
-    if (stream == null) {
+    if (stream == null || stream.size() <= streamNumber) {
       return Collections.emptyList();
     }
 
