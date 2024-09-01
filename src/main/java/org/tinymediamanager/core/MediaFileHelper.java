@@ -780,6 +780,12 @@ public class MediaFileHelper {
         Date creDat = new Date(view.creationTime().toMillis());
         mediaFile.setDateCreated(creDat);
       }
+      else {
+        // probably the bug https://bugs.openjdk.org/browse/JDK-8331533?attachmentOrder=desc
+        // we do the same as Java < 21.0.2 internally did
+        Date creDat = new Date(view.lastModifiedTime().toMillis());
+        mediaFile.setDateCreated(creDat);
+      }
       if (view.lastModifiedTime().toMillis() > 100000) {
         Date modDat = new Date(view.lastModifiedTime().toMillis());
         mediaFile.setDateLastModified(modDat);

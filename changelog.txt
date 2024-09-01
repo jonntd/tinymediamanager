@@ -1,8 +1,9 @@
 Version 5.0.11
 =======================
 + [UI] able to sort TvShows by "dateAdded of episodes" #2677
-+ [UI] do not store the window size bigger than visible #2688
-♻️ [IMDB] try second search on error
+x [UDS] fixed reading file creation date #2691
+x [UI] do not store the window size bigger than visible #2688
+x [IMDB] try second search on error
 
 
 Version 5.0.10
