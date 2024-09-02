@@ -147,11 +147,17 @@ public abstract class UpgradeTasks {
       }
     }
 
-    // remove 0 values
+    // remove -1/0 values
     Iterator<String> it = me.getRatings().keySet().iterator();
     while (it.hasNext()) {
       MediaRating rat = me.getRatings().get(it.next());
-      if (rat.getRating() <= 0) {
+      if (rat.getRating() < 0) {
+        LOGGER.trace("Remove invalid rating: [{}] from {}", rat, me.getTitle());
+        it.remove();
+        changed = true;
+      }
+      else if (rat.getRating() == 0 && !rat.getId().equals(MediaMetadata.ROGER_EBERT)) {
+        // rogerebert DOES rate 0/4 star remove all others!
         LOGGER.trace("Remove invalid rating: [{}] from {}", rat, me.getTitle());
         it.remove();
         changed = true;
