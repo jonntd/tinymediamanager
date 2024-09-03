@@ -724,8 +724,11 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private Date getDateAddedEpisode(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShow tvShow) {
-      TvShowEpisode latest = Collections.max(tvShow.getEpisodes(), Comparator.comparing(TvShowEpisode::getDateAddedForUi));
-      return latest.getDateAddedForUi();
+      List<TvShowEpisode> modifyableList = new ArrayList<TvShowEpisode>(tvShow.getEpisodes());
+      if (!modifyableList.isEmpty()) {
+        TvShowEpisode latest = Collections.max(modifyableList, Comparator.comparing(TvShowEpisode::getDateAddedForUi));
+        return latest.getDateAddedForUi();
+      }
     }
     if (userObject instanceof TvShowEpisode episode) {
       if (!episode.isDummy()) {
