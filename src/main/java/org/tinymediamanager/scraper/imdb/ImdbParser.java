@@ -418,7 +418,7 @@ public abstract class ImdbParser {
       if (isIncludeAdultResults()) {
         param += "&adult=include";
       }
-      advUrl = new InMemoryCachedUrl(constructUrl("searcinvh/title/?title=", URLEncoder.encode(searchTerm, StandardCharsets.UTF_8), param));
+      advUrl = new InMemoryCachedUrl(constructUrl("search/title/?title=", URLEncoder.encode(searchTerm, StandardCharsets.UTF_8), param));
       advUrl.addHeader("Accept-Language", getAcceptLanguage(language, country));
 
       // BASIC SEARCH
