@@ -1,6 +1,7 @@
 Version 5.0.11
 =======================
 + [UI] able to sort TvShows by "dateAdded of episodes" #2677
++ [UI] added the hotkey CTRL+ENTER for direct saving/closing in the editors #2693
 x [UDS] fixed reading file creation date #2691
 x [UI] do not store the window size bigger than visible #2688
 x [IMDB] try second search on error
