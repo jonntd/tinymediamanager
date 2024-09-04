@@ -310,21 +310,25 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
   }
 
   /**
-   * add the displayseason in the form <displayseason>xxx</displayseason>
+   * add the display season in the form <displayseason>xxx</displayseason>, if set
    */
   protected void addDisplaySeason(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
     Element displayseason = document.createElement("displayseason");
-    displayseason.setTextContent(Integer.toString(episode.getDisplaySeason()));
-    root.appendChild(displayseason);
+    if (episode.getDisplaySeason() >= 0 && episode.getDisplayEpisode() >= 0) {
+      displayseason.setTextContent(Integer.toString(episode.getDisplaySeason()));
+      root.appendChild(displayseason);
+    }
   }
 
   /**
-   * add the displayepisode in the form <displayepisode>xxx</displayepisode>
+   * add the display episode in the form <displayepisode>xxx</displayepisode>, if set
    */
   protected void addDisplayEpisode(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
     Element displayepisode = document.createElement("displayepisode");
-    displayepisode.setTextContent(Integer.toString(episode.getDisplayEpisode()));
-    root.appendChild(displayepisode);
+    if (episode.getDisplaySeason() >= 0 && episode.getDisplayEpisode() >= 0) {
+      displayepisode.setTextContent(Integer.toString(episode.getDisplayEpisode()));
+      root.appendChild(displayepisode);
+    }
   }
 
   /**
