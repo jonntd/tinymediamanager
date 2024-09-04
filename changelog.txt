@@ -7,6 +7,7 @@ x [UI] do not store the window size bigger than visible #2688
 x [NFO] do not write unset (-1) display episode/season tags
 x [IMDB] try second search on error
 x [MDBList] do not create empty rating entries
+x [macOS] added a fix for reading file/folder names with Umlauts #2687
 
 
 Version 5.0.10
