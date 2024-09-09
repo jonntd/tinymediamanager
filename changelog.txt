@@ -1,5 +1,6 @@
 Version 5.0.12
 =======================
++ [TV shows] added editions for episodes #2674
 
 
 Version 5.0.11
