@@ -380,7 +380,7 @@ public abstract class ImdbParser {
     String language = options.getLanguage().getLanguage();
     String country = options.getCertificationCountry().getAlpha2(); // for passing the country to the scrape
 
-    searchTerm = MetadataUtil.removeNonSearchCharacters(searchTerm);
+    searchTerm = MetadataUtil.removeNonSearchCharacters(searchTerm).strip();
 
     getLogger().debug("========= BEGIN IMDB Scraper Search for: {}", searchTerm);
     Document doc = null;
@@ -388,6 +388,10 @@ public abstract class ImdbParser {
     boolean advancedSearch = false;
     if (isIncludeShortResults() || isIncludeTvMovieResults() || isIncludeVideogameResults() || isIncludeAdultResults()) {
       advancedSearch = true;
+    }
+    // if we enter just an ID as search term, this only works via basic find url!
+    if (MediaIdUtil.isValidImdbId(searchTerm)) {
+      advancedSearch = false;
     }
 
     Url advUrl;
