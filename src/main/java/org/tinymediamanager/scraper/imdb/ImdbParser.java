@@ -2136,7 +2136,7 @@ public abstract class ImdbParser {
         String extension = FilenameUtils.getExtension(image);
         // https://stackoverflow.com/a/73501833
         String defaultUrl = image.replace("." + extension, "_UX" + width + "." + extension);
-        artwork.setLanguage("?"); // since we do not know which language the artwork is in, set it to a value which will never match
+        artwork.setLanguage("");
         artwork.addImageSize(width, height, defaultUrl, sizeOrder);
       }
     }
