@@ -2,6 +2,7 @@ Version 5.0.12
 =======================
 + [TV shows] added editions for episodes #2674
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
+x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
 
 
 Version 5.0.11
@@ -12,7 +13,7 @@ x [UI] do not store the window size bigger than visible #2688
 x [MediaInfo] remove false HDR fallback detection (thx u/Casual_Tea_94) 
 x [UDS] fixed reading file creation date #2691
 x [NFO] do not write unset (-1) display episode/season tags
-x [IMDB] fix search, implement fallbackm error handling 
+x [IMDB] fix search, implement fallback error handling
 x [MDBList] do not create empty rating entries
 x [macOS] added a fix for reading file/folder names with Umlauts #2687
 
