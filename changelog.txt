@@ -5,6 +5,7 @@ Version 5.0.12
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
 x [IMDB] fix language detection for artwork downloading (thx Noah)
 x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
+x [ARD] do not set incorrect video width/height from aspect ratio detection (detected via FFmpeg)
 
 
 Version 5.0.11
