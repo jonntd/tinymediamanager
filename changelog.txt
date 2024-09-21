@@ -2,6 +2,7 @@ Version 5.0.12
 =======================
 + [TV shows] added editions for episodes #2674
 + [TV shows] added a new CSV export template for TV shows
+x [TV shows] do not trigger automatic renaming when only download missing episodes
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
 x [IMDB] fix language detection for artwork downloading (thx Noah)
 x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
