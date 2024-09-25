@@ -778,6 +778,9 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
       cancelScrapeTask();
 
+      // commit all pending changes in this dialog
+      commitChanges();
+
       episodeToEdit.setTitle(tfTitle.getText());
       episodeToEdit.setOriginalTitle(tfOriginalTitle.getText());
 

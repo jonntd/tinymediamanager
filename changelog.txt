@@ -7,6 +7,7 @@ Version 5.0.12
 x [Movies] fixed rebuilding the image cache #2704
 x [TV shows] do not trigger automatic renaming when only download missing episodes
 x [UI] re-designed filter dialogs to avoid resizing problems
+x [UI] trigger updates from spinner when closing via hotkeys #2705
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
 x [IMDB] fix language detection for artwork downloading (thx Noah)
 x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
