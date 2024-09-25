@@ -10,6 +10,7 @@ x [UI] re-designed filter dialogs to avoid resizing problems
 x [UI] trigger updates from spinner when closing via hotkeys #2705
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
 x [IMDB] fix language detection for artwork downloading (thx Noah)
+x [TVMAZE] better error handling on empty responses (thx u/No_Poem7057)
 x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
 x [ARD] do not set incorrect video width/height from aspect ratio detection (detected via FFmpeg)
 
