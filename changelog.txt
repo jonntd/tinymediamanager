@@ -2,7 +2,6 @@ Version 5.0.12
 =======================
 + [TV shows] added editions for episodes #2674
 + [TV shows] added a new CSV export template for TV shows
-+ [UI] added new font Inter (default for new installations)
 + [Renamer] added the token ${originalBasename} to get the original filename w/o extension
 x [Movies] fixed rebuilding the image cache #2704
 x [TV shows] do not trigger automatic renaming when only download missing episodes
