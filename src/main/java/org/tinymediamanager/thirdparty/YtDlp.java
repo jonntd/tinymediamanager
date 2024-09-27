@@ -91,7 +91,8 @@ public class YtDlp {
     cmdList.add("--abort-on-unavailable-fragment");
     cmdList.add("--fragment-retries");
     cmdList.add("99");
-    cmdList.add("--merge-output-format mp4");
+    cmdList.add("--merge-output-format");
+    cmdList.add("mp4");
 
     cmdList.add(url);
     cmdList.add("-o");
