@@ -182,7 +182,9 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         person.setName(cast.person.name);
         person.setRole(cast.character.name);
         person.setProfileUrl(cast.person.url);
-        person.setThumbUrl(cast.person.image.medium);
+        if (cast.person.image != null) {
+          person.setThumbUrl(cast.person.image.medium);
+        }
         md.addCastMember(person);
       }
     }
@@ -332,7 +334,9 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         person.setName(cast.person.name);
         person.setRole(cast.character.name);
         person.setProfileUrl(cast.person.url);
-        person.setThumbUrl(cast.person.image.medium);
+        if (cast.person.image != null) {
+          person.setThumbUrl(cast.person.image.medium);
+        }
         md.addCastMember(person);
       }
     }
