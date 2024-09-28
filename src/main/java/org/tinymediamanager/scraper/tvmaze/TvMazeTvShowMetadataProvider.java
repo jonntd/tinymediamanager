@@ -37,6 +37,7 @@ import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowArtworkProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
+import org.tinymediamanager.scraper.tvmaze.entities.AlternateList;
 import org.tinymediamanager.scraper.tvmaze.entities.Cast;
 import org.tinymediamanager.scraper.tvmaze.entities.Crew;
 import org.tinymediamanager.scraper.tvmaze.entities.Episode;
@@ -90,7 +91,6 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
     catch (IOException e) {
       LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
     }
-
     if (show == null) {
       throw new NothingFoundException();
     }
@@ -224,7 +224,91 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
       }
     }
 
+    // integer is the EG id for scraping - remember that
+    Map<Integer, MediaEpisodeGroup> egs = getEpisodeGroups(tvMazeId);
+    if (!egs.isEmpty()) {
+      egs.values().forEach(md::addEpisodeGroup);
+    }
+
     return md;
+  }
+
+  /**
+   * 
+   * @param alternateId
+   *          EG id for scraping
+   * @param group
+   *          EG itself for creating MD entry
+   * @return map of aired ID to MD for EG
+   */
+  private Map<Integer, MediaMetadata> getEpisodeListForEG(int alternateId, MediaEpisodeGroup group) {
+    Map<Integer, MediaMetadata> mds = new HashMap<>();
+    // get episodes in EG-style
+    try {
+      List<Episode> eps = controller.getAlternativeEpisodes(alternateId);
+      if (eps != null && !eps.isEmpty()) {
+        for (Episode ep : eps) {
+          MediaMetadata md = new MediaMetadata(MediaMetadata.TVMAZE);
+          md.setId(MediaMetadata.TVMAZE, ep._embedded.episodes.get(0).id); // get the underlying aired episode id
+          md.setEpisodeNumber(group, ep.season, ep.number);
+          mds.put(ep._embedded.episodes.get(0).id, md);
+        }
+      }
+    }
+    catch (IOException e) {
+      LOGGER.trace("could not get episode groups for show: {}", e.getMessage());
+    }
+    return mds;
+  }
+
+  /**
+   * Integer is ID of EG for scraping
+   * 
+   * @param showId
+   * @return
+   */
+  private Map<Integer, MediaEpisodeGroup> getEpisodeGroups(int showId) {
+    Map<Integer, MediaEpisodeGroup> egs = new HashMap<>();
+
+    // get alternate listings aka EpisodeGroups
+    // desc: https://www.tvmaze.com/faq/40/alternate-episodes
+    try {
+      List<AlternateList> alternates = controller.getAlternativeLists(showId);
+      if (alternates != null && alternates.size() > 0) {
+        for (AlternateList alt : alternates) {
+          // dupes possible?
+          if (alt.dvd_release) {
+            egs.put(alt.id, MediaEpisodeGroup.DEFAULT_DVD);
+          }
+          else if (alt.verbatim_order) {
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Verbatim");
+            egs.put(alt.id, eg);
+          }
+          else if (alt.country_premiere) {
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Country Premiere");
+            egs.put(alt.id, eg);
+          }
+          else if (alt.streaming_premiere) {
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Streaming");
+            egs.put(alt.id, eg);
+          }
+          else if (alt.broadcast_premiere) {
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Broadcast Premiere");
+            egs.put(alt.id, eg);
+          }
+          else if (alt.language_premiere) {
+            String lang = alt.language != null ? " (" + alt.language + ")" : ""; // assume, haven found an example
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Language Premiere" + lang);
+            egs.put(alt.id, eg);
+          }
+        }
+      }
+    }
+    catch (IOException e) {
+      LOGGER.trace("could not get episode groups for show: {}", e.getMessage());
+    }
+
+    return egs;
   }
 
   @Override
@@ -233,15 +317,6 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
 
     // lazy initialization of the api
     initAPI();
-
-    // do we have an id from the options?
-    int showId = options.createTvShowSearchAndScrapeOptions().getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
-    if (showId == 0) {
-      LOGGER.warn("no id available");
-      throw new MissingIdException(MediaMetadata.TVMAZE);
-    }
-    // recall show MD (cached)
-    MediaMetadata show = getMetadata(options.createTvShowSearchAndScrapeOptions());
 
     MediaEpisodeGroup episodeGroup = options.getEpisodeGroup();
     // get episode number and season number
@@ -257,91 +332,26 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         }
       }
     }
-
     // old style
     if (seasonNr == -1 && episodeNr == -1) {
       seasonNr = options.getIdAsIntOrDefault(MediaMetadata.SEASON_NR, -1);
       episodeNr = options.getIdAsIntOrDefault(MediaMetadata.EPISODE_NR, -1);
     }
-
     if (seasonNr == -1 && episodeNr == -1) {
       LOGGER.warn("cannot scrape -1/-1 episode");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
-    // get complete episode listing via season call (so this is cached)
-    Map<Integer, Integer> seasonMap = (Map<Integer, Integer>) show.getExtraData().get("seasonMap");
-    if (seasonMap == null) {
-      LOGGER.warn("no season IDs available");
-      throw new MissingIdException(MediaMetadata.TVMAZE);
-    }
-    Integer seasonId = seasonMap.get(seasonNr);
-    if (seasonId == null) {
-      LOGGER.warn("no season IDs available");
-      throw new MissingIdException(MediaMetadata.TVMAZE);
-    }
-
-    Episode episode = null;
-    try {
-      List<Episode> eps = controller.getSeasonEpisodes(seasonId);
-      for (Episode ep : eps) {
-        if (ep.number == episodeNr) {
-          episode = ep;
-          break;
-        }
-      }
-    }
-    catch (Exception e) {
-      LOGGER.trace("could not get Episode information: {}", e.getMessage());
-    }
-    if (episode == null) {
-      throw new NothingFoundException();
-    }
-
-    MediaMetadata md = new MediaMetadata(getId());
-    md.setScrapeOptions(options);
-
-    // found the correct episode
-    md.setId(MediaMetadata.TVMAZE, episode.id);
-    md.setTitle(episode.name);
-    if (StringUtils.isNotBlank(episode.summary)) {
-      md.setPlot(Jsoup.parse(episode.summary).text());
-    }
-    md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, episode.season, episode.number);
-    md.setRuntime(episode.runtime);
-    try {
-      md.setReleaseDate(premieredFormat.parse(episode.airdate));
-      md.setYear(parseYear(episode.airdate));
-    }
-    catch (ParseException ignored) {
-      // ignored
-    }
-
-    // episode image (thumb?)
-    if (episode.image != null) {
-      MediaArtwork ma = new MediaArtwork(MediaMetadata.TVMAZE, MediaArtworkType.THUMB);
-      ma.setOriginalUrl(episode.image.original);
-      ma.setPreviewUrl(episode.image.medium);
-      ma.addImageSize(0, 0, episode.image.original, 0);
-      md.addMediaArt(ma);
-    }
-
-    // Get Guests
-    if (episode._embedded.guestcast != null) {
-      for (Cast cast : episode._embedded.guestcast) {
-        Person person = new Person(Person.Type.GUEST);
-        person.setId(MediaMetadata.TVMAZE, cast.person.id);
-        person.setName(cast.person.name);
-        person.setRole(cast.character.name);
-        person.setProfileUrl(cast.person.url);
-        if (cast.person.image != null) {
-          person.setThumbUrl(cast.person.image.medium);
-        }
-        md.addCastMember(person);
+    List<MediaMetadata> eps = getEpisodeList(options.createTvShowSearchAndScrapeOptions());
+    for (MediaMetadata ep : eps) {
+      MediaEpisodeNumber num = ep.getEpisodeNumber(episodeGroup);
+      if (num.episode() == episodeNr && num.season() == seasonNr) {
+        // found it :)
+        return ep;
       }
     }
 
-    return md;
+    throw new NothingFoundException();
   }
 
   @Override
@@ -433,17 +443,32 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
-    // Get all Episode and Season Information for the given TvShow
     List<Episode> episodeList = new ArrayList<>();
+    // Get all Episode and Season Information for the given TvShow
+    // does get all episodes with ONE call, but cannot mixin guest cast
+    // try {
+    // episodeList.addAll(controller.getEpisodes(showId));
+    // }
+    // catch (IOException e) {
+    // LOGGER.trace("could not get Episode information: {}", e.getMessage());
+    // }
+
+    // proven approach
+    // create same list, but for each season
     try {
-      episodeList.addAll(controller.getEpisodes(showId));
+      MediaMetadata show = getMetadata(options);
+      // seasonNumber / seasonId
+      Map<Integer, Integer> seasonMap = (Map<Integer, Integer>) show.getExtraData().get("seasonMap");
+      for (Map.Entry<Integer, Integer> season : seasonMap.entrySet()) {
+        List<Episode> eps = controller.getSeasonEpisodes(season.getValue());
+        episodeList.addAll(eps);
+      }
     }
-    catch (IOException e) {
+    catch (Exception e) {
       LOGGER.trace("could not get Episode information: {}", e.getMessage());
     }
 
-    List<MediaMetadata> list = new ArrayList<>();
-
+    List<MediaMetadata> returnList = new ArrayList<>();
     // get the correct information
     for (Episode episode : episodeList) {
       MediaMetadata md = new MediaMetadata(getId());
@@ -470,10 +495,41 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         ma.addImageSize(0, 0, episode.image.original, 0);
         md.addMediaArt(ma);
       }
-      list.add(md);
+      // Get Guests
+      if (episode._embedded.guestcast != null) {
+        for (Cast cast : episode._embedded.guestcast) {
+          Person person = new Person(Person.Type.GUEST);
+          person.setId(MediaMetadata.TVMAZE, cast.person.id);
+          person.setName(cast.person.name);
+          person.setRole(cast.character.name);
+          person.setProfileUrl(cast.person.url);
+          if (cast.person.image != null) {
+            person.setThumbUrl(cast.person.image.medium);
+          }
+          md.addCastMember(person);
+        }
+      }
+      returnList.add(md);
     }
 
-    return list;
+    // mixin EGs
+    Map<Integer, MediaEpisodeGroup> egs = getEpisodeGroups(showId);
+    // for every scraper EG...
+    for (Map.Entry<Integer, MediaEpisodeGroup> eg : egs.entrySet()) {
+      // prepare an own EP list with correct numbers
+      Map<Integer, MediaMetadata> egEps = getEpisodeListForEG(eg.getKey(), eg.getValue());
+      // then iterate over TMM episode
+      for (MediaMetadata md : returnList) {
+        MediaMetadata alternate = egEps.get(md.getId(MediaMetadata.TVMAZE));
+        // and add alternate numbers to EP from scraper
+        if (alternate != null) {
+          MediaEpisodeNumber epNo = alternate.getEpisodeNumber(eg.getValue());
+          md.setEpisodeNumber(epNo.episodeGroup(), epNo.season(), epNo.episode());
+        }
+      }
+    }
+
+    return returnList;
   }
 
   @Override

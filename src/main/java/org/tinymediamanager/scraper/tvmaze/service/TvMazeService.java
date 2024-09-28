@@ -17,6 +17,7 @@ package org.tinymediamanager.scraper.tvmaze.service;
 
 import java.util.List;
 
+import org.tinymediamanager.scraper.tvmaze.entities.AlternateList;
 import org.tinymediamanager.scraper.tvmaze.entities.Episode;
 import org.tinymediamanager.scraper.tvmaze.entities.SearchResult;
 import org.tinymediamanager.scraper.tvmaze.entities.Show;
@@ -34,8 +35,11 @@ public interface TvMazeService {
   @GET("/shows/{id}?embed[]=seasons&embed[]=crew&embed[]=cast&embed[]=images")
   Call<Show> show_main_information(@Path("id") int id);
 
-  @GET("/shows/{id}/alternatelists?embed=alternateepisodes")
-  Call<Show> alternativeLists(@Path("id") int id);
+  @GET("/shows/{id}/alternatelists")
+  Call<List<AlternateList>> alternativeLists(@Path("id") int id);
+
+  @GET("/alternatelists/{id}/alternateepisodes?embed=episodes")
+  Call<List<Episode>> alternativeEpisodes(@Path("id") int id);
 
   @GET("/shows/{id}/episodes?specials=1")
   Call<List<Episode>> episodeList(@Path("id") int id);
