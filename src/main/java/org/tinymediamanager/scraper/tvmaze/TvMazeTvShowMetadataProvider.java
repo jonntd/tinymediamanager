@@ -107,7 +107,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
     try {
       md.setYear(parseYear(show.premiered));
     }
-    catch (ParseException e) {
+    catch (Exception e) {
       LOGGER.trace("could not parse year: {}", e.getMessage());
     }
 
@@ -306,7 +306,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
             egs.put(alt.id, eg);
           }
           else if (alt.language_premiere) {
-            // assume, havent found an example
+            // https://api.tvmaze.com/alternatelists/17
             String lang = alt.language != null ? " (" + alt.language + ")" : "";
             MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Language Premiere" + lang);
             egs.put(alt.id, eg);
@@ -421,7 +421,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         try {
           msr.setYear(parseYear(show.premiered));
         }
-        catch (ParseException ignored) {
+        catch (Exception ignored) {
         }
       }
 
@@ -495,7 +495,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
         md.setReleaseDate(premieredFormat.parse(episode.airdate));
         md.setYear(parseYear(episode.airdate));
       }
-      catch (ParseException ignored) {
+      catch (Exception ignored) {
       }
       // episode image (thumb?)
       if (episode.image != null) {
