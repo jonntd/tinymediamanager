@@ -1,6 +1,10 @@
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Network {
+/**
+ * Same as Network
+ *
+ */
+public class WebChannel {
   public int     id;
   public String  name;
   public Country country;

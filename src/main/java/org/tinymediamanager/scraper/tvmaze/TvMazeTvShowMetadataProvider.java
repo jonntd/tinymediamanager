@@ -276,6 +276,15 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
       List<AlternateList> alternates = controller.getAlternativeLists(showId);
       if (alternates != null && alternates.size() > 0) {
         for (AlternateList alt : alternates) {
+
+          String countryPub = "";
+          if (!alt.getName().isBlank()) {
+            countryPub += " - " + alt.getName();
+          }
+          if (!alt.getCountry().isBlank()) {
+            countryPub += " (" + alt.getCountry() + ")";
+          }
+
           // dupes possible?
           if (alt.dvd_release) {
             egs.put(alt.id, MediaEpisodeGroup.DEFAULT_DVD);
@@ -285,19 +294,20 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
             egs.put(alt.id, eg);
           }
           else if (alt.country_premiere) {
-            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Country Premiere");
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Country Premiere" + countryPub);
             egs.put(alt.id, eg);
           }
           else if (alt.streaming_premiere) {
-            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Streaming");
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Streaming" + countryPub);
             egs.put(alt.id, eg);
           }
           else if (alt.broadcast_premiere) {
-            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Broadcast Premiere");
+            MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Broadcast Premiere" + countryPub);
             egs.put(alt.id, eg);
           }
           else if (alt.language_premiere) {
-            String lang = alt.language != null ? " (" + alt.language + ")" : ""; // assume, haven found an example
+            // assume, havent found an example
+            String lang = alt.language != null ? " (" + alt.language + ")" : "";
             MediaEpisodeGroup eg = new MediaEpisodeGroup(MediaEpisodeGroup.EpisodeGroupType.ALTERNATE, "Language Premiere" + lang);
             egs.put(alt.id, eg);
           }

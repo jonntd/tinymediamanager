@@ -30,6 +30,7 @@ public class Show {
   public String       premiered;
   public String       ended;
   public Network      network;
+  public WebChannel   webChannel;
   public String       officialSite;
   public Rating       rating;
   public ExternalIds  externals;
