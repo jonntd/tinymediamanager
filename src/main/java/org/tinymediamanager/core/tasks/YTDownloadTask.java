@@ -201,10 +201,10 @@ public abstract class YTDownloadTask extends TmmTask {
       catch (Exception ignored) {
       }
 
-      YtDlp.downloadTrailer(mediaTrailer.getUrl(), width, trailerBasename);
+      Path trailerFilename = Paths.get(trailerBasename + ".mp4");
+      YtDlp.downloadTrailer(mediaTrailer.getUrl(), width, trailerFilename);
 
       // add new trailer
-      Path trailerFilename = Paths.get(trailerBasename + ".mp4");
       if (Files.exists(trailerFilename)) {
         MediaFile mf = new MediaFile(trailerFilename, MediaFileType.TRAILER);
         mf.gatherMediaInformation();
