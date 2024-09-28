@@ -2,7 +2,6 @@ package org.tinymediamanager.scraper.tvmaze;
 
 import java.io.IOException;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -114,7 +113,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
     try {
       md.setReleaseDate(premieredFormat.parse(show.premiered));
     }
-    catch (ParseException e) {
+    catch (Exception e) {
       LOGGER.trace("could not parse releasedate: {}", e.getMessage());
     }
 
