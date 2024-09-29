@@ -100,9 +100,6 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
   private static final CacheMap<String, List<MediaMetadata>> EPISODE_LIST_CACHE_MAP = new CacheMap<>(600, 5);
   private static final CacheMap<String, MediaMetadata>       EPISODE_CACHE_MAP      = new CacheMap<>(600, 5);
 
-  private static final MediaEpisodeGroup                     ALTERNATE              = new MediaEpisodeGroup(
-      MediaEpisodeGroup.EpisodeGroupType.ALTERNATE);
-
   @Override
   protected MediaProviderInfo createMediaProviderInfo() {
     MediaProviderInfo info = super.createMediaProviderInfo();
