@@ -13,6 +13,7 @@ x [TVDB] fixed links to the actor profile for episode guests #2715
 x [TVMAZE] better error handling on empty responses (thx u/No_Poem7057)
 x [TVMAZE] complete rework of the scraper
 x [Trailer] added 2160p trailer format #2708
+x [Trailer] improved download algorithm for YT #2708
 x [FFmpeg] use FFmpeg generated thumb without checking for language/resolution
 x [ARD] do not set incorrect video width/height from aspect ratio detection (detected via FFmpeg)
 
