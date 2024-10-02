@@ -7,6 +7,7 @@ x [Movies] fixed rebuilding the image cache #2704
 x [TV shows] do not trigger automatic renaming when only download missing episodes
 x [UI] re-designed filter dialogs to avoid resizing problems
 x [UI] trigger updates from spinner when closing via hotkeys #2705
+x [UI] force repaint of the media logos when changing values #2719
 x [IMDB] fix searching for IDs in some cases (thx u/Baltic-Fan)
 x [IMDB] fix language detection for artwork downloading (thx Noah)
 x [TVDB] fixed links to the actor profile for episode guests #2715
