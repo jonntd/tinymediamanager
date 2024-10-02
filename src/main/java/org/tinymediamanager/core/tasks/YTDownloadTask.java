@@ -192,17 +192,17 @@ public abstract class YTDownloadTask extends TmmTask {
 
       Path trailerBasename = getDestinationWoExtension().getParent().resolve(getDestinationWoExtension().getFileName());
 
-      int width = 0;
+      int height = 0;
 
       try {
         VideoQuality videoQuality = getVideoQuality(mediaTrailer.getQuality());
-        width = Integer.parseInt(videoQuality.name().toLowerCase().replace("hd", "").replace("p", ""));
+        height = Integer.parseInt(videoQuality.name().toLowerCase().replace("hd", "").replace("p", ""));
       }
       catch (Exception ignored) {
       }
 
       Path trailerFilename = Paths.get(trailerBasename + ".mp4");
-      YtDlp.downloadTrailer(mediaTrailer.getUrl(), width, trailerFilename);
+      YtDlp.downloadTrailer(mediaTrailer.getUrl(), height, trailerFilename);
 
       // add new trailer
       if (Files.exists(trailerFilename)) {
