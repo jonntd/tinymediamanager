@@ -209,6 +209,10 @@ public abstract class YTDownloadTask extends TmmTask {
         if (Files.exists(trailerFilename)) {
           Utils.deleteFileSafely(trailerFilename);
         }
+        // create parent if needed
+        if (!Files.exists(trailerFilename.getParent())) {
+          Files.createDirectory(trailerFilename.getParent());
+        }
         // and move the temporary file
         Utils.moveFileSafe(tempFile, trailerFilename);
 
@@ -425,12 +429,10 @@ public abstract class YTDownloadTask extends TmmTask {
       if (Files.exists(trailer)) {
         Utils.deleteFileSafely(trailer);
       }
-
       // create parent if needed
       if (!Files.exists(trailer.getParent())) {
         Files.createDirectory(trailer.getParent());
       }
-
       // and move the temporary file
       Utils.moveFileSafe(tempFile, trailer);
 
@@ -503,6 +505,10 @@ public abstract class YTDownloadTask extends TmmTask {
         // delete same named trailer
         if (Files.exists(trailerFilename)) {
           Utils.deleteFileSafely(trailerFilename);
+        }
+        // create parent if needed
+        if (!Files.exists(trailerFilename.getParent())) {
+          Files.createDirectory(trailerFilename.getParent());
         }
         // and move the temporary file
         Utils.moveFileSafe(tempFile, trailerFilename);
