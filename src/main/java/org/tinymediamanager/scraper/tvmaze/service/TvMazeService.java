@@ -16,6 +16,7 @@
 package org.tinymediamanager.scraper.tvmaze.service;
 
 import java.util.List;
+import java.util.Map;
 
 import org.tinymediamanager.scraper.tvmaze.entities.AlternateList;
 import org.tinymediamanager.scraper.tvmaze.entities.Episode;
@@ -26,11 +27,15 @@ import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import retrofit2.http.QueryMap;
 
 public interface TvMazeService {
 
   @GET("/search/shows")
   Call<List<SearchResult>> showSearch(@Query("q") String query);
+
+  @GET("/lookup/shows")
+  Call<Show> getByProvider(@QueryMap Map<String, String> providerId);
 
   @GET("/shows/{id}?embed[]=seasons&embed[]=crew&embed[]=cast&embed[]=images")
   Call<Show> show_main_information(@Path("id") int id);

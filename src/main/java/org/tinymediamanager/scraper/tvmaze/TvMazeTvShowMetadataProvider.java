@@ -35,7 +35,9 @@ import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowArtworkProvider;
+import org.tinymediamanager.scraper.interfaces.ITvShowImdbMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
+import org.tinymediamanager.scraper.interfaces.ITvShowTvdbMetadataProvider;
 import org.tinymediamanager.scraper.tvmaze.entities.AlternateList;
 import org.tinymediamanager.scraper.tvmaze.entities.Cast;
 import org.tinymediamanager.scraper.tvmaze.entities.Crew;
@@ -45,7 +47,8 @@ import org.tinymediamanager.scraper.tvmaze.entities.SearchResult;
 import org.tinymediamanager.scraper.tvmaze.entities.Season;
 import org.tinymediamanager.scraper.tvmaze.entities.Show;
 
-public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider implements ITvShowMetadataProvider, ITvShowArtworkProvider {
+public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
+    implements ITvShowMetadataProvider, ITvShowArtworkProvider, ITvShowImdbMetadataProvider, ITvShowTvdbMetadataProvider {
 
   private static final Logger LOGGER          = LoggerFactory.getLogger(TvMazeTvShowMetadataProvider.class);
   private final DateFormat    premieredFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
@@ -373,18 +376,62 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider impleme
     SortedSet<MediaSearchResult> searchResults = new TreeSet<>();
     List<SearchResult> searchResult;
 
-    // implement get by MazeID first
-    // int tvMazeId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
-    // if (tvMazeId > 0) {
-    //
-    // }
-    // get show
-    // then lookup by OtherID
-    // URL: /lookup/shows?tvrage=:id or /lookup/shows?thetvdb=:id
-    // Example: https://api.tvmaze.com/lookup/shows?thetvdb=81189
-    // Example: https://api.tvmaze.com/lookup/shows?imdb=tt0944947
-    // else search
+    // do we already have a MazeID?
+    int tvMazeId = options.getIdAsInt(MediaMetadata.TVMAZE);
 
+    // try with IMDB
+    if (tvMazeId == 0) {
+      try {
+        String imdb = options.getIdAsString(MediaMetadata.IMDB);
+        if (imdb != null) {
+          Show show = controller.getByImdbId(imdb);
+          tvMazeId = show.id;
+        }
+      }
+      catch (IOException e) {
+        LOGGER.trace("Error calling by ImdbId {}", e.getMessage());
+      }
+    }
+
+    // try with TVDB
+    if (tvMazeId == 0) {
+      try {
+        String tvdb = options.getIdAsString(MediaMetadata.TVDB);
+        if (tvdb != null) {
+          Show show = controller.getByTvdbId(tvdb);
+          tvMazeId = show.id;
+        }
+      }
+      catch (IOException e) {
+        LOGGER.trace("Error calling by TvdbId {}", e.getMessage());
+      }
+    }
+
+    // try with TvRage
+    if (tvMazeId == 0) {
+      try {
+        String tvrage = options.getIdAsString(MediaMetadata.TVRAGE);
+        if (tvrage != null) {
+          Show show = controller.getByTvrageId(tvrage);
+          tvMazeId = show.id;
+        }
+      }
+      catch (IOException e) {
+        LOGGER.trace("Error calling by TvrageId {}", e.getMessage());
+      }
+    }
+
+    // do we NOW have a MazeID, to get the entry direct?
+    if (tvMazeId > 0) {
+      options.setId(MediaMetadata.TVMAZE, tvMazeId);
+      MediaMetadata md = getMetadata(options);
+      MediaSearchResult msr = new MediaSearchResult(getId(), MediaType.TV_SHOW);
+      msr.mergeFrom(md);
+      searchResults.add(msr);
+      return searchResults;
+    }
+
+    // no ID - do some search here
     try {
       searchResult = controller.getTvShowSearchResults(options.getSearchQuery());
     }

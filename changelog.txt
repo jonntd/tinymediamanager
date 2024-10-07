@@ -1,5 +1,6 @@
 Version 5.0.13
 =======================
++ [TVmaze] make it usable from within the universal scraper #2723
 x [Trailer] fix creating directories #2727
 
 

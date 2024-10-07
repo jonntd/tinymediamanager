@@ -17,7 +17,9 @@ package org.tinymediamanager.scraper.tvmaze.service;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.tinymediamanager.scraper.http.TmmHttpClient;
@@ -93,6 +95,24 @@ public class Controller {
 
   public Show getMainInformation(int showId) throws IOException {
     return getService().show_main_information(showId).execute().body();
+  }
+
+  public Show getByTvdbId(String showId) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put("thetvdb", showId);
+    return getService().getByProvider(params).execute().body();
+  }
+
+  public Show getByImdbId(String showId) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put("imdb", showId);
+    return getService().getByProvider(params).execute().body();
+  }
+
+  public Show getByTvrageId(String showId) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put("tvrage", showId);
+    return getService().getByProvider(params).execute().body();
   }
 
   public List<AlternateList> getAlternativeLists(int showId) throws IOException {
