@@ -947,6 +947,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
   private class ScrapeTask extends SwingWorker<Void, Void> {
     private final TvShowChooserModel model;
+    private Throwable                error = null;
 
     private ScrapeTask(TvShowChooserModel model) {
       this.model = model;
@@ -957,15 +958,23 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       startProgressBar(TmmResourceBundle.getString("chooser.scrapeing") + " " + model.getTitle());
 
       // disable ok button as long as its scraping
-      okButton.setEnabled(false);
-      model.scrapeMetaData();
-      okButton.setEnabled(true);
+      try {
+        okButton.setEnabled(false);
+        model.scrapeMetaData();
+        okButton.setEnabled(true);
+      }
+      catch (Exception e) {
+        error = e;
+      }
 
       return null;
     }
 
     @Override
     public void done() {
+      if (error != null) {
+        SwingUtilities.invokeLater(() -> lblError.setText(error.getMessage()));
+      }
       stopProgressBar();
     }
   }

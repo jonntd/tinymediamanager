@@ -845,6 +845,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
 
   private class ScrapeTask extends SwingWorker<Void, Void> {
     private final MovieChooserModel model;
+    private Throwable               error = null;
 
     private ScrapeTask(MovieChooserModel model) {
       this.model = model;
@@ -855,14 +856,23 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       startProgressBar(TmmResourceBundle.getString("chooser.scrapeing") + " " + model.getTitle());
 
       // disable button as long as its scraping
-      okButton.setEnabled(false);
-      model.scrapeMetaData();
-      okButton.setEnabled(true);
+      try {
+        okButton.setEnabled(false);
+        model.scrapeMetaData();
+        okButton.setEnabled(true);
+      }
+      catch (Exception e) {
+        error = e;
+      }
+
       return null;
     }
 
     @Override
     public void done() {
+      if (error != null) {
+        SwingUtilities.invokeLater(() -> lblError.setText(error.getMessage()));
+      }
       stopProgressBar();
     }
   }
