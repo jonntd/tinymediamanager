@@ -1,3 +1,4 @@
 Version 5.1
 =======================
 + [Movies] added a filter for trailer formats #2708
+x [UI] restructured settings dialog
