@@ -630,6 +630,10 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
                 // if (season.isDummy()) {
                 // continue;
                 // }
+                // do not scrape -1/unknown season artwork
+                if (season.getSeason() == -1) {
+                  continue;
+                }
                 if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.SEASON_POSTER)
                     && (overwrite || StringUtils.isBlank(season.getArtworkFilename(MediaFileType.SEASON_POSTER)))) {
                   chooseSeasonArtwork(season, MediaArtwork.MediaArtworkType.SEASON_POSTER);
