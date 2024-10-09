@@ -3,6 +3,7 @@ Version 5.0.13
 + [TVmaze] make it usable from within the universal scraper #2723
 x [UI] propagate more failed responses to Movie/TvShow chooser dialog #2728
 x [UI] do not scrape -1/unknown season artwork (thx u/Casual_Tea_94)
+x [UI] improve BugReport dialog on choosing movies/shows #2730
 x [Trailer] fix creating directories #2727
 
 
