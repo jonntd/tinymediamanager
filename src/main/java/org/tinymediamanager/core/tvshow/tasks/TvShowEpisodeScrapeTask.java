@@ -191,11 +191,6 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
         if (cancel) {
           return;
         }
-
-        // rename on the fly if needed
-        if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-          TvShowRenamer.renameEpisode(episode);
-        }
       }
       catch (MissingIdException e) {
         LOGGER.warn("missing id for scrape");
@@ -216,6 +211,13 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
 
     if (cancel) {
       return;
+    }
+
+    // all episodes scraped now - dedicated rename all if wanted
+    if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+      for (TvShowEpisode episode : episodes) {
+        TvShowRenamer.renameEpisode(episode);
+      }
     }
 
     if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
