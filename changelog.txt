@@ -1,7 +1,7 @@
 Version 5.0.13
 =======================
 + [TVmaze] make it usable from within the universal scraper #2723
-x [AniDB] propose more errors to GUI #2728
+x [UI] porpagate more failed responses to Movie/TvShow chooser dialog #2728
 x [Trailer] fix creating directories #2727
 
 
