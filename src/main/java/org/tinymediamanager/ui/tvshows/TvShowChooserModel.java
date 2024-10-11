@@ -235,7 +235,7 @@ public class TvShowChooserModel extends AbstractModelObject {
       options.setIds(result.getIds());
 
       LOGGER.info("=====================================================");
-      LOGGER.info("Scrape metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
+      LOGGER.info("Scrape tvShow metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
       LOGGER.info("{}", options);
       LOGGER.info("=====================================================");
       metadata = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getMetadata(options);

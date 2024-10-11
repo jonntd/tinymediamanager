@@ -191,7 +191,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             if (ScraperMetadataConfig.containsAnyMetadata(tvShowScrapeParams.tvShowScraperMetadataConfig)
                 || ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)) {
               LOGGER.info("=====================================================");
-              LOGGER.info("Scraper metadata with scraper: {}", mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
+              LOGGER.info("Scrape tvShow metadata with scraper: {}", mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
               LOGGER.info(options.toString());
               LOGGER.info("=====================================================");
               md = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);

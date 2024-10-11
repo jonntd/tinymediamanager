@@ -200,7 +200,7 @@ public class MovieScrapeTask extends TmmThreadPool {
 
           if (mediaMetadataScraper != null && mediaMetadataScraper.getMediaProvider() != null) {
             LOGGER.info("=====================================================");
-            LOGGER.info("Scraper metadata with scraper: " + mediaMetadataScraper.getMediaProvider().getProviderInfo().getId() + ", "
+            LOGGER.info("Scrape movie metadata with scraper: " + mediaMetadataScraper.getMediaProvider().getProviderInfo().getId() + ", "
                 + mediaMetadataScraper.getMediaProvider().getProviderInfo().getVersion());
             LOGGER.info(options.toString());
             LOGGER.info("=====================================================");
@@ -314,7 +314,7 @@ public class MovieScrapeTask extends TmmThreadPool {
       options.setMetadata(metadata);
       if (metadata != null) {
         options.setIds(metadata.getIds());
-      }
+        }
       if (movie.isStacked()) {
         ArrayList<MediaFile> mfs = new ArrayList<>();
         mfs.addAll(movie.getMediaFiles(MediaFileType.VIDEO));
