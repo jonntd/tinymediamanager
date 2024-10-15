@@ -132,7 +132,7 @@ public class MovieSetScrapeTask extends TmmThreadPool {
       options.setArtworkType(MediaArtwork.MediaArtworkType.ALL);
       options.setMetadata(metadata);
       if (metadata != null) {
-        options.setIds(metadata.getIds());
+        options.addIds(metadata.getIds());
       }
       options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
       options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());

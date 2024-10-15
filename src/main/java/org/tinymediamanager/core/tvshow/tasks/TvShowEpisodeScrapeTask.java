@@ -250,10 +250,11 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
     options.setDataFromOtherOptions(scrapeOptions);
     options.setArtworkType(MediaArtwork.MediaArtworkType.ALL);
     options.setMetadata(metadata);
-    options.setIds(episode.getIds());
+    options.addIds(episode.getIds());
     options.setId(MediaMetadata.TVSHOW_IDS, episode.getTvShow().getIds());
     options.setId("mediaFile", episode.getMainFile());
     options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
+    options.setEpisodeGroup(episode.getEpisodeGroup());
 
     // scrape providers till one artwork has been found
     for (MediaScraper artworkScraper : scrapeOptions.getArtworkScrapers()) {
