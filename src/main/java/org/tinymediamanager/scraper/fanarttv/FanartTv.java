@@ -15,8 +15,6 @@
  */
 package org.tinymediamanager.scraper.fanarttv;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.Date;
 
 import org.apache.commons.lang3.StringUtils;
@@ -26,15 +24,10 @@ import org.tinymediamanager.scraper.http.TmmHttpClient;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
 import com.google.gson.internal.bind.DateTypeAdapter;
 
-import okhttp3.Interceptor;
 import okhttp3.Request;
-import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -43,7 +36,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class FanartTv {
   // the base API url
-  public static final String API_URL          = "http://webservice.fanart.tv/v3/";
+  public static final String API_URL          = "https://webservice.fanart.tv/v3/";
   // the api key query parameter; hast to be supplied at all calls
   public static final String PARAM_API_KEY    = "api-key";
   public static final String PARAM_CLIENT_KEY = "client-key";
@@ -99,38 +92,32 @@ public class FanartTv {
   }
 
   /**
-   * Create a new {@link retrofit.RestAdapter.Builder}. Override this to e.g. set your own client or executor.
+   * Create a new {@link Retrofit.Builder} instance. Override this to e.g. set your own client or executor.
    *
-   * @return A {@link retrofit.RestAdapter.Builder} with no modifications.
+   * @return A {@link Retrofit.Builder} with no modifications.
    */
   protected Retrofit.Builder newRestAdapterBuilder() {
     return new Retrofit.Builder();
   }
 
   /**
-   * Return the current {@link retrofit.RestAdapter} instance. If none exists (first call), builds a new one.
+   * Return the current {@link Retrofit} instance. If none exists (first call), builds a new one.
    */
   protected Retrofit getRestAdapter() {
     if (restAdapter == null) {
       Retrofit.Builder builder = newRestAdapterBuilder();
       builder.baseUrl(API_URL);
       builder.addConverterFactory(GsonConverterFactory.create(getGsonBuilder().create()));
-      builder.client(TmmHttpClient.newBuilder().addInterceptor(new Interceptor() {
-        @Override
-        public Response intercept(Chain chain) throws IOException {
-          Request original = chain.request();
-          Request.Builder request = original.newBuilder().method(original.method(), original.body());
-          request.addHeader(PARAM_API_KEY, apiKey);
-          if (StringUtils.isNotBlank(clientKey)) {
-            request.addHeader(PARAM_CLIENT_KEY, clientKey);
-          }
-          Response response = chain.proceed(request.build());
-          return response;
+      builder.client(TmmHttpClient.newBuilder(true).addInterceptor(chain -> {
+        Request original = chain.request();
+        Request.Builder request = original.newBuilder().method(original.method(), original.body());
+        request.addHeader(PARAM_API_KEY, apiKey);
+        if (StringUtils.isNotBlank(clientKey)) {
+          request.addHeader(PARAM_CLIENT_KEY, clientKey);
         }
+        return chain.proceed(request.build());
       }).build());
-      // if (isDebug) {
-      // builder.setLogLevel(RestAdapter.LogLevel.FULL);
-      // }
+
       restAdapter = builder.build();
     }
     return restAdapter;
@@ -139,15 +126,12 @@ public class FanartTv {
   protected GsonBuilder getGsonBuilder() {
     GsonBuilder builder = new GsonBuilder();
     // class types
-    builder.registerTypeAdapter(Integer.class, new JsonDeserializer<Integer>() {
-      @Override
-      public Integer deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-        try {
-          return Integer.valueOf(json.getAsInt());
-        }
-        catch (NumberFormatException e) {
-          return 0;
-        }
+    builder.registerTypeAdapter(Integer.class, (JsonDeserializer<Integer>) (json, typeOfT, context) -> {
+      try {
+        return json.getAsInt();
+      }
+      catch (NumberFormatException e) {
+        return 0;
       }
     });
     builder.registerTypeAdapter(Date.class, new DateTypeAdapter());
