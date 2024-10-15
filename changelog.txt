@@ -2,3 +2,5 @@ Version 5.1
 =======================
 + [Movies] added a filter for trailer formats #2708
 x [UI] restructured settings dialog
+x [UI] reworked image chooser
+x [UI] reworked manual selection of images while scraping

@@ -373,6 +373,53 @@ public class TvShowChooserModel extends AbstractModelObject {
     TmmTaskChain.getInstance(tvShow).add(new ArtworkScrapeTask(tvShow, config, overwrite));
   }
 
+  public List<MediaArtwork> getArtwork() {
+    List<MediaArtwork> artwork = new ArrayList<>();
+
+    ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.TV_SHOW);
+    options.setArtworkType(MediaArtworkType.ALL);
+    options.setMetadata(metadata);
+    options.setIds(metadata.getIds());
+    options.setLanguage(TvShowModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
+    options.setFanartSize(TvShowModuleManager.getInstance().getSettings().getImageFanartSize());
+    options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
+    options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
+
+    for (Entry<String, Object> entry : tvShow.getIds().entrySet()) {
+      options.setId(entry.getKey(), entry.getValue().toString());
+    }
+
+    // scrape providers till one artwork has been found
+    for (MediaScraper artworkScraper : artworkScrapers) {
+      ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
+      try {
+        artwork.addAll(artworkProvider.getArtwork(options));
+      }
+      catch (MissingIdException e) {
+        LOGGER.debug("no id found for scraper {}", artworkScraper.getMediaProvider().getProviderInfo().getId());
+      }
+      catch (NothingFoundException e) {
+        LOGGER.debug("did not find artwork for '{}'", tvShow.getTitle());
+      }
+      catch (ScrapeException e) {
+        LOGGER.error("getArtwork", e);
+        MessageManager.instance.pushMessage(
+            new Message(MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+      }
+    }
+
+    // at last take the poster from the result
+    if (StringUtils.isNotBlank(getPosterUrl())) {
+      MediaArtwork ma = new MediaArtwork(result.getProviderId(), MediaArtworkType.POSTER);
+      ma.setOriginalUrl(getPosterUrl());
+      ma.setPreviewUrl(getPosterUrl());
+      ma.addImageSize(0, 0, getPosterUrl(), 0);
+      artwork.add(ma);
+    }
+
+    return artwork;
+  }
+
   private class ArtworkScrapeTask extends TmmTask {
     private final TvShow                            tvShowToScrape;
     private final List<TvShowScraperMetadataConfig> config;
@@ -391,49 +438,7 @@ public class TvShowChooserModel extends AbstractModelObject {
         return;
       }
 
-      List<MediaArtwork> artwork = new ArrayList<>();
-
-      ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.TV_SHOW);
-      options.setArtworkType(MediaArtworkType.ALL);
-      options.setMetadata(metadata);
-      options.setIds(metadata.getIds());
-      options.setLanguage(TvShowModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
-      options.setFanartSize(TvShowModuleManager.getInstance().getSettings().getImageFanartSize());
-      options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
-      options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
-
-      for (Entry<String, Object> entry : tvShowToScrape.getIds().entrySet()) {
-        options.setId(entry.getKey(), entry.getValue().toString());
-      }
-
-      // scrape providers till one artwork has been found
-      for (MediaScraper artworkScraper : artworkScrapers) {
-        ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
-        try {
-          artwork.addAll(artworkProvider.getArtwork(options));
-        }
-        catch (MissingIdException e) {
-          LOGGER.debug("no id found for scraper {}", artworkScraper.getMediaProvider().getProviderInfo().getId());
-        }
-        catch (NothingFoundException e) {
-          LOGGER.debug("did not find artwork for '{}'", tvShowToScrape.getTitle());
-        }
-        catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, tvShowToScrape, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
-        }
-      }
-
-      // at last take the poster from the result
-      if (StringUtils.isNotBlank(getPosterUrl())) {
-        MediaArtwork ma = new MediaArtwork(result.getProviderId(), MediaArtworkType.POSTER);
-        ma.setOriginalUrl(getPosterUrl());
-        ma.setPreviewUrl(getPosterUrl());
-        ma.addImageSize(0, 0, getPosterUrl(), 0);
-        artwork.add(ma);
-      }
-
+      List<MediaArtwork> artwork = getArtwork();
       tvShowToScrape.setArtwork(artwork, config, overwrite);
     }
   }
