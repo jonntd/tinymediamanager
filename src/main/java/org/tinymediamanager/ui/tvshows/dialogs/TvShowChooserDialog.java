@@ -92,6 +92,7 @@ import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.MediaSearchResult;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.rating.RatingProvider;
@@ -557,13 +558,42 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             md.clearMediaArt();
           }
 
-          if (cbEpisodeGroup.getSelectedItem() instanceof MediaEpisodeGroup episodeGroup) {
-            tvShowToScrape.setEpisodeGroup(episodeGroup);
+          // set all scraped EGs
+          tvShowToScrape.setEpisodeGroups(model.getEpisodeGroups());
+          // our desired EG
+          MediaEpisodeGroup desiredEpisodeGroup = null;
+          if (cbEpisodeGroup.getSelectedItem() instanceof MediaEpisodeGroup eg) {
+            desiredEpisodeGroup = eg;
           }
           else {
-            tvShowToScrape.setEpisodeGroup(MediaEpisodeGroup.DEFAULT_AIRED);
+            desiredEpisodeGroup = MediaEpisodeGroup.DEFAULT_AIRED;
           }
-          tvShowToScrape.setEpisodeGroups(model.getEpisodeGroups());
+
+          // upon scraping, ALL episode numbers are created newly from the scraper.
+          // so we take the "current" number, and make "desired EG" number of it (same as scraper will do)
+          // when we preset that already into episode, they are immediately correctly listed in GUI,
+          // when we change the EG for the show ;)
+          // NOT doing so, resulted in many EPs staying in -1 until they got scraped
+          // and also has a possibility of a mixup, if you abort the scraping...
+
+          // remove and preset our EG for all episodes
+          if (!episodeScraperMetadataConfig.isEmpty()) {
+            List<TvShowEpisode> episodesToScrape = tvShowToScrape.getEpisodesToScrape();
+            for (TvShowEpisode ep : episodesToScrape) {
+              // create EP nums for desired EG out of current show EG
+              MediaEpisodeNumber desiredEpisodeNumber = new MediaEpisodeNumber(desiredEpisodeGroup, ep.getSeason(), ep.getEpisode());
+              // and we always have AIRED - don't loose it ;)
+              MediaEpisodeNumber airedEpisodeNumber = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, ep.getAiredSeason(),
+                  ep.getAiredEpisode());
+
+              Map<MediaEpisodeGroup, MediaEpisodeNumber> wanted = new HashMap<>();
+              wanted.put(MediaEpisodeGroup.DEFAULT_AIRED, airedEpisodeNumber);
+              wanted.put(desiredEpisodeGroup, desiredEpisodeNumber); // possibly overwrite same EG - ok
+              ep.setEpisodeNumbers(wanted);
+            }
+          }
+          // NOW we switch the show ^^ so all ep.getEpisode() will use the newly EG
+          tvShowToScrape.setEpisodeGroup(desiredEpisodeGroup);
 
           // get other ratings too?
           if (TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()) {
@@ -648,11 +678,10 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
                 }
               }
 
-              tvShowToScrape.writeNFO(); // rewrite NFO to get the urls into the NFO
-
+              // rewrite show NFO to get the urls into
+              tvShowToScrape.writeNFO();
               // also force to write all season NFO files
               tvShowToScrape.getSeasons().forEach(TvShowSeason::writeNfo);
-
               tvShowToScrape.saveToDb();
             }
             else {
@@ -672,6 +701,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
               scrapeOptions.setMetadataScraper(model.getMediaScraper());
               scrapeOptions.setArtworkScraper(model.getArtworkScrapers());
               scrapeOptions.setLanguage(model.getLanguage());
+              scrapeOptions.setEpisodeGroup(desiredEpisodeGroup);
 
               TmmTaskChain.getInstance(tvShowToScrape)
                   .add(new TvShowEpisodeScrapeTask(episodesToScrape, scrapeOptions, episodeScraperMetadataConfig, overwrite));
