@@ -1408,6 +1408,10 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     this.lastWatched = lastWatched;
   }
 
+  public String getCRC32() {
+    return getMainVideoFile().getCRC32();
+  }
+
   /**
    * Gets the media info audio codec (i.e mp3) and channels (i.e. 6 at 5.1 sound)
    * 

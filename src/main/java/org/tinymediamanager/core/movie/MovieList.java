@@ -1394,6 +1394,7 @@ public final class MovieList extends AbstractModelObject {
           movie.setDuplicate();
           Movie movie2 = duplicates.get(id);
           movie2.setDuplicate();
+          LOGGER.info("DUPECHECK: movies have the same ID ({}): {} <=> {}", id, movie.getTitle(), movie2.getTitle());
         }
         else {
           // no, store movie
@@ -1412,7 +1413,24 @@ public final class MovieList extends AbstractModelObject {
       // else {
       // duplicates.put(nameYear, movie);
       // }
+
+      // check video HASH
+      String crc = movie.getCRC32();
+      if (!crc.isEmpty()) {
+        if (duplicates.containsKey(crc)) {
+          movie.setDuplicate();
+          Movie movie2 = duplicates.get(crc);
+          movie2.setDuplicate();
+          LOGGER.info("DUPECHECK: files have the same hash ({}): {} <=> {}", crc, movie.getMainFile().getFileAsPath().toAbsolutePath(),
+              movie2.getMainFile().getFileAsPath().toAbsolutePath());
+        }
+        else {
+          duplicates.put(crc, movie);
+        }
+      }
     }
+
+    duplicates.clear();
   }
 
   /**

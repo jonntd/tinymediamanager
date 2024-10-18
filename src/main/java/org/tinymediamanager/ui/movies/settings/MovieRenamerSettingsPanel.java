@@ -259,6 +259,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
     exampleEventList.add(new MovieRenamerExample("${note}"));
     exampleEventList.add(new MovieRenamerExample("${decadeShort}"));
     exampleEventList.add(new MovieRenamerExample("${decadeLong}"));
+    exampleEventList.add(new MovieRenamerExample("${crc32}"));
 
     // event listener must be at the end
     ActionListener actionCreateRenamerExample = e -> createRenamerExample();

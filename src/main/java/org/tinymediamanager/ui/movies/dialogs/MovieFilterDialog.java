@@ -109,6 +109,7 @@ import org.tinymediamanager.ui.movies.filters.MovieVideoBitdepthFilter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoBitrateFilter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoCodecFilter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoContainerFilter;
+import org.tinymediamanager.ui.movies.filters.MovieVideoCrc32Filter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoExtrasFilter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoFilenameFilter;
 import org.tinymediamanager.ui.movies.filters.MovieVideoFilesizeFilter;
@@ -217,6 +218,7 @@ public class MovieFilterDialog extends TmmDialog {
         addFilter(new MovieAspectRatioFilter(), panelVideo);
         addFilter(new MovieFrameRateFilter(), panelVideo);
         addFilter(new MovieVideo3DFilter(), panelVideo);
+        addFilter(new MovieVideoCrc32Filter(), panelVideo);
         addFilter(new MovieHDRFormatFilter(), panelVideo);
       }
 

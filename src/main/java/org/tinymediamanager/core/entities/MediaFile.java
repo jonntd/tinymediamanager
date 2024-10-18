@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -113,6 +114,8 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   private boolean                    isAnimatedGraphic = false;
   @JsonProperty
   private String                     hdrFormat         = "";
+  @JsonProperty
+  protected Map<String, String>      checksums         = new ConcurrentHashMap<>(0);
 
   @JsonProperty
   private List<MediaFileAudioStream> audioStreams      = null;
@@ -157,10 +160,12 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     if (ListUtils.isNotEmpty(clone.audioStreams)) {
       audioStreams = new CopyOnWriteArrayList<>(clone.audioStreams);
     }
-
     if (ListUtils.isNotEmpty(clone.subtitles)) {
       subtitles = new CopyOnWriteArrayList<>(clone.subtitles);
     }
+
+    checksums.clear();
+    checksums = clone.getChecksums();
   }
 
   /**
@@ -1631,6 +1636,27 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    */
   public String getHdrFormat() {
     return this.hdrFormat;
+  }
+
+  public Map<String, String> getChecksums() {
+    return checksums;
+  }
+
+  public void setChecksums(Map<String, String> checksums) {
+    this.checksums = checksums;
+  }
+
+  /**
+   * CRC32 in uppercase
+   * 
+   * @return String or empty, not null
+   */
+  public String getCRC32() {
+    return checksums.get("crc32") == null ? "" : checksums.get("crc32");
+  }
+
+  public void setCRC32(String crc) {
+    this.checksums.put("crc32", crc);
   }
 
   /**

@@ -273,6 +273,7 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
     exampleEventList.add(new TvShowRenamerExample("${parent}"));
     exampleEventList.add(new TvShowRenamerExample("${showNote}"));
     exampleEventList.add(new TvShowRenamerExample("${note}"));
+    exampleEventList.add(new TvShowRenamerExample("${crc32}"));
 
     // event listener must be at the end
     ActionListener renamerActionListener = arg0 -> {

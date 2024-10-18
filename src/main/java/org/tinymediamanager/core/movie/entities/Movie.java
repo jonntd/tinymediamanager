@@ -2754,6 +2754,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
     return offline;
   }
 
+  public String getCRC32() {
+    return getMainVideoFile().getCRC32();
+  }
+
   public void setEdition(MovieEdition newValue) {
     MovieEdition oldValue = this.edition;
     this.edition = newValue;

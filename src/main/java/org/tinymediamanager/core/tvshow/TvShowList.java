@@ -1471,7 +1471,11 @@ public final class TvShowList extends AbstractModelObject {
    */
   public void searchDuplicateEpisodes() {
     Map<String, TvShow> showMap = new HashMap<>();
+    Map<String, TvShowEpisode> hashMap = new HashMap<>(); // global, over ALL shows/episodes
+
     for (TvShow tvShow : getTvShows()) {
+      tvShow.clearDuplicate();
+
       Map<String, Object> ids = tvShow.getIds();
       for (var entry : ids.entrySet()) {
         // ignore collection "IDs"
@@ -1485,6 +1489,7 @@ public final class TvShowList extends AbstractModelObject {
           tvShow.setDuplicate();
           TvShow show2 = showMap.get(id);
           show2.setDuplicate();
+          LOGGER.info("DUPECHECK: tvshows have the same ID ({}): {} <=> {}", id, tvShow.getTitle(), show2.getTitle());
         }
         else {
           // no, store show
@@ -1493,8 +1498,10 @@ public final class TvShowList extends AbstractModelObject {
       }
 
       // check for every episode
-      Map<String, TvShowEpisode> episodeMap = new HashMap<>();
+      Map<String, TvShowEpisode> episodeMap = new HashMap<>(); // only in same tvSHow
       for (TvShowEpisode episode : tvShow.getEpisodes()) {
+        episode.clearDuplicate();
+
         if (episode.getSeason() == -1 || episode.getEpisode() == -1) {
           continue;
         }
@@ -1504,12 +1511,34 @@ public final class TvShowList extends AbstractModelObject {
         if (duplicate != null) {
           duplicate.setDuplicate();
           episode.setDuplicate();
+          LOGGER.info("DUPECHECK: episodes have the same number ({}) in show {}", se, tvShow.getTitle());
         }
         else {
           episodeMap.put(se, episode);
         }
       }
+      episodeMap.clear();
+
+      // check video HASH globally
+      for (TvShowEpisode episode : tvShow.getEpisodes()) {
+        String crc = episode.getCRC32();
+        if (!crc.isEmpty()) {
+          TvShowEpisode duplicate = hashMap.get(crc);
+          if (duplicate != null) {
+            duplicate.setDuplicate();
+            episode.setDuplicate();
+            LOGGER.info("DUPECHECK: files have the same hash ({}): {} <=> {}", crc, episode.getMainFile().getFileAsPath().toAbsolutePath(),
+                duplicate.getMainFile().getFileAsPath().toAbsolutePath());
+          }
+          else {
+            hashMap.put(crc, episode);
+          }
+        }
+      }
     }
+
+    hashMap.clear();
+    tvShows.clear();
   }
 
   public List<TvShowScraperMetadataConfig> detectMissingMetadata(TvShow tvShow) {

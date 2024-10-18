@@ -48,6 +48,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
@@ -77,6 +78,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -2446,5 +2448,36 @@ public class Utils {
 
     DecimalFormat df = new DecimalFormat("#0.00");
     return df.format(bytes / 1000.0) + " " + ci.current();
+  }
+
+  /**
+   * Generates CRC32 of file
+   * 
+   * @param file
+   *          the file
+   * @return the 8 char CRC32 in uppercase, or empty string on error
+   */
+  public static String getCRC32(Path file) {
+    String crc = "";
+
+    final int BUFFER_SIZE = 1024 * 1024; // 1 mb
+    byte[] buffer = new byte[BUFFER_SIZE];
+    CRC32 crc32 = new CRC32();
+    LOGGER.trace("Calculating CRC32 for {}", file);
+    try (InputStream inputStream = Files.newInputStream(file, StandardOpenOption.READ)) {
+      int bytesRead = 0;
+      while ((bytesRead = inputStream.read(buffer, 0, buffer.length)) >= 0) {
+        crc32.update(buffer, 0, bytesRead);
+      }
+      if (crc32.getValue() > 0) {
+        crc = Long.toHexString(crc32.getValue()).toUpperCase(Locale.ROOT);
+        LOGGER.trace("Got CRC32 [{}] for {}", crc, file);
+      }
+    }
+    catch (IOException e) {
+      LOGGER.warn("Could not generate CRC32 from file {}: {}", file, e.getMessage());
+    }
+
+    return crc;
   }
 }

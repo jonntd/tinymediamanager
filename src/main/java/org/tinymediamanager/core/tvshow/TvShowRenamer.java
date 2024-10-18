@@ -210,6 +210,7 @@ public class TvShowRenamer {
 
     tokenMap.put("mediaSource", "episode.mediaSource");
     tokenMap.put("note", "episode.note");
+    tokenMap.put("crc32", "episode.CRC32");
 
     return tokenMap;
   }

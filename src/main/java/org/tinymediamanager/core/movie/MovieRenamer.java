@@ -182,6 +182,8 @@ public class MovieRenamer {
     tokenMap.put("movieSetIndex", "movie;indexOfMovieSet");
     tokenMap.put("movieSetIndex2", "movie;indexOfMovieSetWithDummy");
 
+    tokenMap.put("crc32", "movie.CRC32");
+
     return tokenMap;
   }
 

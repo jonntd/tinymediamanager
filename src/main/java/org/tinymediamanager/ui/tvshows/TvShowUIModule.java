@@ -100,6 +100,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowUnlockAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateDatasourcesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateSingleDatasourceAction;
+import org.tinymediamanager.ui.tvshows.actions.TvshowChecksumsAction;
 import org.tinymediamanager.ui.tvshows.dialogs.TvShowFilterDialog;
 import org.tinymediamanager.ui.tvshows.panels.TvShowTreePanel;
 import org.tinymediamanager.ui.tvshows.panels.episode.TvShowEpisodeCastPanel;
@@ -450,6 +451,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowResetNewFlagAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowTitleToEntityMatcher.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowChangeToAbsoluteAction.class));
+    enhancededitPopupMenu.add(createAndRegisterAction(TvshowChecksumsAction.class));
     popupMenu.add(enhancededitPopupMenu);
 
     JMenu downloadMenu = new JMenu(TmmResourceBundle.getString("tmm.download"));
