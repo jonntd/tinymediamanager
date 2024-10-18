@@ -95,6 +95,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowSyncTraktTvAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowTitleToEntityMatcher;
 import org.tinymediamanager.ui.tvshows.actions.TvShowToggleWatchedFlagAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowTrailerDownloadAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowUndoRenameAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUnlockAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateDatasourcesAction;
@@ -369,6 +370,8 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     renamePopupMenu.add(createAndRegisterAction(TvShowRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(TvShowRenamePreviewAction.class));
     renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(TvShowUndoRenameAction.class));
+    renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(TvShowCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(TvShowClearImageCacheAction.class));
   }
@@ -463,6 +466,8 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     renamePopupMenu.setIcon(IconManager.MENU);
     renamePopupMenu.add(createAndRegisterAction(TvShowRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(TvShowRenamePreviewAction.class));
+    renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(TvShowUndoRenameAction.class));
     renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(TvShowCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(TvShowClearImageCacheAction.class));

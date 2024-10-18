@@ -134,6 +134,7 @@ public class IconManager {
   public static final ImageIcon              SUBTITLE                     = createMenuIcon("comments.svg");
   public static final ImageIcon              SYNC                         = createMenuIcon("sync.svg");
   public static final ImageIcon              THUMB                        = createMenuIcon("photo-film.svg");
+  public static final ImageIcon              UNDO                         = createMenuIcon("undo.svg");
   public static final ImageIcon              UNLOCK_BLUE                  = createMenuIcon("lock-open-alt.svg");
   public static final ImageIcon              VOLUME                       = createMenuIcon("volume.svg");
   public static final ImageIcon              WATCHED_MENU                 = createMenuIcon("play.svg");

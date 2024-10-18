@@ -83,6 +83,7 @@ import org.tinymediamanager.ui.movies.actions.MovieSyncSelectedWatchedTraktTvAct
 import org.tinymediamanager.ui.movies.actions.MovieSyncTraktTvAction;
 import org.tinymediamanager.ui.movies.actions.MovieToggleWatchedFlagAction;
 import org.tinymediamanager.ui.movies.actions.MovieTrailerDownloadAction;
+import org.tinymediamanager.ui.movies.actions.MovieUndoRenameAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnlockAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnscrapedScrapeAction;
 import org.tinymediamanager.ui.movies.actions.MovieUpdateAction;
@@ -281,6 +282,8 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
     renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(MovieUndoRenameAction.class));
+    renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(MovieCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieClearImageCacheAction.class));
   }
@@ -359,6 +362,8 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.setIcon(IconManager.MENU);
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
+    renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(MovieUndoRenameAction.class));
     renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(MovieCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieClearImageCacheAction.class));

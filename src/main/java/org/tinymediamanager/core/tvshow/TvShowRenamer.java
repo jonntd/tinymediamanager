@@ -56,6 +56,8 @@ import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.entities.MediaEntityFilenameHistory;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
 import org.tinymediamanager.core.jmte.JmteUtils;
@@ -243,11 +245,14 @@ public class TvShowRenamer {
    *          the show
    */
   public static void renameTvShow(TvShow tvShow) {
+    MediaEntityFilenameHistory filenameHistory = new MediaEntityFilenameHistory();
     // rename the TV show folder
-    renameTvShowRoot(tvShow);
+    renameTvShowRoot(tvShow, filenameHistory);
 
     // rename TV show media files
-    renameTvShowMediaFiles(tvShow);
+    renameTvShowMediaFiles(tvShow, filenameHistory);
+
+    tvShow.setRenameHistory(filenameHistory);
 
     // rename the season media files
     renameSeasonMediaFiles(tvShow);
@@ -264,7 +269,7 @@ public class TvShowRenamer {
    * @param show
    *          the show
    */
-  private static void renameTvShowRoot(TvShow show) {
+  private static void renameTvShowRoot(TvShow show, MediaEntityFilenameHistory filenameHistory) {
     // skip renamer, if all templates are empty!
     if (TvShowModuleManager.getInstance().getSettings().getRenamerFilename().isEmpty()
         && TvShowModuleManager.getInstance().getSettings().getRenamerSeasonFoldername().isEmpty()
@@ -277,6 +282,8 @@ public class TvShowRenamer {
     LOGGER.debug("TV show path: {}", show.getPathNIO());
     String newPathname = getTvShowFoldername(TvShowModuleManager.getInstance().getSettings().getRenamerTvShowFoldername(), show);
     String oldPathname = show.getPathNIO().toString();
+
+    filenameHistory.setOldPath(oldPathname);
 
     if (!newPathname.isEmpty()) {
       Path srcDir = Paths.get(oldPathname);
@@ -292,6 +299,7 @@ public class TvShowRenamer {
           if (ok) {
             show.updateMediaFilePath(srcDir, destDir); // TvShow MFs
             show.setPath(newPathname);
+            filenameHistory.setNewPath(newPathname);
 
             for (TvShowSeason tvShowSeason : show.getSeasons()) {
               tvShowSeason.updateMediaFilePath(srcDir, destDir);
@@ -319,6 +327,10 @@ public class TvShowRenamer {
         }
       }
     }
+
+    if (StringUtils.isBlank(filenameHistory.getNewPath())) {
+      filenameHistory.setNewPath(filenameHistory.getOldPath());
+    }
   }
 
   /**
@@ -327,7 +339,7 @@ public class TvShowRenamer {
    * @param tvShow
    *          the TV show to rename the artwork for
    */
-  private static void renameTvShowMediaFiles(TvShow tvShow) {
+  private static void renameTvShowMediaFiles(TvShow tvShow, MediaEntityFilenameHistory filenameHistory) {
     // all the good & needed mediafiles
     List<MediaFile> needed = new ArrayList<>();
     List<MediaFile> cleanup = new ArrayList<>(tvShow.getMediaFiles());
@@ -344,15 +356,19 @@ public class TvShowRenamer {
       }
     }
 
+    Path newTvShowPath = tvShow.getPathNIO();
+
     if (nfo != MediaFile.EMPTY_MEDIAFILE) { // one valid found? copy our NFO to all variants
       List<MediaFile> newMFs = generateFilename(tvShow, nfo); // 1:N
       for (MediaFile newMF : newMFs) {
         boolean ok = copyFile(nfo.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
+          filenameHistory.addFilenameHistory(createFilenameHistory(newTvShowPath, nfo.getFileAsPath(), newMF.getFileAsPath()));
           needed.add(newMF);
         }
         else {
           // FIXME: what to do? not copied/exception... keep it for now...
+          filenameHistory.addFilenameHistory(createFilenameHistory(newTvShowPath, nfo.getFileAsPath(), nfo.getFileAsPath()));
           needed.add(nfo);
         }
       }
@@ -374,10 +390,12 @@ public class TvShowRenamer {
       for (MediaFile newMF : newMFs) {
         boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
+          filenameHistory.addFilenameHistory(createFilenameHistory(newTvShowPath, mf.getFileAsPath(), newMF.getFileAsPath()));
           needed.add(newMF);
         }
         else {
           // FIXME: what to do? not copied/exception... keep it for now...
+          filenameHistory.addFilenameHistory(createFilenameHistory(newTvShowPath, mf.getFileAsPath(), mf.getFileAsPath()));
           needed.add(mf);
         }
       }
@@ -448,6 +466,41 @@ public class TvShowRenamer {
     ThreadUtils.sleep(250);
 
     tvShow.addToMediaFiles(needed);
+  }
+
+  private static MediaEntityFilenameHistory.FilenameHistory createFilenameHistory(Path tvShowRoot, Path oldFilePath, Path newFilePath) {
+    String oldFilename = tvShowRoot.relativize(oldFilePath).toString();
+    String newFilename = tvShowRoot.relativize(newFilePath).toString();
+    return new MediaEntityFilenameHistory.FilenameHistory(oldFilename, newFilename);
+  }
+
+  private static MediaEntityFilenameHistory.FilenameHistory findFilenameHistoryForMediaFile(MediaEntity entity, MediaFile mediaFile) {
+    if (entity.getRenameHistory() == null) {
+      return null;
+    }
+
+    Path tvShowRoot;
+
+    if (entity instanceof TvShow tvShow) {
+      tvShowRoot = tvShow.getPathNIO();
+    }
+    else if (entity instanceof TvShowSeason season) {
+      tvShowRoot = season.getTvShow().getPathNIO();
+    }
+    else if (entity instanceof TvShowEpisode episode) {
+      tvShowRoot = episode.getTvShow().getPathNIO();
+    }
+    else {
+      return null;
+    }
+
+    for (MediaEntityFilenameHistory.FilenameHistory filenameHistory : entity.getRenameHistory().getFilenameHistory()) {
+      if (filenameHistory.newFilename().equals(tvShowRoot.relativize(mediaFile.getFileAsPath()).toString())) {
+        return filenameHistory;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -587,12 +640,19 @@ public class TvShowRenamer {
    *          the TV show to rename the season artwork for
    */
   private static void renameSeasonMediaFiles(TvShow tvShow) {
+    Map<TvShowSeason, MediaEntityFilenameHistory> filenameHistoryMap = new HashMap<>();
+
     // all the good & needed mediafiles
     Set<MediaFile> needed = new LinkedHashSet<>();
     List<MediaFile> cleanup = new ArrayList<>();
 
+    Path tvShowRoot = tvShow.getPathNIO();
+
     // NFO
     for (var tvShowSeason : tvShow.getSeasons()) {
+      MediaEntityFilenameHistory filenameHistory = new MediaEntityFilenameHistory();
+      filenameHistoryMap.put(tvShowSeason, filenameHistory);
+
       Set<MediaFile> neededSeason = new LinkedHashSet<>();
       List<MediaFile> cleanupSeason = new ArrayList<>();
 
@@ -617,6 +677,7 @@ public class TvShowRenamer {
             newMf.setFile(Paths.get(tvShow.getPath(), filename));
             boolean ok = copyFile(nfo.getFileAsPath(), newMf.getFileAsPath());
             if (ok) {
+              filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, nfo.getFileAsPath(), newMf.getFileAsPath()));
               neededSeason.add(newMf);
             }
           }
@@ -635,6 +696,8 @@ public class TvShowRenamer {
 
     for (var type : types) {
       for (var tvShowSeason : tvShow.getSeasons()) {
+        MediaEntityFilenameHistory filenameHistory = filenameHistoryMap.get(tvShowSeason);
+
         Set<MediaFile> neededSeason = new LinkedHashSet<>();
         List<MediaFile> cleanupSeason = new ArrayList<>();
 
@@ -661,6 +724,7 @@ public class TvShowRenamer {
                   newMf.setFile(Paths.get(tvShow.getPath(), filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
+                    filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
                     neededSeason.add(newMf);
                   }
                 }
@@ -674,6 +738,7 @@ public class TvShowRenamer {
                   newMf.setFile(Paths.get(tvShow.getPath(), filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
+                    filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
                     neededSeason.add(newMf);
                   }
                 }
@@ -687,6 +752,7 @@ public class TvShowRenamer {
                   newMf.setFile(Paths.get(tvShow.getPath(), filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
+                    filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
                     neededSeason.add(newMf);
                   }
                 }
@@ -700,6 +766,7 @@ public class TvShowRenamer {
                   newMf.setFile(Paths.get(tvShow.getPath(), filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
+                    filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
                     neededSeason.add(newMf);
                   }
                 }
@@ -796,6 +863,17 @@ public class TvShowRenamer {
         ImageCache.cacheImageSilently(gfx, false);
       }
     }
+
+    // store history
+    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+      MediaEntityFilenameHistory filenameHistory = filenameHistoryMap.get(tvShowSeason);
+      if (ListUtils.isNotEmpty(filenameHistory.getFilenameHistory())) {
+        tvShowSeason.setRenameHistory(filenameHistory);
+      }
+      else {
+        tvShowSeason.setRenameHistory(null);
+      }
+    }
   }
 
   /**
@@ -837,8 +915,12 @@ public class TvShowRenamer {
     List<MediaFile> cleanup = new ArrayList<>(episode.getMediaFiles());
     cleanup.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
 
+    Path tvShowRoot = episode.getTvShow().getPathNIO();
+    MediaEntityFilenameHistory fileNameHistory = new MediaEntityFilenameHistory();
+
     String seasonFoldername = getSeasonFoldername(episode.getTvShow(), episode);
     Path seasonFolder = episode.getTvShow().getPathNIO();
+
     if (StringUtils.isNotBlank(seasonFoldername)) {
       seasonFolder = episode.getTvShow().getPathNIO().resolve(seasonFoldername);
       if (!Files.exists(seasonFolder)) {
@@ -861,6 +943,7 @@ public class TvShowRenamer {
       MediaFile newMF = generateEpisodeFilenames(episode.getTvShow(), vid, "").get(0); // there can be only one
       boolean ok = moveFile(vid.getFileAsPath(), newMF.getFileAsPath());
       if (ok) {
+        fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, vid.getFileAsPath(), newMF.getFileAsPath()));
         vid.setFile(newMF.getFileAsPath()); // update
         // if we move the episode in its own folder, we might need to upgrade the path as well!
         episode.setPath(newMF.getPath());
@@ -894,6 +977,7 @@ public class TvShowRenamer {
       for (MediaFile newMF : newMFs) {
         boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
+          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, mf.getFileAsPath(), newMF.getFileAsPath()));
           needed.add(newMF);
 
           // update the cached image by just COPYing it around
@@ -906,7 +990,7 @@ public class TvShowRenamer {
               Files.copy(oldCache, newCache);
             }
             catch (IOException e) {
-              LOGGER.warn("Error moving cached file", e.getMessage());
+              LOGGER.warn("Error moving cached file - '{}'", e.getMessage());
             }
           }
         }
@@ -931,6 +1015,7 @@ public class TvShowRenamer {
         for (MediaFile newNFO : newNFOs) {
           boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
           if (ok) {
+            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, nfo.getFileAsPath(), newNFO.getFileAsPath()));
             needed.add(newNFO);
           }
         }
@@ -949,23 +1034,31 @@ public class TvShowRenamer {
     // ######################################################################
     for (MediaFile subtitle : episode.getMediaFiles(MediaFileType.SUBTITLE)) {
       LOGGER.trace("Rename 1:1 {} {}", subtitle.getType(), subtitle.getFileAsPath());
-      MediaFile sub = generateEpisodeFilenames(episode.getTvShow(), subtitle, oldVideoBasename).get(0); // there can be only one
-      boolean ok = moveFile(subtitle.getFileAsPath(), sub.getFileAsPath());
+      MediaFile newMF = generateEpisodeFilenames(episode.getTvShow(), subtitle, oldVideoBasename).get(0); // there can be only one
+      boolean ok = moveFile(subtitle.getFileAsPath(), newMF.getFileAsPath());
       if (ok) {
-        if (sub.getFilename().endsWith(".sub")) {
+        if (newMF.getFilename().endsWith(".sub")) {
           // when having a .sub, also rename .idx (don't care if error)
           try {
             Path oldidx = subtitle.getFileAsPath().resolveSibling(subtitle.getFilename().replaceFirst("sub$", "idx"));
-            Path newidx = sub.getFileAsPath().resolveSibling(sub.getFilename().replaceFirst("sub$", "idx"));
+            Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().replaceFirst("sub$", "idx"));
             Utils.moveFileSafe(oldidx, newidx);
+
+            MediaFile idx = new MediaFile(newidx);
+            needed.add(idx);
+            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, oldidx, newidx));
           }
           catch (Exception e) {
             // no idx found or error - ignore
           }
         }
-        subtitle.setFile(sub.getFileAsPath()); // update
+        needed.add(newMF);
+        fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, subtitle.getFileAsPath(), newMF.getFileAsPath()));
       }
-      needed.add(subtitle); // add vid, since we're updating existing MF object
+      else {
+        LOGGER.error("could not rename subtitle file '{}'", subtitle.getFileAsPath());
+        needed.add(subtitle);
+      }
     }
 
     // ######################################################################
@@ -978,16 +1071,23 @@ public class TvShowRenamer {
     for (MediaFile other : mfs) {
       LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
 
+      if ("idx".equalsIgnoreCase(other.getExtension())) {
+        // .idx is a sidecar file for .sub - we handled this above
+        continue;
+      }
+
       List<MediaFile> newMFs = generateEpisodeFilenames(episode.getTvShow(), other, oldVideoBasename); // 1:N
       newMFs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
 
       for (MediaFile newMF : newMFs) {
         boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
+          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), newMF.getFileAsPath()));
           needed.add(newMF);
         }
         else {
           // FIXME: what to do? not copied/exception... keep it for now...
+          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), other.getFileAsPath()));
           needed.add(other);
         }
       }
@@ -1031,25 +1131,40 @@ public class TvShowRenamer {
       }
     }
 
-    // update paths/mfs for the episode
-    List<TvShowEpisode> eps = new ArrayList<>();
-    eps.add(episode);
+    // check if there has been _any_ change (or if that EP has already been renamed before that)
+    boolean changeDetected = false;
+    for (MediaEntityFilenameHistory.FilenameHistory history : fileNameHistory.getFilenameHistory()) {
+      if (!history.oldFilename().equals(history.newFilename())) {
+        changeDetected = true;
+        break;
+      }
+    }
 
-    // if the files are multi EP files, change all other episodes too
-    eps.addAll(TvShowList.getTvEpisodesByFile(episode.getTvShow(), originalVideoMediaFile.getFile()));
-    for (TvShowEpisode e : eps) {
-      e.removeAllMediaFiles();
-      e.addToMediaFiles(needed);
-      e.setPath(episode.getPath());
-      e.gatherMediaFileInformation(false);
-      e.saveToDb();
+    if (changeDetected) {
+      // update paths/mfs for the episode
+      List<TvShowEpisode> eps = new ArrayList<>();
+      eps.add(episode);
 
-      // ######################################################################
-      // ## build up image cache
-      // ######################################################################
-      if (Settings.getInstance().isImageCache()) {
-        for (MediaFile gfx : e.getMediaFiles()) {
-          ImageCache.cacheImageSilently(gfx, false);
+      // if the files are multi EP files, change all other episodes too
+      eps.addAll(TvShowList.getTvEpisodesByFile(episode.getTvShow(), originalVideoMediaFile.getFile()));
+      for (TvShowEpisode e : eps) {
+        e.removeAllMediaFiles();
+        e.addToMediaFiles(needed);
+        e.setPath(episode.getPath());
+        e.gatherMediaFileInformation(false);
+
+        // rename history
+        e.setRenameHistory(fileNameHistory);
+
+        e.saveToDb();
+
+        // ######################################################################
+        // ## build up image cache
+        // ######################################################################
+        if (Settings.getInstance().isImageCache()) {
+          for (MediaFile gfx : e.getMediaFiles()) {
+            ImageCache.cacheImageSilently(gfx, false);
+          }
         }
       }
     }
@@ -1062,6 +1177,8 @@ public class TvShowRenamer {
    *          the episode to be renamed
    */
   private static void renameEpisodeAsDisc(TvShowEpisode episode) {
+    MediaEntityFilenameHistory fileNameHistory = new MediaEntityFilenameHistory();
+
     // get the first MF of this episode
     MediaFile mf = episode.getMainVideoFile();
     List<TvShowEpisode> eps = TvShowList.getTvEpisodesByFile(episode.getTvShow(), mf.getFile());
@@ -1120,7 +1237,6 @@ public class TvShowRenamer {
     }
 
     Path newEpFolder = seasonFolder.resolve(newFoldername);
-    Path newDisc = newEpFolder.resolve(disc.getFileName()); // old disc name
 
     try {
       if (!epFolder.toAbsolutePath().toString().equals(newEpFolder.toAbsolutePath().toString())) {
@@ -1143,6 +1259,9 @@ public class TvShowRenamer {
           for (TvShowEpisode e : eps) {
             e.updateMediaFilePath(epFolder, newEpFolder);
             e.setPath(newEpFolder.toAbsolutePath().toString());
+
+            fileNameHistory.addFilenameHistory(createFilenameHistory(episode.getTvShow().getPathNIO(), epFolder, newEpFolder));
+            e.setRenameHistory(fileNameHistory);
             e.saveToDb();
           }
         }
@@ -1160,6 +1279,158 @@ public class TvShowRenamer {
     }
   }
 
+  public static void undoRename(TvShow tvShow) {
+    if (tvShow.getRenameHistory() != null) {
+      // undo the rename of the TV show
+      undoRenameTvShow(tvShow);
+    }
+
+    for (var season : tvShow.getSeasons()) {
+      undoRenameSeason(season);
+    }
+
+    tvShow.saveToDb();
+  }
+
+  private static void undoRenameTvShow(TvShow tvShow) {
+    // TV show root
+    if (StringUtils.isNotBlank(tvShow.getRenameHistory().getOldPath())) {
+      Path srcDir = Paths.get(tvShow.getRenameHistory().getNewPath());
+      Path destDir = Paths.get(tvShow.getRenameHistory().getOldPath());
+      // move directory if needed
+      if (!srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString())) {
+        try {
+          // create parent if needed
+          if (!Files.exists(destDir.getParent())) {
+            Files.createDirectory(destDir.getParent());
+          }
+          boolean ok = Utils.moveDirectorySafe(srcDir, destDir);
+          if (ok) {
+            tvShow.updateMediaFilePath(srcDir, destDir); // TvShow MFs
+            tvShow.setPath(tvShow.getRenameHistory().getOldPath());
+
+            for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+              tvShowSeason.updateMediaFilePath(srcDir, destDir);
+            }
+
+            for (TvShowEpisode episode : tvShow.getEpisodes()) {
+              episode.replacePathForRenamedTvShowRoot(srcDir, destDir);
+              episode.updateMediaFilePath(srcDir, destDir);
+            }
+
+            // ######################################################################
+            // ## build up image cache
+            // ######################################################################
+            if (Settings.getInstance().isImageCache()) {
+              for (MediaFile gfx : tvShow.getMediaFiles()) {
+                ImageCache.cacheImageSilently(gfx, false);
+              }
+            }
+          }
+        }
+        catch (Exception e) {
+          LOGGER.error("error moving folder: {}", e.getMessage());
+          MessageManager.instance
+              .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+        }
+      }
+    }
+
+    // TV show MFs
+    Path tvShowRoot = tvShow.getPathNIO();
+    List<MediaFile> needed = new ArrayList<>();
+
+    for (MediaFile mediaFile : tvShow.getMediaFiles()) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(tvShow, mediaFile);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename for '{}' - history not found", mediaFile.getFilename());
+        continue;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", mediaFile.getType(), mediaFile.getFileAsPath());
+      MediaFile oldMF = new MediaFile(mediaFile);
+      oldMF.setFile(tvShowRoot.resolve(filenameHistory.oldFilename()));
+
+      boolean ok = moveFile(mediaFile.getFileAsPath(), oldMF.getFileAsPath());
+      if (ok) {
+        mediaFile.setFile(oldMF.getFileAsPath()); // update
+        needed.add(mediaFile);
+      }
+    }
+
+    // remove duplicate MediaFiles
+    Set<MediaFile> newMFs = new LinkedHashSet<>(needed);
+    needed.clear();
+    needed.addAll(newMFs);
+
+    tvShow.removeAllMediaFiles();
+
+    // ######################################################################
+    // ## build up image cache
+    // ######################################################################
+    if (Settings.getInstance().isImageCache()) {
+      for (MediaFile gfx : needed) {
+        ImageCache.cacheImageSilently(gfx, false);
+      }
+    }
+
+    // give the file system a bit to write the files
+    ThreadUtils.sleep(250);
+
+    tvShow.addToMediaFiles(needed);
+    tvShow.gatherMediaFileInformation(false);
+
+    tvShow.setRenameHistory(null);
+  }
+
+  private static void undoRenameSeason(TvShowSeason season) {
+    // TV show MFs
+    Path tvShowRoot = season.getTvShow().getPathNIO();
+    List<MediaFile> needed = new ArrayList<>();
+
+    for (MediaFile mediaFile : season.getMediaFiles()) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(season.getTvShow(), mediaFile);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename for '{}' - history not found", mediaFile.getFilename());
+        continue;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", mediaFile.getType(), mediaFile.getFileAsPath());
+      MediaFile oldMF = new MediaFile(mediaFile);
+      oldMF.setFile(tvShowRoot.resolve(filenameHistory.oldFilename()));
+
+      boolean ok = moveFile(mediaFile.getFileAsPath(), oldMF.getFileAsPath());
+      if (ok) {
+        mediaFile.setFile(oldMF.getFileAsPath()); // update
+        needed.add(mediaFile);
+      }
+    }
+
+    // remove duplicate MediaFiles
+    Set<MediaFile> newMFs = new LinkedHashSet<>(needed);
+    needed.clear();
+    needed.addAll(newMFs);
+
+    season.removeAllMediaFiles();
+
+    // ######################################################################
+    // ## build up image cache
+    // ######################################################################
+    if (Settings.getInstance().isImageCache()) {
+      for (MediaFile gfx : needed) {
+        ImageCache.cacheImageSilently(gfx, false);
+      }
+    }
+
+    // give the file system a bit to write the files
+    ThreadUtils.sleep(250);
+
+    season.addToMediaFiles(needed);
+    season.gatherMediaFileInformation(false);
+
+    season.setRenameHistory(null);
+  }
+
   private static void cleanEmptyDir(Path dir) {
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(dir)) {
       if (!directoryStream.iterator().hasNext()) {
@@ -1171,11 +1442,150 @@ public class TvShowRenamer {
     }
     catch (IOException ignored) {
     }
+  }
 
-    // FIXME: recursive backward delete?! why?!
-    // if (Files.isDirectory(dir)) {
-    // cleanEmptyDir(dir.getParent());
-    // }
+  public static void undoRename(TvShowEpisode episode) {
+    if (episode.getRenameHistory() == null) {
+      LOGGER.debug("could not undo rename - no history available");
+      return;
+    }
+
+    if (episode.isDisc()) {
+      undoRenameEpisodeAsDisc(episode);
+      return;
+    }
+
+    List<MediaFile> needed = new ArrayList<>();
+
+    Path tvShowRoot = episode.getTvShow().getPathNIO();
+
+    // try the VIDEO file(s) first
+    for (MediaFile vid : episode.getMediaFiles(MediaFileType.VIDEO)) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(episode, vid);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename - VIDEO file history not found");
+        return;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", vid.getType(), vid.getFileAsPath());
+      MediaFile oldMF = new MediaFile(vid);
+      oldMF.setFile(tvShowRoot.resolve(filenameHistory.oldFilename()));
+
+      boolean ok = moveFile(vid.getFileAsPath(), oldMF.getFileAsPath());
+      if (ok) {
+        vid.setFile(oldMF.getFileAsPath()); // update
+        // if we move the episode in its own folder, we might need to upgrade the path as well!
+        episode.setPath(oldMF.getPath());
+      }
+      else {
+        LOGGER.error("could not move video file of episode '{}' - abort renaming", episode.getTitle());
+        return;
+      }
+      needed.add(vid); // add vid, since we're updating existing MF object
+    }
+
+    // and all others
+    for (MediaFile mediaFile : episode.getMediaFilesExceptType(MediaFileType.VIDEO)) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(episode, mediaFile);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename for '{}' - history not found", mediaFile.getFilename());
+        continue;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", mediaFile.getType(), mediaFile.getFileAsPath());
+      MediaFile oldMF = new MediaFile(mediaFile);
+      oldMF.setFile(tvShowRoot.resolve(filenameHistory.oldFilename()));
+
+      boolean ok = moveFile(mediaFile.getFileAsPath(), oldMF.getFileAsPath());
+      if (ok) {
+        mediaFile.setFile(oldMF.getFileAsPath()); // update
+        needed.add(mediaFile);
+      }
+    }
+
+    // remove duplicate MediaFiles
+    Set<MediaFile> newMFs = new LinkedHashSet<>(needed);
+    needed.clear();
+    needed.addAll(newMFs);
+
+    episode.removeAllMediaFiles();
+
+    // ######################################################################
+    // ## build up image cache
+    // ######################################################################
+    if (Settings.getInstance().isImageCache()) {
+      for (MediaFile gfx : needed) {
+        ImageCache.cacheImageSilently(gfx, false);
+      }
+    }
+
+    // give the file system a bit to write the files
+    ThreadUtils.sleep(250);
+
+    episode.addToMediaFiles(needed);
+    episode.gatherMediaFileInformation(false);
+
+    // remove history
+    episode.setRenameHistory(null);
+
+    episode.saveToDb();
+
+    // cleanup old path
+    try {
+      Utils.deleteEmptyDirectoryRecursive(tvShowRoot);
+    }
+    catch (IOException e) {
+      LOGGER.warn("could not delete empty subfolders: {}", e.getMessage());
+    }
+  }
+
+  private static void undoRenameEpisodeAsDisc(TvShowEpisode episode) {
+    // get the first MF of this episode
+    MediaFile mf = episode.getMainVideoFile();
+    List<TvShowEpisode> eps = TvShowList.getTvEpisodesByFile(episode.getTvShow(), mf.getFile());
+
+    // and do some checks
+    if (!episode.isDisc() || !mf.isDiscFile() || ListUtils.isEmpty(episode.getRenameHistory().getFilenameHistory())) {
+      return;
+    }
+
+    MediaEntityFilenameHistory.FilenameHistory filenameHistory = episode.getRenameHistory().getFilenameHistory().get(0);
+
+    Path newEpFolder = episode.getTvShow().getPathNIO().resolve(filenameHistory.newFilename());
+    Path oldEpFolder = episode.getTvShow().getPathNIO().resolve(filenameHistory.oldFilename());
+
+    try {
+      boolean ok = false;
+      try {
+        // create parent if needed
+        if (!Files.exists(oldEpFolder.getParent())) {
+          Files.createDirectory(oldEpFolder.getParent());
+        }
+        ok = Utils.moveDirectorySafe(newEpFolder, oldEpFolder);
+      }
+      catch (Exception e) {
+        LOGGER.error(e.getMessage());
+        MessageManager.instance
+            .pushMessage(new Message(MessageLevel.ERROR, newEpFolder, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+      }
+      if (ok) {
+        // iterate over all EPs & MFs and fix new path
+        LOGGER.debug("updating *all* MFs for new path -> {}", newEpFolder);
+        for (TvShowEpisode e : eps) {
+          e.updateMediaFilePath(newEpFolder, oldEpFolder);
+          e.setPath(oldEpFolder.toAbsolutePath().toString());
+          e.setRenameHistory(null);
+          e.saveToDb();
+        }
+      }
+      // and cleanup
+      cleanEmptyDir(newEpFolder);
+    }
+    catch (Exception e) {
+      LOGGER.error("error moving video file " + newEpFolder + " to " + oldEpFolder, e);
+      MessageManager.instance.pushMessage(
+          new Message(MessageLevel.ERROR, mf.getFilename(), "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+    }
   }
 
   /**

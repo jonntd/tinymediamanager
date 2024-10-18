@@ -50,6 +50,7 @@ import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.entities.MediaEntityFilenameHistory;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
 import org.tinymediamanager.core.jmte.JmteUtils;
@@ -256,9 +257,10 @@ public class MovieRenamer {
       return;
     }
 
-    // all the good & needed mediafiles
-    ArrayList<MediaFile> needed = new ArrayList<>();
-    ArrayList<MediaFile> cleanup = new ArrayList<>();
+    // all the good & needed mediafiles & hbistory
+    List<MediaFile> needed = new ArrayList<>();
+    List<MediaFile> cleanup = new ArrayList<>();
+    MediaEntityFilenameHistory fileNameHistory = new MediaEntityFilenameHistory();
 
     LOGGER.info("Renaming movie: {}", movie.getTitle());
     LOGGER.debug("movie year: {}", movie.getYear());
@@ -354,6 +356,7 @@ public class MovieRenamer {
       MediaFile newMF = generateFilename(movie, vid, newVideoBasename).get(0); // there can be only one
       boolean ok = moveFile(vid.getFileAsPath(), newMF.getFileAsPath());
       if (ok) {
+        fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, vid.getFileAsPath(), newMF.getFileAsPath()));
         vid.setFile(newMF.getFileAsPath()); // update
       }
       else {
@@ -373,7 +376,7 @@ public class MovieRenamer {
     // ## rename POSTER, FANART, BANNER, CLEARART, THUMB, LOGO, CLEARLOGO, DISCART, KEYART (copy 1:N)
     // ######################################################################
     // we can have multiple ones, just get the newest one and copy(overwrite) them to all needed
-    ArrayList<MediaFile> mfs = new ArrayList<>();
+    List<MediaFile> mfs = new ArrayList<>();
     mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.FANART));
     mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.POSTER));
     mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.BANNER));
@@ -393,6 +396,7 @@ public class MovieRenamer {
         boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
           needed.add(newMF);
+          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), newMF.getFileAsPath()));
 
           // update the cached image by just COPYing it around (1:N)
           if (ImageCache.isImageCached(mf.getFileAsPath())) {
@@ -430,6 +434,7 @@ public class MovieRenamer {
           boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
           if (ok) {
             needed.add(newNFO);
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, nfo.getFileAsPath(), newNFO.getFileAsPath()));
           }
         }
       }
@@ -453,6 +458,7 @@ public class MovieRenamer {
         }
         else {
           needed.add(mf);
+          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), mf.getFileAsPath()));
         }
       }
     }
@@ -472,10 +478,12 @@ public class MovieRenamer {
       for (MediaFile newMF : newMFs) {
         boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
         if (ok) {
+          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), newMF.getFileAsPath()));
           needed.add(newMF);
         }
         else {
           // FIXME: what to do? not copied/exception... keep it for now...
+          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), other.getFileAsPath()));
           needed.add(other);
         }
       }
@@ -495,15 +503,17 @@ public class MovieRenamer {
             Path oldidx = sub.getFileAsPath().resolveSibling(sub.getFilename().replaceFirst("sub$", "idx"));
             Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().toString().replaceFirst("sub$", "idx"));
             Utils.moveFileSafe(oldidx, newidx);
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, oldidx, newidx));
           }
           catch (Exception e) {
             // no idx found or error - ignore
           }
         }
         needed.add(newMF);
+        fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, sub.getFileAsPath(), newMF.getFileAsPath()));
       }
       else {
-        LOGGER.error("could not movie subtitle file '{}'", sub.getFileAsPath());
+        LOGGER.error("could not rename subtitle file '{}'", sub.getFileAsPath());
         needed.add(sub);
       }
     }
@@ -604,7 +614,150 @@ public class MovieRenamer {
 
     cleanupUnwantedFiles(movie);
     removeEmptySubfolders(movie);
+
+    // rename history
+    fileNameHistory.setOldPath(oldPathname);
+    fileNameHistory.setNewPath(newPathname);
+    movie.setRenameHistory(fileNameHistory);
+
     movie.saveToDb();
+  }
+
+  public static void undoRename(Movie movie) {
+    if (movie.getRenameHistory() == null) {
+      LOGGER.debug("could not undo rename - no history available");
+      return;
+    }
+
+    List<MediaFile> needed = new ArrayList<>();
+
+    Path oldMoviePath = Paths.get(movie.getRenameHistory().getOldPath());
+    Path newMoviePath = Paths.get(movie.getRenameHistory().getNewPath());
+
+    // try the VIDEO file(s) first
+    for (MediaFile vid : movie.getMediaFiles(MediaFileType.VIDEO)) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(movie, vid);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename - VIDEO file history not found");
+        return;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", vid.getType(), vid.getFileAsPath());
+      MediaFile oldMF = new MediaFile(vid);
+      oldMF.replacePathForRenamedFolder(newMoviePath, oldMoviePath);
+      oldMF.setFile(oldMoviePath.resolve(filenameHistory.oldFilename()));
+
+      if (movie.isDisc() && Files.isDirectory(vid.getFile())) {
+        boolean ok = moveDirectory(vid.getFileAsPath(), oldMF.getFileAsPath());
+        if (ok) {
+          vid.setFile(oldMF.getFileAsPath()); // update
+        }
+        else {
+          LOGGER.error("could not move video file of movie '{}' - abort renaming", movie.getTitle());
+          return;
+        }
+      }
+      else {
+        boolean ok = moveFile(vid.getFileAsPath(), oldMF.getFileAsPath());
+        if (ok) {
+          vid.setFile(oldMF.getFileAsPath()); // update
+        }
+        else {
+          LOGGER.error("could not move video file of movie '{}' - abort renaming", movie.getTitle());
+          return;
+        }
+      }
+
+      needed.add(vid); // add vid, since we're updating existing MF object
+    }
+
+    // and all others
+    for (MediaFile mediaFile : movie.getMediaFilesExceptType(MediaFileType.VIDEO)) {
+      MediaEntityFilenameHistory.FilenameHistory filenameHistory = findFilenameHistoryForMediaFile(movie, mediaFile);
+      if (filenameHistory == null) {
+        LOGGER.debug("could not undo rename for '{}' - history not found", mediaFile.getFilename());
+        continue;
+      }
+
+      LOGGER.trace("Rename 1:1 {} - {}", mediaFile.getType(), mediaFile.getFileAsPath());
+      MediaFile oldMF = new MediaFile(mediaFile);
+      oldMF.replacePathForRenamedFolder(newMoviePath, oldMoviePath);
+      oldMF.setFile(oldMoviePath.resolve(filenameHistory.oldFilename()));
+
+      if (movie.isDisc() && !Files.exists(mediaFile.getFileAsPath())) {
+        // this file probably has been merged into the disc folder -> we need to adopt the path
+        Path newPath = movie.getMainVideoFile().getFileAsPath().resolve(mediaFile.getFilename());
+        mediaFile.setFile(newPath);
+      }
+
+      boolean ok = moveFile(mediaFile.getFileAsPath(), oldMF.getFileAsPath());
+      if (ok) {
+        mediaFile.setFile(oldMF.getFileAsPath()); // update
+        needed.add(mediaFile);
+      }
+      else {
+        // probably a 1:n rename - just remove that file
+        Utils.deleteFileWithBackup(mediaFile.getFileAsPath(), movie.getDataSource());
+      }
+    }
+
+    // remove duplicate MediaFiles
+    Set<MediaFile> newMFs = new LinkedHashSet<>(needed);
+    needed.clear();
+    needed.addAll(newMFs);
+
+    movie.removeAllMediaFiles();
+
+    // ######################################################################
+    // ## build up image cache
+    // ######################################################################
+    if (Settings.getInstance().isImageCache()) {
+      for (MediaFile gfx : needed) {
+        ImageCache.cacheImageSilently(gfx, false);
+      }
+    }
+
+    // give the file system a bit to write the files
+    ThreadUtils.sleep(250);
+
+    movie.addToMediaFiles(needed);
+    movie.setPath(movie.getRenameHistory().getOldPath());
+    movie.gatherMediaFileInformation(false);
+
+    // remove history
+    movie.setRenameHistory(null);
+
+    movie.saveToDb();
+
+    // cleanup old path
+    try {
+      Utils.deleteEmptyDirectoryRecursive(newMoviePath);
+    }
+    catch (IOException e) {
+      LOGGER.warn("could not delete empty subfolders: {}", e.getMessage());
+    }
+  }
+
+  private static MediaEntityFilenameHistory.FilenameHistory createFilenameHistory(String newMoviePath, Path oldFilePath, Path newFilePath) {
+    String oldFilename = Paths.get(newMoviePath).relativize(oldFilePath).toString(); // already changed in the generate filename logic
+    String newFilename = Paths.get(newMoviePath).relativize(newFilePath).toString();
+    return new MediaEntityFilenameHistory.FilenameHistory(oldFilename, newFilename);
+  }
+
+  private static MediaEntityFilenameHistory.FilenameHistory findFilenameHistoryForMediaFile(Movie movie, MediaFile mediaFile) {
+    if (movie.getRenameHistory() == null) {
+      return null;
+    }
+
+    Path moviePath = movie.getPathNIO();
+
+    for (MediaEntityFilenameHistory.FilenameHistory filenameHistory : movie.getRenameHistory().getFilenameHistory()) {
+      if (filenameHistory.newFilename().equals(moviePath.relativize(mediaFile.getFileAsPath()).toString())) {
+        return filenameHistory;
+      }
+    }
+
+    return null;
   }
 
   private static boolean renameMovieFolder(Movie movie, String newPathname) {
@@ -740,7 +893,7 @@ public class MovieRenamer {
    */
   public static List<MediaFile> generateFilename(Movie movie, MediaFile mf, String newVideoFileName, String oldVideoFileName) {
     // return list of all generated MFs
-    ArrayList<MediaFile> newFiles = new ArrayList<>();
+    List<MediaFile> newFiles = new ArrayList<>();
     boolean newDestIsMultiMovieDir = movie.isMultiMovieDir();
     String newPathname = "";
 
@@ -1419,6 +1572,38 @@ public class MovieRenamer {
       LOGGER.error("error moving file '{}' - '{}'", oldFilename.toAbsolutePath(), e.getMessage());
       MessageManager.instance
           .pushMessage(new Message(MessageLevel.ERROR, oldFilename, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+      return false; // rename failed
+    }
+  }
+
+  /**
+   * moves a directory.
+   *
+   * @param oldName
+   *          the old filename
+   * @param newName
+   *          the new filename
+   * @return true, when we moved file
+   */
+  static boolean moveDirectory(Path oldName, Path newName) {
+    try {
+      // create parent if needed
+      if (!Files.exists(newName.getParent())) {
+        Files.createDirectory(newName.getParent());
+      }
+      boolean ok = Utils.moveDirectorySafe(oldName, newName);
+      if (ok) {
+        return true;
+      }
+      else {
+        LOGGER.error("Could not move folder '{}' to '{}'", oldName, newName);
+        return false; // rename failed
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("error moving folder '{}' - '{}'", oldName.toAbsolutePath(), e.getMessage());
+      MessageManager.instance
+          .pushMessage(new Message(MessageLevel.ERROR, oldName, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
     }
   }

@@ -1,5 +1,6 @@
 Version 5.1
 =======================
++ [Experimental] undo renaming: you can now undo the last renamer run
 + [Movies] added a filter for trailer formats #2708
 x [UI] restructured settings dialog
 x [UI] reworked image chooser

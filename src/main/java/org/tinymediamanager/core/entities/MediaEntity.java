@@ -142,6 +142,8 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   protected String                     lastScraperId      = "";
   @JsonProperty
   protected String                     lastScrapeLanguage = "";
+  @JsonProperty
+  protected MediaEntityFilenameHistory renameHistory      = null;
 
   protected boolean                    newlyAdded         = false;
   protected boolean                    duplicate          = false;
@@ -1511,6 +1513,27 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     tags.clear();
     firePropertyChange(TAGS, null, tags);
     firePropertyChange(TAGS_AS_STRING, null, tags);
+  }
+
+  /**
+   * get the file name history from the last rename run
+   * 
+   * @return the {@link MediaEntityFilenameHistory} for the latest run or null
+   */
+  public MediaEntityFilenameHistory getRenameHistory() {
+    return renameHistory;
+  }
+
+  /**
+   * set the new file name history for the current renamer run
+   * 
+   * @param newValue
+   *          the {@link MediaEntityFilenameHistory} for the current run
+   */
+  public void setRenameHistory(MediaEntityFilenameHistory newValue) {
+    MediaEntityFilenameHistory oldValue = this.renameHistory;
+    this.renameHistory = newValue;
+    firePropertyChange("renameHistory", oldValue, newValue);
   }
 
   public abstract void saveToDb();

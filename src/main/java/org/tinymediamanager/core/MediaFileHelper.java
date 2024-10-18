@@ -1575,6 +1575,11 @@ public class MediaFileHelper {
       }
     }
 
+    // last bot not least add the main ifo (needed in the XML) - only when other files have been found
+    if (!relevantFiles.isEmpty()) {
+      relevantFiles.add(ifomif);
+    }
+
     return relevantFiles;
   }
 
