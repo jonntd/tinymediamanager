@@ -19,7 +19,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.swing.KeyStroke;
 
@@ -64,7 +63,7 @@ public class TvShowEditAction extends TmmAction {
         return true;
       }
       return false;
-    }).collect(Collectors.toList());
+    }).toList();
 
     if (selectedObjects.size() != selectedObjectWoLocked.size()) {
       TvShowSelectionModel.showLockedInformation();
@@ -84,8 +83,7 @@ public class TvShowEditAction extends TmmAction {
       Object obj = selectedObjectWoLocked.get(index);
 
       // display tv show editor
-      if (obj instanceof TvShow) {
-        TvShow tvShow = (TvShow) obj;
+      if (obj instanceof TvShow tvShow) {
         TvShowEditorDialog editor = new TvShowEditorDialog(tvShow, index, selectedCount, selectedShowTab);
         editor.setVisible(true);
         selectedShowTab = editor.getSelectedTab();
@@ -102,8 +100,7 @@ public class TvShowEditAction extends TmmAction {
       }
 
       // change season poster
-      if (obj instanceof TvShowSeason) {
-        TvShowSeason season = (TvShowSeason) obj;
+      if (obj instanceof TvShowSeason season) {
         TvShowSeasonEditorDialog editor = new TvShowSeasonEditorDialog(season, index, selectedCount, selectedSeasonTab);
         editor.setVisible(true);
         selectedSeasonTab = editor.getSelectedTab();
