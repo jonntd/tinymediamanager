@@ -48,32 +48,21 @@ public class TvShowEpisodeNumberEditorPanel extends AbstractModalInputPanel {
 
     List<MediaEpisodeGroup> episodeGroups = new ArrayList<>(episodeGroupsInTvShow);
 
-    // make sure aired order is always available
-    boolean found = false;
-
-    for (MediaEpisodeGroup episodeGroup : episodeGroupsInTvShow) {
-      if (episodeGroup.getEpisodeGroupType().equals(MediaEpisodeGroup.EpisodeGroupType.AIRED)) {
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
+    // make sure aired/absolute/DVD/display order is always available
+    if (isEpisodeGroupMissing(MediaEpisodeGroup.EpisodeGroupType.AIRED, episodeGroupsInTvShow)) {
       episodeGroups.add(0, MediaEpisodeGroup.DEFAULT_AIRED);
     }
 
-    // also add display order when missing
-    found = false;
-
-    for (MediaEpisodeGroup episodeGroup : episodeGroupsInTvShow) {
-      if (episodeGroup.getEpisodeGroupType().equals(MediaEpisodeGroup.EpisodeGroupType.DISPLAY)) {
-        found = true;
-        break;
-      }
+    if (isEpisodeGroupMissing(MediaEpisodeGroup.EpisodeGroupType.ABSOLUTE, episodeGroupsInTvShow)) {
+      episodeGroups.add(0, MediaEpisodeGroup.DEFAULT_ABSOLUTE);
     }
 
-    if (!found) {
-      episodeGroups.add(MediaEpisodeGroup.DEFAULT_DISPLAY);
+    if (isEpisodeGroupMissing(MediaEpisodeGroup.EpisodeGroupType.DVD, episodeGroupsInTvShow)) {
+      episodeGroups.add(0, MediaEpisodeGroup.DEFAULT_DVD);
+    }
+
+    if (isEpisodeGroupMissing(MediaEpisodeGroup.EpisodeGroupType.DISPLAY, episodeGroupsInTvShow)) {
+      episodeGroups.add(0, MediaEpisodeGroup.DEFAULT_DISPLAY);
     }
 
     {
@@ -112,6 +101,16 @@ public class TvShowEpisodeNumberEditorPanel extends AbstractModalInputPanel {
 
     // set focus to the first combobox
     SwingUtilities.invokeLater(cbEpisodeGroup::requestFocus);
+  }
+
+  private boolean isEpisodeGroupMissing(MediaEpisodeGroup.EpisodeGroupType episodeGroupType, List<MediaEpisodeGroup> episodeGroupsInTvShow) {
+    for (MediaEpisodeGroup episodeGroup : episodeGroupsInTvShow) {
+      if (episodeGroup.getEpisodeGroupType().equals(episodeGroupType)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   public MediaEpisodeNumber getEpisodeNumber() {

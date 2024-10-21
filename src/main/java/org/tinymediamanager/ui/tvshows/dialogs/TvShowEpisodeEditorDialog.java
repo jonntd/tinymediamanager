@@ -1125,7 +1125,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
   private void addOrEditEpisodeNumber(MediaEpisodeNumber episodeNumber) {
     // remove the old one
     MediaEpisodeNumber existing = episodeNumbers.stream()
-        .filter(ep -> ep.episodeGroup().getEpisodeGroupType() == episodeNumber.episodeGroup().getEpisodeGroupType())
+        .filter(ep -> ep.episodeGroup().equals(episodeNumber.episodeGroup()))
         .findFirst()
         .orElse(null);
     if (existing != null) {

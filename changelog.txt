@@ -4,6 +4,7 @@ Version 5.1
 + [Movies] added a filter for trailer formats #2708
 + [Movies/TV shows] added an action to calculate checksums for video files #913
 + [Certifications] added support for a lot of certifications
+x [TV shows] fixed editing of episode numbers
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog
 x [UI] reworked image chooser
