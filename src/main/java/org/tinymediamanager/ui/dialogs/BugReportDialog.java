@@ -17,6 +17,7 @@ package org.tinymediamanager.ui.dialogs;
 
 import java.awt.BorderLayout;
 import java.net.URLEncoder;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -32,8 +33,10 @@ import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.movie.MovieComparator;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.tvshow.TvShowComparator;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.ui.IconManager;
@@ -86,7 +89,9 @@ public class BugReportDialog extends TmmDialog {
     dummym.setTitle("- select movie -");
     dummym.setDbId(null);
     cbMovieList.addItem(new EntityContainer(dummym)); // fix first entry!
-    for (MediaEntity m : MovieModuleManager.getInstance().getMovieList().getMovies()) {
+    List<Movie> movies = MovieModuleManager.getInstance().getMovieList().getMovies();
+    movies.sort(new MovieComparator());
+    for (MediaEntity m : movies) {
       cbMovieList.addItem(new EntityContainer(m));
     }
     panelContent.add(cbMovieList, "cell 2 3,growx");
@@ -95,7 +100,9 @@ public class BugReportDialog extends TmmDialog {
     dummys.setTitle("- select tvShow -");
     dummys.setDbId(null);
     cbTvshowList.addItem(new EntityContainer(dummys)); // fix first entry!
-    for (TvShow s : TvShowModuleManager.getInstance().getTvShowList().getTvShows()) {
+    List<TvShow> tvShows = TvShowModuleManager.getInstance().getTvShowList().getTvShows();
+    tvShows.sort(new TvShowComparator());
+    for (TvShow s : tvShows) {
       cbTvshowList.addItem(new EntityContainer(s));
     }
     panelContent.add(cbTvshowList, "cell 2 4,growx");

@@ -978,7 +978,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
       try {
         LOGGER.info("=====================================================");
-        LOGGER.info("Scraper metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
+        LOGGER.info("Scrape episode metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
         LOGGER.info(options.toString());
         LOGGER.info("=====================================================");
         metadata = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getMetadata(options);

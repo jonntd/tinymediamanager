@@ -215,6 +215,11 @@ class TmdbArtworkProvider {
         // original
         ma.addImageSize(image.width, image.height, baseUrl + "original" + image.file_path, MediaArtwork.PosterSizes.getSizeOrder(image.width));
 
+        // w780
+        if (780 < image.width) {
+          ma.addImageSize(780, Math.round(image.height * 780f / image.width), baseUrl + "w780" + image.file_path,
+              MediaArtwork.PosterSizes.getSizeOrder(780));
+        }
         // w500
         if (500 < image.width) {
           ma.addImageSize(500, Math.round(image.height * 500f / image.width), baseUrl + "w500" + image.file_path,

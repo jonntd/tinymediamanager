@@ -22,6 +22,10 @@ import static org.tinymediamanager.core.Constants.MEDIA_FILES;
 import static org.tinymediamanager.core.Constants.POSTER;
 import static org.tinymediamanager.core.Constants.REMOVED_EPISODE;
 import static org.tinymediamanager.core.Constants.SEASON;
+import static org.tinymediamanager.core.Constants.SEASON_BANNER;
+import static org.tinymediamanager.core.Constants.SEASON_FANART;
+import static org.tinymediamanager.core.Constants.SEASON_POSTER;
+import static org.tinymediamanager.core.Constants.SEASON_THUMB;
 import static org.tinymediamanager.core.Constants.THUMB;
 import static org.tinymediamanager.core.Constants.TITLE;
 
@@ -93,7 +97,6 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
   private JLabel                             lblSeason;
   private JTextPane                          taOverview;
   private TmmTable                           tableEpisodes;
-  private JLabel                             lblPlotT;
 
   /**
    * Instantiates a new tv show information panel.
@@ -134,19 +137,19 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
         }
       }
 
-      if ("selectedTvShowSeason".equals(property) || POSTER.equals(property)) {
+      if ("selectedTvShowSeason".equals(property) || POSTER.equals(property) || SEASON_POSTER.equals(property)) {
         setPoster(selectedSeason);
       }
 
-      if ("selectedTvShowSeason".equals(property) || FANART.equals(property)) {
+      if ("selectedTvShowSeason".equals(property) || FANART.equals(property) || SEASON_FANART.equals(property)) {
         setFanart(selectedSeason);
       }
 
-      if ("selectedTvShowSeason".equals(property) || BANNER.equals(property)) {
+      if ("selectedTvShowSeason".equals(property) || BANNER.equals(property) || SEASON_BANNER.equals(property)) {
         setBanner(selectedSeason);
       }
 
-      if ("selectedTvShowSeason".equals(property) || THUMB.equals(property)) {
+      if ("selectedTvShowSeason".equals(property) || THUMB.equals(property) || SEASON_THUMB.equals(property)) {
         setThumb(selectedSeason);
       }
 
@@ -217,7 +220,7 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
         panelRight.add(new JSeparator(), "cell 0 2,growx");
       }
       {
-        lblPlotT = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
+        JLabel lblPlotT = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
         panelRight.add(lblPlotT, "cell 0 3");
 
         JScrollPane scrollPane = new NoBorderScrollPane();
@@ -307,7 +310,6 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
       component.setVisible(visible);
 
       if (component instanceof ImageLabel imageLabel) {
-        imageLabel.clearImage();
         imageLabel.setImagePath(artworkPath);
       }
       else if (component instanceof JLabel sizeLabel) {

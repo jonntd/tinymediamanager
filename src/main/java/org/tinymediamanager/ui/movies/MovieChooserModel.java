@@ -235,7 +235,7 @@ public class MovieChooserModel extends AbstractModelObject {
       options.setIds(result.getIds());
 
       LOGGER.info("=====================================================");
-      LOGGER.info("Scraper metadata with scraper: '{}' - '{}'", metadataProvider.getMediaProvider().getProviderInfo().getId(),
+      LOGGER.info("Scrape movie metadata with scraper: '{}' - '{}'", metadataProvider.getMediaProvider().getProviderInfo().getId(),
           metadataProvider.getMediaProvider().getProviderInfo().getVersion());
       LOGGER.info("{}", options);
       LOGGER.info("=====================================================");
