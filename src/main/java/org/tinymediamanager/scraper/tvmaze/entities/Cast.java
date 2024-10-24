@@ -15,7 +15,9 @@
  */
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Cast {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Cast extends BaseJsonEntity {
   public Person    person;
   public Character character;
   public boolean   self  = false;

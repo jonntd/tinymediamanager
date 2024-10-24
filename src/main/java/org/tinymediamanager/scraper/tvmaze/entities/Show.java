@@ -17,7 +17,9 @@ package org.tinymediamanager.scraper.tvmaze.entities;
 
 import java.util.List;
 
-public class Show {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Show extends BaseJsonEntity {
   public int          id;
   public String       url;
   public String       name;

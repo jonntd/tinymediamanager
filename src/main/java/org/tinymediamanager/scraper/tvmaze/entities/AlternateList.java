@@ -1,6 +1,8 @@
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class AlternateList {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class AlternateList extends BaseJsonEntity {
   public int        id;
   public String     url;
   public boolean    dvd_release;

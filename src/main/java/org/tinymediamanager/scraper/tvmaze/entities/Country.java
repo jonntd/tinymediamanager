@@ -1,6 +1,8 @@
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Country {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Country extends BaseJsonEntity {
   public String name;
   public String code;
   public String timezone;

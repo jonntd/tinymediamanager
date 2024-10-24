@@ -15,7 +15,9 @@
  */
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class SearchResult {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class SearchResult extends BaseJsonEntity {
   public float score;
   public Show  show;
 }
