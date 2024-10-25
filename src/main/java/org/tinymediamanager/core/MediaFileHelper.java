@@ -2016,11 +2016,8 @@ public class MediaFileHelper {
         sub.setLanguage(file.getLanguage());
       }
 
-      // 3. Language from Filename
-      if (sub.getLanguage().isEmpty()) {
-        String shortname = mediaFile.getBasename().toLowerCase(Locale.ROOT);
-        sub.setLanguage(parseLanguageFromString(shortname));
-      }
+      // 3. Language from Filename // NOOO, not here - we need the video basename for that!
+      // MediaStreamInfo info = MediaFileHelper.gatherLanguageInformation(mediaFile.getBasename(), mainVideoFile.getBasename());
 
       mediaFile.setSubtitles(Collections.singletonList(sub));
     }
