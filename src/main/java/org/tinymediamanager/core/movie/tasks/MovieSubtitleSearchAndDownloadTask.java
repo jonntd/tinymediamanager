@@ -160,7 +160,8 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
 
             String filename = FilenameUtils.getBaseName(mf.getFilename()) + "." + lang;
 
-            TmmTaskManager.getInstance().addDownloadTask(new SubtitleDownloadTask(result.getUrl(), movie.getPathNIO().resolve(filename), movie));
+            TmmTaskManager.getInstance()
+                .addDownloadTask(new SubtitleDownloadTask(result.getUrl(), movie.getPathNIO().resolve(filename), movie, lang));
           }
           catch (MissingIdException ignored) {
             // no need to log here

@@ -26,6 +26,7 @@ import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
@@ -34,6 +35,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaFileSubtitle;
 
 /**
  * This class handles the download and additional unpacking of a subtitle
@@ -45,11 +47,13 @@ public class SubtitleDownloadTask extends DownloadTask {
 
   private final MediaEntity   mediaEntity;
   private final Path          destinationFile;
+  private final String        language;
 
-  public SubtitleDownloadTask(String url, Path destinationFile, MediaEntity mediaEntity) {
+  public SubtitleDownloadTask(String url, Path destinationFile, MediaEntity mediaEntity, String language) {
     super(TmmResourceBundle.getString("subtitle.downloading"), url);
     this.mediaEntity = mediaEntity;
     this.destinationFile = destinationFile;
+    this.language = language;
   }
 
   @Override
@@ -90,9 +94,22 @@ public class SubtitleDownloadTask extends DownloadTask {
           MediaFile mf = new MediaFile(destination);
           mf.gatherMediaInformation();
           mf.detectStackingInformation();
-          mediaEntity.removeFromMediaFiles(mf); // remove old (possibly same) file
-          mediaEntity.addToMediaFiles(mf); // add file, but maybe with other MI values
-          mediaEntity.saveToDb();
+
+          // set the subtitle language
+          if (mf.getSubtitles().isEmpty()) {
+            LOGGER.warn("Download to '{}' was ok, but mediainfo did not detect any subtitle info", tempFile);
+            setState(TaskState.FAILED);
+          }
+          else {
+            MediaFileSubtitle subtitle = mf.getSubtitles().get(0);
+            if (StringUtils.isBlank(subtitle.getLanguage())) {
+              subtitle.setLanguage(language);
+            }
+
+            mediaEntity.removeFromMediaFiles(mf); // remove old (possibly same) file
+            mediaEntity.addToMediaFiles(mf); // add file, but maybe with other MI values
+            mediaEntity.saveToDb();
+          }
         }
       }
       else {
@@ -149,9 +166,21 @@ public class SubtitleDownloadTask extends DownloadTask {
         if (mediaEntity != null) {
           mf.gatherMediaInformation();
           mf.detectStackingInformation();
-          mediaEntity.removeFromMediaFiles(mf); // remove old (possibly same) file
-          mediaEntity.addToMediaFiles(mf); // add file, but maybe with other MI values
-          mediaEntity.saveToDb();
+
+          if (mf.getSubtitles().isEmpty()) {
+            LOGGER.warn("Download to '{}' was ok, but mediainfo did not detect any subtitle info", tempFile);
+            setState(TaskState.FAILED);
+          }
+          else {
+            MediaFileSubtitle subtitle = mf.getSubtitles().get(0);
+            if (StringUtils.isBlank(subtitle.getLanguage())) {
+              subtitle.setLanguage(language);
+            }
+
+            mediaEntity.removeFromMediaFiles(mf); // remove old (possibly same) file
+            mediaEntity.addToMediaFiles(mf); // add file, but maybe with other MI values
+            mediaEntity.saveToDb();
+          }
         }
       }
       else {

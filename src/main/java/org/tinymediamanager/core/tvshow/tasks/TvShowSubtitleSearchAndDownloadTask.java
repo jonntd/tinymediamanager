@@ -170,7 +170,8 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
             }
 
             String filename = FilenameUtils.getBaseName(mf.getFilename()) + "." + lang;
-            TmmTaskManager.getInstance().addDownloadTask(new SubtitleDownloadTask(result.getUrl(), episode.getPathNIO().resolve(filename), episode));
+            TmmTaskManager.getInstance()
+                .addDownloadTask(new SubtitleDownloadTask(result.getUrl(), episode.getPathNIO().resolve(filename), episode, lang));
           }
           catch (MissingIdException ignored) {
           }

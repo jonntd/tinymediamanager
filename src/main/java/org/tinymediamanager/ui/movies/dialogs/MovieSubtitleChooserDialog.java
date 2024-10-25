@@ -429,7 +429,7 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
             }
             String filename = FilenameUtils.getBaseName(fileToScrape.getFilename()) + "." + lang;
 
-            DownloadTask task = new SubtitleDownloadTask(model.getDownloadUrl(), movieToScrape.getPathNIO().resolve(filename), movieToScrape);
+            DownloadTask task = new SubtitleDownloadTask(model.getDownloadUrl(), movieToScrape.getPathNIO().resolve(filename), movieToScrape, lang);
 
             // blocking
             setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
