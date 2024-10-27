@@ -76,7 +76,9 @@ import org.tinymediamanager.ui.dialogs.LogDialog;
 import org.tinymediamanager.ui.dialogs.MessageHistoryDialog;
 import org.tinymediamanager.ui.dialogs.SettingsDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
+import org.tinymediamanager.ui.movies.dialogs.MovieJmteExplorerDialog;
 import org.tinymediamanager.ui.thirdparty.KodiRPCMenu;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowJmteExplorerDialog;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -257,6 +259,20 @@ public class MainMenuPanel extends JPanel {
         }
       }
     });
+
+    {
+      menu.addSeparator();
+      JMenu jmteExplorerMenu = new JMenu(TmmResourceBundle.getString("jmteexplorer.title"));
+      JMenuItem movieJmteExplorer = new JMenuItem(TmmResourceBundle.getString("tmm.movies"));
+      movieJmteExplorer.addActionListener(arg0 -> new MovieJmteExplorerDialog(MainWindow.getInstance()).setVisible(true));
+      jmteExplorerMenu.add(movieJmteExplorer);
+
+      JMenuItem tvShowJmteExplorer = new JMenuItem(TmmResourceBundle.getString("tmm.tvshows"));
+      tvShowJmteExplorer.addActionListener(arg0 -> new TvShowJmteExplorerDialog(MainWindow.getInstance()).setVisible(true));
+      jmteExplorerMenu.add(tvShowJmteExplorer);
+
+      menu.add(jmteExplorerMenu);
+    }
 
     if (Globals.canCheckForUpdates() || Globals.isDebug()) {
       menu.addSeparator();

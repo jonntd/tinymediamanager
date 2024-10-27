@@ -70,6 +70,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
@@ -79,6 +80,7 @@ import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
+import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
@@ -1585,5 +1587,10 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   @Override
   public String toPrintable() {
     return getTitle();
+  }
+
+  @Override
+  public String toString() {
+    return ToStringBuilder.reflectionToString(this, TmmToStringStyle.TMM_STYLE, false, MediaEntity.class);
   }
 }

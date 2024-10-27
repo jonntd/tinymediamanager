@@ -23,7 +23,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -72,7 +71,6 @@ import org.tinymediamanager.core.jmte.TmmOutputAppender;
 import org.tinymediamanager.core.jmte.ZeroNumberRenderer;
 import org.tinymediamanager.core.movie.connector.MovieConnectors;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.movie.filenaming.MovieBannerNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieClearartNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieClearlogoNaming;
@@ -84,13 +82,19 @@ import org.tinymediamanager.core.movie.filenaming.MovieNfoNaming;
 import org.tinymediamanager.core.movie.filenaming.MoviePosterNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieThumbNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
+import org.tinymediamanager.core.movie.jmte.MovieNamedFirstCharacterRenderer;
+import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetRenderer;
+import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetWithDummyRenderer;
 import org.tinymediamanager.core.threading.ThreadUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.floreysoft.jmte.Engine;
-import com.floreysoft.jmte.NamedRenderer;
-import com.floreysoft.jmte.RenderFormatInfo;
 import com.floreysoft.jmte.extended.ChainedNamedRenderer;
+import com.floreysoft.jmte.message.DefaultErrorHandler;
+import com.floreysoft.jmte.message.ErrorMessage;
+import com.floreysoft.jmte.message.ParseException;
+import com.floreysoft.jmte.message.ResourceBundleMessage;
+import com.floreysoft.jmte.token.Token;
 
 /**
  * The Class MovieRenamer.
@@ -1390,8 +1394,8 @@ public class MovieRenamer {
   public static String getTokenValue(Movie movie, String token) {
     try {
       Engine engine = createEngine();
-
       engine.setModelAdaptor(new TmmModelAdaptor());
+
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
@@ -1442,8 +1446,12 @@ public class MovieRenamer {
     engine.registerNamedRenderer(new ChainedNamedRenderer(engine.getAllNamedRenderers()));
 
     engine.registerAnnotationProcessor(new RegexpProcessor());
-
-    engine.setModelAdaptor(new TmmModelAdaptor());
+    engine.setErrorHandler(new DefaultErrorHandler() {
+      @Override
+      public void error(ErrorMessage errorMessage, Token token, Map<String, Object> parameters) throws ParseException {
+        throw new ParseException(new ResourceBundleMessage(errorMessage.key).withModel(parameters).onToken(token));
+      }
+    });
 
     return engine;
   }
@@ -1710,115 +1718,5 @@ public class MovieRenamer {
   public static String replacePathSeparators(String source) {
     String result = source.replaceAll("\\/", " "); // NOSONAR
     return result.replaceAll("\\\\", " "); // NOSONAR
-  }
-
-  public static class MovieNamedFirstCharacterRenderer implements NamedRenderer {
-    private static final Pattern FIRST_ALPHANUM_PATTERN = Pattern.compile("[\\p{L}\\d]");
-
-    @Override
-    public String render(Object o, String s, Locale locale, Map<String, Object> map) {
-      if (o instanceof String && StringUtils.isNotBlank((String) o)) {
-        String source = StrgUtils.convertToAscii((String) o, false);
-        Matcher matcher = FIRST_ALPHANUM_PATTERN.matcher(source);
-        if (matcher.find()) {
-          String first = matcher.group();
-
-          if (first.matches("\\p{L}")) {
-            return first.toUpperCase(Locale.ROOT);
-          }
-          else {
-            return MovieModuleManager.getInstance().getSettings().getRenamerFirstCharacterNumberReplacement();
-          }
-        }
-      }
-      if (o instanceof Number) {
-        return MovieModuleManager.getInstance().getSettings().getRenamerFirstCharacterNumberReplacement();
-      }
-      if (o instanceof Date) {
-        return MovieModuleManager.getInstance().getSettings().getRenamerFirstCharacterNumberReplacement();
-      }
-      return "";
-    }
-
-    @Override
-    public String getName() {
-      return "first";
-    }
-
-    @Override
-    public RenderFormatInfo getFormatInfo() {
-      return null;
-    }
-
-    @Override
-    public Class<?>[] getSupportedClasses() {
-      return new Class[] { Date.class, String.class, Integer.class, Long.class };
-    }
-  }
-
-  public static class MovieNamedIndexOfMovieSetRenderer implements NamedRenderer {
-
-    @Override
-    public String render(Object o, String s, Locale locale, Map<String, Object> map) {
-      if (o instanceof Movie) {
-        Movie movie = (Movie) o;
-        MovieSet movieSet = movie.getMovieSet();
-        if (movieSet == null) {
-          return null;
-        }
-
-        return String.valueOf(movieSet.getMovieIndex(movie) + 1);
-      }
-
-      return null;
-    }
-
-    @Override
-    public String getName() {
-      return "indexOfMovieSet";
-    }
-
-    @Override
-    public RenderFormatInfo getFormatInfo() {
-      return null;
-    }
-
-    @Override
-    public Class<?>[] getSupportedClasses() {
-      return new Class[] { Movie.class };
-    }
-  }
-
-  public static class MovieNamedIndexOfMovieSetWithDummyRenderer implements NamedRenderer {
-
-    @Override
-    public String render(Object o, String s, Locale locale, Map<String, Object> map) {
-      if (o instanceof Movie) {
-        Movie movie = (Movie) o;
-        MovieSet movieSet = movie.getMovieSet();
-        if (movieSet == null) {
-          return null;
-        }
-
-        return String.valueOf(movieSet.getMovieIndexWithDummy(movie) + 1);
-      }
-
-      return null;
-    }
-
-    @Override
-    public String getName() {
-      return "indexOfMovieSetWithDummy";
-    }
-
-    @Override
-    public RenderFormatInfo getFormatInfo() {
-      return null;
-    }
-
-    @Override
-    public Class<?>[] getSupportedClasses() {
-      return new Class[] { Movie.class };
-    }
   }
 }

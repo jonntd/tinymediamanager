@@ -37,12 +37,15 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
@@ -1521,7 +1524,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   /**
    * Gets the audio stream marked as "default", or, if none, get the best with highest amount of channels
    * 
-   * @return
+   * @return the default/best {@link MediaFileAudioStream}
    */
   public MediaFileAudioStream getDefaultOrBestAudioStream() {
     MediaFileAudioStream ret = null;
@@ -1563,7 +1566,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   public String getCombinedCodecs() {
     StringBuilder sb = new StringBuilder(videoCodec);
     for (MediaFileAudioStream audioStream : ListUtils.nullSafe(audioStreams)) {
-      if (sb.length() > 0) {
+      if (!sb.isEmpty()) {
         sb.append(" / ");
       }
       sb.append(audioStream.getCodec());
@@ -1594,7 +1597,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    * is this an animated graphic?<br>
    * (intended usage for ImageCache, to not scale this...)
    *
-   * @return
+   * @return true/false
    */
   public boolean isAnimatedGraphic() {
     return isAnimatedGraphic;
@@ -1605,6 +1608,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    * use {@link #checkForAnimation()} to get from GIF file
    *
    * @param isAnimatedGraphic
+   *          true/false
    */
   public void setAnimatedGraphic(boolean isAnimatedGraphic) {
     this.isAnimatedGraphic = isAnimatedGraphic;
@@ -1752,18 +1756,31 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     return Utils.deleteFileWithBackup(getFileAsPath(), datasource);
   }
 
+  /**
+   * <p>
+   * Uses <code>ReflectionToStringBuilder</code> to generate a <code>toString</code> for the specified object.
+   * </p>
+   *
+   * @return the String result
+   * @see ReflectionToStringBuilder#toString(Object)
+   */
   @Override
-  public boolean equals(Object mf2) {
+  public String toString() {
+    return ToStringBuilder.reflectionToString(this, TmmToStringStyle.TMM_STYLE, false, MediaFile.class);
+  }
 
-    if ((mf2 instanceof MediaFile)) {
-      return compareTo((MediaFile) mf2) == 0;
+  @Override
+  public boolean equals(Object other) {
+
+    if ((other instanceof MediaFile mf2)) {
+      return compareTo(mf2) == 0;
     }
     return false;
   }
 
   @Override
-  public int compareTo(MediaFile mf2) {
-    return this.getFileAsPath().compareTo(mf2.getFileAsPath());
+  public int compareTo(MediaFile other) {
+    return this.getFileAsPath().compareTo(other.getFileAsPath());
   }
 
   @Override

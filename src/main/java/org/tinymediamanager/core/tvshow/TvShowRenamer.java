@@ -95,6 +95,11 @@ import com.floreysoft.jmte.Engine;
 import com.floreysoft.jmte.NamedRenderer;
 import com.floreysoft.jmte.RenderFormatInfo;
 import com.floreysoft.jmte.extended.ChainedNamedRenderer;
+import com.floreysoft.jmte.message.DefaultErrorHandler;
+import com.floreysoft.jmte.message.ErrorMessage;
+import com.floreysoft.jmte.message.ParseException;
+import com.floreysoft.jmte.message.ResourceBundleMessage;
+import com.floreysoft.jmte.token.Token;
 
 /**
  * The TvShowRenamer Works on per MediaFile basis
@@ -1947,7 +1952,7 @@ public class TvShowRenamer {
     String newPathname;
 
     try {
-      if (StringUtils.isNotBlank(TvShowModuleManager.getInstance().getSettings().getRenamerTvShowFoldername())) {
+      if (StringUtils.isNotBlank(template)) {
         newPathname = Paths.get(tvShow.getDataSource(), createDestination(template, tvShow)).toString();
       }
       else {
@@ -1976,6 +1981,7 @@ public class TvShowRenamer {
   public static String getTokenValue(TvShow show, TvShowEpisode episode, String token) {
     try {
       Engine engine = createEngine();
+      engine.setModelAdaptor(new TmmModelAdaptor());
 
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
@@ -2022,8 +2028,12 @@ public class TvShowRenamer {
     engine.registerNamedRenderer(new ChainedNamedRenderer(engine.getAllNamedRenderers()));
 
     engine.registerAnnotationProcessor(new RegexpProcessor());
-
-    engine.setModelAdaptor(new TmmModelAdaptor());
+    engine.setErrorHandler(new DefaultErrorHandler() {
+      @Override
+      public void error(ErrorMessage errorMessage, Token token, Map<String, Object> parameters) throws ParseException {
+        throw new ParseException(new ResourceBundleMessage(errorMessage.key).withModel(parameters).onToken(token));
+      }
+    });
 
     return engine;
   }
