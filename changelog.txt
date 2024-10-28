@@ -1,3 +1,7 @@
+Version 5.0.14
+=======================
+
+
 Version 5.0.13
 =======================
 + [TVmaze] make it usable from within the universal scraper #2723
