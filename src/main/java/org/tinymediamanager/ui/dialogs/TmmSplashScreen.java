@@ -33,6 +33,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.plaf.basic.BasicProgressBarUI;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -87,7 +88,15 @@ public class TmmSplashScreen extends JDialog {
     setModal(false);
     setUndecorated(true);
     setDefaultLookAndFeelDecorated(false);
-    setBackground(new Color(0, 0, 0, 0));
+
+    // on linux we need to set a background to avoid flicker
+    if (SystemUtils.IS_OS_LINUX) {
+      getContentPane().setBackground(new Color(39, 39, 39));
+    }
+    else {
+      setBackground(new Color(0, 0, 0, 0));
+    }
+
     pack();
     setLocationRelativeTo(null);
   }
