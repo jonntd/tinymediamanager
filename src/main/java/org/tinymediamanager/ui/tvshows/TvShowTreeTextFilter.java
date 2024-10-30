@@ -54,7 +54,7 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
       // filter on the node
       Matcher matcher;
       if (settings.getNode()) {
-        matcher = filterPattern.matcher(treeNode.toString());
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.toString()));
         if (matcher.find()) {
           return true;
         }
@@ -62,7 +62,7 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
 
       // filter on the title
       if (settings.getTitle()) {
-        matcher = filterPattern.matcher(treeNode.getTitle());
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.getTitle()));
         if (matcher.find()) {
           return true;
         }
@@ -70,7 +70,7 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
 
       // filter on the original title
       if (settings.getOriginalTitle()) {
-        matcher = filterPattern.matcher(treeNode.getOriginalTitle());
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.getOriginalTitle()));
         if (matcher.find()) {
           return true;
         }
@@ -78,7 +78,7 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
 
       // Note
       if (settings.getNote()) {
-        matcher = filterPattern.matcher(treeNode.getNote());
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.getNote()));
         if (matcher.find()) {
           return true;
         }
@@ -109,8 +109,7 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
       return false;
     }
 
-    if (node instanceof TvShowTreeDataProvider.AbstractTvShowTreeNode) {
-      TvShowTreeDataProvider.AbstractTvShowTreeNode treeNode = (TvShowTreeDataProvider.AbstractTvShowTreeNode) node;
+    if (node instanceof TvShowTreeDataProvider.AbstractTvShowTreeNode treeNode) {
       // first: filter on the node
       Matcher matcher = pattern.matcher(StrgUtils.normalizeString(treeNode.toString()));
       if (matcher.find()) {
