@@ -16,6 +16,7 @@
 package org.tinymediamanager.core.movie.entities;
 
 import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
+import static org.tinymediamanager.core.Constants.SORT_TITLE;
 import static org.tinymediamanager.core.Constants.TITLE_FOR_UI;
 import static org.tinymediamanager.core.Constants.TITLE_SORTABLE;
 
@@ -73,6 +74,9 @@ public class MovieSet extends MediaEntity {
   private static final Logger                LOGGER                = LoggerFactory.getLogger(MovieSet.class);
   private static final Comparator<Movie>     MOVIE_SET_COMPARATOR  = new MovieInMovieSetComparator();
   private static final Comparator<MediaFile> MEDIA_FILE_COMPARATOR = new MovieMediaFileComparator();
+
+  @JsonProperty
+  private String                             sortTitle             = "";
 
   @JsonProperty
   private final List<UUID>                   movieIds              = new ArrayList<>(0);
@@ -166,6 +170,32 @@ public class MovieSet extends MediaEntity {
     return titleSortable;
   }
 
+  /**
+   * Gets the sort title.
+   *
+   * @return the sort title
+   */
+  public String getSortTitle() {
+    return sortTitle;
+  }
+
+  /**
+   * Sets the sort title.
+   *
+   * @param newValue
+   *          the new sort title
+   */
+  public void setSortTitle(String newValue) {
+    String oldValue = this.sortTitle;
+    this.sortTitle = newValue;
+    firePropertyChange(SORT_TITLE, oldValue, newValue);
+  }
+
+  /**
+   * get the TMDB Id for this {@link MovieSet}
+   * 
+   * @return the TMDB Id or 0
+   */
   public int getTmdbId() {
     int id;
     try {
@@ -177,6 +207,12 @@ public class MovieSet extends MediaEntity {
     return id;
   }
 
+  /**
+   * set the TMDB Id for this {@link MovieSet}
+   * 
+   * @param newValue
+   *          the new TMDB Id
+   */
   public void setTmdbId(int newValue) {
     int oldValue = getTmdbId();
     ids.put(MediaMetadata.TMDB_SET, newValue);

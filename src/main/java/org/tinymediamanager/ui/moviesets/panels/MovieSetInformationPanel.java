@@ -175,7 +175,7 @@ public class MovieSetInformationPanel extends JPanel {
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[100lp:100lp,grow][300lp:300lp,grow 250]", "[grow]"));
+    setLayout(new MigLayout("", "[n:100lp:20%, grow][300lp:300lp,grow 350]", "[grow]"));
     {
       JPanel panelLeft = new JPanel();
       panelLeft.setLayout(new ColumnLayout());

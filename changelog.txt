@@ -5,6 +5,7 @@ Version 5.1
 + [Movies/TV shows] added an enhanced JMTE helper
 + [Movies/TV shows] added an action to calculate checksums for video files #913
 + [Movies] display director in the movie information panel too
++ [Movie sets] added sorttitle for exporting into the NFO files #2742
 + [Certifications] added support for a lot of certifications
 x [TV shows] fixed editing of episode numbers
 x [UDS/Scraper/JMTE] reworked title case converter
