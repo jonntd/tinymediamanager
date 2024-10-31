@@ -192,6 +192,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
           lblPoster.clearImage();
           tfPoster.setText("");
         });
+        btnDeletePoster.setFocusable(false);
         detailsPanel.add(btnDeletePoster, "cell 3 0");
 
         lblPoster = new ImageLabel();

@@ -179,6 +179,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
         lblPoster.clearImage();
         tfPoster.setText("");
       });
+      btnDeletePoster.setFocusable(false);
       panelContent.add(btnDeletePoster, "cell 2 0");
 
       JLabel lblSorttitleT = new TmmLabel(TmmResourceBundle.getString("metatag.sorttitle"));
@@ -230,6 +231,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
 
       tableMovies = new TmmTable();
       scrollPaneMovies.setViewportView(tableMovies);
+      tableMovies.setFocusable(false);
 
       lblFanart = new ImageLabel();
       lblFanart.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -254,6 +256,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
         lblFanart.clearImage();
         tfFanart.setText("");
       });
+      btnDeleteFanart.setFocusable(false);
       panelContent.add(btnDeleteFanart, "cell 2 7");
 
       panelContent.add(lblFanart, "cell 2 8,grow");
@@ -262,6 +265,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
 
       JButton btnRemoveMovie = new JButton("");
       btnRemoveMovie.setAction(new RemoveMovieAction());
+      btnRemoveMovie.setFocusable(false);
       panelContent.add(btnRemoveMovie, "cell 0 6,alignx right,aligny top");
 
       /**

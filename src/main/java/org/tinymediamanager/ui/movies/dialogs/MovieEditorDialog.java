@@ -424,6 +424,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblPoster.clearImage();
           tfPoster.setText("");
         });
+        btnDeletePoster.setFocusable(false);
         details1Panel.add(btnDeletePoster, "cell 8 0");
 
         details1Panel.add(lblPoster, "cell 8 1 1 6,grow");
@@ -529,6 +530,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
+        tableRatings.setFocusable(false);
       }
       {
         JLabel lblTop = new TmmLabel(TmmResourceBundle.getString("metatag.top250"));
@@ -569,18 +571,22 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblFanart.clearImage();
           tfFanart.setText("");
         });
+        btnDeleteFanart.setFocusable(false);
         details1Panel.add(btnDeleteFanart, "cell 8 8");
 
         details1Panel.add(lblFanart, "cell 8 9 1 4,grow");
         lblFanart.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
             e -> setImageSizeAndCreateLink(lblFanartSize, lblFanart, btnDeleteFanart, MediaFileType.FANART));
       }
+      {
+        JButton btnAddRating = new SquareIconButton(new AddRatingAction());
+        btnAddRating.setFocusable(false);
+        details1Panel.add(btnAddRating, "cell 0 11,alignx right,aligny top");
 
-      JButton btnAddRating = new SquareIconButton(new AddRatingAction());
-      details1Panel.add(btnAddRating, "cell 0 11,alignx right,aligny top");
-
-      JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
-      details1Panel.add(btnRemoveRating, "cell 0 11,alignx right,aligny top");
+        JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
+        btnRemoveRating.setFocusable(false);
+        details1Panel.add(btnRemoveRating, "cell 0 11,alignx right,aligny top");
+      }
       {
         final JButton btnPlay = new SquareIconButton(IconManager.PLAY_INV);
         btnPlay.setFocusable(false);
@@ -651,11 +657,14 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
         tableIds = new MediaIdTable(ids, ScraperType.MOVIE);
         tableIds.configureScrollPane(scrollPaneIds);
+        tableIds.setFocusable(false);
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
+        btnAddId.setFocusable(false);
         details2Panel.add(btnAddId, "cell 6 0 1 3,alignx right,aligny top");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
+        btnRemoveId.setFocusable(false);
         details2Panel.add(btnRemoveId, "cell 6 0 1 3,alignx right,aligny top");
       }
       {
@@ -703,6 +712,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             cbMovieSet.setSelectedItem(movieSet);
           }
         });
+        btnAddMovieSet.setFocusable(false);
         details2Panel.add(btnAddMovieSet, "cell 1 4 4 1");
       }
       {
@@ -735,15 +745,19 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(cbGenres, "cell 1 9 4 1,growx,wmin 0");
 
         JButton btnAddGenre = new SquareIconButton(new AddGenreAction());
+        btnAddGenre.setFocusable(false);
         details2Panel.add(btnAddGenre, "cell 0 8,alignx right,aligny top");
 
         JButton btnRemoveGenre = new SquareIconButton(new RemoveGenreAction());
+        btnRemoveGenre.setFocusable(false);
         details2Panel.add(btnRemoveGenre, "cell 0 8,alignx right,aligny top");
 
         JButton btnMoveGenreUp = new SquareIconButton(new MoveGenreUpAction());
+        btnMoveGenreUp.setFocusable(false);
         details2Panel.add(btnMoveGenreUp, "cell 0 8,alignx right,aligny top");
 
         JButton btnMoveGenreDown = new SquareIconButton(new MoveGenreDownAction());
+        btnMoveGenreDown.setFocusable(false);
         details2Panel.add(btnMoveGenreDown, "cell 0 8,alignx right,aligny top");
       }
       {
@@ -764,21 +778,27 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         details2Panel.add(cbTags, "cell 7 9,growx,wmin 0");
 
         JButton btnAddTag = new SquareIconButton(new AddTagAction());
+        btnAddTag.setFocusable(false);
         details2Panel.add(btnAddTag, "cell 6 8,alignx right,aligny top");
 
         JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
+        btnRemoveTag.setFocusable(false);
         details2Panel.add(btnRemoveTag, "cell 6 8,alignx right,aligny top");
 
         JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
+        btnMoveTagUp.setFocusable(false);
         details2Panel.add(btnMoveTagUp, "cell 6 8,alignx right,aligny top");
 
         JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
+        btnMoveTagDown.setFocusable(false);
         details2Panel.add(btnMoveTagDown, "cell 6 8,alignx right,aligny top");
 
         JButton btnAddShowlink = new SquareIconButton(new AddShowlinkAction());
+        btnAddShowlink.setFocusable(false);
         details2Panel.add(btnAddShowlink, "cell 0 5,alignx right");
 
         JButton btnRemoveShowlink = new SquareIconButton(new RemoveShowlinkAction());
+        btnRemoveShowlink.setFocusable(false);
         details2Panel.add(btnRemoveShowlink, "cell 0 5,alignx right");
       }
     }
@@ -842,64 +862,52 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       {
         JButton btnAddActor = new SquareIconButton(new AddActorAction());
         crewPanel.add(btnAddActor, "cell 0 0,alignx right");
-      }
-      {
+
         JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction());
         crewPanel.add(btnRemoveActor, "cell 0 0,alignx right");
-      }
-      {
+
         JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
         crewPanel.add(btnMoveActorUp, "cell 0 0,alignx right");
-      }
-      {
+
         JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
         crewPanel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
       }
       {
         JButton btnAddProducer = new SquareIconButton(new AddProducerAction());
         crewPanel.add(btnAddProducer, "cell 3 0,alignx right");
-      }
-      {
+
         JButton btnRemoveProducer = new SquareIconButton(new RemoveProducerAction());
         crewPanel.add(btnRemoveProducer, "cell 3 0,alignx right");
-      }
-      {
+
         JButton btnMoveProducerUp = new SquareIconButton(new MoveProducerUpAction());
         crewPanel.add(btnMoveProducerUp, "cell 3 0,alignx right");
-      }
-      {
+
         JButton btnMoveProducerDown = new SquareIconButton(new MoveProducerDownAction());
         crewPanel.add(btnMoveProducerDown, "cell 3 0,alignx right,aligny top");
       }
       {
         JButton btnAddDirector = new SquareIconButton(new AddDirectorAction());
         crewPanel.add(btnAddDirector, "cell 0 2,alignx right");
-      }
-      {
+
         JButton btnRemoveDirector = new SquareIconButton(new RemoveDirectorAction());
         crewPanel.add(btnRemoveDirector, "cell 0 2,alignx right");
-      }
-      {
+
         JButton btnMoveDirectorUp = new SquareIconButton(new MoveDirectorUpAction());
         crewPanel.add(btnMoveDirectorUp, "cell 0 2,alignx right");
-      }
-      {
+
         JButton btnMoveDirectorDown = new SquareIconButton(new MoveDirectorDownAction());
         crewPanel.add(btnMoveDirectorDown, "cell 0 2,alignx right,aligny top");
       }
       {
         JButton btnAddWriter = new SquareIconButton(new AddWriterAction());
         crewPanel.add(btnAddWriter, "cell 3 2,alignx right");
-      }
-      {
+
         JButton btnRemoveWriter = new SquareIconButton(new RemoveWriterAction());
         crewPanel.add(btnRemoveWriter, "cell 3 2,alignx right");
-      }
-      {
+
         JButton btnMoveWriterUp = new SquareIconButton(new MoveWriterUpAction());
         crewPanel.add(btnMoveWriterUp, "cell 3 2,alignx right");
-      }
-      {
+
         JButton btnMoveWriterDown = new SquareIconButton(new MoveWriterDownAction());
         crewPanel.add(btnMoveWriterDown, "cell 3 2,alignx right,aligny top");
       }
@@ -962,6 +970,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblClearlogo.clearImage();
           tfClearLogo.setText("");
         });
+        btnDeleteClearLogo.setFocusable(false);
         artworkPanel.add(btnDeleteClearLogo, "cell 0 0");
 
         lblClearlogo = new ImageLabel();
@@ -998,6 +1007,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblClearart.clearImage();
           tfClearArt.setText("");
         });
+        btnDeleteClearart.setFocusable(false);
         artworkPanel.add(btnDeleteClearart, "cell 2 0");
 
         lblClearart = new ImageLabel();
@@ -1035,6 +1045,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblBanner.clearImage();
           tfBanner.setText("");
         });
+        btnDeleteBanner.setFocusable(false);
         artworkPanel.add(btnDeleteBanner, "cell 0 3");
 
         lblBanner = new ImageLabel();
@@ -1071,6 +1082,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblThumb.clearImage();
           tfThumb.setText("");
         });
+        btnDeleteThumb.setFocusable(false);
         artworkPanel.add(btnDeleteThumb, "cell 0 6");
 
         lblThumb = new ImageLabel();
@@ -1109,6 +1121,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           lblDisc.clearImage();
           tfDisc.setText("");
         });
+        btnDeleteDisc.setFocusable(false);
         artworkPanel.add(btnDeleteDisc, "cell 2 6");
 
         lblDisc = new ImageLabel();
@@ -1203,12 +1216,15 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         artworkAndTrailerPanel.add(lblTrailer, "flowy,cell 0 9,alignx right,aligny top");
 
         JButton btnAddTrailer = new SquareIconButton(new AddTrailerAction());
+        btnAddTrailer.setFocusable(false);
         artworkAndTrailerPanel.add(btnAddTrailer, "cell 0 9,alignx right,aligny top");
 
         JButton btnRemoveTrailer = new SquareIconButton(new RemoveTrailerAction());
+        btnRemoveTrailer.setFocusable(false);
         artworkAndTrailerPanel.add(btnRemoveTrailer, "cell 0 9,alignx right,aligny top");
 
         JButton btnPlayTrailer = new SquareIconButton(new PlayTrailerAction());
+        btnPlayTrailer.setFocusable(false);
         artworkAndTrailerPanel.add(btnPlayTrailer, "cell 0 9,alignx right,aligny top");
 
         tableTrailer = new MediaTrailerTable(trailers, true);
@@ -1216,6 +1232,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         JScrollPane scrollPaneTrailer = new JScrollPane();
         artworkAndTrailerPanel.add(scrollPaneTrailer, "cell 1 9 7 1,grow");
         tableTrailer.configureScrollPane(scrollPaneTrailer);
+        tableTrailer.setFocusable(false);
       }
     }
 

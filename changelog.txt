@@ -7,6 +7,7 @@ Version 5.1
 + [Movies] display director in the movie information panel too
 + [Movie sets] added sorttitle for exporting into the NFO files #2742
 + [Certifications] added support for a lot of certifications
++ [UI] reworked focus traversal in editors #2488
 x [TV shows] fixed editing of episode numbers
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog

@@ -440,6 +440,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           lblPoster.clearImage();
           tfPoster.setText("");
         });
+        btnDeletePoster.setFocusable(false);
         details1Panel.add(btnDeletePoster, "cell 8 0");
 
         details1Panel.add(lblPoster, "cell 8 1 1 6, grow");
@@ -552,6 +553,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
+        tableRatings.setFocusable(false);
       }
       {
         lblFanart = new ImageLabel();
@@ -585,6 +587,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           lblFanart.clearImage();
           tfFanart.setText("");
         });
+        btnDeleteFanart.setFocusable(false);
         details1Panel.add(btnDeleteFanart, "cell 8 8");
 
         details1Panel.add(lblFanart, "cell 8 9 1 4,grow");
@@ -594,9 +597,11 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       }
 
       JButton btnAddRating = new SquareIconButton(new AddRatingAction());
+      btnAddRating.setFocusable(false);
       details1Panel.add(btnAddRating, "cell 0 10,alignx right,aligny top");
 
       JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
+      btnRemoveRating.setFocusable(false);
       details1Panel.add(btnRemoveRating, "cell 0 10,alignx right,aligny top");
 
       {
@@ -630,21 +635,26 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         tableActors = new PersonTable(actors);
         tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
         tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
+        tableActors.setFocusable(false);
 
         JScrollPane scrollPaneActors = new JScrollPane();
         tableActors.configureScrollPane(scrollPaneActors);
         details2Panel.add(scrollPaneActors, "cell 1 0 1 2,grow");
 
         JButton btnAddActor = new SquareIconButton(new AddActorAction());
+        btnAddActor.setFocusable(false);
         details2Panel.add(btnAddActor, "cell 0 0,alignx right");
 
         JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction()); // $NON-NLS-1$
+        btnRemoveActor.setFocusable(false);
         details2Panel.add(btnRemoveActor, "cell 0 0,alignx right,aligny top");
 
         JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
+        btnMoveActorUp.setFocusable(false);
         details2Panel.add(btnMoveActorUp, "cell 0 0,alignx right");
 
         JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
+        btnMoveActorDown.setFocusable(false);
         details2Panel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
       }
       {
@@ -662,12 +672,15 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
         JScrollPane scrollPaneIds = new JScrollPane();
         tableIds.configureScrollPane(scrollPaneIds);
+        tableIds.setFocusable(false);
         details2Panel.add(scrollPaneIds, "cell 4 1,grow");
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
+        btnAddId.setFocusable(false);
         details2Panel.add(btnAddId, "cell 3 1,alignx right");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
+        btnRemoveId.setFocusable(false);
         details2Panel.add(btnRemoveId, "cell 3 1,alignx right,aligny top");
       }
       {
@@ -681,15 +694,19 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         scrollPaneGenres.setViewportView(listGenres);
 
         JButton btnAddGenre = new SquareIconButton(new AddGenreAction());
+        btnAddGenre.setFocusable(false);
         details2Panel.add(btnAddGenre, "cell 0 3,alignx right");
 
         JButton btnRemoveGenre = new SquareIconButton(new RemoveGenreAction());
+        btnRemoveGenre.setFocusable(false);
         details2Panel.add(btnRemoveGenre, "cell 0 3,alignx right,aligny top");
 
         JButton btnMoveGenreUp = new SquareIconButton(new MoveGenreUpAction());
+        btnMoveGenreUp.setFocusable(false);
         details2Panel.add(btnMoveGenreUp, "cell 0 3,alignx right,aligny top");
 
         JButton btnMoveGenreDown = new SquareIconButton(new MoveGenreDownAction());
+        btnMoveGenreDown.setFocusable(false);
         details2Panel.add(btnMoveGenreDown, "cell 0 3,alignx right,aligny top");
 
         cbGenres = new AutocompleteComboBox(MediaGenres.values());
@@ -709,15 +726,19 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         scrollPaneTags.setViewportView(listTags);
 
         JButton btnAddTag = new SquareIconButton(new AddTagAction());
+        btnAddTag.setFocusable(false);
         details2Panel.add(btnAddTag, "cell 3 3,alignx right");
 
         JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
+        btnRemoveTag.setFocusable(false);
         details2Panel.add(btnRemoveTag, "cell 3 3,alignx right,aligny top");
 
         JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
+        btnMoveTagUp.setFocusable(false);
         details2Panel.add(btnMoveTagUp, "cell 3 3,alignx right,aligny top");
 
         JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
+        btnMoveTagDown.setFocusable(false);
         details2Panel.add(btnMoveTagDown, "cell 3 3,alignx right,aligny top");
 
         cbTags = new AutocompleteComboBox<>(tvShowList.getTagsInTvShows());
