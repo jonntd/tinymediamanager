@@ -1575,7 +1575,7 @@ public class MediaFileHelper {
       }
     }
 
-    // last bot not least add the main ifo (needed in the XML) - only when other files have been found
+    // last but not least add the main ifo (needed in the XML) - only when other files have been found
     if (!relevantFiles.isEmpty()) {
       relevantFiles.add(ifomif);
     }
@@ -2893,7 +2893,7 @@ public class MediaFileHelper {
         }
         videoDur += mif.getDuration();
       }
-      else if (mif.getFileExtension().equalsIgnoreCase("ifo")) {
+      else if (ifo == null && mif.getFileExtension().equalsIgnoreCase("ifo")) {
         ifo = mif;
       }
     }
