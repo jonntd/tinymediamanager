@@ -16,3 +16,4 @@ x [UI] reworked manual selection of images while scraping
 x [UI] also normalize episode titles in the TV show search #2745
 x [TMDB] try to avoid generic episode titles #2737
 x [Trakt.tv] do not sync locked entities #2684
+x [FFmpeg] enhanced still creation for anamorphic videos #2747

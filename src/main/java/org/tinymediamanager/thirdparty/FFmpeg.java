@@ -67,6 +67,8 @@ public class FFmpeg {
     cmdList.add(String.valueOf(second));
     cmdList.add("-i");
     cmdList.add(videoFile.toAbsolutePath().toString());
+    cmdList.add("-vf");
+    cmdList.add("scale=iw*sar:ih");
     cmdList.add("-frames:v");
     cmdList.add("1");
     cmdList.add("-q:v");
