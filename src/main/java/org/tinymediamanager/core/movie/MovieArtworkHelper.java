@@ -840,6 +840,16 @@ public class MovieArtworkHelper {
 
         // and add them according to the want amount
         for (MediaArtwork.ImageSizeAndUrl art : sortedFanarts) {
+          // do not get tiny extrathumbs
+          if (MovieModuleManager.getInstance().getSettings().getImageFanartSize() != MediaArtwork.FanartSizes.SMALL && art.getHeight() < 720) {
+            continue;
+          }
+
+          // do not add the main fanart here too
+          if (art.getUrl().equals(movie.getArtworkUrl(MediaFileType.THUMB))) {
+            continue;
+          }
+
           extrathumbs.add(art.getUrl());
           if (extrathumbs.size() >= MovieModuleManager.getInstance().getSettings().getImageExtraThumbsCount()) {
             break;
@@ -867,6 +877,16 @@ public class MovieArtworkHelper {
 
         // and add them according to the want amount
         for (MediaArtwork.ImageSizeAndUrl art : sortedFanarts) {
+          // do not get tiny extrafanarts
+          if (MovieModuleManager.getInstance().getSettings().getImageFanartSize() != MediaArtwork.FanartSizes.SMALL && art.getHeight() < 720) {
+            continue;
+          }
+
+          // do not add the main fanart here too
+          if (art.getUrl().equals(movie.getArtworkUrl(MediaFileType.FANART))) {
+            continue;
+          }
+
           extrafanarts.add(art.getUrl());
           if (extrafanarts.size() >= MovieModuleManager.getInstance().getSettings().getImageExtraFanartCount()) {
             break;
@@ -1030,6 +1050,7 @@ public class MovieArtworkHelper {
       int newOrder = MediaArtwork.MAX_IMAGE_SIZE_ORDER;
       while (newOrder > 1) {
         newOrder = newOrder / 2;
+
         for (MediaLanguages language : languages) {
           // the right language and the right resolution
           for (MediaArtwork art : artworkForType.stream().filter(art -> art.getLanguage().equals(language.getLanguage())).toList()) {
