@@ -313,8 +313,8 @@ public class MovieScrapeTask extends TmmThreadPool {
       options.setArtworkType(MediaArtworkType.ALL);
       options.setMetadata(metadata);
       if (metadata != null) {
-        options.setIds(metadata.getIds());
-        }
+        options.addIds(metadata.getIds());
+      }
       if (movie.isStacked()) {
         ArrayList<MediaFile> mfs = new ArrayList<>();
         mfs.addAll(movie.getMediaFiles(MediaFileType.VIDEO));
@@ -358,7 +358,7 @@ public class MovieScrapeTask extends TmmThreadPool {
       options.setDataFromOtherOptions(movieScrapeParams.searchAndScrapeOptions);
       options.setMetadata(metadata);
       if (metadata != null) {
-        options.setIds(metadata.getIds());
+        options.addIds(metadata.getIds());
       }
 
       // scrape trailers

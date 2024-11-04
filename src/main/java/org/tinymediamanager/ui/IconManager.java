@@ -134,6 +134,7 @@ public class IconManager {
   public static final ImageIcon              SUBTITLE                     = createMenuIcon("comments.svg");
   public static final ImageIcon              SYNC                         = createMenuIcon("sync.svg");
   public static final ImageIcon              THUMB                        = createMenuIcon("photo-film.svg");
+  public static final ImageIcon              UNDO                         = createMenuIcon("undo.svg");
   public static final ImageIcon              UNLOCK_BLUE                  = createMenuIcon("lock-open-alt.svg");
   public static final ImageIcon              VOLUME                       = createMenuIcon("volume.svg");
   public static final ImageIcon              WATCHED_MENU                 = createMenuIcon("play.svg");
@@ -177,8 +178,10 @@ public class IconManager {
   public static final ImageIcon              COPY_INV                     = createButtonIcon("clone.svg");
   public static final ImageIcon              DELETE_INV                   = createButtonIcon("trash-alt.svg");
   public static final ImageIcon              EXCHANGE                     = createButtonIcon("exchange.svg");
-  public static final ImageIcon              FILE_OPEN_INV                = createButtonIcon("folder-open.svg");
   public static final ImageIcon              FILE_ADD_INV                 = createButtonIcon("file-plus.svg");
+  public static final ImageIcon              FILE_EXPORT_INV              = createButtonIcon("file-export.svg");
+  public static final ImageIcon              FILE_IMPORT_INV              = createButtonIcon("file-import.svg");
+  public static final ImageIcon              FILE_OPEN_INV                = createButtonIcon("folder-open.svg");
   public static final ImageIcon              IMAGE_INV                    = createButtonIcon("image.svg");
   public static final ImageIcon              PLAY_INV                     = createButtonIcon("play.svg");
   public static final ImageIcon              REMOVE_INV                   = createButtonIcon("minus.svg");

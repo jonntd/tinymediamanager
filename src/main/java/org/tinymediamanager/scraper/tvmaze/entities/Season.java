@@ -15,7 +15,9 @@
  */
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Season {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Season extends BaseJsonEntity {
   public int        id;
   public String     url;
   public int        number;

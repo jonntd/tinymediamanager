@@ -196,7 +196,7 @@ class TmdbArtworkProvider {
           ma = new MediaArtwork(TmdbMetadataProvider.ID, MediaArtworkType.SEASON_POSTER);
         }
 
-        ma.setPreviewUrl(baseUrl + "w185" + image.file_path);
+        ma.setPreviewUrl(baseUrl + "w342" + image.file_path);
         ma.setOriginalUrl(baseUrl + "original" + image.file_path);
         if (StringUtils.isBlank(image.iso_639_1)) {
           // no text
@@ -243,7 +243,7 @@ class TmdbArtworkProvider {
     if (artworkType == MediaArtwork.MediaArtworkType.BACKGROUND || artworkType == MediaArtwork.MediaArtworkType.ALL) {
       for (Image image : ListUtils.nullSafe(tmdbArtwork.backdrops)) {
         MediaArtwork ma = new MediaArtwork(TmdbMetadataProvider.ID, MediaArtworkType.BACKGROUND);
-        ma.setPreviewUrl(baseUrl + "w300" + image.file_path);
+        ma.setPreviewUrl(baseUrl + "w1280" + image.file_path);
         ma.setOriginalUrl(baseUrl + "original" + image.file_path);
         ma.setLanguage(image.iso_639_1);
         ma.setTmdbId(tmdbId);
@@ -298,7 +298,7 @@ class TmdbArtworkProvider {
     if (artworkType == MediaArtworkType.CLEARLOGO || artworkType == MediaArtwork.MediaArtworkType.ALL) {
       for (Image image : ListUtils.nullSafe(tmdbArtwork.logos)) {
         MediaArtwork ma = new MediaArtwork(TmdbMetadataProvider.ID, MediaArtworkType.CLEARLOGO);
-        ma.setPreviewUrl(baseUrl + "w300" + image.file_path);
+        ma.setPreviewUrl(baseUrl + "w500" + image.file_path);
         ma.setOriginalUrl(baseUrl + "original" + image.file_path);
         ma.setLanguage(image.iso_639_1);
         ma.setTmdbId(tmdbId);

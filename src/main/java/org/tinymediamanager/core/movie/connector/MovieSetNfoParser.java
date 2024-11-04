@@ -55,6 +55,7 @@ public class MovieSetNfoParser {
   private final List<String>  supportedElements   = new ArrayList<>();
 
   public String               title               = "";
+  public String               sorttitle           = "";
   public String               plot                = "";
   public String               userNote            = "";
 
@@ -91,6 +92,7 @@ public class MovieSetNfoParser {
 
     // parse all supported fields
     parseTag(MovieSetNfoParser::parseTitle);
+    parseTag(MovieSetNfoParser::parseSorttitle);
     parseTag(MovieSetNfoParser::parsePlot);
     parseTag(MovieSetNfoParser::parseIds);
     parseTag(MovieSetNfoParser::parseTags);
@@ -174,6 +176,20 @@ public class MovieSetNfoParser {
     Element element = getSingleElement(root, "title");
     if (element != null) {
       title = element.ownText();
+    }
+
+    return null;
+  }
+
+  /**
+   * the sorttitle usually comes in the sorttitle tag
+   */
+  private Void parseSorttitle() {
+    supportedElements.add("sorttitle");
+
+    Element element = getSingleElement(root, "sorttitle");
+    if (element != null) {
+      sorttitle = element.ownText();
     }
 
     return null;
@@ -379,6 +395,7 @@ public class MovieSetNfoParser {
   public MovieSet toMovieSet() {
     MovieSet movieSet = new MovieSet();
     movieSet.setTitle(title);
+    movieSet.setSortTitle(sorttitle);
     movieSet.setPlot(plot);
 
     for (Map.Entry<String, Object> entry : ids.entrySet()) {

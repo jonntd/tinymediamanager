@@ -28,7 +28,8 @@ public class MovieSetSettingsNode extends TmmSettingsNode {
 
   public MovieSetSettingsNode() {
     super(TmmResourceBundle.getString("Settings.moviesets"), new MovieSetSettingsPanel());
+    setBoldText(true);
 
-    addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.images"), new MovieSetImageSettingsPanel()));
+    addChild(new TmmSettingsNode(TmmResourceBundle.getString("scraper.artwork"), new MovieSetImageSettingsPanel()));
   }
 }

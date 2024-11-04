@@ -48,6 +48,7 @@ import org.tinymediamanager.ui.movies.actions.MovieAspectRatioDetectAction;
 import org.tinymediamanager.ui.movies.actions.MovieAssignMovieSetAction;
 import org.tinymediamanager.ui.movies.actions.MovieBulkEditAction;
 import org.tinymediamanager.ui.movies.actions.MovieChangeDatasourceAction;
+import org.tinymediamanager.ui.movies.actions.MovieChecksumAction;
 import org.tinymediamanager.ui.movies.actions.MovieCleanUpFilesAction;
 import org.tinymediamanager.ui.movies.actions.MovieClearImageCacheAction;
 import org.tinymediamanager.ui.movies.actions.MovieCreateOfflineAction;
@@ -83,6 +84,7 @@ import org.tinymediamanager.ui.movies.actions.MovieSyncSelectedWatchedTraktTvAct
 import org.tinymediamanager.ui.movies.actions.MovieSyncTraktTvAction;
 import org.tinymediamanager.ui.movies.actions.MovieToggleWatchedFlagAction;
 import org.tinymediamanager.ui.movies.actions.MovieTrailerDownloadAction;
+import org.tinymediamanager.ui.movies.actions.MovieUndoRenameAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnlockAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnscrapedScrapeAction;
 import org.tinymediamanager.ui.movies.actions.MovieUpdateAction;
@@ -281,6 +283,8 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
     renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(MovieUndoRenameAction.class));
+    renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(MovieCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieClearImageCacheAction.class));
   }
@@ -344,6 +348,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
     enhancededitPopupMenu.addSeparator();
     enhancededitPopupMenu.add(createAndRegisterAction(MovieRebuildImageCacheAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(MovieResetNewFlagAction.class));
+    enhancededitPopupMenu.add(createAndRegisterAction(MovieChecksumAction.class));
     popupMenu.add(enhancededitPopupMenu);
 
     JMenu downloadMenu = new JMenu(TmmResourceBundle.getString("tmm.download"));
@@ -359,6 +364,8 @@ public class MovieUIModule extends AbstractTmmUIModule {
     renamePopupMenu.setIcon(IconManager.MENU);
     renamePopupMenu.add(createAndRegisterAction(MovieRenameAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieRenamePreviewAction.class));
+    renamePopupMenu.addSeparator();
+    renamePopupMenu.add(createAndRegisterAction(MovieUndoRenameAction.class));
     renamePopupMenu.addSeparator();
     renamePopupMenu.add(createAndRegisterAction(MovieCleanUpFilesAction.class));
     renamePopupMenu.add(createAndRegisterAction(MovieClearImageCacheAction.class));

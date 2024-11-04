@@ -120,6 +120,7 @@ public class MovieInformationPanel extends InformationPanel {
   private JLabel                     lblCertificationLogo;
   private LinkLabel                  lblTraktTvId;
   private JLabel                     lblShowlink;
+  private JLabel                     lblDirector;
 
   /**
    * Instantiates a new movie information panel.
@@ -305,7 +306,7 @@ public class MovieInformationPanel extends InformationPanel {
       {
         JPanel panelTopDetails = new JPanel();
         panelRight.add(panelTopDetails, "cell 0 0,grow");
-        panelTopDetails.setLayout(new MigLayout("insets 0", "[][][40lp!][][grow][]", "[]2lp[]2lp[grow]2lp[]2lp[]2lp[]2lp[]2lp[]"));
+        panelTopDetails.setLayout(new MigLayout("insets 0", "[][][40lp!][][grow][]", "[]2lp[]2lp[grow]2lp[]2lp[]2lp[]2lp[]2lp[]2lp[]"));
 
         {
           JLabel lblYearT = new TmmLabel(TmmResourceBundle.getString("metatag.year"));
@@ -375,25 +376,32 @@ public class MovieInformationPanel extends InformationPanel {
           panelTopDetails.add(taGenres, "cell 1 4 5 1,growx,wmin 0");
         }
         {
+          JLabel lblDirectorT = new TmmLabel(TmmResourceBundle.getString("metatag.director"));
+          panelTopDetails.add(lblDirectorT, "cell 0 5");
+
+          lblDirector = new JLabel("");
+          panelTopDetails.add(lblDirector, "cell 1 5 5 1,growx,wmin 0");
+        }
+        {
           JLabel lblProductionT = new TmmLabel(TmmResourceBundle.getString("metatag.production"));
-          panelTopDetails.add(lblProductionT, "cell 0 5");
+          panelTopDetails.add(lblProductionT, "cell 0 6");
 
           taProduction = new ReadOnlyTextPane();
-          panelTopDetails.add(taProduction, "cell 1 5 5 1,growx,wmin 0");
+          panelTopDetails.add(taProduction, "cell 1 6 5 1,growx,wmin 0");
         }
         {
           JLabel lblCountryT = new TmmLabel(TmmResourceBundle.getString("metatag.country"));
-          panelTopDetails.add(lblCountryT, "cell 0 6");
+          panelTopDetails.add(lblCountryT, "cell 0 7");
 
           lblCountry = new JLabel("");
-          panelTopDetails.add(lblCountry, "cell 1 6 5 1,wmin 0");
+          panelTopDetails.add(lblCountry, "cell 1 7 5 1,wmin 0");
         }
         {
           JLabel lblSpokenLanguagesT = new TmmLabel(TmmResourceBundle.getString("metatag.spokenlanguages"));
-          panelTopDetails.add(lblSpokenLanguagesT, "cell 0 7");
+          panelTopDetails.add(lblSpokenLanguagesT, "cell 0 8");
 
           lblSpokenLanguages = new JLabel("");
-          panelTopDetails.add(lblSpokenLanguages, "cell 1 7 5 1,wmin 0");
+          panelTopDetails.add(lblSpokenLanguages, "cell 1 8 5 1,wmin 0");
         }
       }
 
@@ -642,5 +650,10 @@ public class MovieInformationPanel extends InformationPanel {
     AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_25, lblShowlink,
         jLabelBeanProperty);
     autoBinding_25.bind();
+    //
+    Property movieSelectionModelBeanProperty_26 = BeanProperty.create("selectedMovie.directorsAsString");
+    AutoBinding autoBinding_26 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_26, lblDirector,
+        jLabelBeanProperty);
+    autoBinding_26.bind();
   }
 }

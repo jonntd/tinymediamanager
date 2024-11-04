@@ -53,8 +53,8 @@ import net.miginfocom.swing.MigLayout;
 public class MovieCastPanel extends JPanel {
   private final MovieSelectionModel selectionModel;
 
-  private EventList<Person>         actorEventList    = null;
-  private EventList<Person>         producerEventList = null;
+  private final EventList<Person>   actorEventList;
+  private final EventList<Person>   producerEventList;
 
   /**
    * UI elements
@@ -149,7 +149,6 @@ public class MovieCastPanel extends JPanel {
       add(lblDirectorT, "cell 0 0");
 
       lblDirector = new JLabel("");
-      lblDirectorT.setLabelFor(lblDirector);
       add(lblDirector, "cell 1 0 2 1,growx,wmin 0");
     }
     {
@@ -157,7 +156,6 @@ public class MovieCastPanel extends JPanel {
       add(lblWriterT, "cell 0 1");
 
       lblWriter = new JLabel("");
-      lblWriterT.setLabelFor(lblWriter);
       add(lblWriter, "cell 1 1 2 1,growx,wmin 0");
     }
     {

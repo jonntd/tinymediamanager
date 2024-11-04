@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,9 +131,7 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
       options.setFanartSize(TvShowModuleManager.getInstance().getSettings().getImageFanartSize());
       options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
       options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
-      for (Map.Entry<String, Object> entry : tvShow.getIds().entrySet()) {
-        options.setId(entry.getKey(), entry.getValue().toString());
-      }
+      options.addIds(tvShow.getIds());
     }
 
     @Override
@@ -193,10 +190,8 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
       options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
       options.setId(MediaMetadata.TVSHOW_IDS, episode.getTvShow().getIds());
       options.setId("mediaFile", episode.getMainFile());
-
-      for (Map.Entry<String, Object> entry : episode.getIds().entrySet()) {
-        options.setId(entry.getKey(), entry.getValue().toString());
-      }
+      options.setEpisodeGroup(episode.getEpisodeGroup());
+      options.addIds(episode.getIds());
 
       options.setId(MediaMetadata.EPISODE_NR, episode.getEpisodeNumbers());
       options.setArtworkType(MediaArtwork.MediaArtworkType.THUMB);

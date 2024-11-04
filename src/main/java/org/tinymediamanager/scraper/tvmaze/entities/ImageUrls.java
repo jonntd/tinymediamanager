@@ -1,6 +1,8 @@
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class ImageUrls {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class ImageUrls extends BaseJsonEntity {
   public String medium;
   public String original;
 }

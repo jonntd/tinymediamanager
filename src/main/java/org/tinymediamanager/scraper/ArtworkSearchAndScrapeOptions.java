@@ -17,6 +17,7 @@
 package org.tinymediamanager.scraper;
 
 import org.tinymediamanager.scraper.entities.MediaArtwork;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaType;
 
 /**
@@ -26,9 +27,10 @@ import org.tinymediamanager.scraper.entities.MediaType;
  */
 public class ArtworkSearchAndScrapeOptions extends MediaSearchAndScrapeOptions {
   private MediaArtwork.MediaArtworkType artworkType;
-  private MediaArtwork.FanartSizes      fanartSize = MediaArtwork.FanartSizes.LARGE; // default; will be overwritten by tmm settings
-  private MediaArtwork.PosterSizes      posterSize = MediaArtwork.PosterSizes.LARGE; // default; will be overwritten by tmm settings
-  private MediaArtwork.ThumbSizes       thumbSize  = MediaArtwork.ThumbSizes.MEDIUM; // default; will be overwritten by tmm settings
+  private MediaArtwork.FanartSizes      fanartSize   = MediaArtwork.FanartSizes.LARGE;  // default; will be overwritten by tmm settings
+  private MediaArtwork.PosterSizes      posterSize   = MediaArtwork.PosterSizes.LARGE;  // default; will be overwritten by tmm settings
+  private MediaArtwork.ThumbSizes       thumbSize    = MediaArtwork.ThumbSizes.MEDIUM;  // default; will be overwritten by tmm settings
+  private MediaEpisodeGroup             episodeGroup = MediaEpisodeGroup.DEFAULT_AIRED; // we might need that to identify NOT based on IDs
 
   public ArtworkSearchAndScrapeOptions(MediaType type) {
     super(type);
@@ -39,6 +41,7 @@ public class ArtworkSearchAndScrapeOptions extends MediaSearchAndScrapeOptions {
     this.artworkType = original.artworkType;
     this.fanartSize = original.fanartSize;
     this.posterSize = original.posterSize;
+    this.episodeGroup = original.episodeGroup;
   }
 
   /**
@@ -115,5 +118,13 @@ public class ArtworkSearchAndScrapeOptions extends MediaSearchAndScrapeOptions {
    */
   public void setThumbSize(MediaArtwork.ThumbSizes thumbSizes) {
     this.thumbSize = thumbSizes;
+  }
+
+  public MediaEpisodeGroup getEpisodeGroup() {
+    return episodeGroup;
+  }
+
+  public void setEpisodeGroup(MediaEpisodeGroup episodeGroup) {
+    this.episodeGroup = episodeGroup;
   }
 }

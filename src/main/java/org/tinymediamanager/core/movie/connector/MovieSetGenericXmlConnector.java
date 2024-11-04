@@ -138,6 +138,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
 
         // add well known tags
         addTitle();
+        addSorttitle();
         // addOriginaltitle();
         // addRating();
         // addUserrating();
@@ -258,6 +259,15 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
     Element title = document.createElement("title");
     title.setTextContent(movieSet.getTitle());
     root.appendChild(title);
+  }
+
+  /**
+   * add the sorttitle in the form <sorttitle>xxx</sorttitle>
+   */
+  protected void addSorttitle() {
+    Element sorttitle = document.createElement("sorttitle");
+    sorttitle.setTextContent(movieSet.getSortTitle());
+    root.appendChild(sorttitle);
   }
 
   /**

@@ -70,6 +70,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
@@ -79,6 +80,7 @@ import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
+import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
@@ -142,6 +144,8 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   protected String                     lastScraperId      = "";
   @JsonProperty
   protected String                     lastScrapeLanguage = "";
+  @JsonProperty
+  protected MediaEntityFilenameHistory renameHistory      = null;
 
   protected boolean                    newlyAdded         = false;
   protected boolean                    duplicate          = false;
@@ -1513,6 +1517,27 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     firePropertyChange(TAGS_AS_STRING, null, tags);
   }
 
+  /**
+   * get the file name history from the last rename run
+   * 
+   * @return the {@link MediaEntityFilenameHistory} for the latest run or null
+   */
+  public MediaEntityFilenameHistory getRenameHistory() {
+    return renameHistory;
+  }
+
+  /**
+   * set the new file name history for the current renamer run
+   * 
+   * @param newValue
+   *          the {@link MediaEntityFilenameHistory} for the current run
+   */
+  public void setRenameHistory(MediaEntityFilenameHistory newValue) {
+    MediaEntityFilenameHistory oldValue = this.renameHistory;
+    this.renameHistory = newValue;
+    firePropertyChange("renameHistory", oldValue, newValue);
+  }
+
   public abstract void saveToDb();
 
   public abstract void callbackForGatheredMediainformation(MediaFile mediaFile);
@@ -1562,5 +1587,10 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   @Override
   public String toPrintable() {
     return getTitle();
+  }
+
+  @Override
+  public String toString() {
+    return ToStringBuilder.reflectionToString(this, TmmToStringStyle.TMM_STYLE, false, MediaEntity.class);
   }
 }

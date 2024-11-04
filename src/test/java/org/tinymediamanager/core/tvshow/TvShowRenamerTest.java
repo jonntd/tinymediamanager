@@ -209,6 +209,13 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     return Paths.get(path);
   }
 
+  private void checkFiles(Path moviePath, String... filenames) {
+    for (String filename : filenames) {
+      Path filePath = moviePath.resolve(filename);
+      assertThat(filePath).exists();
+    }
+  }
+
   /**
    * just a test of a simple episode (one EP file with some extra files)
    */
@@ -247,22 +254,23 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     ep.gatherMediaFileInformation(false); // add langu from filenames
     show.addEpisode(ep);
 
+    Path tvShowPath = destination;
+    String[] filenamesOld = new String[] { "S01E01.de.srt", "S01E01.jpg", "S01E01.nfo", "S01E01.mkv" };
+    checkFiles(tvShowPath, filenamesOld);
+
     renameTvShow(show);
 
     Path showDir = destination.getParent().resolve("Breaking Bad (2008)");
     assertThat(showDir).exists();
 
-    Path seasonDir = showDir.resolve("Season 1");
-    assertThat(seasonDir).exists();
+    String[] filenamesNew = new String[] { "Season 1/Breaking Bad - S01E01 - Pilot.mkv", "Season 1/Breaking Bad - S01E01 - Pilot-thumb.jpg",
+        "Season 1/Breaking Bad - S01E01 - Pilot.nfo", "Season 1/Breaking Bad - S01E01 - Pilot.deu.srt" };
+    checkFiles(showDir, filenamesNew);
 
-    Path video = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.mkv");
-    assertThat(video).exists();
-    Path thumb = seasonDir.resolve("Breaking Bad - S01E01 - Pilot-thumb.jpg");
-    assertThat(thumb).exists();
-    Path nfo = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.nfo");
-    assertThat(nfo).exists();
-    Path sub = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.deu.srt");
-    assertThat(sub).exists();
+    // undo
+    TvShowRenamer.undoRename(show);
+    show.getEpisodes().forEach(TvShowRenamer::undoRename);
+    checkFiles(tvShowPath, filenamesOld);
   }
 
   /**
@@ -327,31 +335,25 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     ep.setTvShow(show);
     show.addEpisode(ep);
 
+    Path tvShowPath = destination;
+    String[] filenamesOld = new String[] { "S01E01.mkv", "extras/S01E01 - cut scenes.mkv", "S01E01 - sample.avi", "S01E01 - something else.mkv",
+        "Season 1/S01E02.mkv", "Season 1/extras/S01E02 - takeouts.mkv" };
+    checkFiles(tvShowPath, filenamesOld);
+
     renameTvShow(show);
 
     Path showDir = destination.getParent().resolve("Breaking Bad (2008)");
     assertThat(showDir).exists();
 
-    Path seasonDir = showDir.resolve("Season 1");
-    assertThat(seasonDir).exists();
+    String[] filenamesNew = new String[] { "Season 1/Breaking Bad - S01E01 - Pilot.mkv", "extras/S01E01 - cut scenes.mkv",
+        "Season 1/Breaking Bad - S01E01 - Pilot-sample.avi", "Season 1/Breaking Bad - S01E01 - Pilot - something else.mkv",
+        "Season 1/Breaking Bad - S01E02 - Pilot 2.mkv", "Season 1/extras/S01E02 - takeouts.mkv" };
+    checkFiles(showDir, filenamesNew);
 
-    Path video1 = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.mkv");
-    assertThat(video1).exists();
-
-    Path extra1 = showDir.resolve("extras/S01E01 - cut scenes.mkv");
-    assertThat(extra1).exists();
-
-    Path sample1 = seasonDir.resolve("Breaking Bad - S01E01 - Pilot-sample.avi");
-    assertThat(sample1).exists();
-
-    Path extra12 = seasonDir.resolve("Breaking Bad - S01E01 - Pilot - something else.mkv");
-    assertThat(extra12).exists();
-
-    Path video2 = seasonDir.resolve("Breaking Bad - S01E02 - Pilot 2.mkv");
-    assertThat(video2).exists();
-
-    Path extra2 = seasonDir.resolve("extras/S01E02 - takeouts.mkv");
-    assertThat(extra2).exists();
+    // undo
+    TvShowRenamer.undoRename(show);
+    show.getEpisodes().forEach(TvShowRenamer::undoRename);
+    checkFiles(tvShowPath, filenamesOld);
   }
 
   /**
@@ -409,22 +411,24 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     ep.setTvShow(show);
     show.addEpisode(ep);
 
+    Path tvShowPath = destination;
+    String[] filenamesOld = new String[] { "S01E01E02.mkv", "S01E01E02.jpg", "S01E01E02.nfo", "S01E01E02.de.srt" };
+    checkFiles(tvShowPath, filenamesOld);
+
     renameTvShow(show);
 
     Path showDir = destination.getParent().resolve("Breaking Bad (2008)");
     assertThat(showDir).exists();
 
-    Path seasonDir = showDir.resolve("Season 1");
-    assertThat(seasonDir).exists();
+    String[] filenamesNew = new String[] { "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.mkv",
+        "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2-thumb.jpg", "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.nfo",
+        "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.deu.srt" };
+    checkFiles(showDir, filenamesNew);
 
-    Path video = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.mkv");
-    assertThat(video).exists();
-    Path thumb = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2-thumb.jpg");
-    assertThat(thumb).exists();
-    Path nfo = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.nfo");
-    assertThat(nfo).exists();
-    Path sub = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.deu.srt");
-    assertThat(sub).exists();
+    // undo
+    TvShowRenamer.undoRename(show);
+    show.getEpisodes().forEach(TvShowRenamer::undoRename);
+    checkFiles(tvShowPath, filenamesOld);
   }
 
   /**
@@ -468,24 +472,24 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     ep.gatherMediaFileInformation(false); // add langu from filenames
     show.addEpisode(ep);
 
+    Path tvShowPath = destination;
+    String[] filenamesOld = new String[] { "S01E01.part1.mkv", "S01E01.part2.mkv", "S01E01.jpg", "S01E01.nfo", "S01E01.de.srt" };
+    checkFiles(tvShowPath, filenamesOld);
+
     renameTvShow(show);
 
     Path showDir = destination.getParent().resolve("Breaking Bad (2008)");
     assertThat(showDir).exists();
 
-    Path seasonDir = showDir.resolve("Season 1");
-    assertThat(seasonDir).exists();
+    String[] filenamesNew = new String[] { "Season 1/Breaking Bad - S01E01 - Pilot.part1.mkv", "Season 1/Breaking Bad - S01E01 - Pilot.part2.mkv",
+        "Season 1/Breaking Bad - S01E01 - Pilot-thumb.jpg", "Season 1/Breaking Bad - S01E01 - Pilot.nfo",
+        "Season 1/Breaking Bad - S01E01 - Pilot.deu.srt" };
+    checkFiles(showDir, filenamesNew);
 
-    Path video = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.part1.mkv");
-    assertThat(video).exists();
-    video = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.part2.mkv");
-    assertThat(video).exists();
-    Path thumb = seasonDir.resolve("Breaking Bad - S01E01 - Pilot-thumb.jpg");
-    assertThat(thumb).exists();
-    Path nfo = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.nfo");
-    assertThat(nfo).exists();
-    Path sub = seasonDir.resolve("Breaking Bad - S01E01 - Pilot.deu.srt");
-    assertThat(sub).exists();
+    // undo
+    TvShowRenamer.undoRename(show);
+    show.getEpisodes().forEach(TvShowRenamer::undoRename);
+    checkFiles(tvShowPath, filenamesOld);
   }
 
   /**
@@ -557,28 +561,26 @@ public class TvShowRenamerTest extends BasicTvShowTest {
     ep.gatherMediaFileInformation(false); // add langu from filenames
     show.addEpisode(ep);
 
+    Path tvShowPath = destination;
+    String[] filenamesOld = new String[] { "S01E01E02.part1.mkv", "S01E01E02.part2.mkv", "S01E01E02.jpg", "S01E01E02.nfo", "S01E01E02.de.srt",
+        "S01E01E02.sub", "S01E01E02.idx" };
+    checkFiles(tvShowPath, filenamesOld);
+
     renameTvShow(show);
 
     Path showDir = destination.getParent().resolve("Breaking Bad (2008)");
     assertThat(showDir).exists();
 
-    Path seasonDir = showDir.resolve("Season 1");
-    assertThat(seasonDir).exists();
+    String[] filenamesNew = new String[] { "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.part1.mkv",
+        "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.part1.mkv", "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2-thumb.jpg",
+        "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.nfo", "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.deu.srt",
+        "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.sub", "Season 1/Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.idx" };
+    checkFiles(showDir, filenamesNew);
 
-    Path video = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.part1.mkv");
-    assertThat(video).exists();
-    video = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.part2.mkv");
-    assertThat(video).exists();
-    Path thumb = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2-thumb.jpg");
-    assertThat(thumb).exists();
-    Path nfo = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.nfo");
-    assertThat(nfo).exists();
-    Path sub = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.deu.srt");
-    assertThat(sub).exists();
-    Path sub2 = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.sub");
-    assertThat(sub2).exists();
-    Path other = seasonDir.resolve("Breaking Bad - S01E01 S01E02 - Pilot - Pilot 2.idx");
-    assertThat(other).exists();
+    // undo
+    TvShowRenamer.undoRename(show);
+    show.getEpisodes().forEach(TvShowRenamer::undoRename);
+    checkFiles(tvShowPath, filenamesOld);
   }
 
   /**

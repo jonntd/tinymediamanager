@@ -15,18 +15,20 @@
  */
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Image {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Image extends BaseJsonEntity {
   public int         id;
   public String      type;
   boolean            main = false;
   public Resolutions resolutions;
 
-  public static class Resolutions {
+  public static class Resolutions extends BaseJsonEntity {
     public Resolution original;
     public Resolution medium;
   }
 
-  public static class Resolution {
+  public static class Resolution extends BaseJsonEntity {
     public String url;
     public int    width;
     public int    height;

@@ -44,6 +44,7 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.thirdparty.imageviewer.ImageViewer;
 
 import net.miginfocom.swing.MigLayout;
@@ -83,7 +84,7 @@ public class ImagePreviewDialog extends TmmDialog {
     imgViewer.getPopupMenu().add(new SaveToDiskAction());
 
     {
-      imagePanel.setLayout(new MigLayout("", "[300lp,grow]", "[300lp,grow]"));
+      imagePanel.setLayout(new MigLayout("", "[300lp,grow]", "[300lp,grow][]"));
       getContentPane().add(imagePanel);
     }
     {
@@ -125,7 +126,21 @@ public class ImagePreviewDialog extends TmmDialog {
               imgViewer.setImage(ImageLoader.createImage(originalImageBytes));
               imagePanel.removeAll();
               imagePanel.add(imgViewer.getComponent(), "cell 0 0, center, grow");
-              imagePanel.invalidate();
+
+              LinkLabel linkLabel = new LinkLabel(imageUrl);
+              linkLabel.addActionListener(arg0 -> {
+                try {
+                  TmmUIHelper.browseUrl(imageUrl);
+                }
+                catch (Exception e) {
+                  LOGGER.error("browse to image url '{}' - '{}'", imageUrl, e.getMessage());
+                  MessageManager.instance.pushMessage(
+                      new Message(Message.MessageLevel.ERROR, imageUrl, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
+                }
+              });
+
+              imagePanel.add(linkLabel, "cell 0 1, center, wmin 0");
+              imagePanel.revalidate();
               imagePanel.repaint();
 
               if (imgViewer.getImage().getWidth() > 0 && imgViewer.getImage().getHeight() > 0) {

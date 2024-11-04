@@ -386,10 +386,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
       options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
       options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
       options.setMetadata(metadata);
-
-      for (Entry<String, Object> entry : tvShow.getIds().entrySet()) {
-        options.setId(entry.getKey(), entry.getValue().toString());
-      }
+      options.addIds(tvShow.getIds());
 
       // scrape providers till one artwork has been found
       for (MediaScraper artworkScraper : tvShowScrapeParams.scrapeOptions.getArtworkScrapers()) {

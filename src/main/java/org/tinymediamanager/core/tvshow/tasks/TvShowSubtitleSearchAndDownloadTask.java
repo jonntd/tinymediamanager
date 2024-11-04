@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -130,8 +129,8 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
             SubtitleSearchAndScrapeOptions options = new SubtitleSearchAndScrapeOptions(MediaType.TV_EPISODE);
             options.setMediaFile(mf);
             options.setLanguage(language);
-            options.setSeason(episode.getSeason());
-            options.setEpisode(episode.getEpisode());
+            options.setSeason(episode.getAiredSeason());
+            options.setEpisode(episode.getAiredEpisode());
 
             options.setIds(episode.getIds());
 
@@ -146,6 +145,7 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
             if (MediaIdUtil.isValidImdbId(tvShowImdbId)) {
               tvShowIds.put(MediaMetadata.IMDB, tvShowImdbId);
             }
+
             options.setId(MediaMetadata.TVSHOW_IDS, tvShowIds);
 
             List<SubtitleSearchResult> searchResults = subtitleProvider.search(options);
@@ -210,7 +210,7 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
           return true;
         }
         return false;
-      }).collect(Collectors.toList());
+      }).toList();
 
       if (filteredResults.isEmpty()) {
         return null;

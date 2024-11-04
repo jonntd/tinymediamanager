@@ -15,7 +15,9 @@
  */
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Crew {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Crew extends BaseJsonEntity {
   public String type;
   public Person person;
 }

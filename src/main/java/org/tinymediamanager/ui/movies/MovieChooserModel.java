@@ -367,6 +367,56 @@ public class MovieChooserModel extends AbstractModelObject {
     TmmTaskChain.getInstance(movieToScrape).add(new TrailerScrapeTask(movieToScrape, overwrite));
   }
 
+  public List<MediaArtwork> getArtwork() {
+    List<MediaArtwork> artwork = new ArrayList<>();
+
+    ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.MOVIE);
+    options.setArtworkType(MediaArtworkType.ALL);
+    options.setMetadata(metadata);
+    options.setIds(metadata.getIds());
+    if (movieToScrape.isStacked()) {
+      ArrayList<MediaFile> mfs = new ArrayList<>();
+      mfs.addAll(movieToScrape.getMediaFiles(MediaFileType.VIDEO));
+      options.setId("mediaFile", mfs);
+    }
+    else {
+      options.setId("mediaFile", movieToScrape.getMainFile());
+    }
+    options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
+    options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());
+    options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
+
+    // scrape providers
+    for (MediaScraper artworkScraper : artworkScrapers) {
+      IMovieArtworkProvider artworkProvider = (IMovieArtworkProvider) artworkScraper.getMediaProvider();
+      try {
+        artwork.addAll(artworkProvider.getArtwork(options));
+      }
+      catch (MissingIdException e) {
+        LOGGER.debug("no id found for scraper {}", artworkScraper.getMediaProvider().getProviderInfo().getId());
+      }
+      catch (ScrapeException e) {
+        LOGGER.error("getArtwork", e);
+        MessageManager.instance.pushMessage(
+            new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+      }
+      catch (Error e) {
+        LOGGER.debug("uncaught error", e);
+      }
+    }
+
+    // at last take the poster from the result
+    if (StringUtils.isNotBlank(getPosterUrl())) {
+      MediaArtwork ma = new MediaArtwork(result.getProviderId(), MediaArtworkType.POSTER);
+      ma.setOriginalUrl(getPosterUrl());
+      ma.setPreviewUrl(getPosterUrl());
+      ma.addImageSize(0, 0, getPosterUrl(), 0);
+      artwork.add(ma);
+    }
+
+    return artwork;
+  }
+
   private class ArtworkScrapeTask extends TmmTask {
     private final Movie                            movieToScrape;
     private final List<MovieScraperMetadataConfig> config;
@@ -385,57 +435,7 @@ public class MovieChooserModel extends AbstractModelObject {
         return;
       }
 
-      List<MediaArtwork> artwork = new ArrayList<>();
-
-      ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.MOVIE);
-      options.setArtworkType(MediaArtworkType.ALL);
-      options.setMetadata(metadata);
-      options.setIds(metadata.getIds());
-      if (movieToScrape.isStacked()) {
-        ArrayList<MediaFile> mfs = new ArrayList<>();
-        mfs.addAll(movieToScrape.getMediaFiles(MediaFileType.VIDEO));
-        options.setId("mediaFile", mfs);
-      }
-      else {
-        options.setId("mediaFile", movieToScrape.getMainFile());
-      }
-      options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
-      options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());
-      options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
-
-      // scrape providers
-      for (MediaScraper artworkScraper : artworkScrapers) {
-        if ("ffmpeg".equals(artworkScraper.getId())) {
-          // do not use FFmpeg here
-          continue;
-        }
-
-        IMovieArtworkProvider artworkProvider = (IMovieArtworkProvider) artworkScraper.getMediaProvider();
-        try {
-          artwork.addAll(artworkProvider.getArtwork(options));
-        }
-        catch (MissingIdException e) {
-          LOGGER.debug("no id found for scraper {}", artworkScraper.getMediaProvider().getProviderInfo().getId());
-        }
-        catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
-        }
-        catch (Error e) {
-          LOGGER.debug("uncaught error", e);
-        }
-      }
-
-      // at last take the poster from the result
-      if (StringUtils.isNotBlank(getPosterUrl())) {
-        MediaArtwork ma = new MediaArtwork(result.getProviderId(), MediaArtworkType.POSTER);
-        ma.setOriginalUrl(getPosterUrl());
-        ma.setPreviewUrl(getPosterUrl());
-        ma.addImageSize(0, 0, getPosterUrl(), 0);
-        artwork.add(ma);
-      }
-
+      List<MediaArtwork> artwork = getArtwork();
       movieToScrape.setArtwork(artwork, config, overwrite);
     }
   }

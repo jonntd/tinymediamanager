@@ -28,24 +28,33 @@ public class TvShowSettingsNode extends TmmSettingsNode {
 
   public TvShowSettingsNode() {
     super(TmmResourceBundle.getString("Settings.tvshow"), new TvShowSettingsPanel());
+    setBoldText(true);
 
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.ui"), new TvShowUiSettingsPanel()));
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.source"), new TvShowDatasourceSettingsPanel()));
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.nfo"), new TvShowScraperNfoSettingsPanel()));
 
-    TmmSettingsNode scraperSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("Settings.scraper"), new TvShowScraperSettingsPanel());
+    TmmSettingsNode scraperSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("scraper.metadata"), new TvShowScraperSettingsPanel());
     scraperSettingsNode
-        .addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.scraper.options"), new TvShowScraperOptionsSettingsPanel()));
+        .addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.advancedoptions"), new TvShowScraperOptionsSettingsPanel()));
     addChild(scraperSettingsNode);
 
-    TmmSettingsNode imageSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("Settings.images"), new TvShowImageSettingsPanel());
-    imageSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.scraper.options"), new TvShowImageOptionsSettingsPanel()));
+    TmmSettingsNode imageSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("scraper.artwork"), new TvShowImageSettingsPanel());
+    imageSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.advancedoptions"), new TvShowImageOptionsSettingsPanel()));
     imageSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.artwork.naming"), new TvShowImageTypeSettingsPanel()));
     imageSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.extraartwork"), new TvShowImageExtraPanel()));
     addChild(imageSettingsNode);
 
-    addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.trailer"), new TvShowTrailerSettingsPanel()));
-    addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.subtitle"), new TvShowSubtitleSettingsPanel()));
+    TmmSettingsNode trailerSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("scraper.trailer"), new TvShowTrailerSettingsPanel());
+    trailerSettingsNode
+        .addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.advancedoptions"), new TvShowTrailerOptionsSettingsPanel()));
+    addChild(trailerSettingsNode);
+
+    TmmSettingsNode subtitleSettingsNode = new TmmSettingsNode(TmmResourceBundle.getString("scraper.subtitle"), new TvShowSubtitleSettingsPanel());
+    subtitleSettingsNode
+        .addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.advancedoptions"), new TvShowSubtitleOptionsSettingsPanel()));
+    addChild(subtitleSettingsNode);
+
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.renamer"), new TvShowRenamerSettingsPanel()));
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.postprocessing"), new TvShowPostProcessingSettingsPanel()));
   }

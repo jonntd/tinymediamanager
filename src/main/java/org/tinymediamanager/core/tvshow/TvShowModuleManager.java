@@ -423,7 +423,7 @@ public final class TvShowModuleManager implements ITmmModule {
           }
         }
         catch (Exception e) {
-          LOGGER.warn("could not store '{}' - '{}'", entry.getKey().getClass().getName(), e.getMessage());
+          LOGGER.warn("could not store '{}' - '{}'", entry.getValue().getClass().getName(), e.getMessage());
         }
         finally {
           pendingChanges.remove(entry.getValue());

@@ -532,37 +532,40 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           if (ScraperMetadataConfig.containsAnyArtwork(scraperConfig)) {
             // let the user choose the images
             if (!MovieModuleManager.getInstance().getSettings().isScrapeBestImage()) {
+              // get _all_ artwork sync and let the chooser just display it
+              List<MediaArtwork> artwork = model.getArtwork();
+
               if (scraperConfig.contains(MovieScraperMetadataConfig.POSTER)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.POSTER)))) {
-                chooseArtwork(MediaFileType.POSTER);
+                chooseArtwork(artwork, MediaFileType.POSTER);
               }
               if ((scraperConfig.contains(MovieScraperMetadataConfig.FANART) || scraperConfig.contains(MovieScraperMetadataConfig.EXTRAFANART))
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.FANART)))) {
-                chooseArtwork(MediaFileType.FANART);
+                chooseArtwork(artwork, MediaFileType.FANART);
               }
               if (scraperConfig.contains(MovieScraperMetadataConfig.BANNER)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.BANNER)))) {
-                chooseArtwork(MediaFileType.BANNER);
+                chooseArtwork(artwork, MediaFileType.BANNER);
               }
               if (scraperConfig.contains(MovieScraperMetadataConfig.CLEARLOGO)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.CLEARLOGO)))) {
-                chooseArtwork(MediaFileType.CLEARLOGO);
+                chooseArtwork(artwork, MediaFileType.CLEARLOGO);
               }
               if (scraperConfig.contains(MovieScraperMetadataConfig.CLEARART)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.CLEARART)))) {
-                chooseArtwork(MediaFileType.CLEARART);
+                chooseArtwork(artwork, MediaFileType.CLEARART);
               }
               if (scraperConfig.contains(MovieScraperMetadataConfig.DISCART)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.DISC)))) {
-                chooseArtwork(MediaFileType.DISC);
+                chooseArtwork(artwork, MediaFileType.DISC);
               }
               if ((scraperConfig.contains(MovieScraperMetadataConfig.THUMB) || scraperConfig.contains(MovieScraperMetadataConfig.EXTRATHUMB))
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.THUMB)))) {
-                chooseArtwork(MediaFileType.THUMB);
+                chooseArtwork(artwork, MediaFileType.THUMB);
               }
               if (scraperConfig.contains(MovieScraperMetadataConfig.KEYART)
                   && (overwrite || StringUtils.isBlank(movieToScrape.getArtworkFilename(MediaFileType.KEYART)))) {
-                chooseArtwork(MediaFileType.KEYART);
+                chooseArtwork(artwork, MediaFileType.KEYART);
               }
 
               movieToScrape.saveToDb();
@@ -614,7 +617,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     }
   }
 
-  private void chooseArtwork(MediaFileType mediaFileType) {
+  private void chooseArtwork(List<MediaArtwork> artwork, MediaFileType mediaFileType) {
     MediaArtwork.MediaArtworkType imageType;
     List<String> extrathumbs = null;
     List<String> extrafanarts = null;
@@ -696,26 +699,34 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       newIds.put("mediaFile", movieToScrape.getMainFile());
     }
 
-    String imageUrl = ImageChooserDialog.chooseImage(this, newIds, imageType, artworkScrapers, extrathumbs, extrafanarts, MediaType.MOVIE,
-        movieToScrape.getPathNIO().toAbsolutePath().toString());
-
-    movieToScrape.setArtworkUrl(imageUrl, mediaFileType);
-    if (StringUtils.isNotBlank(imageUrl)) {
-      movieToScrape.downloadArtwork(mediaFileType);
+    List<MediaArtwork> filteredArtwork = artwork.stream().filter(mediaArtwork -> mediaArtwork.getType() == imageType).toList();
+    if (filteredArtwork.isEmpty()) {
+      // clear previous artwork url
+      movieToScrape.setArtworkUrl("", mediaFileType);
     }
+    else {
+      // open the chooser
+      String imageUrl = ImageChooserDialog.chooseImage(this, newIds, imageType, artworkScrapers, extrathumbs, extrafanarts, filteredArtwork,
+          MediaType.MOVIE, movieToScrape.getPathNIO().toAbsolutePath().toString());
 
-    // set extrathumbs and extrafanarts
-    if (extrathumbs != null) {
-      movieToScrape.setExtraThumbs(extrathumbs);
-      if (!extrathumbs.isEmpty()) {
-        movieToScrape.downloadArtwork(MediaFileType.EXTRATHUMB);
+      movieToScrape.setArtworkUrl(imageUrl, mediaFileType);
+      if (StringUtils.isNotBlank(imageUrl)) {
+        movieToScrape.downloadArtwork(mediaFileType);
       }
-    }
 
-    if (extrafanarts != null) {
-      movieToScrape.setExtraFanarts(extrafanarts);
-      if (!extrafanarts.isEmpty()) {
-        movieToScrape.downloadArtwork(MediaFileType.EXTRAFANART);
+      // set extrathumbs and extrafanarts
+      if (extrathumbs != null) {
+        movieToScrape.setExtraThumbs(extrathumbs);
+        if (!extrathumbs.isEmpty()) {
+          movieToScrape.downloadArtwork(MediaFileType.EXTRATHUMB);
+        }
+      }
+
+      if (extrafanarts != null) {
+        movieToScrape.setExtraFanarts(extrafanarts);
+        if (!extrafanarts.isEmpty()) {
+          movieToScrape.downloadArtwork(MediaFileType.EXTRAFANART);
+        }
       }
     }
   }

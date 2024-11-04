@@ -1,6 +1,8 @@
 package org.tinymediamanager.scraper.tvmaze.entities;
 
-public class Network {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Network extends BaseJsonEntity {
   public int     id;
   public String  name;
   public Country country;

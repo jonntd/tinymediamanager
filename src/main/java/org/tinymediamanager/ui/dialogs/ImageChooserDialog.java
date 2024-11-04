@@ -20,6 +20,7 @@ import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkTyp
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -129,11 +130,11 @@ public class ImageChooserDialog extends TmmDialog {
   private final ImageLabel                  imageLabel;
   private final List<MediaScraper>          artworkScrapers;
 
-  private final ButtonGroup                 buttonGroup    = new NoneSelectedButtonGroup();
   private final List<JToggleButton>         buttons        = new ArrayList<>();
   private final List<JPanel>                imagePanels    = new ArrayList<>();
   private final ActionListener              filterListener;
 
+  private ButtonGroup                       buttonGroup;
   private JProgressBar                      progressBar;
   private JLabel                            lblProgressAction;
   private JScrollPane                       scrollPane;
@@ -142,6 +143,7 @@ public class ImageChooserDialog extends TmmDialog {
   private JTextField                        tfImageUrl;
 
   private String                            openFolderPath = null;
+  private List<MediaArtwork>                artwork;
   private List<String>                      extraThumbs    = null;
   private List<String>                      extraFanarts   = null;
   private DownloadTask                      task;
@@ -185,6 +187,7 @@ public class ImageChooserDialog extends TmmDialog {
     this.mediaType = mediaType;
     this.ids = ids;
     this.artworkScrapers = artworkScrapers;
+    this.artwork = null;
 
     filterListener = e -> SwingUtilities.invokeLater(this::filterChanged);
 
@@ -462,8 +465,11 @@ public class ImageChooserDialog extends TmmDialog {
       okButton.setActionCommand("OK");
       addDefaultButton(okButton);
     }
+  }
 
-    task = new DownloadTask(ids, artworkScrapers);
+  private void startScraping() {
+    // scrape from online sources or use pre-selected artwork
+    task = new DownloadTask(ids, artworkScrapers, artwork);
     task.execute();
   }
 
@@ -482,6 +488,10 @@ public class ImageChooserDialog extends TmmDialog {
     else {
       lblExtrathumbsSelected.setText("");
     }
+  }
+
+  private void setArtwork(List<MediaArtwork> artwork) {
+    this.artwork = artwork;
   }
 
   private void updateExtraFanartSelectedCount() {
@@ -555,7 +565,10 @@ public class ImageChooserDialog extends TmmDialog {
     progressBar.setIndeterminate(false);
   }
 
-  private void addImage(BufferedImage originalImage, final MediaArtwork artwork) {
+  private void addImage(byte[] imageData, final MediaArtwork artwork) throws Exception {
+    BufferedImage originalImage = ImageUtils.createImage(imageData);
+    artwork.addImageSize(originalImage.getWidth(), originalImage.getHeight(), artwork.getPreviewUrl(), 0);
+
     Point size = null;
 
     GridBagLayout gbl = new GridBagLayout();
@@ -591,24 +604,21 @@ public class ImageChooserDialog extends TmmDialog {
     int row = 0;
 
     GridBagConstraints gbc = new GridBagConstraints();
-    gbc.fill = GridBagConstraints.BOTH;
     gbc.gridx = 0;
     gbc.gridy = row;
     gbc.gridwidth = 3;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(5, 5, 5, 5);
 
-    JToggleButton button = new JToggleButton();
+    JToggleButton button = new JToggleButton() {
+      @Override
+      public void setSelected(boolean b) {
+        super.setSelected(b);
+      }
+    };
     button.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
-        // DEBUG
-        // if (e.getClickCount() == 1 && e.getButton() == MouseEvent.BUTTON1) {
-        // Object o = button.getClientProperty("MediaArtwork");
-        // if (o instanceof MediaArtwork) {
-        // System.out.println((MediaArtwork) o);
-        // }
-        // }
         if (e.getClickCount() >= 2 && e.getButton() == MouseEvent.BUTTON1) {
           button.setSelected(true);
           new OkAction().actionPerformed(new ActionEvent(e.getSource(), e.getID(), "OK"));
@@ -626,9 +636,9 @@ public class ImageChooserDialog extends TmmDialog {
           Scalr.resize(originalImage, Scalr.Method.BALANCED, Scalr.Mode.AUTOMATIC, size.x, size.y, Scalr.OP_ANTIALIAS));
       button.setIcon(imageIcon);
     }
+
     button.putClientProperty("MediaArtwork", artwork);
 
-    buttonGroup.add(button);
     buttons.add(button);
     imagePanel.add(button, gbc);
 
@@ -649,6 +659,9 @@ public class ImageChooserDialog extends TmmDialog {
     }
     button.putClientProperty("MediaArtworkSize", cb);
     imagePanel.add(cb, gbc);
+
+    // release memory
+    originalImage.flush();
 
     /* show image button */
     gbc = new GridBagConstraints();
@@ -714,17 +727,16 @@ public class ImageChooserDialog extends TmmDialog {
     }
 
     imagePanel.putClientProperty("MediaArtwork", artwork);
+
     imagePanels.add(imagePanel);
     imagePanels.sort((o1, o2) -> {
       Object obj1 = o1.getClientProperty("MediaArtwork");
       Object obj2 = o2.getClientProperty("MediaArtwork");
 
-      if (!(obj1 instanceof MediaArtwork) || !(obj2 instanceof MediaArtwork)) {
+      if (!(obj1 instanceof MediaArtwork artwork1) || !(obj2 instanceof MediaArtwork artwork2)) {
         return 0;
       }
 
-      MediaArtwork artwork1 = (MediaArtwork) obj1;
-      MediaArtwork artwork2 = (MediaArtwork) obj2;
       int score1 = 0;
       int score2 = 0;
       if (mediaType == MediaType.MOVIE || mediaType == MediaType.MOVIE_SET) {
@@ -828,6 +840,13 @@ public class ImageChooserDialog extends TmmDialog {
 
   private void filterChanged() {
     panelImages.removeAll();
+    ButtonModel selectedButton = null;
+
+    if (buttonGroup != null) {
+      selectedButton = buttonGroup.getSelection();
+    }
+
+    buttonGroup = new NoneSelectedButtonGroup();
 
     for (JPanel panel : imagePanels) {
       Object obj = panel.getClientProperty("MediaArtwork");
@@ -840,6 +859,11 @@ public class ImageChooserDialog extends TmmDialog {
       if (cbScraper.getSelectedItems().isEmpty() && cbSize.getSelectedItems().isEmpty() && cbLanguage.getSelectedItems().isEmpty()) {
         // nothing selected - add all
         panelImages.add(panel);
+        for (Component child : panel.getComponents()) {
+          if (child instanceof JToggleButton button) {
+            buttonGroup.add(button);
+          }
+        }
       }
       else {
         // filter
@@ -900,6 +924,10 @@ public class ImageChooserDialog extends TmmDialog {
           panelImages.add(panel);
         }
       }
+    }
+
+    if (selectedButton != null) {
+      buttonGroup.setSelected(selectedButton, true);
     }
 
     viewport.setLocked(true);
@@ -973,15 +1001,18 @@ public class ImageChooserDialog extends TmmDialog {
         art.setPreviewUrl(url);
         art.setOriginalUrl(url);
 
-        Url url1 = new Url(art.getPreviewUrl());
-        final BufferedImage bufferedImage = ImageUtils.createImage(url1.getBytesWithRetry(5));
+        Url previewUrl = new Url(art.getPreviewUrl());
+        byte[] artworkBytes = previewUrl.getBytesWithRetry(5);
 
-        if (bufferedImage != null) {
-          art.addImageSize(bufferedImage.getWidth(), bufferedImage.getHeight(), url, 0);
+        if (artworkBytes.length > 0) {
 
           SwingUtilities.invokeLater(() -> {
-            addImage(bufferedImage, art);
-            bufferedImage.flush();
+            try {
+              addImage(artworkBytes, art);
+            }
+            catch (Exception e) {
+              LOGGER.debug("Could not add image '{}' - '{}'", art.getPreviewUrl(), e.getMessage());
+            }
           });
           tfImageUrl.setText("");
         }
@@ -994,6 +1025,15 @@ public class ImageChooserDialog extends TmmDialog {
       }
     };
     task.run();
+  }
+
+  @Override
+  public void setVisible(boolean visible) {
+    if (visible && task == null) {
+      startScraping();
+    }
+
+    super.setVisible(visible);
   }
 
   /**
@@ -1009,7 +1049,7 @@ public class ImageChooserDialog extends TmmDialog {
    * @param artworkScrapers
    *          the artwork providers
    * @param mediaType
-   *          the media for for which artwork has to be chosen
+   *          the media for which artwork has to be chosen
    * @param defaultPath
    *          the default path to open
    */
@@ -1035,7 +1075,7 @@ public class ImageChooserDialog extends TmmDialog {
    * @param extraFanarts
    *          the extra fanarts
    * @param mediaType
-   *          the media for for which artwork has to be chosen
+   *          the media for which artwork has to be chosen
    * @param defaultPath
    *          the default path to open
    */
@@ -1053,6 +1093,52 @@ public class ImageChooserDialog extends TmmDialog {
     dialog.setOpenFolderPath(defaultPath);
 
     dialog.setLocationRelativeTo(MainWindow.getInstance());
+    dialog.startScraping();
+    dialog.setVisible(true);
+    return lblImage.getImageUrl();
+  }
+
+  /**
+   * call a new image chooser dialog with extrathumbs and extrafanart usage.<br />
+   * this method also checks if there are valid IDs for scraping
+   *
+   * @param parent
+   *          the parent of this dialog
+   * @param ids
+   *          the ids
+   * @param type
+   *          the type private List<MediaArtwork> artwork;
+   * @param artworkScrapers
+   *          the artwork providers
+   * @param extraThumbs
+   *          the extra thumbs
+   * @param extraFanarts
+   *          the extra fanarts
+   * @param artwork
+   *          all pre-selected artwork to show
+   * @param mediaType
+   *          the media for which artwork has to be chosen
+   * @param defaultPath
+   *          the default path to open
+   */
+  public static String chooseImage(JDialog parent, final Map<String, Object> ids, MediaArtworkType type, List<MediaScraper> artworkScrapers,
+      List<String> extraThumbs, List<String> extraFanarts, List<MediaArtwork> artwork, MediaType mediaType, String defaultPath) {
+    if (ids.isEmpty() || ListUtils.isEmpty(artwork)) {
+      return "";
+    }
+
+    List<MediaArtwork> filteredArtwork = artwork.stream().filter(mediaArtwork -> mediaArtwork.getType() == type).toList();
+
+    ImageLabel lblImage = new ImageLabel();
+    ImageChooserDialog dialog = new ImageChooserDialog(parent, ids, type, artworkScrapers, lblImage, mediaType);
+
+    dialog.setArtwork(filteredArtwork);
+    dialog.bindExtraThumbs(extraThumbs);
+    dialog.bindExtraFanarts(extraFanarts);
+    dialog.setOpenFolderPath(defaultPath);
+
+    dialog.setLocationRelativeTo(MainWindow.getInstance());
+    dialog.startScraping();
     dialog.setVisible(true);
     return lblImage.getImageUrl();
   }
@@ -1141,14 +1227,8 @@ public class ImageChooserDialog extends TmmDialog {
             MediaArtwork artwork = (MediaArtwork) button.getClientProperty("MediaArtwork");
             @SuppressWarnings("rawtypes")
             JComboBox cb = (JComboBox) button.getClientProperty("MediaArtworkSize");
-            if (cb.getSelectedItem() instanceof ImageSizeAndUrl) {
-              ImageSizeAndUrl size = (ImageSizeAndUrl) cb.getSelectedItem();
-              if (size != null) {
-                selectedExtraThumbs.add(size.getUrl());
-              }
-              else {
-                selectedExtraThumbs.add(artwork.getOriginalUrl());
-              }
+            if (cb.getSelectedItem() instanceof ImageSizeAndUrl size) {
+              selectedExtraThumbs.add(size.getUrl());
             }
             else if (cb.getSelectedItem() instanceof String) {
               selectedExtraThumbs.add(artwork.getOriginalUrl());
@@ -1176,14 +1256,8 @@ public class ImageChooserDialog extends TmmDialog {
             MediaArtwork artwork = (MediaArtwork) button.getClientProperty("MediaArtwork");
             @SuppressWarnings("rawtypes")
             JComboBox cb = (JComboBox) button.getClientProperty("MediaArtworkSize");
-            if (cb.getSelectedItem() instanceof ImageSizeAndUrl) {
-              ImageSizeAndUrl size = (ImageSizeAndUrl) cb.getSelectedItem();
-              if (size != null) {
-                selectedExtrafanarts.add(size.getUrl());
-              }
-              else {
-                selectedExtrafanarts.add(artwork.getOriginalUrl());
-              }
+            if (cb.getSelectedItem() instanceof ImageSizeAndUrl size) {
+              selectedExtrafanarts.add(size.getUrl());
             }
             else if (cb.getSelectedItem() instanceof String) {
               selectedExtrafanarts.add(artwork.getOriginalUrl());
@@ -1211,13 +1285,17 @@ public class ImageChooserDialog extends TmmDialog {
   }
 
   private class DownloadTask extends SwingWorker<Void, DownloadChunk> {
-    private final Map<String, Object> ids;
-    private final List<MediaScraper>  artworkScrapers;
-    private boolean                   imagesFound = false;
+    private final Map<String, Object>                ids;
+    private final List<MediaScraper>                 artworkScrapers;
+    private final List<MediaArtwork>                 prescrapedArtwork;
 
-    public DownloadTask(Map<String, Object> ids, List<MediaScraper> artworkScrapers) {
+    private boolean                                  imagesFound = false;
+    private ExecutorCompletionService<DownloadChunk> service;
+
+    public DownloadTask(Map<String, Object> ids, List<MediaScraper> artworkScrapers, List<MediaArtwork> artwork) {
       this.ids = ids;
       this.artworkScrapers = artworkScrapers;
+      this.prescrapedArtwork = artwork;
     }
 
     @Override
@@ -1227,153 +1305,130 @@ public class ImageChooserDialog extends TmmDialog {
         return null;
       }
 
-      SwingUtilities.invokeLater(() -> {
-        startProgressBar(TmmResourceBundle.getString("image.download.progress"));
-      });
+      SwingUtilities.invokeLater(() -> startProgressBar(TmmResourceBundle.getString("image.download.progress")));
 
-      if (artworkScrapers == null || artworkScrapers.isEmpty()) {
+      if (ListUtils.isEmpty(artworkScrapers) && ListUtils.isEmpty(prescrapedArtwork)) {
         return null;
       }
 
       // open a thread pool to parallel download the images
       ThreadPoolExecutor pool = new ThreadPoolExecutor(5, 10, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
       pool.allowCoreThreadTimeOut(true);
-      ExecutorCompletionService<DownloadChunk> service = new ExecutorCompletionService<>(pool);
+      service = new ExecutorCompletionService<>(pool);
 
-      // get images from all artwork providers
-      for (MediaScraper scraper : artworkScrapers) {
-        try {
-          IMediaArtworkProvider artworkProvider = (IMediaArtworkProvider) scraper.getMediaProvider();
+      if (ListUtils.isEmpty(prescrapedArtwork)) {
+        // get images from all artwork providers
+        for (MediaScraper scraper : artworkScrapers) {
+          try {
+            IMediaArtworkProvider artworkProvider = (IMediaArtworkProvider) scraper.getMediaProvider();
 
-          ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(mediaType);
-          if (mediaType == MediaType.MOVIE || mediaType == MediaType.MOVIE_SET) {
-            options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
-            options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());
-            options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
-          }
-          else if (mediaType == MediaType.TV_SHOW || mediaType == MediaType.TV_EPISODE) {
-            options.setLanguage(TvShowModuleManager.getInstance().getSettings().getScraperLanguage());
-            options.setFanartSize(TvShowModuleManager.getInstance().getSettings().getImageFanartSize());
-            options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
-            options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
-          }
-          else {
-            continue;
-          }
+            ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(mediaType);
+            if (mediaType == MediaType.MOVIE || mediaType == MediaType.MOVIE_SET) {
+              options.setLanguage(MovieModuleManager.getInstance().getSettings().getDefaultImageScraperLanguage());
+              options.setFanartSize(MovieModuleManager.getInstance().getSettings().getImageFanartSize());
+              options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
+            }
+            else if (mediaType == MediaType.TV_SHOW || mediaType == MediaType.TV_EPISODE) {
+              options.setLanguage(TvShowModuleManager.getInstance().getSettings().getScraperLanguage());
+              options.setFanartSize(TvShowModuleManager.getInstance().getSettings().getImageFanartSize());
+              options.setPosterSize(TvShowModuleManager.getInstance().getSettings().getImagePosterSize());
+              options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
+            }
+            else {
+              continue;
+            }
 
-          switch (type) {
-            case POSTER:
-              options.setArtworkType(MediaArtworkType.POSTER);
-              break;
+            switch (type) {
+              case POSTER:
+                options.setArtworkType(MediaArtworkType.POSTER);
+                break;
 
-            case BACKGROUND:
-              options.setArtworkType(BACKGROUND);
-              break;
+              case BACKGROUND:
+                options.setArtworkType(BACKGROUND);
+                break;
 
-            case BANNER:
-              options.setArtworkType(MediaArtworkType.BANNER);
-              break;
+              case BANNER:
+                options.setArtworkType(MediaArtworkType.BANNER);
+                break;
 
-            case SEASON_POSTER:
-              options.setArtworkType(MediaArtworkType.SEASON_POSTER);
-              break;
+              case SEASON_POSTER:
+                options.setArtworkType(MediaArtworkType.SEASON_POSTER);
+                break;
 
-            case SEASON_FANART:
-              options.setArtworkType(MediaArtworkType.SEASON_FANART);
-              break;
+              case SEASON_FANART:
+                options.setArtworkType(MediaArtworkType.SEASON_FANART);
+                break;
 
-            case SEASON_BANNER:
-              options.setArtworkType(MediaArtworkType.SEASON_BANNER);
-              break;
+              case SEASON_BANNER:
+                options.setArtworkType(MediaArtworkType.SEASON_BANNER);
+                break;
 
-            case SEASON_THUMB:
-              options.setArtworkType(MediaArtworkType.SEASON_THUMB);
-              break;
+              case SEASON_THUMB:
+                options.setArtworkType(MediaArtworkType.SEASON_THUMB);
+                break;
 
-            case CLEARART:
-              options.setArtworkType(MediaArtworkType.CLEARART);
-              break;
+              case CLEARART:
+                options.setArtworkType(MediaArtworkType.CLEARART);
+                break;
 
-            case DISC:
-              options.setArtworkType(MediaArtworkType.DISC);
-              break;
+              case DISC:
+                options.setArtworkType(MediaArtworkType.DISC);
+                break;
 
-            case CLEARLOGO:
-            case LOGO:
-              options.setArtworkType(MediaArtworkType.CLEARLOGO);
-              break;
+              case CLEARLOGO:
+              case LOGO:
+                options.setArtworkType(MediaArtworkType.CLEARLOGO);
+                break;
 
-            case CHARACTERART:
-              options.setArtworkType(MediaArtworkType.CHARACTERART);
-              break;
+              case CHARACTERART:
+                options.setArtworkType(MediaArtworkType.CHARACTERART);
+                break;
 
-            case KEYART:
-              options.setArtworkType(MediaArtworkType.KEYART);
-              break;
+              case KEYART:
+                options.setArtworkType(MediaArtworkType.KEYART);
+                break;
 
-            case THUMB:
-              options.setArtworkType(MediaArtworkType.THUMB);
-              break;
-          }
+              case THUMB:
+                options.setArtworkType(MediaArtworkType.THUMB);
+                break;
+            }
 
-          // populate ids
-          options.setIds(ids);
+            // populate ids
+            options.setIds(ids);
 
-          // get the artwork
-          List<MediaArtwork> artwork = artworkProvider.getArtwork(options);
-          if (artwork == null || artwork.isEmpty()) {
-            continue;
-          }
+            // get the artwork
+            List<MediaArtwork> artwork = artworkProvider.getArtwork(options);
+            if (artwork == null || artwork.isEmpty()) {
+              continue;
+            }
 
-          int season = MediaIdUtil.getIdAsIntOrDefault(ids, "tvShowSeason", -1);
-
-          // display all images
-          for (MediaArtwork art : artwork) {
+            processImages(artwork);
             if (isCancelled()) {
               return null;
             }
-            if (art.getPreviewUrl().isEmpty()) {
-              continue;
-            }
-
-            // for seasons, just use the season related artwork
-            if (season > -1 && season != art.getSeason()) {
-              continue;
-            }
-
-            Callable<DownloadChunk> callable = () -> {
-              Url url = new Url(art.getPreviewUrl());
-              DownloadChunk chunk = new DownloadChunk();
-              chunk.artwork = art;
-              try {
-                chunk.image = ImageUtils.createImage(url.getBytesWithRetry(5));
-              }
-              catch (Exception e) {
-                // ignore, return empty chunk
-              }
-              return chunk;
-            };
-
-            service.submit(callable);
           }
-        }
-        catch (MissingIdException e) {
-          LOGGER.debug("could not fetch artwork: {}", e.getIds());
-        }
-        catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-        }
-        catch (Exception e) {
-          if (e instanceof InterruptedException || e instanceof InterruptedIOException) { // NOSONAR
-            // shutdown the pool
-            pool.getQueue().clear();
-            pool.shutdownNow();
-
-            return null;
+          catch (MissingIdException e) {
+            LOGGER.debug("could not fetch artwork: {}", e.getIds());
           }
-          LOGGER.error("could not process artwork downloading - {}", e.getMessage());
-        }
-      } // end foreach scraper
+          catch (ScrapeException e) {
+            LOGGER.error("getArtwork", e);
+          }
+          catch (Exception e) {
+            if (e instanceof InterruptedException || e instanceof InterruptedIOException) { // NOSONAR
+              // shutdown the pool
+              pool.getQueue().clear();
+              pool.shutdownNow();
+
+              return null;
+            }
+            LOGGER.error("could not process artwork downloading - {}", e.getMessage());
+          }
+        } // end foreach scraper
+      }
+      else {
+        // add pre-scraped artwork
+        processImages(prescrapedArtwork);
+      }
 
       // wait for all downloads to finish
       pool.shutdown();
@@ -1382,7 +1437,7 @@ public class ImageChooserDialog extends TmmDialog {
           final Future<DownloadChunk> future = service.poll(1, TimeUnit.SECONDS);
           if (future != null) {
             DownloadChunk dc = future.get();
-            if (dc.image != null) {
+            if (dc.imageData.length > 0) {
               publish(dc);
               imagesFound = true;
             }
@@ -1403,10 +1458,49 @@ public class ImageChooserDialog extends TmmDialog {
       return null;
     }
 
+    private void processImages(List<MediaArtwork> artwork) {
+      int season = MediaIdUtil.getIdAsIntOrDefault(ids, "tvShowSeason", -1);
+
+      // display all images
+      for (MediaArtwork art : artwork) {
+        if (isCancelled()) {
+          return;
+        }
+        if (art.getPreviewUrl().isEmpty()) {
+          continue;
+        }
+
+        // for seasons, just use the season related artwork
+        if (season > -1 && season != art.getSeason()) {
+          continue;
+        }
+
+        Callable<DownloadChunk> callable = () -> {
+          Url url = new Url(art.getPreviewUrl());
+          DownloadChunk chunk = new DownloadChunk();
+          chunk.artwork = art;
+          try {
+            chunk.imageData = url.getBytesWithRetry(5);
+          }
+          catch (Exception e) {
+            LOGGER.debug("Could not add image '{}' - '{}'", art.getPreviewUrl(), e.getMessage());
+          }
+          return chunk;
+        };
+
+        service.submit(callable);
+      }
+    }
+
     @Override
     protected void process(List<DownloadChunk> chunks) {
       for (DownloadChunk chunk : chunks) {
-        addImage(chunk.image, chunk.artwork);
+        try {
+          addImage(chunk.imageData, chunk.artwork);
+        }
+        catch (Exception e) {
+          LOGGER.debug("Could not add image '{}' - '{}'", chunk.artwork.getPreviewUrl(), e.getMessage());
+        }
       }
     }
 
@@ -1424,8 +1518,8 @@ public class ImageChooserDialog extends TmmDialog {
   }
 
   private static class DownloadChunk {
-    private BufferedImage image;
-    private MediaArtwork  artwork;
+    private byte[]       imageData;
+    private MediaArtwork artwork;
   }
 
   private class LocalFileChooseAction extends AbstractAction {

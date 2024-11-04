@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.scraper.util;
 
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -27,6 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
 
 /**
  * The class StrgUtils. This can be used for several String related tasks
@@ -38,8 +40,11 @@ public class StrgUtils {
   private static final Map<Integer, Replacement> REPLACEMENTS          = new HashMap<>(20);
   private static final String[]                  COMMON_TITLE_PREFIXES = buildCommonTitlePrefixes();
   private static final char[]                    HEX_ARRAY             = "0123456789ABCDEF".toCharArray();
+  private static final byte[]                    DIGITS_LOWER          = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e',
+      'f' };
   private static final Map<String, String>       DATE_FORMAT_REGEXPS   = new HashMap<>(30);
   private static final Pattern                   NORMALIZE_PATTERN     = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+  private static final char[]                    CAP_DELIMS            = new char[] { ' ', '-', '_', '.', '\'', '(', '[', '*' };
   static {
     DATE_FORMAT_REGEXPS.put("^\\d{8}$", "yyyyMMdd");
     DATE_FORMAT_REGEXPS.put("^\\d{1,2}-\\d{1,2}-\\d{4}$", "dd-MM-yyyy");
@@ -121,6 +126,56 @@ public class StrgUtils {
       hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
     }
     return new String(hexChars);
+  }
+
+  public static String encodeHex(byte[] data) {
+    final int dataLength = data.length;
+    final int outLength = dataLength << 1;
+
+    final byte[] out = new byte[outLength];
+    for (int i = 0, j = 0; i < dataLength; i++) {
+      out[(j++)] = DIGITS_LOWER[((0xf0 & data[i]) >>> 4)];
+      out[(j++)] = DIGITS_LOWER[(0x0f & data[i])];
+    }
+    return new String(out, 0, outLength, StandardCharsets.ISO_8859_1);
+  }
+
+  public static String encodeHex(int data) {
+    byte[] out = new byte[8];
+
+    out[0] = DIGITS_LOWER[(data >>> 28) & 0x0f];
+    out[1] = DIGITS_LOWER[(data >>> 24) & 0x0f];
+    out[2] = DIGITS_LOWER[(data >>> 20) & 0x0f];
+    out[3] = DIGITS_LOWER[(data >>> 16) & 0x0f];
+    out[4] = DIGITS_LOWER[(data >>> 12) & 0x0f];
+    out[5] = DIGITS_LOWER[(data >>> 8) & 0x0f];
+    out[6] = DIGITS_LOWER[(data >>> 4) & 0x0f];
+    out[7] = DIGITS_LOWER[(data >>> 0) & 0x0f];
+
+    return new String(out, 0, 8, StandardCharsets.ISO_8859_1);
+  }
+
+  public static String encodeHex(long data) {
+    byte[] out = new byte[16];
+
+    out[0] = DIGITS_LOWER[(int) ((data >>> 60) & 0x0f)];
+    out[1] = DIGITS_LOWER[(int) ((data >>> 56) & 0x0f)];
+    out[2] = DIGITS_LOWER[(int) ((data >>> 52) & 0x0f)];
+    out[3] = DIGITS_LOWER[(int) ((data >>> 48) & 0x0f)];
+    out[4] = DIGITS_LOWER[(int) ((data >>> 44) & 0x0f)];
+    out[5] = DIGITS_LOWER[(int) ((data >>> 40) & 0x0f)];
+    out[6] = DIGITS_LOWER[(int) ((data >>> 36) & 0x0f)];
+    out[7] = DIGITS_LOWER[(int) ((data >>> 32) & 0x0f)];
+    out[8] = DIGITS_LOWER[(int) ((data >>> 28) & 0x0f)];
+    out[9] = DIGITS_LOWER[(int) ((data >>> 24) & 0x0f)];
+    out[10] = DIGITS_LOWER[(int) ((data >>> 20) & 0x0f)];
+    out[11] = DIGITS_LOWER[(int) ((data >>> 16) & 0x0f)];
+    out[12] = DIGITS_LOWER[(int) ((data >>> 12) & 0x0f)];
+    out[13] = DIGITS_LOWER[(int) ((data >>> 8) & 0x0f)];
+    out[14] = DIGITS_LOWER[(int) ((data >>> 4) & 0x0f)];
+    out[15] = DIGITS_LOWER[(int) ((data >>> 0) & 0x0f)];
+
+    return new String(out, 0, 16, StandardCharsets.ISO_8859_1);
   }
 
   /**
@@ -548,5 +603,15 @@ public class StrgUtils {
       return new String[] {};
     }
     return source.replace("[", "").replace("]", "").replaceAll("\\s", "").split(",");
+  }
+
+  /**
+   * TMMs style of capitalizing strings. CapitalizeFully is not so good, and capitalize misses some.
+   * 
+   * @param text
+   * @return the capitalized string
+   */
+  public static String capitalize(String text) {
+    return WordUtils.capitalize(text, CAP_DELIMS);
   }
 }

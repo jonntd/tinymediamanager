@@ -19,9 +19,12 @@ import java.text.ParseException;
 import java.util.Comparator;
 import java.util.Date;
 
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -143,6 +146,19 @@ public class MediaTrailer extends AbstractModelObject implements Comparable<Medi
     Date oldValue = this.date;
     this.date = newValue;
     firePropertyChange("date", oldValue, newValue);
+  }
+
+  /**
+   * <p>
+   * Uses <code>ReflectionToStringBuilder</code> to generate a <code>toString</code> for the specified object.
+   * </p>
+   *
+   * @return the String result
+   * @see ReflectionToStringBuilder#toString(Object)
+   */
+  @Override
+  public String toString() {
+    return ToStringBuilder.reflectionToString(this, TmmToStringStyle.TMM_STYLE, false, MediaTrailer.class);
   }
 
   @Override

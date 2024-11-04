@@ -16,19 +16,13 @@
 
 package org.tinymediamanager.ui.tvshows.settings;
 
-import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER;
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import static org.tinymediamanager.ui.TmmFontHelper.L2;
 
-import java.awt.Font;
-import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
-import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,26 +31,20 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.KeyStroke;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BeanProperty;
@@ -65,8 +53,6 @@ import org.jdesktop.beansbinding.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
-import org.tinymediamanager.core.Message;
-import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
@@ -75,28 +61,19 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.ScrollingEventDelegator;
-import org.tinymediamanager.ui.TableColumnResizer;
-import org.tinymediamanager.ui.TablePopupListener;
 import org.tinymediamanager.ui.TmmFontHelper;
-import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.CollapsiblePanel;
 import org.tinymediamanager.ui.components.DocsButton;
 import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.ReadOnlyTextArea;
 import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.TmmRoundTextArea;
-import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
-import org.tinymediamanager.ui.components.table.TmmTableModel;
 import org.tinymediamanager.ui.renderer.MultilineTableCellRenderer;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowJmteExplorerDialog;
 
-import ca.odell.glazedlists.BasicEventList;
-import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.GlazedLists;
-import ca.odell.glazedlists.ObservableElementList;
-import ca.odell.glazedlists.swing.GlazedListsSwing;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -110,12 +87,13 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
   private final TvShowSettings                     settings          = TvShowModuleManager.getInstance().getSettings();
   private final List<String>                       spaceReplacements = new ArrayList<>(Arrays.asList("_", ".", "-"));
   private final List<String>                       colonReplacements = new ArrayList<>(Arrays.asList(" ", "-", "_"));
-  private final EventList<TvShowRenamerExample>    exampleEventList;
 
   /*
    * UI components
    */
-  private JLabel                                   lblExample;
+  private LinkLabel                                lblExampleDatasource;
+  private JLabel                                   lblExampleFoldername;
+  private JLabel                                   lblExampleFilename;
   private JComboBox<TvShowPreviewContainer>        cbTvShowForPreview;
   private JTextArea                                tfSeasonFolderName;
   private JCheckBox                                chckbxAsciiReplacement;
@@ -126,7 +104,6 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
   private JCheckBox                                chckbxFilenameSpaceReplacement;
   private JComboBox                                cbFilenameSpaceReplacement;
   private JComboBox<TvShowEpisodePreviewContainer> cbEpisodeForPreview;
-  private TmmTable                                 tableExamples;
   private JTextArea                                tfTvShowFolder;
   private JTextArea                                tfEpisodeFilename;
   private JComboBox                                cbColonReplacement;
@@ -135,10 +112,6 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
   private JCheckBox                                chckbxCleanupUnwanted;
 
   public TvShowRenamerSettingsPanel() {
-
-    exampleEventList = GlazedLists
-        .threadSafeList(new ObservableElementList<>(new BasicEventList<>(), GlazedLists.beanConnector(TvShowRenamerExample.class)));
-
     // UI initializations
     initComponents();
     initDataBindings();
@@ -199,81 +172,6 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
       cbColonReplacement.setSelectedIndex(index);
     }
 
-    lblExample.putClientProperty("clipPosition", SwingConstants.LEFT);
-
-    // examples
-    exampleEventList.add(new TvShowRenamerExample("${title}"));
-    exampleEventList.add(new TvShowRenamerExample("${originalTitle}"));
-    exampleEventList.add(new TvShowRenamerExample("${originalFilename}"));
-    exampleEventList.add(new TvShowRenamerExample("${originalBasename}"));
-    exampleEventList.add(new TvShowRenamerExample("${titleSortable}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNr}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNr2}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNr}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNr2}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNrAired}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNrAired2}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNrAired}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNrAired2}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNrDvd}"));
-    exampleEventList.add(new TvShowRenamerExample("${seasonNrDvd2}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNrDvd}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeNrDvd2}"));
-    exampleEventList.add(new TvShowRenamerExample("${absoluteNr}"));
-    exampleEventList.add(new TvShowRenamerExample("${absoluteNr2}"));
-    exampleEventList.add(new TvShowRenamerExample("${airedDate}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeRating}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeImdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeTmdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeTvdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${episodeTags[0]}"));
-    exampleEventList.add(new TvShowRenamerExample("${year}"));
-    exampleEventList.add(new TvShowRenamerExample("${showYear}"));
-    exampleEventList.add(new TvShowRenamerExample("${showTitle}"));
-    exampleEventList.add(new TvShowRenamerExample("${showOriginalTitle}"));
-    exampleEventList.add(new TvShowRenamerExample("${showTitleSortable}"));
-    exampleEventList.add(new TvShowRenamerExample("${showRating}"));
-    exampleEventList.add(new TvShowRenamerExample("${showImdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${showTmdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${showTvdb}"));
-    exampleEventList.add(new TvShowRenamerExample("${showCertification}"));
-    exampleEventList.add(new TvShowRenamerExample("${showStatus}"));
-    exampleEventList.add(new TvShowRenamerExample("${showProductionCompany}"));
-    exampleEventList.add(new TvShowRenamerExample("${showProductionCompanyAsArray[0]}"));
-    exampleEventList.add(new TvShowRenamerExample("${showTags[0]}"));
-    exampleEventList.add(new TvShowRenamerExample("${showGenres[0]}"));
-    exampleEventList.add(new TvShowRenamerExample("${showGenres[0].name}"));
-    exampleEventList.add(new TvShowRenamerExample("${showGenresAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${videoResolution}"));
-    exampleEventList.add(new TvShowRenamerExample("${aspectRatio}"));
-    exampleEventList.add(new TvShowRenamerExample("${aspectRatio2}"));
-    exampleEventList.add(new TvShowRenamerExample("${videoCodec}"));
-    exampleEventList.add(new TvShowRenamerExample("${videoFormat}"));
-    exampleEventList.add(new TvShowRenamerExample("${videoBitDepth}"));
-    exampleEventList.add(new TvShowRenamerExample("${videoBitRate}"));
-    exampleEventList.add(new TvShowRenamerExample("${framerate}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioCodec}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioCodecList}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioCodecsAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannels}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannelList}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannelsAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannelsDot}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannelDotList}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioChannelsDotAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioLanguage}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioLanguageList}"));
-    exampleEventList.add(new TvShowRenamerExample("${audioLanguagesAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${subtitleLanguageList}"));
-    exampleEventList.add(new TvShowRenamerExample("${subtitleLanguagesAsString}"));
-    exampleEventList.add(new TvShowRenamerExample("${mediaSource}"));
-    exampleEventList.add(new TvShowRenamerExample("${hdr}"));
-    exampleEventList.add(new TvShowRenamerExample("${hdrformat}"));
-    exampleEventList.add(new TvShowRenamerExample("${filesize}"));
-    exampleEventList.add(new TvShowRenamerExample("${parent}"));
-    exampleEventList.add(new TvShowRenamerExample("${showNote}"));
-    exampleEventList.add(new TvShowRenamerExample("${note}"));
-
     // event listener must be at the end
     ActionListener renamerActionListener = arg0 -> {
       checkChanges();
@@ -289,24 +187,12 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
     cbSeasonFoldernameSpaceReplacement.addActionListener(renamerActionListener);
     cbFilenameSpaceReplacement.addActionListener(renamerActionListener);
     cbColonReplacement.addActionListener(renamerActionListener);
-
-    // force the size of the table
-    tableExamples.setPreferredScrollableViewportSize(tableExamples.getPreferredSize());
-
-    // make tokens copyable
-    JPopupMenu popupMenu = new JPopupMenu();
-    popupMenu.add(new CopyShortRenamerTokenAction());
-    popupMenu.add(new CopyLongRenamerTokenAction());
-    tableExamples.addMouseListener(new TablePopupListener(popupMenu, tableExamples));
-
-    final KeyStroke copy = KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx(), false);
-    tableExamples.registerKeyboardAction(new CopyShortRenamerTokenAction(), "Copy", copy, JComponent.WHEN_FOCUSED);
   }
 
   private void initComponents() {
     setLayout(new MigLayout("", "[600lp,grow]", "[][15lp!][][15lp!][]"));
     {
-      JPanel panelPatterns = new JPanel(new MigLayout("insets 0, hidemode 1", "[20lp!][15lp][][300lp,grow]", "[][][][][][][]"));
+      JPanel panelPatterns = new JPanel(new MigLayout("insets 0, hidemode 1", "[20lp!][15lp][][400lp,grow][grow]", "[][][][][][][]"));
 
       JLabel lblPatternsT = new TmmLabel(TmmResourceBundle.getString("Settings.tvshow.renamer.title"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelPatterns, lblPatternsT, true);
@@ -318,19 +204,19 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
         panelPatterns.add(lblTvShowFolder, "cell 1 0 2 1,alignx right");
 
         tfTvShowFolder = new TmmRoundTextArea();
-        panelPatterns.add(tfTvShowFolder, "cell 3 0 2 1, growx, wmin 0");
+        panelPatterns.add(tfTvShowFolder, "cell 3 0, growx, wmin 0");
 
         JButton btnReset = new FlatButton(IconManager.UNDO_GREY);
         btnReset.setToolTipText(TmmResourceBundle.getString("Settings.renamer.reverttodefault"));
         btnReset.addActionListener(l -> tfTvShowFolder.setText(TvShowSettings.DEFAULT_RENAMER_FOLDER_PATTERN));
-        panelPatterns.add(btnReset, "cell 3 0 2 1, aligny top");
+        panelPatterns.add(btnReset, "cell 3 0, aligny top");
 
         JLabel lblDefault = new JLabel(TmmResourceBundle.getString("Settings.default"));
         panelPatterns.add(lblDefault, "cell 1 1 2 1,alignx right");
         TmmFontHelper.changeFont(lblDefault, L2);
 
         JTextArea tpDefaultFolderPattern = new ReadOnlyTextArea(TvShowSettings.DEFAULT_RENAMER_FOLDER_PATTERN);
-        panelPatterns.add(tpDefaultFolderPattern, "cell 3 1 2 1,growx,wmin 0");
+        panelPatterns.add(tpDefaultFolderPattern, "cell 3 1,growx,wmin 0");
         TmmFontHelper.changeFont(tpDefaultFolderPattern, L2);
       }
       {
@@ -338,19 +224,19 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
         panelPatterns.add(lblSeasonFolderName, "cell 1 2 2 1,alignx right");
 
         tfSeasonFolderName = new TmmRoundTextArea();
-        panelPatterns.add(tfSeasonFolderName, "cell 3 2 2 1, growx, wmin 0");
+        panelPatterns.add(tfSeasonFolderName, "cell 3 2, growx, wmin 0");
 
         JButton btnReset = new FlatButton(IconManager.UNDO_GREY);
         btnReset.setToolTipText(TmmResourceBundle.getString("Settings.renamer.reverttodefault"));
         btnReset.addActionListener(l -> tfSeasonFolderName.setText(TvShowSettings.DEFAULT_RENAMER_SEASON_PATTERN));
-        panelPatterns.add(btnReset, "cell 3 2 2 1, aligny top");
+        panelPatterns.add(btnReset, "cell 3 2, aligny top");
 
         JLabel lblDefault = new JLabel(TmmResourceBundle.getString("Settings.default"));
         panelPatterns.add(lblDefault, "cell 1 3 2 1,alignx right");
         TmmFontHelper.changeFont(lblDefault, L2);
 
         JTextArea tpDefaultSeasonPattern = new ReadOnlyTextArea(TvShowSettings.DEFAULT_RENAMER_SEASON_PATTERN);
-        panelPatterns.add(tpDefaultSeasonPattern, "cell 3 3 2 1,growx,wmin 0");
+        panelPatterns.add(tpDefaultSeasonPattern, "cell 3 3,growx,wmin 0");
         TmmFontHelper.changeFont(tpDefaultSeasonPattern, L2);
       }
       {
@@ -358,38 +244,32 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
         panelPatterns.add(lblEpisodeFileName, "cell 1 4 2 1,alignx right");
 
         tfEpisodeFilename = new TmmRoundTextArea();
-        panelPatterns.add(tfEpisodeFilename, "cell 3 4 2 1, growx, wmin 0");
+        panelPatterns.add(tfEpisodeFilename, "cell 3 4, growx, wmin 0");
 
         JButton btnReset = new FlatButton(IconManager.UNDO_GREY);
         btnReset.setToolTipText(TmmResourceBundle.getString("Settings.renamer.reverttodefault"));
         btnReset.addActionListener(l -> tfEpisodeFilename.setText(TvShowSettings.DEFAULT_RENAMER_FILE_PATTERN));
-        panelPatterns.add(btnReset, "cell 3 4 2 1, aligny top");
+        panelPatterns.add(btnReset, "cell 3 4, aligny top");
 
         JLabel lblDefault = new JLabel(TmmResourceBundle.getString("Settings.default"));
         panelPatterns.add(lblDefault, "cell 1 5 2 1,alignx right");
         TmmFontHelper.changeFont(lblDefault, L2);
 
         JTextArea tpDefaultFilePattern = new ReadOnlyTextArea(TvShowSettings.DEFAULT_RENAMER_FILE_PATTERN);
-        panelPatterns.add(tpDefaultFilePattern, "cell 3 5 2 1,growx,wmin 0");
+        panelPatterns.add(tpDefaultFilePattern, "cell 3 5,growx,wmin 0");
         TmmFontHelper.changeFont(tpDefaultFilePattern, L2);
       }
       {
         JLabel lblRenamerHintT = new JLabel(TmmResourceBundle.getString("Settings.tvshow.renamer.hint"));
         panelPatterns.add(lblRenamerHintT, "cell 1 6 3 1");
-
-        JButton btnHelp = new JButton(TmmResourceBundle.getString("tmm.help"));
-        btnHelp.addActionListener(e -> {
-          String url = StringEscapeUtils.unescapeHtml4("https://www.tinymediamanager.org/docs/tvshows/renamer");
-          try {
-            TmmUIHelper.browseUrl(url);
-          }
-          catch (Exception e1) {
-            LOGGER.error("Wiki", e1);
-            MessageManager.instance
-                .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
-          }
+      }
+      {
+        JButton btnJmteExplorer = new JButton(TmmResourceBundle.getString("jmteexplorer.title"));
+        btnJmteExplorer.addActionListener(e -> {
+          TvShowJmteExplorerDialog dialog = new TvShowJmteExplorerDialog((JDialog) this.getTopLevelAncestor());
+          dialog.setVisible(true);
         });
-        panelPatterns.add(btnHelp, "cell 1 6 3 1");
+        panelPatterns.add(btnJmteExplorer, "cell 4 0");
       }
     }
     {
@@ -462,7 +342,7 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
     }
     {
       JPanel panelExample = new JPanel();
-      panelExample.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][300lp,grow]", ""));
+      panelExample.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][][300lp,grow]", "[][]10lp![][][]"));
 
       JLabel lblAdvancedOptions = new TmmLabel(TmmResourceBundle.getString("Settings.example"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelExample, lblAdvancedOptions, true);
@@ -473,30 +353,33 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
         panelExample.add(lblExampleTvShowT, "cell 1 0");
 
         cbTvShowForPreview = new JComboBox();
-        panelExample.add(cbTvShowForPreview, "cell 1 0,growx,wmin 0");
+        panelExample.add(cbTvShowForPreview, "cell 2 0,growx,wmin 0");
       }
       {
         JLabel lblExampleEpisodeT = new JLabel(TmmResourceBundle.getString("metatag.episode"));
-        panelExample.add(lblExampleEpisodeT, "cell 1 0");
+        panelExample.add(lblExampleEpisodeT, "cell 1 1");
 
         cbEpisodeForPreview = new JComboBox();
-        panelExample.add(cbEpisodeForPreview, "cell 1 0,growx,wmin 0");
+        panelExample.add(cbEpisodeForPreview, "cell 2 1,growx,wmin 0");
       }
       {
-        lblExample = new JLabel("");
-        panelExample.add(lblExample, "cell 1 1, wmin 0");
-        TmmFontHelper.changeFont(lblExample, Font.BOLD);
-      }
-      {
-        tableExamples = new TmmTable(
-            new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(exampleEventList), new TvShowRenamerExampleTableFormat()));
-        JScrollPane scrollPane = new JScrollPane();
-        tableExamples.configureScrollPane(scrollPane);
-        scrollPane.setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_NEVER);
-        ScrollingEventDelegator.install(scrollPane);
-        panelExample.add(scrollPane, "cell 1 2,grow");
-        scrollPane.setViewportView(tableExamples);
-        tableExamples.setRowHeight(35);
+        JLabel lblDatasourceT = new TmmLabel(TmmResourceBundle.getString("metatag.datasource"));
+        panelExample.add(lblDatasourceT, "cell 1 2");
+
+        lblExampleDatasource = new LinkLabel("");
+        panelExample.add(lblExampleDatasource, "cell 2 2, wmin 0");
+
+        JLabel lblFoldernameT = new TmmLabel(TmmResourceBundle.getString("Settings.renamer.folder"));
+        panelExample.add(lblFoldernameT, "cell 1 3");
+
+        lblExampleFoldername = new JLabel("");
+        panelExample.add(lblExampleFoldername, "cell 2 3, wmin 0");
+
+        JLabel lblFilenameT = new TmmLabel(TmmResourceBundle.getString("Settings.renamer.file"));
+        panelExample.add(lblFilenameT, "cell 1 4");
+
+        lblExampleFilename = new JLabel("");
+        panelExample.add(lblExampleFilename, "cell 2 4, wmin 0");
       }
     }
   }
@@ -576,19 +459,17 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
                 FilenameUtils.getBaseName(episode.getMainVideoFile().getFilename()))
             .get(0);
 
-        String newFilenameAndPath = episodeMf.getFile().toString().replace(episode.getTvShow().getPath(), "");
-        lblExample.setText(tvShowDir + newFilenameAndPath);
-        lblExample.setToolTipText(tvShowDir + newFilenameAndPath);
+        String newFilenameAndPath = episodeMf.getFile().toString().replace(episode.getTvShow().getPath() + File.separator, "");
 
-        // create examples
-        for (TvShowRenamerExample example : exampleEventList) {
-          example.createExample(episode);
-        }
-        TableColumnResizer.adjustColumnPreferredWidths(tableExamples, 7);
+        lblExampleDatasource.setText(tvShow.getDataSource());
+        lblExampleFoldername.setText(tvShowDir.replace(tvShow.getDataSource() + File.separator, ""));
+        lblExampleFilename.setText(newFilenameAndPath);
+
       }
       else {
-        lblExample.setText("");
-        lblExample.setToolTipText(null);
+        lblExampleDatasource.setText("");
+        lblExampleFoldername.setText("");
+        lblExampleFilename.setText("");
       }
     });
   }
@@ -783,49 +664,5 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
     AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6, chckbxCleanupUnwanted,
         jCheckBoxBeanProperty);
     autoBinding_9.bind();
-  }
-
-  private class CopyShortRenamerTokenAction extends AbstractAction {
-    CopyShortRenamerTokenAction() {
-      putValue(LARGE_ICON_KEY, IconManager.COPY);
-      putValue(SMALL_ICON, IconManager.COPY);
-      putValue(NAME, TmmResourceBundle.getString("renamer.copytoken"));
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("renamer.copytoken"));
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableExamples.getSelectedRow();
-      if (row > -1) {
-        row = tableExamples.convertRowIndexToModel(row);
-        TvShowRenamerExample example = exampleEventList.get(row);
-        StringSelection stringSelection = new StringSelection(example.token);
-
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        clipboard.setContents(stringSelection, stringSelection);
-      }
-    }
-  }
-
-  private class CopyLongRenamerTokenAction extends AbstractAction {
-    CopyLongRenamerTokenAction() {
-      putValue(LARGE_ICON_KEY, IconManager.COPY);
-      putValue(SMALL_ICON, IconManager.COPY);
-      putValue(NAME, TmmResourceBundle.getString("renamer.copytoken.long"));
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("renamer.copytoken.long"));
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableExamples.getSelectedRow();
-      if (row > -1) {
-        row = tableExamples.convertRowIndexToModel(row);
-        TvShowRenamerExample example = exampleEventList.get(row);
-        StringSelection stringSelection = new StringSelection(example.longToken);
-
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        clipboard.setContents(stringSelection, stringSelection);
-      }
-    }
   }
 }

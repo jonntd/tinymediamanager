@@ -287,10 +287,17 @@ public abstract class MediaSearchAndScrapeOptions {
   }
 
   /**
-   * set die provider ids for the search
+   * set provider ids for the search
    */
   public void setIds(Map<String, Object> newIds) {
     ids.clear();
+    ids.putAll(newIds);
+  }
+
+  /**
+   * appends provider ids to existing
+   */
+  public void addIds(Map<String, Object> newIds) {
     ids.putAll(newIds);
   }
 

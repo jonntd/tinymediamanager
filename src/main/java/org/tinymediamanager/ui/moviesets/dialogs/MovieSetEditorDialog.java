@@ -74,6 +74,7 @@ import org.tinymediamanager.ui.components.ImageLabel;
 import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.TmmObligatoryTextArea;
+import org.tinymediamanager.ui.components.TmmRoundTextArea;
 import org.tinymediamanager.ui.components.TmmTabbedPane;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.dialogs.AbstractEditorDialog;
@@ -100,6 +101,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
 
   /** UI components */
   private JTextArea                tfName;
+  private JTextArea                tfSorttitle;
   private TmmTable                 tableMovies;
   private ImageLabel               lblPoster;
   private ImageLabel               lblFanart;
@@ -145,14 +147,13 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
       JPanel panelContent = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details"), panelContent);
       panelContent.setLayout(new MigLayout("", "[][400lp,grow][150lp:200lp,grow 50]",
-          "[][][100lp:25%:25%,grow][50lp:50lp:100lp,grow 50][20lp:n][pref!][][50lp:20%:30%,grow]"));
+          "[][][][100lp:25%:25%,grow][50lp:50lp:100lp,grow 50][20lp:n][pref!][][50lp:20%:30%,grow]"));
 
       JLabel lblName = new TmmLabel(TmmResourceBundle.getString("movieset.title"));
-      panelContent.add(lblName, "cell 0 0,alignx right");
+      panelContent.add(lblName, "cell 0 0,alignx trailing");
 
       tfName = new TmmObligatoryTextArea();
       panelContent.add(tfName, "cell 1 0,growx,aligny top, wmin 0");
-      tfName.setColumns(10);
 
       lblPoster = new ImageLabel();
       lblPoster.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -178,24 +179,31 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
         lblPoster.clearImage();
         tfPoster.setText("");
       });
+      btnDeletePoster.setFocusable(false);
       panelContent.add(btnDeletePoster, "cell 2 0");
 
-      panelContent.add(lblPoster, "cell 2 1 1 5,grow");
+      JLabel lblSorttitleT = new TmmLabel(TmmResourceBundle.getString("metatag.sorttitle"));
+      panelContent.add(lblSorttitleT, "cell 0 1,alignx trailing");
+
+      tfSorttitle = new TmmRoundTextArea();
+      panelContent.add(tfSorttitle, "cell 1 1,growx,aligny top");
+
+      panelContent.add(lblPoster, "cell 2 1 1 6,grow");
       lblPoster.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
           e -> setImageSizeAndCreateLink(lblPosterSize, lblPoster, btnDeletePoster, MediaFileType.POSTER));
 
       JLabel lblTmdbid = new TmmLabel(TmmResourceBundle.getString("metatag.tmdb"));
-      panelContent.add(lblTmdbid, "cell 0 1,alignx right");
+      panelContent.add(lblTmdbid, "cell 0 2,alignx trailing");
 
       tfTmdbId = new JTextField();
-      panelContent.add(tfTmdbId, "flowx,cell 1 1,aligny center");
+      panelContent.add(tfTmdbId, "flowx,cell 1 2,aligny center");
       tfTmdbId.setColumns(10);
 
       JLabel lblOverview = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
-      panelContent.add(lblOverview, "cell 0 2,alignx right,aligny top");
+      panelContent.add(lblOverview, "cell 0 3,alignx trailing,aligny top");
 
       JScrollPane scrollPaneOverview = new JScrollPane();
-      panelContent.add(scrollPaneOverview, "cell 1 2,grow, wmin 0");
+      panelContent.add(scrollPaneOverview, "cell 1 3,wmin 0,grow");
 
       taPlot = new JTextArea();
       taPlot.setLineWrap(true);
@@ -204,10 +212,10 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
       scrollPaneOverview.setViewportView(taPlot);
 
       JLabel lblNoteT = new TmmLabel(TmmResourceBundle.getString("metatag.note"));
-      panelContent.add(lblNoteT, "cell 0 3,alignx right,aligny top");
+      panelContent.add(lblNoteT, "cell 0 4,alignx trailing,aligny top");
 
       JScrollPane scrollPane = new JScrollPane();
-      panelContent.add(scrollPane, "cell 1 3,grow,wmin 0");
+      panelContent.add(scrollPane, "cell 1 4,wmin 0,grow");
 
       taNote = new JTextArea();
       taNote.setLineWrap(true);
@@ -216,13 +224,14 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
       scrollPane.setViewportView(taNote);
 
       JLabel lblMovies = new TmmLabel(TmmResourceBundle.getString("tmm.movies"));
-      panelContent.add(lblMovies, "flowy,cell 0 5,alignx right,aligny top");
+      panelContent.add(lblMovies, "flowy,cell 0 6,alignx trailing,aligny top");
 
       JScrollPane scrollPaneMovies = new JScrollPane();
-      panelContent.add(scrollPaneMovies, "cell 1 5 1 3,grow");
+      panelContent.add(scrollPaneMovies, "cell 1 6 1 3,grow");
 
       tableMovies = new TmmTable();
       scrollPaneMovies.setViewportView(tableMovies);
+      tableMovies.setFocusable(false);
 
       lblFanart = new ImageLabel();
       lblFanart.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -237,25 +246,27 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
           updateArtworkUrl(lblFanart, tfFanart);
         }
       });
-      panelContent.add(new TmmLabel(TmmResourceBundle.getString("mediafiletype.fanart")), "cell 2 6");
+      panelContent.add(new TmmLabel(TmmResourceBundle.getString("mediafiletype.fanart")), "cell 2 7");
 
       LinkLabel lblFanartSize = new LinkLabel();
-      panelContent.add(lblFanartSize, "cell 2 6");
+      panelContent.add(lblFanartSize, "cell 2 7");
       JButton btnDeleteFanart = new FlatButton(SPACER, IconManager.DELETE_GRAY);
       btnDeleteFanart.setToolTipText(TmmResourceBundle.getString("Button.deleteartwork.desc"));
       btnDeleteFanart.addActionListener(e -> {
         lblFanart.clearImage();
         tfFanart.setText("");
       });
-      panelContent.add(btnDeleteFanart, "cell 2 6");
+      btnDeleteFanart.setFocusable(false);
+      panelContent.add(btnDeleteFanart, "cell 2 7");
 
-      panelContent.add(lblFanart, "cell 2 7,grow");
+      panelContent.add(lblFanart, "cell 2 8,grow");
       lblFanart.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
           e -> setImageSizeAndCreateLink(lblFanartSize, lblFanart, btnDeleteFanart, MediaFileType.FANART));
 
       JButton btnRemoveMovie = new JButton("");
       btnRemoveMovie.setAction(new RemoveMovieAction());
-      panelContent.add(btnRemoveMovie, "cell 0 5,alignx right,aligny top");
+      btnRemoveMovie.setFocusable(false);
+      panelContent.add(btnRemoveMovie, "cell 0 6,alignx right,aligny top");
 
       /**
        * Artwork pane
@@ -511,6 +522,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
 
     {
       tfName.setText(movieSetToEdit.getTitle());
+      tfSorttitle.setText(movieSetToEdit.getSortTitle());
       tfTmdbId.setText(String.valueOf(movieSetToEdit.getTmdbId()));
       taPlot.setText(movieSetToEdit.getPlot());
       taNote.setText(movieSetToEdit.getNote());
@@ -639,6 +651,7 @@ public class MovieSetEditorDialog extends AbstractEditorDialog {
       commitChanges();
 
       movieSetToEdit.setTitle(tfName.getText());
+      movieSetToEdit.setSortTitle(tfSorttitle.getText());
       movieSetToEdit.setPlot(taPlot.getText());
       movieSetToEdit.setNote(taNote.getText());
 
