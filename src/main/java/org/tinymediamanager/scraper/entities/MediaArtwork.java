@@ -401,7 +401,10 @@ public class MediaArtwork {
    *          the sizeOrder - set with the right int when known, 0 otherwise
    */
   public void addImageSize(int width, int height, String url, int sizeOrder) {
-    imageSizes.add(new ImageSizeAndUrl(width, height, url, sizeOrder));
+    ImageSizeAndUrl imageSizeAndUrl = new ImageSizeAndUrl(width, height, url, sizeOrder);
+    if (!imageSizes.contains(imageSizeAndUrl)) {
+      imageSizes.add(imageSizeAndUrl);
+    }
   }
 
   /**

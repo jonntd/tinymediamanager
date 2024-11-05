@@ -182,10 +182,14 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
         FFmpeg.createStill(mediaFile.getFile(), tempFile, second + variance);
         createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
-        // set the artwork type depending on the configured type
-        int width = mediaFile.getVideoWidth();
-        int height = mediaFile.getVideoHeight();
+        // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
+        MediaFile imageMediaFile = new MediaFile(tempFile);
+        imageMediaFile.gatherMediaInformation();
 
+        int width = imageMediaFile.getVideoWidth();
+        int height = imageMediaFile.getVideoHeight();
+
+        // set the artwork type depending on the configured type
         if (isFanartEnabled() && (options.getArtworkType() == MediaArtwork.MediaArtworkType.ALL
             || options.getArtworkType() == MediaArtwork.MediaArtworkType.BACKGROUND)) {
           MediaArtwork still = new MediaArtwork(getId(), MediaArtwork.MediaArtworkType.BACKGROUND);
@@ -273,10 +277,14 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
           FFmpeg.createStill(mf.getFile(), tempFile, second + variance);
           createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
-          // set the artwork type depending on the configured type
-          int width = mf.getVideoWidth();
-          int height = mf.getVideoHeight();
+          // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
+          MediaFile imageMediaFile = new MediaFile(tempFile);
+          imageMediaFile.gatherMediaInformation();
 
+          int width = imageMediaFile.getVideoWidth();
+          int height = imageMediaFile.getVideoHeight();
+
+          // set the artwork type depending on the configured type
           if (isFanartEnabled() && (options.getArtworkType() == MediaArtwork.MediaArtworkType.ALL
               || options.getArtworkType() == MediaArtwork.MediaArtworkType.BACKGROUND)) {
             MediaArtwork still = new MediaArtwork(getId(), MediaArtwork.MediaArtworkType.BACKGROUND);
@@ -354,10 +362,14 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
           FFmpeg.createStill(path, tempFile, second);
           createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
-          // set the artwork type depending on the configured type
-          int width = mediaFile.getVideoWidth();
-          int height = mediaFile.getVideoHeight();
+          // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
+          MediaFile imageMediaFile = new MediaFile(tempFile);
+          imageMediaFile.gatherMediaInformation();
 
+          int width = imageMediaFile.getVideoWidth();
+          int height = imageMediaFile.getVideoHeight();
+
+          // set the artwork type depending on the configured type
           if (isFanartEnabled() && (options.getArtworkType() == MediaArtwork.MediaArtworkType.ALL
               || options.getArtworkType() == MediaArtwork.MediaArtworkType.BACKGROUND)) {
             MediaArtwork still = new MediaArtwork(getId(), MediaArtwork.MediaArtworkType.BACKGROUND);
