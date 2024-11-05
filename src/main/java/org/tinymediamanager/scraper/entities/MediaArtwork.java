@@ -430,8 +430,7 @@ public class MediaArtwork {
    *          the preferred languages array
    * @return score
    */
-  public int getMatchingScoreAccordingPreferences(int wantedSize, List<MediaLanguages> preferredLanguages, boolean preferFanartWoText,
-      boolean otherResolutions) {
+  public int getMatchingScoreAccordingPreferences(int wantedSize, List<MediaLanguages> preferredLanguages, boolean preferFanartWoText) {
     // do not use likes here - just check against user preferences!
     int score = 0;
 
@@ -479,10 +478,6 @@ public class MediaArtwork {
       // well... not a single preference matched
     }
 
-    // consider the amount of images? Nah, not needed
-    // if (otherResolutions) {
-    // score += imageSizes.size() * 2;
-    // }
     if (isAnimated()) {
       score += 5; // why not ^^
     }

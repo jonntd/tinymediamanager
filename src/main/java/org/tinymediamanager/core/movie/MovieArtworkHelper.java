@@ -1104,8 +1104,7 @@ public class MovieArtworkHelper {
     }
 
     boolean preferFanartWoText = MovieModuleManager.getInstance().getSettings().isImageScraperPreferFanartWoText();
-    boolean otherResolutions = MovieModuleManager.getInstance().getSettings().isImageScraperOtherResolutions();
-    int score = ma.getMatchingScoreAccordingPreferences(size, languages, preferFanartWoText, otherResolutions);
+    int score = ma.getMatchingScoreAccordingPreferences(size, languages, preferFanartWoText);
     return score;
   }
 
