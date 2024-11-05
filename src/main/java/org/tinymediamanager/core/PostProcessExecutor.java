@@ -63,21 +63,25 @@ public abstract class PostProcessExecutor {
       if (p.endsWith("exe") || p.endsWith("com")) {
         commandList.add("&");
         commandList.add("'" + postProcess.getPath() + "'"); // needs to be quoted
-        commandList.addAll(Arrays.asList(cmdline));
+        for (String cmd : cmdline) {
+          commandList.add("\\\"" + cmd + "\\\""); // add all params with double quote around
+        }
       }
       // powershell scripting file
       else if (p.endsWith("ps1")) {
         commandList.add("-ExecutionPolicy"); // default security restriction bypass
         commandList.add("ByPass");
         commandList.add("-File");
-        commandList.add(postProcess.getPath()); // needs to be unquoted
+        commandList.add(postProcess.getPath()); // needs to be UNquoted
         commandList.addAll(Arrays.asList(cmdline));
       }
       // standard cmd, ONLY if we not operating on a network share // TODO: find better way
       else if ((p.endsWith("bat") || p.endsWith("cmd")) && !mediaEntity.getDataSource().startsWith("\\\\")) {
         commandList.add("&");
         commandList.add("'" + postProcess.getPath() + "'");
-        commandList.addAll(Arrays.asList(cmdline));
+        for (String cmd : cmdline) {
+          commandList.add("\\\"" + cmd + "\\\""); // add all params with double quote around
+        }
       }
       else {
         // just commands - CONVERT TO SINGLE STRING - be sure to use delimiter ";" if multiple commands!!!
