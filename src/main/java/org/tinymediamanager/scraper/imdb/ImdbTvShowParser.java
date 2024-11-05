@@ -47,6 +47,7 @@ import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
+import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaType;
@@ -881,7 +882,6 @@ public class ImdbTvShowParser extends ImdbParser {
 
     // just get the MediaMetadata via normal scrape and pick the poster from the result
     try {
-      List<MediaArtwork> artworks = Collections.emptyList();
       if (options.getMediaType() == MediaType.TV_EPISODE) {
         TvShowEpisodeSearchAndScrapeOptions op = new TvShowEpisodeSearchAndScrapeOptions();
         op.setDataFromOtherOptions(options);
@@ -889,18 +889,21 @@ public class ImdbTvShowParser extends ImdbParser {
           Map<String, Object> tvShowIds = (Map<String, Object>) options.getIds().get(MediaMetadata.TVSHOW_IDS);
           op.setTvShowIds(tvShowIds);
         }
-        artworks = getMetadata(op).getMediaArt(options.getArtworkType());
+        // Episode gets its one and only artwork via MetaData call
+        List<MediaArtwork> artworks = getMetadata(op).getMediaArt(options.getArtworkType());
+        return artworks;
       }
       else {
-        TvShowSearchAndScrapeOptions op = new TvShowSearchAndScrapeOptions();
-        op.setDataFromOtherOptions(options);
-        artworks = getMetadata(op).getMediaArt(options.getArtworkType());
+        // whereas show artwork has i new dedicated method
+        List<MediaArtwork> artworks = getMediaArt(options);
+        if (options.getArtworkType() == MediaArtworkType.ALL) {
+          return artworks;
+        }
+        return artworks.stream().filter(ma -> ma.getType() == options.getArtworkType()).toList();
       }
-
-      return artworks;
     }
-    catch (NothingFoundException e) {
-      LOGGER.debug("nothing found");
+    catch (Exception e) {
+      LOGGER.warn("Error getting arworks: {}", e.getMessage());
     }
 
     return Collections.emptyList();

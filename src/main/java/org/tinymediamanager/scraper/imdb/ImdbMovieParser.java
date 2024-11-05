@@ -35,6 +35,7 @@ import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
+import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.NothingFoundException;
@@ -362,26 +363,24 @@ public class ImdbMovieParser extends ImdbParser {
 
   public List<MediaArtwork> getMovieArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException {
     String imdbId = options.getImdbId();
-
     // imdbid via tmdbid
     if (!MediaIdUtil.isValidImdbId(imdbId) && options.getTmdbId() > 0) {
       imdbId = MediaIdUtil.getMovieImdbIdViaTmdbId(options.getTmdbId());
     }
-
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
       LOGGER.warn("not possible to scrape from IMDB - no imdbId found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
-    // just get the MediaMetadata via normal scrape and pick the poster from the result
-    MovieSearchAndScrapeOptions movieSearchAndScrapeOptions = new MovieSearchAndScrapeOptions();
-    movieSearchAndScrapeOptions.setDataFromOtherOptions(options);
-
     try {
-      return getMetadata(movieSearchAndScrapeOptions).getMediaArt(options.getArtworkType());
+      List<MediaArtwork> artworks = getMediaArt(options);
+      if (options.getArtworkType() == MediaArtworkType.ALL) {
+        return artworks;
+      }
+      return artworks.stream().filter(ma -> ma.getType() == options.getArtworkType()).toList();
     }
-    catch (NothingFoundException e) {
-      LOGGER.debug("nothing found");
+    catch (Exception e) {
+      LOGGER.warn("Error getting arworks: {}", e.getMessage());
     }
 
     return Collections.emptyList();

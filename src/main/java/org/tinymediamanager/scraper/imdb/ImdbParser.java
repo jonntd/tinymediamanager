@@ -54,6 +54,7 @@ import org.tinymediamanager.core.entities.MediaGenres;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaSearchResult;
@@ -1103,24 +1104,26 @@ public abstract class ImdbParser {
       }
 
       // ***** MAIN column *****
-      JsonNode titleMainImages = JsonUtils.at(node, "/props/pageProps/mainColumnData/titleMainImages/edges");
-      for (JsonNode fanart : ListUtils.nullSafe(titleMainImages)) {
-        ImdbImage i = JsonUtils.parseObject(mapper, fanart.get("node"), ImdbImage.class);
-        // only parse landscape ones as fanarts
-        if (i != null && i.getWidth() > i.getHeight()) {
-          MediaArtwork mediaArtwork = new MediaArtwork(ImdbMetadataProvider.ID, MediaArtworkType.BACKGROUND);
-          mediaArtwork.setOriginalUrl(i.url);
-          mediaArtwork.setPreviewUrl(i.url); // well, yes
-          mediaArtwork.setImdbId(i.id);
 
-          // add original size
-          mediaArtwork.addImageSize(i.getWidth(), i.getHeight(), i.url, MediaArtwork.FanartSizes.getSizeOrder(i.getWidth()));
-          // add variants
-          adoptArtworkSizes(mediaArtwork, i.getWidth());
-
-          md.addMediaArt(mediaArtwork);
-        }
-      }
+      // weird/mixed images - use extra call for that!!s
+      // JsonNode titleMainImages = JsonUtils.at(node, "/props/pageProps/mainColumnData/titleMainImages/edges");
+      // for (JsonNode fanart : ListUtils.nullSafe(titleMainImages)) {
+      // ImdbImage i = JsonUtils.parseObject(mapper, fanart.get("node"), ImdbImage.class);
+      // // only parse landscape ones as fanarts
+      // if (i != null && i.getWidth() > i.getHeight()) {
+      // MediaArtwork mediaArtwork = new MediaArtwork(ImdbMetadataProvider.ID, MediaArtworkType.BACKGROUND);
+      // mediaArtwork.setOriginalUrl(i.url);
+      // mediaArtwork.setPreviewUrl(i.url); // well, yes
+      // mediaArtwork.setImdbId(i.id);
+      //
+      // // add original size
+      // mediaArtwork.addImageSize(i.getWidth(), i.getHeight(), i.url, MediaArtwork.FanartSizes.getSizeOrder(i.getWidth()));
+      // // add variants
+      // adoptArtworkSizes(mediaArtwork, i.getWidth());
+      //
+      // md.addMediaArt(mediaArtwork);
+      // }
+      // }
 
       JsonNode directorsNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/directors");
       for (ImdbCredits directors : JsonUtils.parseList(mapper, directorsNode, ImdbCredits.class)) {
@@ -1175,6 +1178,75 @@ public abstract class ImdbParser {
       getLogger().warn("Error parsing JSON: '{}'", e);
       throw e;
     }
+  }
+
+  protected List<MediaArtwork> getMediaArt(ArtworkSearchAndScrapeOptions options) {
+    List<MediaArtwork> artworks = new ArrayList<>();
+    String imdbId = "";
+    // imdbId from searchResult
+    if (options.getSearchResult() != null) {
+      imdbId = options.getSearchResult().getIMDBId();
+    }
+    // imdbid from scraper option
+    if (!MediaIdUtil.isValidImdbId(imdbId)) {
+      imdbId = options.getImdbId();
+    }
+    if (imdbId.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    try {
+      Document doc = null;
+      Callable<Document> fanarts = new ImdbWorker(constructUrl("title/", imdbId, decode("L21lZGlhaW5kZXgvP2NvbnRlbnRUeXBlcz1zdGlsbF9mcmFtZQ==")),
+          options.getLanguage().getLanguage(), options.getCertificationCountry().getAlpha2(), true);
+      Future<Document> futureFanarts = executor.submit(fanarts);
+
+      Callable<Document> posters = new ImdbWorker(constructUrl("title/", imdbId, decode("L21lZGlhaW5kZXgvP2NvbnRlbnRUeXBlcz1wb3N0ZXI=")),
+          options.getLanguage().getLanguage(), options.getCertificationCountry().getAlpha2(), true);
+      Future<Document> futurePosters = executor.submit(posters);
+
+      // add posters
+      doc = futurePosters.get();
+      artworks.addAll(parseImagesPageJson(doc, MediaArtworkType.POSTER));
+      // add stills = fanarts
+      doc = futureFanarts.get();
+      artworks.addAll(parseImagesPageJson(doc, MediaArtworkType.BACKGROUND));
+    }
+    catch (Exception e) {
+      getLogger().warn("Could not get imagesfor id '{}' - '{}'", imdbId, e.getMessage());
+    }
+
+    return artworks;
+  }
+
+  private List<MediaArtwork> parseImagesPageJson(Document doc, MediaArtworkType type) {
+    List<MediaArtwork> images = new ArrayList<>();
+    try {
+      String json = doc.getElementById("__NEXT_DATA__").data();
+      // System.out.println(json);
+      JsonNode node = mapper.readTree(json);
+      JsonNode imgs = JsonUtils.at(node, "/props/pageProps/contentData/data/title/all_images/edges");
+      for (JsonNode fanart : ListUtils.nullSafe(imgs)) {
+        ImdbImage i = JsonUtils.parseObject(mapper, fanart.get("node"), ImdbImage.class);
+        if (i != null) {
+          MediaArtwork mediaArtwork = new MediaArtwork(ImdbMetadataProvider.ID, type);
+          mediaArtwork.setOriginalUrl(i.url);
+          mediaArtwork.setPreviewUrl(i.url); // well, yes
+          mediaArtwork.setImdbId(i.id);
+
+          // add original size
+          mediaArtwork.addImageSize(i.getWidth(), i.getHeight(), i.url, MediaArtwork.FanartSizes.getSizeOrder(i.getWidth()));
+          // add variants
+          adoptArtworkSizes(mediaArtwork, i.getWidth());
+
+          images.add(mediaArtwork);
+        }
+      }
+    }
+    catch (Exception e) {
+      getLogger().warn("Could not parse images page  - '{}'", e.getMessage());
+    }
+    return images;
   }
 
   /**
