@@ -708,12 +708,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
         if (episode.getSeason() > -1 && episode.getEpisode() > -1) {
           availableEpisodes.add("A" + episode.getSeason() + "." + episode.getEpisode());
         }
-        if (episode.getDvdSeason() > -1 && episode.getDvdEpisode() > -1) {
-          availableEpisodes.add("D" + episode.getSeason() + "." + episode.getEpisode());
-        }
-        if (episode.getAbsoluteNumber() > -1) {
-          availableEpisodes.add("ABS" + episode.getAbsoluteNumber());
-        }
       }
 
       // and now mix in unavailable ones
@@ -722,9 +716,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
           continue;
         }
 
-        if (!availableEpisodes.contains("A" + episode.getSeason() + "." + episode.getEpisode())
-            && !availableEpisodes.contains("D" + episode.getDvdSeason() + "." + episode.getDvdEpisode())
-            && !availableEpisodes.contains("ABS" + episode.getAbsoluteNumber())) {
+        if (!availableEpisodes.contains("A" + episode.getSeason() + "." + episode.getEpisode())) {
           episodes.add(episode);
         }
       }

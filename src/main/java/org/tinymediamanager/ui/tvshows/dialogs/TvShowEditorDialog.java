@@ -323,6 +323,20 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           }
         }
       }
+
+      // and also get episode groups from the TV show for the case we do not have any EP with such an EG in our database
+      for (MediaEpisodeGroup episodeGroup : tvShowToEdit.getEpisodeGroups()) {
+        EpisodeGroupContainer container = episodeGroups.get(episodeGroup);
+        if (container == null) {
+          container = new EpisodeGroupContainer(episodeGroup);
+
+          if (tvShowToEdit.getEpisodeGroup().equals(episodeGroup)) {
+            selectedEpisodeGroup = container;
+          }
+          episodeGroups.put(episodeGroup, container);
+        }
+      }
+
       episodeGroups.values().forEach(episodeGroupContainer -> cbEpisodeOrder.addItem(episodeGroupContainer));
       if (selectedEpisodeGroup != null) {
         cbEpisodeOrder.setSelectedItem(selectedEpisodeGroup);
