@@ -427,6 +427,10 @@ public class TvShowHelpers {
    * @return true/false
    */
   public static boolean shouldAddDummyEpisode(TvShowEpisode episode) {
+    if (episode.getEpisode() == -1 || episode.getSeason() == -1) {
+      return false;
+    }
+
     TvShowEpisodeType episodeType = TvShowEpisodeType.getTypeForEpisode(episode);
 
     return switch (episodeType) {
