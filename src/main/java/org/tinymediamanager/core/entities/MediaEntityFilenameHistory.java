@@ -33,7 +33,7 @@ public class MediaEntityFilenameHistory {
   @JsonProperty
   private String                newPath;
   @JsonProperty
-  private List<FilenameHistory> FilenameHistory;
+  private List<FilenameHistory> filenameHistory;
 
   public void setOldPath(String oldPath) {
     this.oldPath = oldPath;
@@ -62,20 +62,20 @@ public class MediaEntityFilenameHistory {
   }
 
   public void addFilenameHistory(FilenameHistory filenameHistory) {
-    if (FilenameHistory == null) {
-      FilenameHistory = new ArrayList<>();
+    if (this.filenameHistory == null) {
+      this.filenameHistory = new ArrayList<>();
     }
-    FilenameHistory.add(filenameHistory);
+    this.filenameHistory.add(filenameHistory);
   }
 
   public void setFilenameHistory(List<FilenameHistory> newFilenames) {
-    if (FilenameHistory == null) {
-      FilenameHistory = new ArrayList<>();
+    if (filenameHistory == null) {
+      filenameHistory = new ArrayList<>();
     }
     else {
-      FilenameHistory.clear();
+      filenameHistory.clear();
     }
-    FilenameHistory.addAll(newFilenames);
+    filenameHistory.addAll(newFilenames);
   }
 
   /**
@@ -84,10 +84,10 @@ public class MediaEntityFilenameHistory {
    * @return a {@link List} of all file paths
    */
   public List<FilenameHistory> getFilenameHistory() {
-    if (FilenameHistory == null) {
+    if (filenameHistory == null) {
       return Collections.emptyList();
     }
-    return FilenameHistory;
+    return filenameHistory;
   }
 
   /**
