@@ -51,12 +51,13 @@ import org.tinymediamanager.ui.components.ReadOnlyTextArea;
 import net.miginfocom.swing.MigLayout;
 
 /**
- * The class {@link UiSettingsPanel} is used to display generic UI settings
+ * The class {@link UiSettingsPanelLite} is used to display generic UI settings<br>
+ * This is the "lite" variant, used for first start wizard.W
  * 
  * @author Manuel Laggner
  */
-class UiSettingsPanel extends JPanel {
-  private static final Logger        LOGGER             = LoggerFactory.getLogger(UiSettingsPanel.class);
+class UiSettingsPanelLite extends JPanel {
+  private static final Logger        LOGGER             = LoggerFactory.getLogger(UiSettingsPanelLite.class);
 
   private static final Integer[]     DEFAULT_FONT_SIZES = { 12, 14, 16, 18, 20, 22, 24, 26, 28 };
 
@@ -74,7 +75,7 @@ class UiSettingsPanel extends JPanel {
   private JCheckBox                  chckbxAutomaticUpdates;
   private JLabel                     lblUpdateHint;
 
-  public UiSettingsPanel() {
+  public UiSettingsPanelLite() {
     LocaleComboBox actualLocale = null;
     LocaleComboBox fallbackLocale = null;
     Locale settingsLang = Utils.getLocaleFromLanguage(settings.getLanguage());
@@ -169,7 +170,7 @@ class UiSettingsPanel extends JPanel {
     add(lblThemeT, "cell 1 5");
 
     ImageLabel lblLight = new ImageLabel(false);
-    try (InputStream is = UiSettingsPanel.class.getResourceAsStream("light.png")) {
+    try (InputStream is = UiSettingsPanelLite.class.getResourceAsStream("light.png")) {
       lblLight.setOriginalImage(IOUtils.toByteArray(is));
     }
     catch (Exception e) {
@@ -178,7 +179,7 @@ class UiSettingsPanel extends JPanel {
     add(lblLight, "cell 1 6, grow");
 
     ImageLabel lblDark = new ImageLabel(false);
-    try (InputStream is = UiSettingsPanel.class.getResourceAsStream("dark.png")) {
+    try (InputStream is = UiSettingsPanelLite.class.getResourceAsStream("dark.png")) {
       lblDark.setOriginalImage(IOUtils.toByteArray(is));
     }
     catch (Exception e) {
