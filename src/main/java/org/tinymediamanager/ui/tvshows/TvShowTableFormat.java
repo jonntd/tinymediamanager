@@ -753,7 +753,29 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (userObject instanceof TvShowEpisode episode) {
       return episode.getMediaInfoVideoFormat();
     }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueVideoFormat(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueVideoFormat(tvShow.getEpisodes());
+    }
     return "";
+  }
+
+  private String detectUniqueVideoFormat(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the same video format
+    String videoFormat = episodes.get(0).getMediaInfoVideoFormat();
+    for (TvShowEpisode episode : episodes) {
+      if (!videoFormat.equals(episode.getMediaInfoVideoFormat())) {
+        return null;
+      }
+    }
+
+    return videoFormat;
   }
 
   private String getVideoCodec(TmmTreeNode node) {
@@ -761,7 +783,29 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (userObject instanceof TvShowEpisode episode) {
       return episode.getMediaInfoVideoCodec();
     }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueVideoCodec(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueVideoCodec(tvShow.getEpisodes());
+    }
     return "";
+  }
+
+  private String detectUniqueVideoCodec(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the same video codec
+    String videoCodec = episodes.get(0).getMediaInfoVideoCodec();
+    for (TvShowEpisode episode : episodes) {
+      if (!videoCodec.equals(episode.getMediaInfoVideoCodec())) {
+        return null;
+      }
+    }
+
+    return videoCodec;
   }
 
   private Integer getVideoBitrate(TmmTreeNode node) {
@@ -775,9 +819,32 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private String getAudio(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShowEpisode episode) {
-      return episode.getMainVideoFile().getAudioCodec() + " " + episode.getMainVideoFile().getAudioChannels();
+      return episode.getMediaInfoAudioCodec() + " " + episode.getMediaInfoAudioChannels();
+    }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueAudio(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueAudio(tvShow.getEpisodes());
     }
     return null;
+  }
+
+  private String detectUniqueAudio(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the audio codec/channels
+    String audio = episodes.get(0).getMediaInfoAudioCodec() + " " + episodes.get(0).getMediaInfoAudioChannels();
+    for (TvShowEpisode episode : episodes) {
+      String otherAudio = episode.getMediaInfoAudioCodec() + " " + episode.getMediaInfoAudioChannels();
+      if (!audio.equals(otherAudio)) {
+        return null;
+      }
+    }
+
+    return audio;
   }
 
   private MediaSource getMediaSource(TmmTreeNode node) {
@@ -863,7 +930,29 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (userObject instanceof TvShowEpisode episode) {
       return episode.getMediaInfoAspectRatio();
     }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueAspectRatio(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueAspectRatio(tvShow.getEpisodes());
+    }
     return null;
+  }
+
+  private Float detectUniqueAspectRatio(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the aspect ratio
+    float aspectRatio = episodes.get(0).getMediaInfoAspectRatio();
+    for (TvShowEpisode episode : episodes) {
+      if (aspectRatio != episode.getMediaInfoAspectRatio()) {
+        return null;
+      }
+    }
+
+    return aspectRatio;
   }
 
   private ImageIcon isHDR(TmmTreeNode node) {
@@ -871,7 +960,29 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (userObject instanceof TvShowEpisode episode) {
       return getCheckIcon(StringUtils.isNotEmpty(episode.getVideoHDRFormat()));
     }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueIsHDR(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueIsHDR(tvShow.getEpisodes());
+    }
     return null;
+  }
+
+  private ImageIcon detectUniqueIsHDR(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the same HDR format
+    String hdrFormat = episodes.get(0).getVideoHDRFormat();
+    for (TvShowEpisode episode : episodes) {
+      if (!hdrFormat.equals(episode.getVideoHDRFormat())) {
+        return null;
+      }
+    }
+
+    return getCheckIcon(StringUtils.isNotEmpty(hdrFormat));
   }
 
   private String getVideoHDRFormat(TmmTreeNode node) {
@@ -879,7 +990,29 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     if (userObject instanceof TvShowEpisode episode) {
       return episode.getVideoHDRFormat();
     }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueHDRFormat(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueHDRFormat(tvShow.getEpisodes());
+    }
     return null;
+  }
+
+  private String detectUniqueHDRFormat(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the same HDR format
+    String hdrFormat = episodes.get(0).getVideoHDRFormat();
+    for (TvShowEpisode episode : episodes) {
+      if (!hdrFormat.equals(episode.getVideoHDRFormat())) {
+        return null;
+      }
+    }
+
+    return hdrFormat;
   }
 
   private ImageIcon hasMetadata(TmmTreeNode node) {

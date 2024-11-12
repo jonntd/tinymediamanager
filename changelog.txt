@@ -2,10 +2,11 @@ Version 5.1
 =======================
 + [Experimental] undo renaming: you can now undo the last renamer run
 + [Movies] added a filter for trailer formats #2708
++ [Movies] display director in the movie information panel too
 + [Movies/TV shows] added an enhanced JMTE helper
 + [Movies/TV shows] added an action to calculate checksums for video files #913
-+ [Movies] display director in the movie information panel too
 + [Movie sets] added sorttitle for exporting into the NFO files #2742
++ [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
 + [Certifications] added support for a lot of certifications
 + [UI] reworked focus traversal in editors #2488
 x [TV shows] fixed editing of episode numbers
