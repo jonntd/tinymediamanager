@@ -95,6 +95,8 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowSyncTraktTvAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowTitleToEntityMatcher;
 import org.tinymediamanager.ui.tvshows.actions.TvShowToggleWatchedFlagAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowTrailerDownloadAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowTraktTvRemoveFromCollectionAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowTraktTvRemoveFromWatchedAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUndoRenameAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUnlockAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowUpdateAction;
@@ -360,6 +362,9 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedCollectionTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedWatchedTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedRatingTraktTvAction.class));
+    traktMenu.addSeparator();
+    traktMenu.add(createAndRegisterAction(TvShowTraktTvRemoveFromCollectionAction.class));
+    traktMenu.add(createAndRegisterAction(TvShowTraktTvRemoveFromWatchedAction.class));
     editPopupMenu.add(traktMenu);
 
     editPopupMenu.addSeparator();
@@ -486,7 +491,11 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedCollectionTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedWatchedTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(TvShowSyncSelectedRatingTraktTvAction.class));
+    traktMenu.addSeparator();
+    traktMenu.add(createAndRegisterAction(TvShowTraktTvRemoveFromCollectionAction.class));
+    traktMenu.add(createAndRegisterAction(TvShowTraktTvRemoveFromWatchedAction.class));
     popupMenu.add(traktMenu);
+
     JMenu kodiRPCMenu = KodiRPCMenu.createMenuKodiMenuRightClickTvShows();
     popupMenu.add(kodiRPCMenu);
 

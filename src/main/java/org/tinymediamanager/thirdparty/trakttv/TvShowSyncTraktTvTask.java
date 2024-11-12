@@ -32,13 +32,15 @@ import org.tinymediamanager.scraper.util.MediaIdUtil;
  * @author Manuel Laggner
  */
 public class TvShowSyncTraktTvTask extends TmmTask {
-  private static final Logger LOGGER         = LoggerFactory.getLogger(TvShowSyncTraktTvTask.class);
+  private static final Logger LOGGER               = LoggerFactory.getLogger(TvShowSyncTraktTvTask.class);
 
-  private final List<TvShow>  tvShows        = new ArrayList<>();
+  private final List<TvShow>  tvShows              = new ArrayList<>();
 
-  private boolean             syncCollection = false;
-  private boolean             syncWatched    = false;
-  private boolean             syncRating     = false;
+  private boolean             syncCollection       = false;
+  private boolean             syncWatched          = false;
+  private boolean             syncRating           = false;
+  private boolean             removeFromCollection = false;
+  private boolean             removeFromWatched    = false;
 
   public TvShowSyncTraktTvTask(List<TvShow> tvShows) {
     super(TmmResourceBundle.getString("trakt.sync"), 0, TaskType.BACKGROUND_TASK);
@@ -55,6 +57,14 @@ public class TvShowSyncTraktTvTask extends TmmTask {
 
   public void setSyncRating(boolean value) {
     this.syncRating = value;
+  }
+
+  public void setRemoveFromCollection(boolean value) {
+    this.removeFromCollection = value;
+  }
+
+  public void setRemoveFromWatched(boolean value) {
+    this.removeFromWatched = value;
   }
 
   @Override
@@ -81,10 +91,30 @@ public class TvShowSyncTraktTvTask extends TmmTask {
       }
     }
 
+    if (removeFromCollection) {
+      publishState(TmmResourceBundle.getString("trakt.sync.tvshow.remove"), 0);
+      try {
+        traktTV.removeFromTraktTvShowCollection(tvShows);
+      }
+      catch (Exception e) {
+        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+      }
+    }
+
     if (syncWatched) {
       publishState(TmmResourceBundle.getString("trakt.sync.tvshowwatched"), 0);
       try {
         traktTV.syncTraktTvShowWatched(tvShows);
+      }
+      catch (Exception e) {
+        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+      }
+    }
+
+    if (removeFromWatched) {
+      publishState(TmmResourceBundle.getString("trakt.sync.tvshowwatched.remove"), 0);
+      try {
+        traktTV.removeFromTraktTvShowWatched(tvShows);
       }
       catch (Exception e) {
         LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());

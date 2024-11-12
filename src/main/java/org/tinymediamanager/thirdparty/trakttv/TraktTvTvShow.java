@@ -24,6 +24,7 @@ import static org.tinymediamanager.thirdparty.trakttv.TraktTv.printStatus;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -457,6 +458,50 @@ class TraktTvTvShow {
         LOGGER.error("failed syncing trakt: {}", e.getMessage());
         return;
       }
+    }
+  }
+
+  void removeFromTraktCollection(TvShow tmmShow) {
+    removeFromTraktCollection(Collections.singletonList(tmmShow));
+  }
+
+  void removeFromTraktCollection(List<TvShow> tmmShows) {
+    List<SyncShow> syncShows = new ArrayList<>();
+    for (TvShow tmmShow : tmmShows) {
+      LOGGER.debug("Going to remove from your Trakt.tv collection: {}", tmmShow.getTitle());
+      SyncShow sync = toSyncShow(tmmShow, false, Collections.emptyList());
+      syncShows.add(sync);
+    }
+
+    try {
+      SyncItems items = new SyncItems().shows(syncShows);
+      SyncResponse response = executeCall(api.sync().deleteItemsFromCollection(items));
+      printStatus(response);
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+    }
+  }
+
+  void removeFromTraktWatched(TvShow tmmShow) {
+    removeFromTraktWatched(Collections.singletonList(tmmShow));
+  }
+
+  void removeFromTraktWatched(List<TvShow> tmmShows) {
+    List<SyncShow> syncShows = new ArrayList<>();
+    for (TvShow tmmShow : tmmShows) {
+      LOGGER.debug("Going to remove from your Trakt.tv collection: {}", tmmShow.getTitle());
+      SyncShow sync = toSyncShow(tmmShow, true, Collections.emptyList());
+      syncShows.add(sync);
+    }
+
+    try {
+      SyncItems items = new SyncItems().shows(syncShows);
+      SyncResponse response = executeCall(api.sync().deleteItemsFromWatchedHistory(items));
+      printStatus(response);
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
     }
   }
 

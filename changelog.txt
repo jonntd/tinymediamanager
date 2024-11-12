@@ -9,6 +9,7 @@ Version 5.1
 + [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
 + [Certifications] added support for a lot of certifications
 + [UI] reworked focus traversal in editors #2488
++ [Trakt.tv] able to remove only selected entries from Trakt
 x [TV shows] fixed editing of episode numbers
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog

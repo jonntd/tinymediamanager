@@ -30,16 +30,16 @@ import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.movies.MovieUIModule;
 
 /**
- * The class {@link MovieSyncSelectedTraktTvAction}. To synchronize all selected movies with trakt.tv (collection and watched)
+ * The class {@link MovieTraktTvRemoveFromWatchedAction}. Removes all selected movies from trakt.tv (watched history)
  * 
- * @author Manuel Laggner
+ * @author Myron Boyle
  */
-public class MovieSyncSelectedTraktTvAction extends TmmAction {
-  public MovieSyncSelectedTraktTvAction() {
-    putValue(NAME, TmmResourceBundle.getString("movie.synctrakt.selected"));
-    putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.synctrakt.selected.desc"));
-    putValue(SMALL_ICON, IconManager.SYNC);
-    putValue(LARGE_ICON_KEY, IconManager.SYNC);
+public class MovieTraktTvRemoveFromWatchedAction extends TmmAction {
+  public MovieTraktTvRemoveFromWatchedAction() {
+    putValue(NAME, TmmResourceBundle.getString("movie.synctrakt.selected.watched.remove"));
+    // putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.synctrakt.selected.desc"));
+    putValue(SMALL_ICON, IconManager.DELETE_FOREVER);
+    putValue(LARGE_ICON_KEY, IconManager.DELETE_FOREVER);
   }
 
   @Override
@@ -52,9 +52,7 @@ public class MovieSyncSelectedTraktTvAction extends TmmAction {
     }
 
     MovieSyncTraktTvTask task = new MovieSyncTraktTvTask(selectedMovies);
-    task.setSyncCollection(true);
-    task.setSyncWatched(true);
-    task.setSyncRating(true);
+    task.setRemoveFromWatched(true);
 
     TmmTaskManager.getInstance().addUnnamedTask(task);
   }

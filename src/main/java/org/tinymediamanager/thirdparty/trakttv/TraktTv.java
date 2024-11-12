@@ -285,6 +285,32 @@ public class TraktTv implements TmmFeature {
   }
 
   /**
+   * Removes specified movies from Trakt.tv collection (not all)<br>
+   */
+  public void removeFromTraktMovieCollection(List<Movie> moviesInTmm) throws ScrapeException {
+    initAPI();
+
+    if (!isEnabled()) {
+      return;
+    }
+
+    new TraktTvMovie(this).removeFromTraktCollection(moviesInTmm);
+  }
+
+  /**
+   * Removes specified movies from Trakt.tv watched history (not all)<br>
+   */
+  public void removeFromTraktMovieWatched(List<Movie> moviesInTmm) throws ScrapeException {
+    initAPI();
+
+    if (!isEnabled()) {
+      return;
+    }
+
+    new TraktTvMovie(this).removeFromTraktWatchedHistory(moviesInTmm);
+  }
+
+  /**
    * clears the whole Trakt.tv movie collection. Gets all Trakt.tv movies from your collection and removes them from the collection and the watched
    * state; a little helper to initialize the collection
    */
@@ -339,6 +365,26 @@ public class TraktTv implements TmmFeature {
     }
 
     new TraktTvTvShow(this).syncTraktTvShowRating(tvShowsInTmm);
+  }
+
+  public void removeFromTraktTvShowCollection(List<TvShow> tvShowsInTmm) throws Exception {
+    initAPI();
+
+    if (!isEnabled()) {
+      return;
+    }
+
+    new TraktTvTvShow(this).removeFromTraktCollection(tvShowsInTmm);
+  }
+
+  public void removeFromTraktTvShowWatched(List<TvShow> tvShowsInTmm) throws Exception {
+    initAPI();
+
+    if (!isEnabled()) {
+      return;
+    }
+
+    new TraktTvTvShow(this).removeFromTraktWatched(tvShowsInTmm);
   }
 
   /**

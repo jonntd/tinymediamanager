@@ -84,6 +84,8 @@ import org.tinymediamanager.ui.movies.actions.MovieSyncSelectedWatchedTraktTvAct
 import org.tinymediamanager.ui.movies.actions.MovieSyncTraktTvAction;
 import org.tinymediamanager.ui.movies.actions.MovieToggleWatchedFlagAction;
 import org.tinymediamanager.ui.movies.actions.MovieTrailerDownloadAction;
+import org.tinymediamanager.ui.movies.actions.MovieTraktTvRemoveFromCollectionAction;
+import org.tinymediamanager.ui.movies.actions.MovieTraktTvRemoveFromWatchedAction;
 import org.tinymediamanager.ui.movies.actions.MovieUndoRenameAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnlockAction;
 import org.tinymediamanager.ui.movies.actions.MovieUnscrapedScrapeAction;
@@ -272,6 +274,9 @@ public class MovieUIModule extends AbstractTmmUIModule {
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedCollectionTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedWatchedTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedRatingTraktTvAction.class));
+    traktMenu.addSeparator();
+    traktMenu.add(createAndRegisterAction(MovieTraktTvRemoveFromCollectionAction.class));
+    traktMenu.add(createAndRegisterAction(MovieTraktTvRemoveFromWatchedAction.class));
     editPopupMenu.add(traktMenu);
 
     editPopupMenu.addSeparator();
@@ -385,6 +390,9 @@ public class MovieUIModule extends AbstractTmmUIModule {
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedCollectionTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedWatchedTraktTvAction.class));
     traktMenu.add(createAndRegisterAction(MovieSyncSelectedRatingTraktTvAction.class));
+    traktMenu.addSeparator();
+    traktMenu.add(createAndRegisterAction(MovieTraktTvRemoveFromCollectionAction.class));
+    traktMenu.add(createAndRegisterAction(MovieTraktTvRemoveFromWatchedAction.class));
     popupMenu.add(traktMenu);
 
     JMenu kodiRPCMenu = KodiRPCMenu.createMenuKodiMenuRightClickMovies();

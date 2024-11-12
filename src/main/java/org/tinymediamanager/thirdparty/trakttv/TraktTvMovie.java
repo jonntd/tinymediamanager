@@ -24,6 +24,7 @@ import static org.tinymediamanager.thirdparty.trakttv.TraktTv.printStatus;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -448,6 +449,50 @@ class TraktTvMovie {
     }
     catch (Exception e) {
       LOGGER.error("failed syncing trakt: {}", e.getMessage());
+    }
+  }
+
+  void removeFromTraktCollection(Movie tmmMovie) {
+    removeFromTraktCollection(Collections.singletonList(tmmMovie));
+  }
+
+  void removeFromTraktCollection(List<Movie> tmmMovies) {
+    List<SyncMovie> syncMovies = new ArrayList<>();
+    for (Movie tmmMovie : tmmMovies) {
+      LOGGER.debug("Going to remove from your Trakt.tv collection: {}", tmmMovie.getTitle());
+      SyncMovie sync = toSyncMovie(tmmMovie, TraktTv.SyncType.COLLECTION);
+      syncMovies.add(sync);
+    }
+
+    try {
+      SyncItems items = new SyncItems().movies(syncMovies);
+      SyncResponse response = executeCall(api.sync().deleteItemsFromCollection(items));
+      printStatus(response);
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+    }
+  }
+
+  void removeFromTraktWatchedHistory(Movie tmmMovie) {
+    removeFromTraktWatchedHistory(Collections.singletonList(tmmMovie));
+  }
+
+  void removeFromTraktWatchedHistory(List<Movie> tmmMovies) {
+    List<SyncMovie> syncMovies = new ArrayList<>();
+    for (Movie tmmMovie : tmmMovies) {
+      LOGGER.debug("Going to remove from your Trakt.tv collection: {}", tmmMovie.getTitle());
+      SyncMovie sync = toSyncMovie(tmmMovie, TraktTv.SyncType.WATCHED);
+      syncMovies.add(sync);
+    }
+
+    try {
+      SyncItems items = new SyncItems().movies(syncMovies);
+      SyncResponse response = executeCall(api.sync().deleteItemsFromWatchedHistory(items));
+      printStatus(response);
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
     }
   }
 
