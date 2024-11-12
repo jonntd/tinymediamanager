@@ -141,6 +141,7 @@ public enum MediaLanguages {
     for (MediaLanguages lang : MediaLanguages.values()) {
       if (!lang.getTitle().isBlank()) {
         mlMap.put(lang.getTitle(), lang);
+        mlMap.put(lang.toString(), lang);
       }
       mlMap.put(lang.name(), lang);
     }
@@ -188,7 +189,11 @@ public enum MediaLanguages {
     if (this == none) {
       return "";
     }
-    return name().substring(0, 2);
+    int delim = name().indexOf("_");
+    if (delim == -1) {
+      return name(); // full enum name
+    }
+    return name().substring(0, delim); // else up to country delim TODO: check why we need to reduce this!!!
   }
 
   @Override

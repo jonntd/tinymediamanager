@@ -78,7 +78,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     info.getConfig().addBoolean("scrapeLanguageNames", true);
 
     ArrayList<String> fallbackLanguages = new ArrayList<>();
-    for (MediaLanguages mediaLanguages : MediaLanguages.values()) {
+    for (MediaLanguages mediaLanguages : MediaLanguages.valuesSorted()) {
       fallbackLanguages.add(mediaLanguages.toString());
     }
     info.getConfig().addSelect(FALLBACK_LANGUAGE, fallbackLanguages.toArray(new String[0]), MediaLanguages.en.toString());

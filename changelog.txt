@@ -18,6 +18,7 @@ x [UI] also normalize episode titles in the TV show search #2745
 x [UI] fixed display of missing specials #2751
 x [TMDB] try to avoid generic episode titles #2737
 x [IMDB] better parse images, ignore some uncommon types
+x [TVDB] fix fallback language scraping #2757
 x [Trakt.tv] do not sync locked entities #2684
 x [FFmpeg] enhanced still creation for anamorphic videos #2747
 x [PostProcessing] add double quoting for windows #2748
