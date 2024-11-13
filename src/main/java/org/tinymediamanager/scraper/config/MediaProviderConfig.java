@@ -33,8 +33,8 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.core.AesUtil;
 import org.tinymediamanager.scraper.MediaProviderInfo;
-import org.tinymediamanager.scraper.util.AesUtil;
 
 /**
  * This class is used to provide a configuration interface for scrapers
