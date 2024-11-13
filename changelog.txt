@@ -22,4 +22,5 @@ x [IMDB] better parse images, ignore some uncommon types
 x [TVDB] fix fallback language scraping #2757
 x [Trakt.tv] do not sync locked entities #2684
 x [FFmpeg] enhanced still creation for anamorphic videos #2747
+x [KodiRPC] rework mapping of TMM<>Kodi videos
 x [PostProcessing] add double quoting for windows #2748

@@ -216,7 +216,13 @@ public class KodiRPC {
             rel = rel.replaceAll(SEPARATOR_REGEX, "/"); // normalize separators
             ds = ds.replaceAll(SEPARATOR_REGEX + "$", ""); // replace ending separator
             ds = ds.replaceAll(".*" + SEPARATOR_REGEX, ""); // replace everything till last separator
-            kodiDsAndFolder.put(ds + "|" + rel, movie.movieid);
+            if (!kodiDsAndFolder.containsKey(rel)) {
+              kodiDsAndFolder.put(rel, movie.movieid);
+            }
+            else {
+              // no putIfAbsent since i wanna have a log!
+              LOGGER.warn("Kodi file {} already attached to another datasource - skipping", rel);
+            }
           }
         }
         else {
@@ -226,7 +232,13 @@ public class KodiRPC {
           rel = rel.replaceAll(SEPARATOR_REGEX, "/"); // normalize separators
           ds = ds.replaceAll(SEPARATOR_REGEX + "$", ""); // replace ending separator
           ds = ds.replaceAll(".*" + SEPARATOR_REGEX, ""); // replace everything till last separator
-          kodiDsAndFolder.put(ds + "|" + rel, movie.movieid);
+          if (!kodiDsAndFolder.containsKey(rel)) {
+            kodiDsAndFolder.put(rel, movie.movieid);
+          }
+          else {
+            // no putIfAbsent since i wanna have a log!
+            LOGGER.warn("Kodi file {} already attached to another datasource - skipping", rel);
+          }
         }
       }
       LOGGER.debug("KODI {} movies", call.getResults().size()); // stacked movies are multiple times in here
@@ -292,7 +304,6 @@ public class KodiRPC {
       return fileMap;
     }
 
-    String dsName = parseDatasourceName(ds);
     MediaFile main = entity.getMainFile();
     if (isDisc) {
       // Kodi RPC sends what we call the main disc identifier, but we have disc folder only
@@ -317,14 +328,26 @@ public class KodiRPC {
         if (file != null) {
           String rel = Utils.relPath(ds, file); // file relative from datasource
           rel = rel.replaceAll(SEPARATOR_REGEX, "/"); // normalize separators
-          fileMap.put(dsName + "|" + rel, entity.getDbId());
+          if (!fileMap.containsKey(rel)) {
+            fileMap.put(rel, entity.getDbId());
+          }
+          else {
+            // no putIfAbsent since i wanna have a log!
+            LOGGER.warn("Movie dir {} already attached to another datasource - skipping", entity.getPathNIO());
+          }
         }
       }
     }
     else {
       String rel = Utils.relPath(ds, main.getFileAsPath()); // file relative from datasource
       rel = rel.replaceAll(SEPARATOR_REGEX, "/"); // normalize separators
-      fileMap.put(dsName + "|" + rel, entity.getDbId());
+      if (!fileMap.containsKey(rel)) {
+        fileMap.put(rel, entity.getDbId());
+      }
+      else {
+        // no putIfAbsent since i wanna have a log!
+        LOGGER.warn("Movie dir {} already attached to another datasource - skipping", entity.getPathNIO());
+      }
     }
     return fileMap;
   }
