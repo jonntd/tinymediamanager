@@ -35,6 +35,7 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MoviePostProcessExecutor;
+import org.tinymediamanager.core.threading.NullTasksMenu;
 import org.tinymediamanager.license.License;
 import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.ui.AbstractTmmUIModule;
@@ -409,6 +410,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
     if (Globals.isDebug()) {
       final JMenu debugMenu = new JMenu("Debug");
       debugMenu.add(new DebugDumpMovieAction());
+      debugMenu.add(NullTasksMenu.createTaskManagerTestMenu());
       popupMenu.addSeparator();
       popupMenu.add(debugMenu);
     }
