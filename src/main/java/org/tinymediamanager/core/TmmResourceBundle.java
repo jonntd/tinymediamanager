@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 /**
- * this is a wrapper of the {@link java.util.ResourceBundle} to buffer loading and prevent getting exceptions on mussing properties
+ * this is a wrapper of the {@link java.util.ResourceBundle} to buffer loading and prevent getting exceptions on missing properties
  */
 public class TmmResourceBundle {
 

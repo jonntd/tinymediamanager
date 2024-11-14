@@ -21,7 +21,6 @@ import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
 
 import java.awt.BorderLayout;
 import java.util.Map;
-import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.BorderFactory;
@@ -43,8 +42,6 @@ import org.tinymediamanager.ui.components.TaskListComponent;
 import net.miginfocom.swing.MigLayout;
 
 public class TaskListDialog extends TmmDialog implements TmmTaskListener {
-  protected static final ResourceBundle               BUNDLE  = ResourceBundle.getBundle("messages");
-
   private static TaskListDialog                       instance;
 
   // a map of all active tasks
@@ -87,7 +84,7 @@ public class TaskListDialog extends TmmDialog implements TmmTaskListener {
         TmmTaskChain.abortAllOpenTasks();
         taskMap.forEach((task, component) -> {
           task.cancel();
-          removeListItem(task);
+          // removeListItem(task);// hmm... nah, not yet.
         });
       });
       addButton(btnAbortAll);
@@ -118,6 +115,7 @@ public class TaskListDialog extends TmmDialog implements TmmTaskListener {
           break;
 
         case STARTED:
+        case CANCELLED:
           TaskListComponent comp = taskMap.get(task);
           if (comp == null) {
             addListItem(task);
@@ -127,7 +125,6 @@ public class TaskListDialog extends TmmDialog implements TmmTaskListener {
           break;
 
         case FINISHED:
-        case CANCELLED:
         case FAILED:
         default:
           removeListItem(task);

@@ -102,7 +102,7 @@ public class TmmTaskChain implements TmmTaskListener {
   @Override
   public void processTaskEvent(TmmTaskHandle task) {
     switch (task.getState()) {
-      case CANCELLED, FAILED:
+      case FAILED:
         LOGGER.debug("Task '{}' {} - continue with next", task.getClass().getName(), task.getState());
         startNextTask();
         break;

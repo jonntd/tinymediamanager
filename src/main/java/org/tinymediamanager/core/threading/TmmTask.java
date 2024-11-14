@@ -103,6 +103,7 @@ public abstract class TmmTask implements Runnable, TmmTaskHandle, TmmFeature {
 
   protected final void setState(TaskState newState) {
     this.state = newState;
+    // System.out.println("Task '" + getTaskName() + "' set to " + newState);
     informListeners();
   }
 
@@ -128,6 +129,7 @@ public abstract class TmmTask implements Runnable, TmmTaskHandle, TmmFeature {
 
     // the task has been cancelled before it is being executed
     if (cancel) {
+      finish();
       return;
     }
 
@@ -151,7 +153,7 @@ public abstract class TmmTask implements Runnable, TmmTaskHandle, TmmFeature {
   public void cancel() {
     this.cancel = true;
     setState(TaskState.CANCELLED);
-    thread = null;
+    // thread = null; // nah, cancelled tasks can run till finished, and must not emty-ed immediately
   }
 
   protected void start() {
@@ -180,7 +182,7 @@ public abstract class TmmTask implements Runnable, TmmTaskHandle, TmmFeature {
   }
 
   protected void finish() {
-    if (state != TaskState.FAILED && state != TaskState.CANCELLED) {
+    if (state != TaskState.FAILED) {
       setState(TaskState.FINISHED);
     }
     thread = null;
