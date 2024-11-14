@@ -860,6 +860,11 @@ public class ImageChooserDialog extends TmmDialog {
         // nothing selected - add all
         panelImages.add(panel);
         for (Component child : panel.getComponents()) {
+          if (child instanceof JCheckBox) {
+            // JCheckBox is a subclass of JToggleButton -> skip
+            continue;
+          }
+
           if (child instanceof JToggleButton button) {
             buttonGroup.add(button);
           }
