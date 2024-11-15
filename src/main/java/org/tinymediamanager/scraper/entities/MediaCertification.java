@@ -38,8 +38,7 @@ public enum MediaCertification {
   // list generated with org.tinymediamanager.scraper.util.ITCertifications
 
   // well known / most used certifications will be on top
-  NOT_RATED(CountryCode.US, "not rated", new String[] { "not rated", "NR" }),
-  UNKNOWN(null, "unknown", new String[] { "unknown" }),
+  NOT_RATED(CountryCode.US, "NR", new String[] { "Not Rated", "NR" }),
 
   US_APPROVED(CountryCode.US, "Approved", new String[] { "Approved" }),
   US_G(CountryCode.US, "G", new String[] { "G", "Rated G" }),
@@ -925,7 +924,10 @@ public enum MediaCertification {
   ZA_PG13(CountryCode.ZA, "PG13", new String[] { "PG13" }),
   ZA_R18(CountryCode.ZA, "R18", new String[] { "R18" }),
   ZA_X18(CountryCode.ZA, "X18", new String[] { "X18" }),
-  ZA_XX(CountryCode.ZA, "XX", new String[] { "XX" });
+  ZA_XX(CountryCode.ZA, "XX", new String[] { "XX" }),
+
+  // last but not least our representation of a "null" value
+  UNKNOWN(null, "unknown", new String[] { "unknown" });
 
   private final CountryCode country;
   private final String      name;

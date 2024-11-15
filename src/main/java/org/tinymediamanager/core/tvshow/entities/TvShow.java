@@ -302,7 +302,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     setRuntime(runtime == 0 || force ? other.runtime : runtime);
     setFirstAired(firstAired == null || force ? other.firstAired : firstAired);
     setStatus(status == MediaAiredStatus.UNKNOWN || force ? other.status : status);
-    setCertification(certification == MediaCertification.NOT_RATED || force ? other.certification : certification);
+    setCertification(certification == MediaCertification.UNKNOWN || force ? other.certification : certification);
     setCountry(StringUtils.isEmpty(country) || force ? other.country : country);
     setTop250(top250 == 0 || force ? other.top250 : top250);
 
