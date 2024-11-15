@@ -228,7 +228,6 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        syncTraktCollection                    = true;
   boolean                                        syncTraktWatched                       = true;
   boolean                                        syncTraktRating                        = true;
-  String                                         preferredRating                        = "tvdb";
   boolean                                        extractArtworkFromVsmeta               = false;
   boolean                                        useMediainfoMetadata                   = false;
 
@@ -1766,16 +1765,6 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.nfoWriteLockdata;
     this.nfoWriteLockdata = newValue;
     firePropertyChange("nfoWriteLockdata", oldValue, newValue);
-  }
-
-  public String getPreferredRating() {
-    return preferredRating;
-  }
-
-  public void setPreferredRating(String newValue) {
-    String oldValue = this.preferredRating;
-    this.preferredRating = newValue;
-    firePropertyChange("preferredRating", oldValue, newValue);
   }
 
   public boolean isWriteActorImages() {

@@ -955,12 +955,6 @@ class TvShowUiSettingsPanel extends JPanel {
     AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_2,
         chckbxShowMissingEpisodes, jCheckBoxBeanProperty);
     autoBinding_3.bind();
-
-    Property tvShowSettingsBeanProperty_3 = BeanProperty.create("preferredRating");
-    Property autocompleteComboBoxBeanProperty = BeanProperty.create("selectedItem");
-    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_3, cbRating,
-        autocompleteComboBoxBeanProperty);
-    autoBinding_4.bind();
     //
     Property tvShowSettingsBeanProperty_5 = BeanProperty.create("ratingSources");
     JListBinding jListBinding = SwingBindings.createJListBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_5, listRatings);

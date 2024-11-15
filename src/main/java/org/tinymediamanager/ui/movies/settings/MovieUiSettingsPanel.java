@@ -648,12 +648,6 @@ class MovieUiSettingsPanel extends JPanel {
   }
 
   protected void initDataBindings() {
-    Property movieSettingsBeanProperty_8 = BeanProperty.create("preferredRating");
-    Property autocompleteComboBoxBeanProperty = BeanProperty.create("selectedItem");
-    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_8, cbRating,
-        autocompleteComboBoxBeanProperty);
-    autoBinding_8.bind();
-    //
     Property movieSettingsBeanProperty_13 = BeanProperty.create("title");
     Property jCheckBoxBeanProperty = BeanProperty.create("selected");
     AutoBinding autoBinding_13 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_13, chckbxTitle,

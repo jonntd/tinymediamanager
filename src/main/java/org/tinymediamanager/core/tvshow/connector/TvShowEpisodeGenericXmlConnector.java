@@ -372,7 +372,14 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
 
     // the default rating
     Map<String, MediaRating> ratings = episode.getRatings();
-    MediaRating mainMediaRating = ratings.get(TvShowModuleManager.getInstance().getSettings().getPreferredRating());
+
+    MediaRating mainMediaRating = null;
+    for (String ratingSource : TvShowModuleManager.getInstance().getSettings().getRatingSources()) {
+      mainMediaRating = ratings.get(ratingSource);
+      if (mainMediaRating != null) {
+        break;
+      }
+    }
 
     // is there any rating which is not the user rating?
     if (mainMediaRating == null) {
