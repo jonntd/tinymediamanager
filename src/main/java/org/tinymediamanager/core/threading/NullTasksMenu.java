@@ -77,18 +77,22 @@ public class NullTasksMenu {
           switch (type) {
             case "main": {
               TmmTaskManager.getInstance().addUnnamedTask(new NullTask(name + "-" + i, workunits, sleep, TaskType.MAIN_TASK));
+              break;
             }
 
             case "dl": {
               TmmTaskManager.getInstance().addDownloadTask(new NullTask(name + "-" + i, workunits, sleep, TaskType.BACKGROUND_TASK));
+              break;
             }
 
             case "img": {
               TmmTaskManager.getInstance().addImageCacheTask(new NullTask(name + "-" + i, workunits, sleep, TaskType.BACKGROUND_TASK));
+              break;
             }
 
             case "anon": {
               TmmTaskManager.getInstance().addUnnamedTask(new NullTask(name + "-" + i, workunits, sleep, TaskType.BACKGROUND_TASK));
+              break;
             }
 
             default:

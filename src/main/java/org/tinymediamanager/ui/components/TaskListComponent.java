@@ -113,7 +113,10 @@ public class TaskListComponent extends JPanel {
       case CANCELLED:
         String desc = dynaLabel.getText();
         String cancel = TmmResourceBundle.getString("task.cancelled");
-        if (!desc.startsWith(cancel)) {
+        if (desc.startsWith(TmmResourceBundle.getString("task.running"))) {
+          dynaLabel.setText(cancel);
+        }
+        else if (!desc.startsWith(cancel)) {
           dynaLabel.setText(cancel + " " + desc); // keep existing text
         }
         break;
