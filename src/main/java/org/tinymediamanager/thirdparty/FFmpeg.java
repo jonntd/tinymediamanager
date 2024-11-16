@@ -50,16 +50,18 @@ public class FFmpeg {
    *          the destination file
    * @param second
    *          the second of the video file to get the still from
+   * @param useHdrFilter
+   *          should we create the still using the HDR filters
    * @throws IOException
    *           any {@link IOException} occurred
    * @throws InterruptedException
    *           being thrown if the thread has been interrupted
    */
-  public static void createStill(Path videoFile, Path stillFile, int second) throws IOException, InterruptedException {
-    executeCommand(createCommandforStill(videoFile, stillFile, second));
+  public static void createStill(Path videoFile, Path stillFile, int second, boolean useHdrFilter) throws IOException, InterruptedException {
+    executeCommand(createCommandforStill(videoFile, stillFile, second, useHdrFilter));
   }
 
-  private static List<String> createCommandforStill(Path videoFile, Path stillFile, int second) throws IOException {
+  private static List<String> createCommandforStill(Path videoFile, Path stillFile, int second, boolean useHdrFilter) throws IOException {
     List<String> cmdList = new ArrayList<>();
     cmdList.add(getFfmpegExecutable());
     cmdList.add("-y");
@@ -68,7 +70,14 @@ public class FFmpeg {
     cmdList.add("-i");
     cmdList.add(videoFile.toAbsolutePath().toString());
     cmdList.add("-vf");
-    cmdList.add("scale=iw*sar:ih");
+
+    String filters = "scale=iw*sar:ih";
+
+    if (useHdrFilter) {
+      filters += ",zscale=primaries=709:transfer=linear:matrix=gbr,tonemap=hable,zscale=matrix=709:transfer=709";
+    }
+
+    cmdList.add(filters);
     cmdList.add("-frames:v");
     cmdList.add("1");
     cmdList.add("-q:v");

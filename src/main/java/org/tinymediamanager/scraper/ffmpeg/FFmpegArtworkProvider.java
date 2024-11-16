@@ -28,6 +28,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tinymediamanager.addon.FFmpegAddon;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.Settings;
@@ -48,7 +50,9 @@ import org.tinymediamanager.thirdparty.FFmpeg;
  * @author Manuel Laggner
  */
 abstract class FFmpegArtworkProvider implements IMediaProvider {
-  private static final long       IMAGE_TTL = 10 * 60 * 1000L; // 10 min
+  private static final Logger     LOGGER    = LoggerFactory.getLogger(FFmpegArtworkProvider.class);
+
+  private static final long       IMAGE_TTL = 10 * 60 * 1000L;                                     // 10 min
   static final String             ID        = "ffmpeg";
 
   private final MediaProviderInfo providerInfo;
@@ -168,6 +172,8 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
 
     Random random = new Random(System.nanoTime());
 
+    boolean useHdrFilters = mediaFile.isHDR();
+
     for (int i = 0; i < count; i++) {
       int second = (int) (duration * (start / 100f + i * increment));
 
@@ -179,7 +185,19 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
 
       try {
         Path tempFile = Paths.get(Utils.getTempFolder(), "ffmpeg-still." + System.currentTimeMillis() + ".jpg");
-        FFmpeg.createStill(mediaFile.getFile(), tempFile, second + variance);
+        try {
+          FFmpeg.createStill(mediaFile.getFile(), tempFile, second + variance, useHdrFilters);
+        }
+        catch (Exception e) {
+          if (mediaFile.isHDR()) {
+            LOGGER.debug("we tried to create a HDR -> SDR still but failed. falling back to SDR creation");
+            useHdrFilters = false;
+            FFmpeg.createStill(mediaFile.getFile(), tempFile, second + variance, useHdrFilters);
+          }
+          else {
+            throw e;
+          }
+        }
         createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
         // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
@@ -263,6 +281,8 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
 
       Random random = new Random(System.nanoTime());
 
+      boolean useHdrFilters = mf.isHDR();
+
       for (int i = 0; i < stillsForThisFile; i++) {
         int second = (int) (duration * (start / 100f + i * increment));
 
@@ -274,7 +294,20 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
 
         try {
           Path tempFile = Paths.get(Utils.getTempFolder(), "ffmpeg-still." + System.currentTimeMillis() + ".jpg");
-          FFmpeg.createStill(mf.getFile(), tempFile, second + variance);
+          try {
+            FFmpeg.createStill(mf.getFile(), tempFile, second + variance, useHdrFilters);
+          }
+          catch (Exception e) {
+            if (mf.isHDR()) {
+              LOGGER.debug("we tried to create a HDR -> SDR still but failed. falling back to SDR creation");
+              useHdrFilters = false;
+              FFmpeg.createStill(mf.getFile(), tempFile, second + variance, useHdrFilters);
+            }
+            else {
+              throw e;
+            }
+          }
+
           createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
           // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
@@ -350,6 +383,8 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
     int fileDuration = duration / files.size();
     List<MediaArtwork> artworks = new ArrayList<>();
 
+    boolean useHdrFilters = mediaFile.isHDR();
+
     for (int fileIndex = 0; fileIndex < files.size(); fileIndex++) {
       Path path = Paths.get(files.get(fileIndex).getPath(), files.get(fileIndex).getFilename());
 
@@ -359,7 +394,19 @@ abstract class FFmpegArtworkProvider implements IMediaProvider {
 
         try {
           Path tempFile = Paths.get(Utils.getTempFolder(), "ffmpeg-still." + System.currentTimeMillis() + ".jpg");
-          FFmpeg.createStill(path, tempFile, second);
+          try {
+            FFmpeg.createStill(path, tempFile, second, useHdrFilters);
+          }
+          catch (Exception e) {
+            if (mediaFile.isHDR()) {
+              LOGGER.debug("we tried to create a HDR -> SDR still but failed. falling back to SDR creation");
+              useHdrFilters = false;
+              FFmpeg.createStill(path, tempFile, second, useHdrFilters);
+            }
+            else {
+              throw e;
+            }
+          }
           createdStills.put(tempFile.toString(), System.currentTimeMillis());
 
           // get the resolution from the created still (for anamorphic videos this could differ from the video file resolution)
