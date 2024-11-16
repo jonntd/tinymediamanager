@@ -12,6 +12,7 @@ x [TV shows] fixed writing of ratings in NFO #2764
 + [UI] reworked focus traversal in editors #2488
 + [Trakt.tv] able to remove only selected entries from Trakt
 x [TV shows] fixed editing of episode numbers
+x [TV shows] read mediainfo data for season artwork #2570
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog
 x [UI] reworked image chooser

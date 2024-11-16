@@ -667,7 +667,27 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
     }
 
-    // get mediainfo for all episodes within this tv show
+    // get mediainfo for all seasons within the TV show
+    for (TvShowSeason season : new ArrayList<>(tvShow.getSeasons())) {
+      for (MediaFile mf : season.getMediaFiles()) {
+        if (StringUtils.isBlank(mf.getContainerFormat())) {
+          submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, false));
+        }
+        else {
+          // // did the file dates/size change?
+          if (MediaFileHelper.gatherFileInformation(mf)) {
+            // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
+            season.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
+              Utils.deleteFileSafely(mediaFile.getFileAsPath());
+              tvShow.removeFromMediaFiles(mediaFile);
+            });
+            submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, true));
+          }
+        }
+      }
+    }
+
+    // get mediainfo for all episodes within this TV show
     for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
       for (MediaFile mf : episode.getMediaFiles()) {
         if (StringUtils.isBlank(mf.getContainerFormat())) {
