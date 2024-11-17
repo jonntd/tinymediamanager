@@ -1997,7 +1997,9 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    */
   @JsonSetter
   public void setExtraFanartUrls(List<String> extraFanartUrls) {
-    ListUtils.mergeLists(this.extraFanartUrls, extraFanartUrls);
+    this.extraFanartUrls.clear();
+    this.extraFanartUrls.addAll(extraFanartUrls);
+    firePropertyChange("extraFanartUrls", null, this.extraFanartUrls);
   }
 
   /**
