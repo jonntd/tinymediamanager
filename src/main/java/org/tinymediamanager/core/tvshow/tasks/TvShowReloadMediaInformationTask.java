@@ -30,6 +30,7 @@ import org.tinymediamanager.core.tasks.MediaFileInformationFetcherTask;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 
 /**
  * The Class TvShowReloadMediaInformationTask, to explicit reload mediainformation.
@@ -80,6 +81,13 @@ public class TvShowReloadMediaInformationTask extends TmmThreadPool {
               show.writeNFO();
             }
           });
+        }
+
+        // for seasons too
+        for (TvShowSeason season : show.getSeasons()) {
+          for (MediaFile mf : season.getMediaFiles()) {
+            submitTask(new MediaFileInformationFetcherTask(mf, season, true));
+          }
         }
       }
 
