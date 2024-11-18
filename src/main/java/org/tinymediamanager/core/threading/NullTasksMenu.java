@@ -16,10 +16,10 @@ public class NullTasksMenu {
     menu.setIcon(IconManager.FEEDBACK);
 
     JMenuItem i = new JMenuItem("ThreadPool with 1T 100WU");
-    i.addActionListener(new AddTask(i.getText(), 1, 100, 1000, "pool"));
+    i.addActionListener(new AddTask(i.getText(), 1, 100, 500, "pool"));
     menu.add(i);
     i = new JMenuItem("ThreadPool with 5T 100WU");
-    i.addActionListener(new AddTask(i.getText(), 5, 100, 1000, "pool"));
+    i.addActionListener(new AddTask(i.getText(), 5, 100, 500, "pool"));
     menu.add(i);
     menu.addSeparator();
 
@@ -37,17 +37,17 @@ public class NullTasksMenu {
     menu.add(i);
     menu.addSeparator();
 
-    i = new JMenuItem("10 Main Tasks á 10WU");
-    i.addActionListener(new AddTask(i.getText(), 10, 10, 1000, "main"));
+    i = new JMenuItem("10 Main Tasks á 1WU");
+    i.addActionListener(new AddTask(i.getText(), 10, 1, 2000, "main"));
     menu.add(i);
-    i = new JMenuItem("10 Download Tasks á 10WU");
-    i.addActionListener(new AddTask(i.getText(), 10, 10, 1000, "dl"));
+    i = new JMenuItem("10 Download Tasks á 1WU");
+    i.addActionListener(new AddTask(i.getText(), 10, 1, 10000, "dl"));
     menu.add(i);
-    i = new JMenuItem("10 ImageCache Tasks á 10WU");
-    i.addActionListener(new AddTask(i.getText(), 10, 10, 1000, "img"));
+    i = new JMenuItem("10 ImageCache Tasks á 1WU");
+    i.addActionListener(new AddTask(i.getText(), 10, 1, 2000, "img"));
     menu.add(i);
-    i = new JMenuItem("10 Unknown Tasks á 10WU");
-    i.addActionListener(new AddTask(i.getText(), 10, 10, 1000, "anon"));
+    i = new JMenuItem("10 Unknown Tasks á 1WU");
+    i.addActionListener(new AddTask(i.getText(), 10, 1, 5000, "anon"));
     menu.add(i);
     return menu;
   }
