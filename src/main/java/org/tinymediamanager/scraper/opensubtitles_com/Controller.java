@@ -37,13 +37,14 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 class Controller {
-  private static final String API_URL             = "https://api.opensubtitles.com";
+  private static final String DEFAULT_API_URL     = "https://api.opensubtitles.com";
   private static final String PARAM_API_KEY       = "Api-Key";
   private static final String PARAM_AUTHORIZATION = "Authorization";
 
   private Retrofit            restAdapter;
 
   private String              apiKey;
+  private String              apiUrl              = DEFAULT_API_URL;
   private String              username;
   private String              password;
   private String              token;
@@ -83,7 +84,14 @@ class Controller {
           throw new HttpException(code, "Could not logon to Opensubtitles.com");
         }
 
-        this.token = response.body().token;
+        LoginResponse resp = response.body();
+        this.token = resp.token;
+        this.apiUrl = resp.baseUrl;
+        if (!this.apiUrl.startsWith("http")) {
+          // dunno if host ALWAYS comes wo scheme
+          this.apiUrl = "https://" + this.apiUrl;
+        }
+        this.restAdapter = null; // to recreate this with NEW baseUrl!
       }
       catch (IOException e) {
         throw new ScrapeException(e);
@@ -94,7 +102,7 @@ class Controller {
   protected Retrofit getRestAdapter() {
     if (restAdapter == null) {
       Retrofit.Builder builder = new Retrofit.Builder();
-      builder.baseUrl(API_URL);
+      builder.baseUrl(apiUrl);
       builder.addConverterFactory(GsonConverterFactory.create(getGsonBuilder().create()));
       builder.client(TmmHttpClient.newBuilder().addInterceptor(chain -> {
         Request original = chain.request();

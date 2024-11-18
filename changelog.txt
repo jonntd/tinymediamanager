@@ -25,5 +25,6 @@ x [TVDB] fix fallback language scraping #2757
 x [Trakt.tv] do not sync locked entities #2684
 x [FFmpeg] enhanced still creation for anamorphic videos #2747
 x [FFmpeg] enabled creation of HDR -> SDR stills #2495
+x [OpenSubtitles] use vip server for VIP users #2756
 x [KodiRPC] rework mapping of TMM<>Kodi videos
 x [PostProcessing] add double quoting for windows #2748

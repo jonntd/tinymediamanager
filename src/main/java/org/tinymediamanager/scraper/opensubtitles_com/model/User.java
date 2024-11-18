@@ -24,6 +24,9 @@ public class User {
   @JsonProperty("allowed_downloads")
   public int     allowedDownloads;
 
+  @JsonProperty("allowed_translations")
+  public int     allowedTranslations;
+
   @JsonProperty("level")
   public String  level;
 

@@ -21,6 +21,9 @@ public class LoginResponse {
   @JsonProperty("user")
   public User   user;
 
+  @JsonProperty("base_url")
+  public String baseUrl;
+
   @JsonProperty("token")
   public String token;
 
