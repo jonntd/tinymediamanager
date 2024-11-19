@@ -18,15 +18,19 @@ package org.tinymediamanager.ui.wizard;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -65,6 +69,8 @@ class UiSettingsPanelLite extends JPanel {
   private final List<LocaleComboBox> locales            = new ArrayList<>();
 
   private JComboBox                  cbLanguage;
+  private ImageLabel                 lblLight;
+  private ImageLabel                 lblDark;
   private JRadioButton               rdbtnLight;
   private JRadioButton               rdbtnDark;
   private JComboBox                  cbFontSize;
@@ -133,6 +139,8 @@ class UiSettingsPanelLite extends JPanel {
     cbFontSize.addActionListener(actionListener);
     rdbtnLight.addActionListener(actionListener);
     rdbtnDark.addActionListener(actionListener);
+    lblLight.addBoundedMouseListener(new MouseClickEventProxy(rdbtnLight));
+    lblDark.addBoundedMouseListener(new MouseClickEventProxy(rdbtnDark));
     chckbxAutomaticUpdates.addActionListener(actionListener);
 
     // hide update related settings if we tmm.noupdate has been set
@@ -169,7 +177,7 @@ class UiSettingsPanelLite extends JPanel {
     JLabel lblThemeT = new JLabel(TmmResourceBundle.getString("Settings.uitheme"));
     add(lblThemeT, "cell 1 5");
 
-    ImageLabel lblLight = new ImageLabel(false);
+    lblLight = new ImageLabel(false);
     try (InputStream is = UiSettingsPanelLite.class.getResourceAsStream("light.png")) {
       lblLight.setOriginalImage(IOUtils.toByteArray(is));
     }
@@ -178,7 +186,7 @@ class UiSettingsPanelLite extends JPanel {
     }
     add(lblLight, "cell 1 6, grow");
 
-    ImageLabel lblDark = new ImageLabel(false);
+    lblDark = new ImageLabel(false);
     try (InputStream is = UiSettingsPanelLite.class.getResourceAsStream("dark.png")) {
       lblDark.setOriginalImage(IOUtils.toByteArray(is));
     }
@@ -302,6 +310,30 @@ class UiSettingsPanelLite extends JPanel {
     else {
       spUpdateInterval.setEnabled(false);
       lblUpdateHint.setText(TmmResourceBundle.getString("Settings.updatecheck.hint"));
+    }
+  }
+
+  /**
+   * Proxy mouse click events from any {@link JComponent} to any other clickable {@link AbstractButton}.
+   * <p>
+   * This allows the user to click on an {@link ImageLabel} in order to select its corresponding {@link JRadioButton},
+   * for example.
+   */
+  private static class MouseClickEventProxy extends MouseAdapter {
+    private final AbstractButton button;
+
+    MouseClickEventProxy(AbstractButton button) {
+      this.button = button;
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+      this.button.doClick();
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+      this.button.doClick();
     }
   }
 }
