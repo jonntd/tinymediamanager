@@ -34,6 +34,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
@@ -97,6 +100,10 @@ public class ImageLabel extends JComponent {
   protected SwingWorker<Void, Void> worker                 = null;
   protected MouseListener           lightboxListener       = null;
 
+  protected List<MouseListener>     boundedMouseListeners  = new ArrayList<>();
+  protected double                  imageScaleX            = 1;
+  protected double                  imageScaleY            = 1;
+
   private static TmmSvgIcon createNoImageIcon() {
 
     try {
@@ -130,6 +137,23 @@ public class ImageLabel extends JComponent {
     if (drawShadow) {
       this.shadowRenderer = new ShadowRenderer(8, 0.3f, Color.BLACK);
     }
+
+    addMouseListener(new BoundedMouseListener());
+  }
+
+  /**
+   * Register a {@link MouseListener} that will only be invoked when the mouse event occurs inside the bounds of the
+   * rendered image.
+   */
+  public void addBoundedMouseListener(MouseListener listener) {
+    boundedMouseListeners.add(listener);
+  }
+
+  /**
+   * Unregister a {@link MouseListener} that was previously registered with {@link #addBoundedMouseListener}.
+   */
+  public void removeBoundedMouseListener(MouseListener listener) {
+    boundedMouseListeners.remove(listener);
   }
 
   public void setOriginalImage(byte[] originalImageBytes) {
@@ -344,6 +368,9 @@ public class ImageLabel extends JComponent {
       g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
       g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_DEFAULT);
       g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+      imageScaleX = g2d.getTransform().getScaleX();
+      imageScaleY = g2d.getTransform().getScaleY();
 
       if (scaledImage != null) {
         int scaledImageWidth = scaledImage.getWidth(null);
@@ -807,6 +834,65 @@ public class ImageLabel extends JComponent {
       if (arg0.getClickCount() == 1 && scaledImage != null) {
         MainWindow.getInstance().createLightbox(getImagePath(), getImageUrl());
       }
+    }
+  }
+
+  /**
+   * A {@link MouseAdapter} implementation that proxies events to child listeners **IFF** the event occurs inside the
+   * bounds of the rendered image.
+   */
+  private class BoundedMouseListener extends MouseAdapter {
+    private int scale(int dimension, double scale) {
+      return (int)(dimension / (scale == 0 ? 1 : scale));
+    }
+
+    private boolean contains(MouseEvent e) {
+      if (isLoading() || !isShowing() || scaledImage == null || e.getClickCount() != 1) {
+        return false;
+      }
+
+      try {
+        int width = scale(scaledImage.getWidth(null), imageScaleX);
+        int height = scale(scaledImage.getHeight(null), imageScaleY);
+        Rectangle rect = new Rectangle(0, 0, width, height);
+        Point mouseLocationRelativeToLabel = e.getPoint();
+        return rect.contains(mouseLocationRelativeToLabel);
+      } catch (Throwable t) {
+        // Ignore
+      }
+
+      return false;
+    }
+
+    private void ifContains(MouseEvent e, Consumer<MouseListener> action) {
+      if (contains(e)) {
+        boundedMouseListeners.forEach(action);
+      }
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+      ifContains(e, (listener) -> listener.mouseEntered(e));
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+      ifContains(e, (listener) -> listener.mouseExited(e));
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+      ifContains(e, (listener) -> listener.mousePressed(e));
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+      ifContains(e, (listener) -> listener.mouseReleased(e));
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+      ifContains(e, (listener) -> listener.mouseClicked(e));
     }
   }
 }
