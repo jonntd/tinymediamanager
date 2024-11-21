@@ -35,11 +35,7 @@ import org.tinymediamanager.core.TmmModuleManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.movie.MovieModuleManager;
-import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
-import org.tinymediamanager.core.threading.TmmTaskManager;
-import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
-import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 
 import net.miginfocom.swing.MigLayout;
@@ -53,9 +49,10 @@ public class TinyMediaManagerWizard extends TmmDialog {
   private final List<JPanel> panels;
   private int                activePanelIndex = 0;
 
+  private BackAction         actBack;
+  private NextAction         actNext;
   private JButton            btnBack;
   private JButton            btnNext;
-  private JButton            btnFinish;
   private JPanel             panelContent;
 
   public TinyMediaManagerWizard() {
@@ -80,7 +77,6 @@ public class TinyMediaManagerWizard extends TmmDialog {
     }
 
     btnBack.setEnabled(false);
-    btnFinish.setVisible(false);
 
     addWindowListener(new WindowAdapter() {
       @Override
@@ -102,14 +98,13 @@ public class TinyMediaManagerWizard extends TmmDialog {
       panelSizing.add(panelContent, "cell 0 0,grow");
     }
     {
-      btnBack = new JButton(new BackAction());
+      actBack = new BackAction();
+      btnBack = new JButton(actBack);
       addButton(btnBack);
 
-      btnNext = new JButton(new NextAction());
-      addButton(btnNext);
-
-      btnFinish = new JButton(new FinishAction());
-      addButton(btnFinish);
+      actNext = new NextAction();
+      btnNext = new JButton(actNext);
+      addDefaultButton(btnNext);
     }
   }
 
@@ -121,13 +116,17 @@ public class TinyMediaManagerWizard extends TmmDialog {
     return btnNext;
   }
 
-  JButton getBtnFinish() {
-    return btnFinish;
-  }
-
   @Override
   public void pack() {
     // do not pack - it would look weird
+  }
+
+  private void setNextButtonLabel() {
+    actNext.setButtonLabel();
+  }
+
+  private boolean isLastPanel() {
+    return panels != null && activePanelIndex >= panels.size() - 1;
   }
 
   private class BackAction extends AbstractAction {
@@ -138,11 +137,13 @@ public class TinyMediaManagerWizard extends TmmDialog {
     @Override
     public void actionPerformed(ActionEvent e) {
       activePanelIndex--;
-      if (activePanelIndex == 0) {
+      if (activePanelIndex > 0) {
+        btnBack.setEnabled(true);
+      } else {
         btnBack.setEnabled(false);
       }
-      btnNext.setEnabled(true);
-      btnFinish.setVisible(false);
+      setNextButtonLabel();
+
       CardLayout cl = (CardLayout) (panelContent.getLayout());
       cl.show(panelContent, "" + activePanelIndex);
       panelContent.revalidate();
@@ -151,39 +152,39 @@ public class TinyMediaManagerWizard extends TmmDialog {
 
   private class NextAction extends AbstractAction {
     public NextAction() {
-      putValue(NAME, TmmResourceBundle.getString("wizard.next"));
+      setButtonLabel();
+    }
+
+    void setButtonLabel() {
+      if (isLastPanel()) {
+        putValue(NAME, TmmResourceBundle.getString("wizard.finish"));
+      } else {
+        putValue(NAME, TmmResourceBundle.getString("wizard.next"));
+      }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
       activePanelIndex++;
-      if (panels.size() == activePanelIndex + 1) {
-        btnNext.setEnabled(false);
-        btnFinish.setVisible(true);
+
+      if (activePanelIndex == panels.size()) {
+        TmmModuleManager.getInstance().saveSettings();
+
+        // fire events, that the wizard finished
+        MovieModuleManager.getInstance().getSettings().firePropertyChange("wizard", false, true);
+        TvShowModuleManager.getInstance().getSettings().firePropertyChange("wizard", false, true);
+
+        // close the wizard
+        TinyMediaManagerWizard.this.setVisible(false);
+      } else {
+        btnBack.setEnabled(true);
+        setNextButtonLabel();
+
+        CardLayout cl = (CardLayout) (panelContent.getLayout());
+        cl.show(panelContent, "" + activePanelIndex);
+        panelContent.revalidate();
       }
-      btnBack.setEnabled(true);
-
-      CardLayout cl = (CardLayout) (panelContent.getLayout());
-      cl.show(panelContent, "" + activePanelIndex);
-      panelContent.revalidate();
     }
   }
 
-  private class FinishAction extends AbstractAction {
-    public FinishAction() {
-      putValue(NAME, TmmResourceBundle.getString("wizard.finish"));
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      TmmModuleManager.getInstance().saveSettings();
-
-      // fire events, that the wizard finished
-      MovieModuleManager.getInstance().getSettings().firePropertyChange("wizard", false, true);
-      TvShowModuleManager.getInstance().getSettings().firePropertyChange("wizard", false, true);
-
-      // close the wizard
-      TinyMediaManagerWizard.this.setVisible(false);
-    }
-  }
 }
