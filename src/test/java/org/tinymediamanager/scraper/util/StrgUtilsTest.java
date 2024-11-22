@@ -48,12 +48,15 @@ public class StrgUtilsTest extends BasicTest {
 
   @Test
   public void titleCase() {
-    String text = "i am FINE U.N.c.l.e. iv gigi d'agostino part iI WALL·E (c) m*a*s*h F***ed Up";
+    String text = "i am FINE | U.N.c.l.e. | iv | gigi d'agostino | part iI | WALL·E (c) | m*a*s*h | F***ed Up | how's going? | rick o'shea | i'll get it";
     char[] delim = new char[] { ' ', '-', '_', '.', '\'', '(', '[', '*' };
 
     System.out.println(WordUtils.capitalize(text));
     System.out.println(WordUtils.capitalizeFully(text));
     System.out.println(WordUtils.capitalize(text, delim));
     System.out.println(WordUtils.capitalizeFully(text, delim));
+
+    System.out.println("TMM impl");
+    System.out.println(StrgUtils.capitalize(text));
   }
 }

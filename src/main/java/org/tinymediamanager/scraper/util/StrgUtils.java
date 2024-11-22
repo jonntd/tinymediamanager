@@ -45,6 +45,8 @@ public class StrgUtils {
   private static final Map<String, String>       DATE_FORMAT_REGEXPS   = new HashMap<>(30);
   private static final Pattern                   NORMALIZE_PATTERN     = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
   private static final char[]                    CAP_DELIMS            = new char[] { ' ', '-', '_', '.', '\'', '(', '[', '*' };
+  private static final String[]                  NON_CAP               = new String[] { "'S", "'Ll", "'T", "'D", "'Ve", "'Re" };
+
   static {
     DATE_FORMAT_REGEXPS.put("^\\d{8}$", "yyyyMMdd");
     DATE_FORMAT_REGEXPS.put("^\\d{1,2}-\\d{1,2}-\\d{4}$", "dd-MM-yyyy");
@@ -612,6 +614,11 @@ public class StrgUtils {
    * @return the capitalized string
    */
   public static String capitalize(String text) {
-    return WordUtils.capitalize(text, CAP_DELIMS);
+    String ret = WordUtils.capitalize(text, CAP_DELIMS);
+    for (String n : NON_CAP) {
+      ret = ret.replaceAll(n + "\s", n.toLowerCase(Locale.ROOT) + " "); // String needs to end or have a whitespace after!
+      ret = ret.replaceAll(n + "$", n.toLowerCase(Locale.ROOT)); // but not at end!
+    }
+    return ret.strip();
   }
 }
