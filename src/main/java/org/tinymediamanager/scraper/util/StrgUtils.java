@@ -45,7 +45,7 @@ public class StrgUtils {
   private static final Map<String, String>       DATE_FORMAT_REGEXPS   = new HashMap<>(30);
   private static final Pattern                   NORMALIZE_PATTERN     = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
   private static final char[]                    CAP_DELIMS            = new char[] { ' ', '-', '_', '.', '\'', '(', '[', '*' };
-  private static final String[]                  NON_CAP               = new String[] { "'S", "'Ll", "'T", "'D", "'Ve", "'Re" };
+  private static final String[]                  NON_CAP               = new String[] { "'S", "'M", "'Ll", "'T", "'D", "'Ve", "'Re" };
 
   static {
     DATE_FORMAT_REGEXPS.put("^\\d{8}$", "yyyyMMdd");

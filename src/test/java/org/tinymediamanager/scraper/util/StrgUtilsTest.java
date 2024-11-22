@@ -48,7 +48,7 @@ public class StrgUtilsTest extends BasicTest {
 
   @Test
   public void titleCase() {
-    String text = "i am FINE | U.N.c.l.e. | iv | gigi d'agostino | part iI | WALL·E (c) | m*a*s*h | F***ed Up | how's going? | rick o'shea | i'll get it";
+    String text = "i'm am FINE | U.N.c.l.e. | iv | gigi d'agostino | part iI | WALL·E (c) | m*a*s*h | F***ed Up | how's going? | rick o'shea | i'll get it";
     char[] delim = new char[] { ' ', '-', '_', '.', '\'', '(', '[', '*' };
 
     System.out.println(WordUtils.capitalize(text));
