@@ -619,6 +619,6 @@ public class StrgUtils {
       ret = ret.replaceAll(n + "\s", n.toLowerCase(Locale.ROOT) + " "); // String needs to end or have a whitespace after!
       ret = ret.replaceAll(n + "$", n.toLowerCase(Locale.ROOT)); // but not at end!
     }
-    return ret.strip();
+    return ret;
   }
 }
