@@ -348,6 +348,11 @@
             <artifactId>commons-csv</artifactId>
             <version>1.10.0</version>
         </dependency>
+        <dependency>
+            <groupId>io.github.jacksonbrienen</groupId>
+            <artifactId>jwfd</artifactId>
+            <version>0.9.0</version>
+        </dependency>
         <!-- testing -->
         <dependency>
             <groupId>junit</groupId>

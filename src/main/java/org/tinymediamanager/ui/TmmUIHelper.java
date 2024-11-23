@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.ResourceBundle;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -76,14 +75,15 @@ import org.tinymediamanager.updater.UpdaterTask;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.fonts.inter.FlatInterFont;
 
+import io.github.jacksonbrienen.jwfd.JWindowsFileDialog;
+
 /**
  * The Class TmmUIHelper.
  * 
  * @author Manuel Laggner
  */
 public class TmmUIHelper {
-  private static final Logger           LOGGER = LoggerFactory.getLogger(TmmUIHelper.class);
-  protected static final ResourceBundle BUNDLE = ResourceBundle.getBundle("messages");
+  private static final Logger LOGGER = LoggerFactory.getLogger(TmmUIHelper.class);
 
   private TmmUIHelper() {
     throw new IllegalAccessError();
@@ -120,8 +120,18 @@ public class TmmUIHelper {
       return openJFileChooser(JFileChooser.DIRECTORIES_ONLY, title, initialPath, true, null, null);
     }
 
-    // on macOS/OSX we simply use the AWT FileDialog
-    if (SystemUtils.IS_OS_MAC) {
+    if (SystemUtils.IS_OS_WINDOWS) {
+      // on Windows we use the newer API provided via JWindowsFileDialog
+      String path = JWindowsFileDialog.showDirectoryDialog(null, title, initialPath);
+      if (StringUtils.isNotBlank(path)) {
+        return Paths.get(path);
+      }
+      else {
+        return null;
+      }
+    }
+    else if (SystemUtils.IS_OS_MAC) {
+      // on macOS/OSX we simply use the AWT FileDialog
       try {
         // open directory chooser
         return openDirectoryDialog(title, initialPath);
@@ -219,8 +229,18 @@ public class TmmUIHelper {
       return openJFileChooser(JFileChooser.FILES_ONLY, title, initialPath, true, null, filter);
     }
 
-    // on macOS/OSX we simply use the AWT FileDialog
-    if (SystemUtils.IS_OS_MAC) {
+    if (SystemUtils.IS_OS_WINDOWS) {
+      // on Windows we use the newer API provided via JWindowsFileDialog
+      String path = JWindowsFileDialog.showOpenDialog(null, title, initialPath);
+      if (StringUtils.isNotBlank(path)) {
+        return Paths.get(path);
+      }
+      else {
+        return null;
+      }
+    }
+    else if (SystemUtils.IS_OS_MAC) {
+      // on macOS/OSX we simply use the AWT FileDialog
       try {
         // open file chooser
         return openFileDialog(title, initialPath, FileDialog.LOAD, null);
@@ -315,8 +335,18 @@ public class TmmUIHelper {
       return openJFileChooser(JFileChooser.FILES_ONLY, title, initialPath, false, filename, filter);
     }
 
-    // on macOS/OSX we simply use the AWT FileDialog
+    if (SystemUtils.IS_OS_WINDOWS) {
+      // on Windows we use the newer API provided via JWindowsFileDialog
+      String path = JWindowsFileDialog.showSaveDialog(null, title, initialPath + File.separator + filename);
+      if (StringUtils.isNotBlank(path)) {
+        return Paths.get(path);
+      }
+      else {
+        return null;
+      }
+    }
     if (SystemUtils.IS_OS_MAC) {
+      // on macOS/OSX we simply use the AWT FileDialog
       try {
         // open file chooser
         return openFileDialog(title, initialPath, FileDialog.SAVE, filename);

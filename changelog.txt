@@ -7,12 +7,13 @@ Version 5.1
 + [Movies/TV shows] added an action to calculate checksums for video files #913
 + [Movie sets] added sorttitle for exporting into the NFO files #2742
 + [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
-x [TV shows] fixed writing of ratings in NFO #2764
 + [Certifications] added support for a lot of certifications
 + [UI] reworked focus traversal in editors #2488
 + [Trakt.tv] able to remove only selected entries from Trakt
++ [Windows] switched to a newer library for showing file/folder picking dialogs #2772
 x [TV shows] fixed editing of episode numbers
 x [TV shows] read mediainfo data for season artwork #2570
+x [TV shows] fixed writing of ratings in NFO #2764
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog
 x [UI] reworked image chooser
