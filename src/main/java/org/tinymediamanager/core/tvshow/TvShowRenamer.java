@@ -946,7 +946,14 @@ public class TvShowRenamer {
     // ######################################################################
     for (MediaFile vid : episode.getMediaFiles(MediaFileType.VIDEO)) {
       LOGGER.trace("Rename 1:1 {} {}", vid.getType(), vid.getFileAsPath());
-      MediaFile newMF = generateEpisodeFilenames(episode.getTvShow(), vid, "").get(0); // there can be only one
+
+      List<MediaFile> newFilenames = generateEpisodeFilenames(episode.getTvShow(), vid, "");
+      if (ListUtils.isEmpty(newFilenames)) {
+        LOGGER.warn("could not rename '{}' - no new filename generated!", vid.getFileAsPath());
+        return;
+      }
+
+      MediaFile newMF = newFilenames.get(0); // there can be only one
       boolean ok = moveFile(vid.getFileAsPath(), newMF.getFileAsPath());
       if (ok) {
         fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, vid.getFileAsPath(), newMF.getFileAsPath()));
@@ -1643,7 +1650,7 @@ public class TvShowRenamer {
    */
   public static List<MediaFile> generateEpisodeFilenames(String template, TvShow tvShow, MediaFile mf, String oldVideoBasename) {
     // return list of all generated MFs
-    ArrayList<MediaFile> newFiles = new ArrayList<>();
+    List<MediaFile> newFiles = new ArrayList<>();
 
     List<TvShowEpisode> eps = TvShowList.getTvEpisodesByFile(tvShow, mf.getFile());
     if (ListUtils.isEmpty(eps)) {
