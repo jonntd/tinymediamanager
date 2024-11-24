@@ -41,7 +41,6 @@ import javax.swing.Icon;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.table.TableCellRenderer;
@@ -750,6 +749,15 @@ public class TmmTreeTable extends TmmTable {
     return ((TmmTreeModel) treeTableModel.getTreeModel()).isAdjusting();
   }
 
+  private void setSelectedRows(int[] selectedRows) {
+    ((TmmTreeModel) treeTableModel.getTreeModel()).setAdjusting(true);
+    clearSelection();
+    ((TmmTreeModel) treeTableModel.getTreeModel()).setAdjusting(false);
+    for (int selectedRow : selectedRows) {
+      getSelectionModel().addSelectionInterval(selectedRow, selectedRow);
+    }
+  }
+
   private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel {
 
     /**
@@ -768,7 +776,7 @@ public class TmmTreeTable extends TmmTable {
 
       if (now > nextNodeStructureChanged) {
         // store selected nodes
-        int[] selectedRows = getSelectedRows();
+        TreePath[] selectedPaths = getSelectedTreePaths();
 
         setAdjusting(true);
 
@@ -778,11 +786,9 @@ public class TmmTreeTable extends TmmTable {
           nodeStructureChanged();
 
           // Restoring tree state including all selections and expansions
-          clearSelection();
           setAdjusting(false);
-          for (int row : selectedRows) {
-            getSelectionModel().addSelectionInterval(row, row);
-          }
+
+          setSelectedRows(treeTableModel.getLayout().getRowsForPaths(selectedPaths));
         }
         else {
           setAdjusting(false);
@@ -834,26 +840,16 @@ public class TmmTreeTable extends TmmTable {
     }
 
     private int[] getParentRows(int[] childRows) {
-      return IntStream.of(childRows)
-              .map(leafRow -> {
-                @Nonnull TreePath leafPath = getRowPath(leafRow);
-                @Nullable TreePath parentPath = leafPath.getParentPath();
-                @Nonnull TreePath pathToReturn = parentPath != null ? parentPath : leafPath;
-                int parentRow = treeTableModel.getLayout().getRowForPath(pathToReturn);
-                return parentRow > -1 ? parentRow : leafRow;
-              })
-              .toArray();
-    }
-
-    private void setSelectedRows(int[] selectedRows) {
-      // After KeyAdapter event handler methods return, some other piece of code deselects all rows but one.
-      // In order to maintain the user's selection, we must briefly defer the execution of the code below.
-      SwingUtilities.invokeLater(() -> {
-        clearSelection();
-        for (int selectedRow : selectedRows){
-          getSelectionModel().addSelectionInterval(selectedRow, selectedRow);
-        }
-      });
+      return IntStream.of(childRows).map(leafRow -> {
+        @Nonnull
+        TreePath leafPath = getRowPath(leafRow);
+        @Nullable
+        TreePath parentPath = leafPath.getParentPath();
+        @Nonnull
+        TreePath pathToReturn = parentPath != null ? parentPath : leafPath;
+        int parentRow = treeTableModel.getLayout().getRowForPath(pathToReturn);
+        return parentRow > -1 ? parentRow : leafRow;
+      }).toArray();
     }
 
     private void toggleRows(int[] rows, boolean expand) {
@@ -877,13 +873,13 @@ public class TmmTreeTable extends TmmTable {
       for (int row : reversedBranchRows) {
         if (expand) {
           treeTable.expandRow(row);
-        } else {
+        }
+        else {
           treeTable.collapseRow(row);
         }
       }
 
-      int[] selectedRows = treeTableModel.getLayout().getRowsForPaths(selectedPaths);
-      setSelectedRows(selectedRows);
+      setSelectedRows(treeTableModel.getLayout().getRowsForPaths(selectedPaths));
     }
 
     @Override

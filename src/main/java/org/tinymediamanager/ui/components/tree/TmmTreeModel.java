@@ -106,10 +106,14 @@ public class TmmTreeModel<E extends TmmTreeNode> extends DefaultTreeModel {
 
         TreeNode[] path = child.getPath();
         if (path != null && path.length > 1) {
+          // remove cache for all children
           readWriteLock.writeLock().lock();
-          TmmTreeNode parent = (TmmTreeNode) path[1];
-          filteredNodeChildrenCache.remove(parent.getId());
+          for (int i = 1; i < path.length; i++) {
+            TmmTreeNode parent = (TmmTreeNode) path[i];
+            filteredNodeChildrenCache.remove(parent.getId());
+          }
           readWriteLock.writeLock().unlock();
+
           updateSortingAndFiltering();
         }
       }

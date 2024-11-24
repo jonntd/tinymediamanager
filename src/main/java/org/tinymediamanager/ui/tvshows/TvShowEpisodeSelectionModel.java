@@ -26,11 +26,12 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
  * @author Manuel Laggner
  */
 public class TvShowEpisodeSelectionModel extends AbstractModelObject {
-  private static final String    SELECTED_TV_SHOW_EPISODE = "selectedTvShowEpisode";
+  private static final String          SELECTED_TV_SHOW_EPISODE = "selectedTvShowEpisode";
 
-  private TvShowEpisode          selectedTvShowEpisode;
-  private TvShowEpisode          initalTvShowEpisode      = new TvShowEpisode();
-  private PropertyChangeListener propertyChangeListener;
+  private final TvShowEpisode          initalTvShowEpisode      = new TvShowEpisode();
+  private final PropertyChangeListener propertyChangeListener;
+
+  private TvShowEpisode                selectedTvShowEpisode;
 
   /**
    * Instantiates a new tv show episode selection model. Usage in TvShowPanel

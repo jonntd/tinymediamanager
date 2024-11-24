@@ -689,7 +689,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
         existingEpisodeNumber = mediaEpisodeNumber;
         break;
       }
+    }
 
+    if (existingEpisodeNumber == episode) {
+      // nothing to do
+      return;
     }
 
     if (existingEpisodeNumber != null) {
@@ -705,9 +709,17 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     else {
       episodeNumbers.add(episode);
     }
-    firePropertyChange(EPISODE, -1, episode.episode());
-    firePropertyChange(SEASON, -1, episode.season());
-    firePropertyChange(TITLE_FOR_UI, -1, episode.episode());
+
+    if (existingEpisodeNumber != null) {
+      firePropertyChange(EPISODE, existingEpisodeNumber.episode(), episode.episode());
+      firePropertyChange(SEASON, existingEpisodeNumber.season(), episode.season());
+      firePropertyChange(TITLE_FOR_UI, existingEpisodeNumber.episode(), episode.episode());
+    }
+    else {
+      firePropertyChange(EPISODE, -1, episode.episode());
+      firePropertyChange(SEASON, -1, episode.season());
+      firePropertyChange(TITLE_FOR_UI, -1, episode.episode());
+    }
   }
 
   /**

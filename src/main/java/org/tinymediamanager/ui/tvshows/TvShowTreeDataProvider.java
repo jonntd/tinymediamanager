@@ -19,7 +19,6 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.ResourceBundle;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.Constants;
@@ -41,8 +40,6 @@ import org.tinymediamanager.ui.components.treetable.TmmTreeTableFormat;
  * @author Manuel Laggner
  */
 public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
-  protected static final ResourceBundle         BUNDLE     = ResourceBundle.getBundle("messages");
-
   private final TmmTreeTableFormat<TmmTreeNode> tableFormat;
   private final TmmTreeNode                     root       = new TmmTreeNode(new Object(), this);
 
@@ -154,9 +151,8 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       switch (evt.getPropertyName()) {
         // changed the season/episode nr of an episode
         case Constants.SEASON, Constants.EPISODE, Constants.EPISODE_GROUP:
-          // simply remove it from the tree and readd it
-          removeTvShowEpisode(episode);
-          addTvShowEpisode(episode);
+          // check if we need to change the position in the tree
+          updateEpisode(episode);
           updateDummyEpisodesForTvShow(episode.getTvShow());
           break;
 
@@ -184,6 +180,34 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
         case "displayMissingEpisodes", "displayMissingSpecials", "displayMissingNotAired" -> updateDummyEpisodes();
       }
     });
+  }
+
+  /**
+   * update the episode node on demand (when something dramatically has changed)
+   */
+  private void updateEpisode(TvShowEpisode episode) {
+    // the episode node
+    TmmTreeNode episodeNode = getNodeFromCache(episode);
+
+    if (episodeNode == null) {
+      // episode not yet on the UI - readd
+      removeTvShowEpisode(episode);
+      addTvShowEpisode(episode);
+    }
+    else {
+      TmmTreeNode seasonNodeUi = (TmmTreeNode) episodeNode.getParent();
+      TmmTreeNode seasonNodeBean = getNodeFromCache(episode.getTvShowSeason());
+
+      if (seasonNodeUi == null || seasonNodeUi != seasonNodeBean) {
+        // season on the UI does not match the evaluated season - readd
+        removeTvShowEpisode(episode);
+        addTvShowEpisode(episode);
+      }
+      else {
+        // episode is on UI, season is the same - reorder
+        firePropertyChange(NODE_CHANGED, null, episodeNode);
+      }
+    }
   }
 
   /**
