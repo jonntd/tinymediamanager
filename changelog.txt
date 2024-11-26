@@ -20,6 +20,7 @@ x [UI] reworked image chooser
 x [UI] reworked manual selection of images while scraping
 x [UI] also normalize episode titles in the TV show search #2745
 x [UI] fixed display of missing specials #2751
+x [UI] fixed shortcut for downloading TV show trailers #2774
 x [JMTE] fixed corner cases for title case converter 
 x [TMDB] try to avoid generic episode titles #2737
 x [IMDB] better parse images, ignore some uncommon types

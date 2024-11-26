@@ -44,7 +44,7 @@ public class TvShowTrailerDownloadAction extends TmmAction {
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("tvshow.downloadtrailer"));
     putValue(SMALL_ICON, IconManager.DOWNLOAD);
     putValue(LARGE_ICON_KEY, IconManager.DOWNLOAD);
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK + InputEvent.ALT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK + InputEvent.ALT_DOWN_MASK));
   }
 
   @Override
