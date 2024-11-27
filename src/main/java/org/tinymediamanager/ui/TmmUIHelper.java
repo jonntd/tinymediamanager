@@ -407,21 +407,14 @@ public class TmmUIHelper {
     }
     else if (SystemUtils.IS_OS_WINDOWS) {
       // try to open directly
-      if (abs.length() >= 260) {
-        // Desktop.open() relies on the ancient file length limitation of 260 chars somehow, call explorer directly
-        // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
-        exec(new String[] { "explorer", abs });
+      try {
+        Desktop.getDesktop().open(file.toFile());
       }
-      else {
-        try {
-          Desktop.getDesktop().open(file.toFile());
-        }
-        catch (Exception e) {
-          LOGGER.debug("could not open file with the default app - '{}'", e.getMessage());
-          // use explorer directly - ship around access exceptions and the unresolved network bug
-          // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6780505
-          exec(new String[] { "explorer", abs });
-        }
+      catch (Exception e) {
+        LOGGER.debug("could not open file with the default app - '{}'", e.getMessage());
+        // use explorer directly - ship around access exceptions and the unresolved network bug
+        // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6780505
+        exec(new String[] { "explorer", abs });
       }
     }
     else if (SystemUtils.IS_OS_LINUX) {
