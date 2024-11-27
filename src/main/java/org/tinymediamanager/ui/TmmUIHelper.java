@@ -778,7 +778,7 @@ public class TmmUIHelper {
 
     try {
       // get the property for the last update check
-      String lastUpdateCheck = TmmProperties.getInstance().getProperty("lastUpdateCheck");
+      String lastUpdateCheck = TmmProperties.getInstance().getProperty("lastUpdateCheck", "0");
 
       long old = Long.parseLong(lastUpdateCheck);
       long now = new Date().getTime();

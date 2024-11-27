@@ -20,12 +20,17 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.addon.YtDlpAddon;
+import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TmmProperties;
+import org.tinymediamanager.core.threading.TmmTask;
+import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
 
 /**
  * the class {@link YtDlp} is used to access yt-dlp for downloading trailers from yt
@@ -54,6 +59,7 @@ public class YtDlp {
    *           being thrown if the thread has been interrupted
    */
   public static void downloadTrailer(String url, int height, Path trailerFile) throws IOException, InterruptedException {
+    selfUpdateIfAvailable();
     executeCommand(createCommandForDownload(url, height, trailerFile));
   }
 
@@ -91,6 +97,10 @@ public class YtDlp {
     cmdList.add("--abort-on-unavailable-fragment");
     cmdList.add("--fragment-retries");
     cmdList.add("99");
+
+    if (Settings.getInstance().isIgnoreSSLProblems()) {
+      cmdList.add("--no-check-certificates");
+    }
 
     cmdList.add(url);
     cmdList.add("-o");
@@ -146,6 +156,39 @@ public class YtDlp {
     }
     else {
       throw new IOException("yt-dlp is not available");
+    }
+  }
+
+  public static void selfUpdateIfAvailable() {
+    YtDlpAddon ytDlpAddon = new YtDlpAddon();
+    if (ytDlpAddon.isAvailable()) {
+      // we need an own logic here - just every 2 days is ok
+      // (got blocked executing 3 updates in a row)
+      String lastUpdateCheck = TmmProperties.getInstance().getProperty("lastYtDlpUpdateCheck", "0");
+      long old = Long.parseLong(lastUpdateCheck);
+      long now = new Date().getTime();
+
+      if (now > old + 2 * 1000 * 3600 * 24F) {
+        TmmTask upd = new TmmTask("YT-DLP", 1, TaskType.BACKGROUND_TASK) {
+          @Override
+          protected void doInBackground() {
+            setTaskDescription("self updating YT-DLP...");
+            TmmProperties.getInstance().putProperty("lastYtDlpUpdateCheck", Long.toString(new Date().getTime()));
+            TmmProperties.getInstance().writeProperties();
+            try {
+              String response = executeCommand(List.of(ytDlpAddon.getExecutablePath(), "--update"));
+              LOGGER.info(response);
+            }
+            catch (Exception e) {
+              LOGGER.error("Error self-updating yt-dlp: {}", e.getMessage());
+            }
+          }
+        };
+        // run as blocking task, since we DO come from a DL BG task,
+        // where only one can run - so it should be able to update before :)
+        upd.run();
+        // TmmTaskManager.getInstance().addDownloadTask(upd);
+      }
     }
   }
 }
