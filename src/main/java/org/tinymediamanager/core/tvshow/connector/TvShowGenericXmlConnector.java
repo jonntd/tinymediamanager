@@ -127,7 +127,9 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
         // tmm comment
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String dat = formatter.format(new Date());
-        document.appendChild(document.createComment("created on " + dat + " - tinyMediaManager " + Settings.getInstance().getVersion()));
+        TvShowConnectors conn = TvShowModuleManager.getInstance().getSettings().getTvShowConnector();
+        document.appendChild(
+            document.createComment("created on " + dat + " by tinyMediaManager " + Settings.getInstance().getVersion() + " for " + conn.name()));
 
         root = document.createElement("tvshow");
         document.appendChild(root);

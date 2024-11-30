@@ -121,7 +121,9 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         // tmm comment
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String dat = formatter.format(new Date());
-        document.appendChild(document.createComment("created on " + dat + " - tinyMediaManager " + Settings.getInstance().getVersion()));
+        MovieConnectors conn = MovieModuleManager.getInstance().getSettings().getMovieConnector();
+        document.appendChild(
+            document.createComment("created on " + dat + " by tinyMediaManager " + Settings.getInstance().getVersion() + " for " + conn.name()));
 
         root = document.createElement("movie");
         document.appendChild(root);
