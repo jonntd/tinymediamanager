@@ -1,35 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-        xmlns:dc="http://purl.org/dc/elements/1.1/"
-        xmlns:cc="http://creativecommons.org/ns#"
-        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
-        xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-        xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
         viewBox="0 0 499.73135 548.05002"
         version="1.1"
         id="svg4"
-        sodipodi:docname="icn_upgrade.svg"
         width="19.989254"
-        height="21.922001"
-        inkscape:version="1.0.1 (0767f8302a, 2020-10-17)">
-    <metadata
-            id="metadata10">
-        <rdf:RDF>
-            <cc:Work
-                    rdf:about="">
-                <dc:format>image/svg+xml</dc:format>
-                <dc:type
-                        rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-                <dc:title></dc:title>
-            </cc:Work>
-        </rdf:RDF>
-    </metadata>
+        height="21.922001">
+
     <defs
             id="defs8">
         <linearGradient
-                inkscape:collect="always"
                 id="linearGradient839">
             <stop
                     style="stop-color:#17ca25;stop-opacity:1"
@@ -41,7 +22,6 @@
                     id="stop837"/>
         </linearGradient>
         <linearGradient
-                inkscape:collect="always"
                 xlink:href="#linearGradient839"
                 id="linearGradient843"
                 gradientUnits="userSpaceOnUse"
@@ -50,33 +30,7 @@
                 x2="249.52516"
                 y2="51.542229"/>
     </defs>
-    <sodipodi:namedview
-            pagecolor="#ffffff"
-            bordercolor="#666666"
-            borderopacity="1"
-            objecttolerance="10"
-            gridtolerance="10"
-            guidetolerance="10"
-            inkscape:pageopacity="0"
-            inkscape:pageshadow="2"
-            inkscape:window-width="1920"
-            inkscape:window-height="1050"
-            id="namedview6"
-            showgrid="false"
-            scale-x="448"
-            inkscape:zoom="31.5"
-            inkscape:cx="13.234077"
-            inkscape:cy="10.106619"
-            inkscape:window-x="0"
-            inkscape:window-y="0"
-            inkscape:window-maximized="1"
-            inkscape:current-layer="svg4"
-            fit-margin-top="2"
-            fit-margin-left="2"
-            fit-margin-right="2"
-            fit-margin-bottom="2"/>
-    <path
-            d="m 297.86568,498.05 h -96 c -13.3,0 -24,-10.7 -24,-24 v -200 H 74.065682 c -21.4,0 -32.1,-25.8 -17,-41 l 175.799998,-176 c 9.4,-9.4 24.6,-9.4 34,0 l 175.8,176 c 15.1,15.1 4.4,41 -17,41 h -103.8 v 200 c 0,13.3 -10.7,24 -24,24 z"
+    <path d="M400 240H128v-94.8c0-52.8 42.1-96.7 95-97.2 53.4-.6 97 42.7 97 96v24c0 13.3 10.7 24 24 24s24-10.7 24-24v-22.6C368 65.8 304 .2 224.3 0 144.8-.2 80 64.5 80 144v96H48c-26.5 0-48 21.5-48 48v176c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V288c0-26.5-21.5-48-48-48zm0 224H48V288h352v176zm-176-32c-15.5 0-28-12.5-28-28v-56c0-15.5 12.5-28 28-28s28 12.5 28 28v56c0 15.5-12.5 28-28 28z"
             id="path2"
             style="fill-opacity:1;fill:url(#linearGradient843)"/>
 </svg>
