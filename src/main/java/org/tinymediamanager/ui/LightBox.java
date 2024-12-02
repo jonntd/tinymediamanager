@@ -89,7 +89,7 @@ public class LightBox {
 
     imagePanel.add(image, "cell 0 0,grow");
 
-    backgroundPanel.addMouseListener(new MouseAdapter() {
+    MouseAdapter clickListener = new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
         frame.getLayeredPane().remove(imagePanel);
@@ -97,7 +97,11 @@ public class LightBox {
         frame.validate();
         frame.repaint();
       }
-    });
+    };
+
+    backgroundPanel.addMouseListener(clickListener);
+    imagePanel.addMouseListener(clickListener);
+    image.addMouseListener(clickListener);
   }
 
   private void show() {
