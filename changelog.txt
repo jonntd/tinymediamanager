@@ -14,6 +14,7 @@ Version 5.1
 x [TV shows] fixed editing of episode numbers
 x [TV shows] read mediainfo data for season artwork #2570
 x [TV shows] fixed writing of ratings in NFO #2764
+x [TV shows] also export locked TV shows #2783
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog
 x [UI] reworked image chooser

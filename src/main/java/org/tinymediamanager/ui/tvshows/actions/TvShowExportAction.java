@@ -54,7 +54,7 @@ public class TvShowExportAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    List<TvShow> selectedTvShows = TvShowUIModule.getInstance().getSelectionModel().getSelectedTvShowsRecursive();
+    List<TvShow> selectedTvShows = TvShowUIModule.getInstance().getSelectionModel().getSelectedTvShowsRecursive(true);
 
     if (selectedTvShows.isEmpty()) {
       return;
