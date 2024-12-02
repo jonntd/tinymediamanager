@@ -74,7 +74,13 @@ public interface IAddon {
       return executable.toString();
     }
 
-    // 3. look in the PATH from the system
+    // 3. look in the addon folder in the tmm root
+    executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
+    if (Files.exists(executable)) {
+      return executable.toString();
+    }
+
+    // 4. look in the PATH from the system
     String systemPath = System.getenv("PATH");
     String[] pathDirs = systemPath.split(File.pathSeparator);
 
