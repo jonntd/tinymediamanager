@@ -55,7 +55,7 @@ public class TvShowRemoveAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    TvShowSelectionModel.SelectedObjects selectedObjects = TvShowUIModule.getInstance().getSelectionModel().getSelectedObjects();
+    TvShowSelectionModel.SelectedObjects selectedObjects = TvShowUIModule.getInstance().getSelectionModel().getSelectedObjects(true, false);
 
     if (selectedObjects.isLockedFound()) {
       TvShowSelectionModel.showLockedInformation();
@@ -87,12 +87,22 @@ public class TvShowRemoveAction extends TmmAction {
 
     TmmTaskManager.getInstance().addUnnamedTask(() -> {
       for (TvShowEpisode episode : selectedObjects.getEpisodes()) {
-        episode.getTvShow().removeEpisode(episode);
+        if (episode.isDummy()) {
+          episode.getTvShow().removeDummyEpisode(episode);
+        }
+        else {
+          episode.getTvShow().removeEpisode(episode);
+        }
       }
 
       for (TvShowSeason season : selectedObjects.getSeasons()) {
-        for (TvShowEpisode episode : new ArrayList<>(season.getEpisodes())) {
-          season.getTvShow().removeEpisode(episode);
+        for (TvShowEpisode episode : new ArrayList<>(season.getEpisodesForDisplay())) {
+          if (episode.isDummy()) {
+            season.getTvShow().removeDummyEpisode(episode);
+          }
+          else {
+            season.getTvShow().removeEpisode(episode);
+          }
         }
       }
 

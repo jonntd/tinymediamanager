@@ -9,6 +9,7 @@ Version 5.1
 + [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
 + [Certifications] added support for a lot of certifications
 + [UI] reworked focus traversal in editors #2488
++ [UI] enabled removing of dummy episodes #2746
 + [Trakt.tv] able to remove only selected entries from Trakt
 + [Windows] switched to a newer library for showing file/folder picking dialogs #2772
 x [TV shows] fixed editing of episode numbers
