@@ -28,6 +28,7 @@ x [UI] enabled mouse click on the whole lightbox area to close the image
 x [JMTE] fixed corner cases for title case converter 
 x [TMDB] try to avoid generic episode titles #2737
 x [IMDB] better parse images, ignore some uncommon types
+x [IMDB] refactor search yet again
 x [TVDB] fix fallback language scraping #2757
 x [Trakt.tv] do not sync locked entities #2684
 x [FFmpeg] enhanced still creation for anamorphic videos #2747

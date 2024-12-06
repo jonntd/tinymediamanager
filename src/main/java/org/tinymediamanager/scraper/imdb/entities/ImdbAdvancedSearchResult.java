@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.tinymediamanager.scraper.entities.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -32,39 +31,6 @@ public class ImdbAdvancedSearchResult {
 
   @JsonIgnore
   public Map<String, Object> additionalProperties = new HashMap<>();
-
-  /**
-   * maps internal groups to our mediaTypes - if it must be parsed as movie or tvshow with episodes
-   * 
-   * @return MediaType or NULL if we cannot identify it
-   */
-  public MediaType getMediaType() {
-    if (titleType != null)
-      switch (titleType.id) {
-        case "movie":
-        case "tvMovie":
-        case "tvSpecial":
-        case "short":
-        case "tvShort":
-        case "musicVideo":
-        case "video":
-          return MediaType.MOVIE;
-
-        case "tvSeries":
-        case "tvMiniSeries":
-        case "podcastSeries":
-          return MediaType.TV_SHOW;
-
-        case "tvEpisode":
-        case "podcastEpisode":
-          return MediaType.TV_EPISODE;
-
-        case "videoGame":
-        default:
-          break;
-      }
-    return null;
-  }
 
   public String getId() {
     return titleId;
