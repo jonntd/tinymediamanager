@@ -87,6 +87,7 @@ import org.tinymediamanager.scraper.imdb.entities.ImdbPlaybackUrl;
 import org.tinymediamanager.scraper.imdb.entities.ImdbReleaseDate;
 import org.tinymediamanager.scraper.imdb.entities.ImdbSearchResult;
 import org.tinymediamanager.scraper.imdb.entities.ImdbSectionItem;
+import org.tinymediamanager.scraper.imdb.entities.ImdbShowEpisodes;
 import org.tinymediamanager.scraper.imdb.entities.ImdbTitleKeyword;
 import org.tinymediamanager.scraper.imdb.entities.ImdbTitleType;
 import org.tinymediamanager.scraper.imdb.entities.ImdbVideo;
@@ -1147,6 +1148,16 @@ public abstract class ImdbParser {
       for (JsonNode p : ListUtils.nullSafe(prods)) {
         md.addProductionCompany(p.at("/node/company/companyText/text").asText());
       }
+
+      // available episodes & seasons
+      JsonNode episodesNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/episodes");
+      ImdbShowEpisodes eps = JsonUtils.parseObject(mapper, episodesNode, ImdbShowEpisodes.class);
+      if (eps != null) {
+        md.addExtraData("episodeCount", eps.episodes.total);
+        md.addExtraData("seasons", eps.getSeasons());
+        md.addExtraData("years", eps.getYears());
+      }
+
     }
     catch (Exception e) {
       getLogger().warn("Error parsing JSON: '{}'", e);

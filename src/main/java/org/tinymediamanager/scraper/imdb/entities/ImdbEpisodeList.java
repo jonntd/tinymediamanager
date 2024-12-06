@@ -16,11 +16,9 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 
 public class ImdbEpisodeList extends BaseJsonEntity {
-  public String                  currentSeason = "";
-  public String                  currentYear   = "";
-  public ImdbEpisodeListEpisodes episodes      = null;
-  public List<ImdbIdValueType>   seasons       = null;
-  public List<ImdbIdValueType>   years         = null;
+  public ImdbEpisodeListEpisodes episodes = null;
+  public List<ImdbIdValueType>   seasons  = null;
+  public List<ImdbIdValueType>   years    = null;
 
   public List<MediaMetadata> getEpisodes() {
     List<MediaMetadata> eps = new ArrayList<>();
