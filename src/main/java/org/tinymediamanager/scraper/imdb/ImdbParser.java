@@ -604,7 +604,7 @@ public abstract class ImdbParser {
   private MediaSearchResult parseJsonSearchResults(ImdbSearchResult result, MediaSearchAndScrapeOptions options) {
     MediaSearchResult sr = new MediaSearchResult(ImdbMetadataProvider.ID, options.getMediaType());
 
-    sr.setIMDBId(result.getId());
+    sr.setIMDBId(result.id);
     sr.setTitle(result.titleNameText);
     String year = result.titleReleaseText;
     if (!year.isEmpty()) {
@@ -635,7 +635,7 @@ public abstract class ImdbParser {
   private MediaSearchResult parseJsonAdvancedSearchResults(ImdbAdvancedSearchResult result, MediaSearchAndScrapeOptions options) {
     MediaSearchResult sr = new MediaSearchResult(ImdbMetadataProvider.ID, options.getMediaType());
 
-    sr.setIMDBId(result.getId());
+    sr.setIMDBId(result.titleId);
     sr.setTitle(result.titleText);
     sr.setYear(result.releaseYear);
     if (result.primaryImage != null) {
