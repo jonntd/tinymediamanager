@@ -962,8 +962,10 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     // when there are no ids, we must assume that this is the first scrape of the episode - treat it like a matched one (to prevent existing/manually
     // entered data from being overwritten)
+    boolean newEntity = false;
     if (ids.isEmpty()) {
       matchFound = true;
+      newEntity = true;
     }
 
     if (!matchFound && overwriteExistingItems) {
@@ -983,7 +985,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     }
 
     if (config.contains(TvShowEpisodeScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())
-        && (overwriteExistingItems || StringUtils.isBlank(getTitle()))) {
+        && (overwriteExistingItems || newEntity || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setTitle(StrgUtils.capitalize(metadata.getTitle()));

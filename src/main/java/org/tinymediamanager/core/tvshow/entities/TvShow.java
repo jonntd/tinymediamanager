@@ -1132,8 +1132,10 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     // when there are no ids, we must assume that this is the first scrape of the TV show - treat it like a matched one (to prevent existing/manually
     // entered data from being overwritten)
+    boolean newEntity = false;
     if (ids.isEmpty()) {
       matchFound = true;
+      newEntity = true;
     }
 
     if (!matchFound && overwriteExistingItems) {
@@ -1153,7 +1155,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     }
 
     if (config.contains(TvShowScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())
-        && (overwriteExistingItems || StringUtils.isBlank(getTitle()))) {
+        && (overwriteExistingItems || newEntity || StringUtils.isBlank(getTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setTitle(StrgUtils.capitalize(metadata.getTitle()));
