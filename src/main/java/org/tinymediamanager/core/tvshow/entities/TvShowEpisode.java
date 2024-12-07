@@ -960,6 +960,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
+    // when there are no ids, we must assume that this is the first scrape of the episode - treat it like a matched one (to prevent existing/manually
+    // entered data from being overwritten)
+    if (ids.isEmpty()) {
+      matchFound = true;
+    }
+
     if (!matchFound && overwriteExistingItems) {
       // clear the old ids to set only the new ones
       ids.clear();
