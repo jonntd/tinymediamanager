@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.ui.components.TmmLabel;
 
@@ -71,11 +72,28 @@ public class TvShowNoteFilter extends AbstractTextTvShowUIFilter {
       if (matcher.find()) {
         foundShow = true;
       }
+
       if (!invert && foundShow) {
         return true;
       }
       else if (invert && foundShow) {
         return false;
+      }
+
+      // also look in the seasons
+      for (TvShowSeason season : tvShow.getSeasons()) {
+        boolean foundSeason = false;
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(season.getNote()));
+        if (matcher.find()) {
+          foundSeason = true;
+        }
+
+        if (invert && !foundSeason) {
+          return true;
+        }
+        else if (!invert && foundSeason) {
+          return true;
+        }
       }
     }
     catch (Exception e) {

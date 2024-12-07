@@ -426,6 +426,16 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
+    addUserNote();
+  }
+
+  /**
+   * add the user note in <user_note>xxx</user_note>
+   */
+  protected void addUserNote() {
+    Element userNote = document.createElement("user_note");
+    userNote.setTextContent(tvShowSeason.getNote());
+    root.appendChild(userNote);
   }
 
   /**

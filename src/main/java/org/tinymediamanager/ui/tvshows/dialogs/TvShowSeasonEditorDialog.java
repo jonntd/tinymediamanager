@@ -86,8 +86,9 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
   /**
    * UI elements
    */
-  private JTextArea           taPlot;
   private JTextField          tfTitle;
+  private JTextArea           taPlot;
+  private JTextArea           taNote;
 
   private ImageLabel          lblPoster;
   private ImageLabel          lblFanart;
@@ -122,6 +123,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
     {
       tfTitle.setText(tvShowSeason.getTitle());
       taPlot.setText(tvShowSeason.getPlot());
+      taNote.setText(tvShowSeason.getNote());
       lblPoster.setImagePath(tvShowSeason.getArtworkFilename(SEASON_POSTER));
       lblFanart.setImagePath(tvShowSeason.getArtworkFilename(SEASON_FANART));
       lblThumb.setImagePath(tvShowSeason.getArtworkFilename(SEASON_THUMB));
@@ -156,7 +158,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
     {
       JPanel detailsPanel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details"), null, detailsPanel, null);
-      detailsPanel.setLayout(new MigLayout("", "[][grow][20lp:n][200lp:250lp,grow]", "[][250lp:75%:75%,grow]"));
+      detailsPanel.setLayout(new MigLayout("", "[][grow][20lp:n][200lp:250lp,grow]", "[][250lp:75%:75%,grow][75lp:20%:20%,grow]"));
       {
         JLabel lblTitleT = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
         detailsPanel.add(lblTitleT, "flowx,cell 0 0,alignx right");
@@ -164,8 +166,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
         tfTitle = new JTextField();
         detailsPanel.add(tfTitle, "cell 1 0,growx");
       }
-      JLabel lblPosterT = new TmmLabel(TmmResourceBundle.getString("mediafiletype.poster"));
-      detailsPanel.add(lblPosterT, "flowx,cell 3 0");
+
       {
         JLabel lblPlot = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
         detailsPanel.add(lblPlot, "cell 0 1,alignx right,aligny top");
@@ -181,6 +182,22 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
       }
 
       {
+        JLabel lblNoteT = new TmmLabel(TmmResourceBundle.getString("metatag.note"));
+        detailsPanel.add(lblNoteT, "cell 0 2,alignx right,aligny top");
+
+        JScrollPane scrollPane = new JScrollPane();
+        detailsPanel.add(scrollPane, "cell 1 2,grow,wmin 0");
+
+        taNote = new JTextArea();
+        taNote.setLineWrap(true);
+        taNote.setWrapStyleWord(true);
+        taNote.setForeground(UIManager.getColor("TextField.foreground"));
+        scrollPane.setViewportView(taNote);
+      }
+
+      {
+        JLabel lblPosterT = new TmmLabel(TmmResourceBundle.getString("mediafiletype.poster"));
+        detailsPanel.add(lblPosterT, "flowx,cell 3 0");
         detailsPanel.add(new TmmLabel(TmmResourceBundle.getString("mediafiletype.poster")), "cell 3 0");
 
         LinkLabel lblPosterSize = new LinkLabel();
@@ -204,7 +221,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
           }
         });
 
-        detailsPanel.add(lblPoster, "cell 3 1,grow");
+        detailsPanel.add(lblPoster, "cell 3 1 1 2,grow");
         lblPoster.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
             e -> setImageSizeAndCreateLink(lblPosterSize, lblPoster, btnDeletePoster, SEASON_POSTER));
       }
@@ -431,6 +448,7 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
 
       tvShowSeasonToEdit.setTitle(tfTitle.getText());
       tvShowSeasonToEdit.setPlot(taPlot.getText());
+      tvShowSeasonToEdit.setNote(taNote.getText());
 
       // process artwork
       processArtwork(SEASON_POSTER, lblPoster, tfPoster);

@@ -57,6 +57,7 @@ public class TvShowSeasonNfoParser {
   public String                     title               = "";
   public String                     sortTitle           = "";
   public String                     plot                = "";
+  public String                     userNote            = "";
 
   public List<String>               posters             = new ArrayList<>();
   public List<String>               banners             = new ArrayList<>();
@@ -93,6 +94,8 @@ public class TvShowSeasonNfoParser {
     parseTag(TvShowSeasonNfoParser::parseBanners);
     parseTag(TvShowSeasonNfoParser::parseThumbs);
     parseTag(TvShowSeasonNfoParser::parseFanarts);
+
+    parseTag(TvShowSeasonNfoParser::parseUserNote);
 
     // MUST BE THE LAST ONE!
     parseTag(TvShowSeasonNfoParser::findUnsupportedElements);
@@ -330,6 +333,19 @@ public class TvShowSeasonNfoParser {
   }
 
   /**
+   * the user note is usually in the user_note tag
+   */
+  private Void parseUserNote() {
+    supportedElements.add("user_note");
+
+    Element element = getSingleElement(root, "user_note");
+    if (element != null) {
+      userNote = element.ownText();
+    }
+    return null;
+  }
+
+  /**
    * find and store all unsupported tags
    */
   private Void findUnsupportedElements() {
@@ -363,6 +379,7 @@ public class TvShowSeasonNfoParser {
     TvShowSeason showSeason = new TvShowSeason(season);
     showSeason.setTitle(title);
     showSeason.setPlot(plot);
+    showSeason.setNote(userNote);
 
     if (!posters.isEmpty()) {
       showSeason.setArtworkUrl(posters.get(0), MediaFileType.POSTER);
