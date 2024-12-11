@@ -4,7 +4,7 @@ Version 5.1
 + [Movies] added a filter for trailer formats #2708
 + [Movies] display director in the movie information panel too
 + [Movies/TV shows] added an enhanced JMTE helper
-+ [Movies/TV shows] added an action to calculate checksums for video files #913
++ [Movies/TV shows] added an action to calculate CRC32 checksums for video files #913
 + [Movies/TV shows] added an option to prevent writing of trailer and fileinfo to the NFO
 + [Movie sets] added sorttitle for exporting into the NFO files #2742
 + [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
