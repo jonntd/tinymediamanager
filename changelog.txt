@@ -40,3 +40,4 @@ x [OpenSubtitles] use vip server for VIP users #2756
 x [KodiRPC] rework mapping of TMM<>Kodi videos
 x [YT-DLP] self updating and adhere SSL ignores
 x [PostProcessing] add double quoting for windows #2748
+x [HDR] do not add HDR10 when already being HDR10+ #2680
