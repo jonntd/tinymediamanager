@@ -913,6 +913,9 @@ public class TvShowRenamer {
       return;
     }
 
+    // store all episodes for this media file
+    List<TvShowEpisode> episodes = TvShowList.getTvEpisodesByFile(episode.getTvShow(), originalVideoMediaFile.getFile());
+
     // make sure we have actual stacking markers
     episode.reEvaluateStacking();
 
@@ -1154,13 +1157,8 @@ public class TvShowRenamer {
     }
 
     if (changeDetected) {
-      // update paths/mfs for the episode
-      List<TvShowEpisode> eps = new ArrayList<>();
-      eps.add(episode);
-
-      // if the files are multi EP files, change all other episodes too
-      eps.addAll(TvShowList.getTvEpisodesByFile(episode.getTvShow(), originalVideoMediaFile.getFile()));
-      for (TvShowEpisode e : eps) {
+      // update paths/mfs for all relevant episodes
+      for (TvShowEpisode e : episodes) {
         e.removeAllMediaFiles();
         e.addToMediaFiles(needed);
         e.setPath(episode.getPath());
