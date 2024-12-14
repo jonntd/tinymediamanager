@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -172,13 +173,16 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
     public void run() {
       try {
         // set up scrapers
+        ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         List<MediaArtwork> artwork = new ArrayList<>();
 
-        // scrape providers till one artwork has been found
-        for (MediaScraper artworkScraper : options.getArtworkScrapers()) {
+        // scrape providers till one artwork has been found (in parallel)
+        options.getArtworkScrapers().parallelStream().forEach(artworkScraper -> {
           ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
           try {
+            lock.writeLock().lock();
             artwork.addAll(artworkProvider.getArtwork(options));
+            lock.writeLock().unlock();
           }
           catch (MissingIdException ignored) {
             LOGGER.debug("no id found for scraper {}", artworkProvider.getProviderInfo());
@@ -191,7 +195,7 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             MessageManager.instance.pushMessage(
                 new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
           }
-        }
+        });
 
         // now set & download the artwork
         if (!artwork.isEmpty()) {
@@ -230,13 +234,16 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
     public void run() {
       try {
         // set up scrapers
+        ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         List<MediaArtwork> artwork = new ArrayList<>();
 
         // scrape providers till one artwork has been found
-        for (MediaScraper artworkScraper : options.getArtworkScrapers()) {
+        options.getArtworkScrapers().parallelStream().forEach(artworkScraper -> {
           ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
           try {
+            lock.writeLock().lock();
             artwork.addAll(artworkProvider.getArtwork(options));
+            lock.writeLock().unlock();
           }
           catch (MissingIdException ignored) {
             LOGGER.debug("no id found for scraper {}", artworkProvider.getProviderInfo());
@@ -249,7 +256,7 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             MessageManager.instance.pushMessage(
                 new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
           }
-        }
+        });
 
         // now set & download the artwork
         if (!artwork.isEmpty()) {
