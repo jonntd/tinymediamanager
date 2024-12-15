@@ -21,6 +21,7 @@ x [TV shows] fixed writing of ratings in NFO #2764
 x [TV shows] also export locked TV shows #2783
 x [TV shows] further tweak episode detection pattern #2785
 x [TV shows] fixed missing external subtitles for multi episode files #2792
+x [TV shows] fixed displaying of season files in renamer preview
 x [UDS/Scraper/JMTE] reworked title case converter
 x [UI] restructured settings dialog
 x [UI] reworked image chooser
