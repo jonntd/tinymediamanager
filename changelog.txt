@@ -14,6 +14,7 @@ Version 5.1
 + [UI] enabled removing of dummy episodes #2746
 + [Trakt.tv] able to remove only selected entries from Trakt
 + [Windows] switched to a newer library for showing file/folder picking dialogs #2772
++ [MediaInfo] able to read MediaInfo from dereferenced STRM files !492
 x [Movies/TV shows] do not overwrite metadata of unscraped movies/TV shows/episodes #2770
 x [TV shows] fixed editing of episode numbers
 x [TV shows] read mediainfo data for season artwork #2570

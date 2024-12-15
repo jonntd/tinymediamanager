@@ -17,9 +17,7 @@
 package org.tinymediamanager.core.mediainfo;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.FileReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -37,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.entities.MediaFile;
-import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.thirdparty.MediaInfo;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
 
@@ -152,9 +149,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
   }
 
   private Path dereferenceStreamFile(Path file) {
-    try {
-      final File openFile = new File(file.toUri());
-      final BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(openFile)));
+    try (FileReader fr = new FileReader(file.toFile()); BufferedReader br = new BufferedReader(fr)) {
       String readLine;
       while ((readLine = br.readLine()) != null) {
         readLine = readLine.strip();
@@ -169,7 +164,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
         break;
       }
 
-      if (readLine == null) {
+      if (readLine == null || readLine.isBlank()) {
         // Didn't find anything...
         return file;
       }
@@ -187,7 +182,8 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
 
       LOGGER.trace("Chasing relative stream reference: {} = {}/{}", file, path, readLine);
       return Paths.get(path, readLine);
-    } catch (Exception | Error e) {
+    }
+    catch (Exception | Error e) {
       LOGGER.error("Mediainfo could not read stream file: {} - {}", file, e.getMessage());
     }
 
@@ -200,8 +196,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
     }
 
     Path file = Paths.get(path, filename);
-
-    if (MediaSource.parseMediaSource(filename) == MediaSource.STREAM) {
+    if (filename.endsWith(".strm")) {
       // If this is a local-file stream, we should get media info from its target
       file = dereferenceStreamFile(file);
     }
