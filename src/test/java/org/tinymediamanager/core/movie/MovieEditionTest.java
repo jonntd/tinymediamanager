@@ -8,6 +8,7 @@ import static org.tinymediamanager.core.movie.MovieEdition.EXTENDED_EDITION;
 import static org.tinymediamanager.core.movie.MovieEdition.FINAL_CUT;
 import static org.tinymediamanager.core.movie.MovieEdition.IMAX;
 import static org.tinymediamanager.core.movie.MovieEdition.NONE;
+import static org.tinymediamanager.core.movie.MovieEdition.OPEN_MATTE;
 import static org.tinymediamanager.core.movie.MovieEdition.REMASTERED;
 import static org.tinymediamanager.core.movie.MovieEdition.SPECIAL_EDITION;
 import static org.tinymediamanager.core.movie.MovieEdition.THEATRICAL_EDITION;
@@ -52,6 +53,7 @@ public class MovieEditionTest extends BasicMovieTest {
     assertThat(parse("Creep.UNCUT.2004.AC3.HDTVRip.x264")).isEqualTo(UNCUT);
     assertThat(parse("Dragonball.Z.COMPLETE.Dutch.Dubbed.UNCUT.1989.ANiME.WS.DVDRiP.XviD")).isEqualTo(UNCUT);
     assertThat(parse("Rest Stop Dead Ahead 2006 UNCUT 720p BluRay H264 AAC-xxx")).isEqualTo(UNCUT);
+    assertThat(parse("Karate.Tiger.2.Raging.Thunder.UNCUT.OPEN.MATTE.1987.German.DL.1080p.BluRay.X264-MRW")).isEqualTo(UNCUT);
 
     // IMAX
     assertThat(parse("IMAX.Sharks.2004.BDRip.XviD-xyz")).isEqualTo(IMAX);
@@ -87,6 +89,10 @@ public class MovieEditionTest extends BasicMovieTest {
     assertThat(parse("some.movie name.1977.criterion.iNTERNAL.1080p.BluRay.x264-EwDp")).isEqualTo(CRITERION_COLLECTION);
     assertThat(parse("some.movie name.1977.criterion.edition-iNTERNAL.1080p.BluRay.x264-EwDp")).isEqualTo(CRITERION_COLLECTION);
     assertThat(parse("some.movie name.1977.criterion-collection-iNTERNAL.1080p.BluRay.x264-EwDp")).isEqualTo(CRITERION_COLLECTION);
+
+    // OPEN MATTE
+    assertThat(parse("The.Hitcher.2007.Open.Matte.German.EAC3.DL.1080p.BluRay.x265-VECTOR")).isEqualTo(OPEN_MATTE);
+    assertThat(parse("Blade.Runner.2049.2017.Hybrid.Open.Matte.German.Dubbed.DL.1080p.WEB.x264-QfG")).isEqualTo(OPEN_MATTE);
 
     // NORMAL
     assertThat(parse("Boomerang.1992.Incl.Directors.Commentary.DVDRip.x264-xyz")).isEqualTo(NONE);

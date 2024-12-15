@@ -18,6 +18,7 @@ package org.tinymediamanager.core.movie;
 import java.text.RuleBasedCollator;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,6 +59,8 @@ public class MovieEdition extends DynaEnum<MovieEdition> {
       ".Special.(Cut|Edition|Version)");
   public static final MovieEdition              CRITERION_COLLECTION = new MovieEdition("CRITERION_COLLECTION", 12, "Criterion Collection",
       ".Criterion.(Collection|Edition)?");
+  public static final MovieEdition              OPEN_MATTE           = new MovieEdition("OPEN_MATTE", 13, "Open Matte",
+      ".Open.Matte.(Cut|Edition|Version)?");
 
   private static final Pattern                  FILENAME_PATTERN     = Pattern.compile("\\{edition\\-(.*?)\\}", Pattern.CASE_INSENSITIVE);
   private final String                          title;
@@ -109,8 +112,12 @@ public class MovieEdition extends DynaEnum<MovieEdition> {
    * @return the found edition
    */
   public static MovieEdition getMovieEditionFromString(String name) {
+    // sort editions by ordinal
+    List<MovieEdition> editions = Arrays.asList(values(MovieEdition.class)); // avoid sorting via text
+    editions.sort(Comparator.comparingInt(o -> o.ordinal));
+
     // split checks for performance
-    for (MovieEdition edition : values()) {
+    for (MovieEdition edition : editions) {
       // check if the "enum" name matches
       if (edition.name().equals(name)) {
         return edition;
@@ -118,14 +125,14 @@ public class MovieEdition extends DynaEnum<MovieEdition> {
     }
 
     // check if the printable name matches
-    for (MovieEdition edition : values()) {
+    for (MovieEdition edition : editions) {
       if (edition.title.equalsIgnoreCase(name)) {
         return edition;
       }
     }
 
     // check if any regular expression matches
-    for (MovieEdition edition : values()) {
+    for (MovieEdition edition : editions) {
       if (edition.pattern != null) {
         Matcher matcher = edition.pattern.matcher(name);
         if (matcher.find()) {
