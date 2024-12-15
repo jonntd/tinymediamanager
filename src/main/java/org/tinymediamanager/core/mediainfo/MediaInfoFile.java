@@ -16,6 +16,10 @@
 
 package org.tinymediamanager.core.mediainfo;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -33,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.thirdparty.MediaInfo;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
 
@@ -146,11 +151,61 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
     this.contents = contents;
   }
 
+  private Path dereferenceStreamFile(Path file) {
+    try {
+      final File openFile = new File(file.toUri());
+      final BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(openFile)));
+      String readLine;
+      while ((readLine = br.readLine()) != null) {
+        readLine = readLine.strip();
+        if (readLine.startsWith("#")) {
+          // comment/property line
+          continue;
+        }
+        if (readLine.isEmpty()) {
+          // empty line
+          continue;
+        }
+        break;
+      }
+
+      if (readLine == null) {
+        // Didn't find anything...
+        return file;
+      }
+
+      // referenced path is now in readLine
+      if (readLine.contains("://")) {
+        // This has a protocol in it, so it's not something we should go trying to open directly
+        return file;
+      }
+
+      if (readLine.startsWith("/") || readLine.startsWith("\\")) {
+        LOGGER.trace("Chasing absolute stream reference: {} = {}", file, readLine);
+        return Paths.get(readLine);
+      }
+
+      LOGGER.trace("Chasing relative stream reference: {} = {}/{}", file, path, readLine);
+      return Paths.get(path, readLine);
+    } catch (Exception | Error e) {
+      LOGGER.error("Mediainfo could not read stream file: {} - {}", file, e.getMessage());
+    }
+
+    return file;
+  }
+
   public void gatherMediaInformation() {
     if (snapshot != null) {
       return; // already gathered
     }
+
     Path file = Paths.get(path, filename);
+
+    if (MediaSource.parseMediaSource(filename) == MediaSource.STREAM) {
+      // If this is a local-file stream, we should get media info from its target
+      file = dereferenceStreamFile(file);
+    }
+
     try (MediaInfo mediaInfo = new MediaInfo()) {
       if (!mediaInfo.open(file)) {
         LOGGER.error("Mediainfo could not open file: {}", file);
