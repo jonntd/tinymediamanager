@@ -18,8 +18,11 @@ package org.tinymediamanager.core.tvshow;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -439,5 +442,44 @@ public class TvShowHelpers {
       case DUMMY_NOT_AIRED -> TvShowModuleManager.getInstance().getSettings().isDisplayMissingNotAired();
       default -> false;
     };
+  }
+
+  /**
+   * Mix in the dummy episodes according to the settings - mainly for displaying, but also used in other areas
+   * 
+   * @param existingEpisodes
+   *          all existing {@link TvShowEpisode}s
+   * @param dummyEpisodes
+   *          all available dummy {@link TvShowEpisode}s
+   * @return a {@link List} containing all existing and all to mix in dummies
+   */
+  public static List<TvShowEpisode> getEpisodesForDisplay(List<TvShowEpisode> existingEpisodes, List<TvShowEpisode> dummyEpisodes) {
+    List<TvShowEpisode> episodes = new ArrayList<>(existingEpisodes);
+
+    // mix in unavailable episodes if the user wants to
+    if (TvShowModuleManager.getInstance().getSettings().isDisplayMissingEpisodes()) {
+      // build up a set which holds a string representing the S/E indicator
+      Set<String> availableEpisodes = new HashSet<>();
+
+      for (TvShowEpisode episode : episodes) {
+        if (episode.getSeason() > -1 && episode.getEpisode() > -1) {
+          availableEpisodes.add("A" + episode.getSeason() + "." + episode.getEpisode());
+        }
+      }
+
+      // and now mix in unavailable ones
+      for (TvShowEpisode episode : dummyEpisodes) {
+        if (!TvShowHelpers.shouldAddDummyEpisode(episode)) {
+          continue;
+        }
+
+        if (!availableEpisodes.contains("A" + episode.getSeason() + "." + episode.getEpisode())) {
+          episodes.add(episode);
+        }
+      }
+    }
+
+    episodes.sort(Comparator.comparingInt(TvShowEpisode::getEpisode));
+    return episodes;
   }
 }

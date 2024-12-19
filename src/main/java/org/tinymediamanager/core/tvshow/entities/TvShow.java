@@ -57,7 +57,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -716,32 +715,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    * @return a list of _all_ episodes
    */
   public List<TvShowEpisode> getEpisodesForDisplay() {
-    List<TvShowEpisode> episodes = new ArrayList<>(getEpisodes());
-
-    // mix in unavailable episodes if the user wants to
-    if (TvShowModuleManager.getInstance().getSettings().isDisplayMissingEpisodes()) {
-      // build up a set which holds a string representing the S/E indicator
-      Set<String> availableEpisodes = new HashSet<>();
-
-      for (TvShowEpisode episode : episodes) {
-        if (episode.getSeason() > -1 && episode.getEpisode() > -1) {
-          availableEpisodes.add("A" + episode.getSeason() + "." + episode.getEpisode());
-        }
-      }
-
-      // and now mix in unavailable ones
-      for (TvShowEpisode episode : getDummyEpisodes()) {
-        if (!TvShowHelpers.shouldAddDummyEpisode(episode)) {
-          continue;
-        }
-
-        if (!availableEpisodes.contains("A" + episode.getSeason() + "." + episode.getEpisode())) {
-          episodes.add(episode);
-        }
-      }
-    }
-
-    return episodes;
+    return TvShowHelpers.getEpisodesForDisplay(episodes, dummyEpisodes);
   }
 
   /**
@@ -779,6 +753,11 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    */
   public int getDummyEpisodeCount() {
     int count = 0;
+
+    if (!TvShowModuleManager.getInstance().getSettings().isDisplayMissingEpisodes()) {
+      return count;
+    }
+
     for (TvShowSeason season : seasons) {
       for (TvShowEpisode episode : season.getEpisodesForDisplay()) {
         if (episode.isDummy()) {
