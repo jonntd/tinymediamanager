@@ -16,11 +16,12 @@
 package org.tinymediamanager.core.tvshow.tasks;
 
 import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
 import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
 import static java.nio.file.FileVisitResult.TERMINATE;
 import static org.tinymediamanager.core.Utils.DISC_FOLDER_REGEX;
 import static org.tinymediamanager.core.Utils.SEASON_NFO_PATTERN;
-import static org.tinymediamanager.core.Utils.containsSkipFile;
+import static org.tinymediamanager.core.Utils.SKIP_FILES;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -35,10 +36,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
@@ -50,6 +54,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.time.StopWatch;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractFileVisitor;
@@ -85,6 +90,7 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
@@ -758,7 +764,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         return "";
       }
 
-      Set<Path> allFiles = getAllFilesRecursive(showDir, Integer.MAX_VALUE);
+      Set<Path> allFiles = getAllFilesRecursive(showDir);
       if (allFiles == null || allFiles.isEmpty()) {
         LOGGER.info("skip empty directory: {}", showDir);
         return "";
@@ -1480,51 +1486,27 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
 
     /**
-     * returns all MFs NOT matching specified type
-     *
-     * @param mfs
-     *          array to search
-     * @param types
-     *          MF types to exclude
-     * @return list of matching MFs
-     */
-    private List<MediaFile> getMediaFilesExceptType(List<MediaFile> mfs, MediaFileType... types) {
-      List<MediaFile> mf = new ArrayList<>();
-      for (MediaFile mediaFile : mfs) {
-        boolean match = false;
-        for (MediaFileType type : types) {
-          if (mediaFile.getType().equals(type)) {
-            match = true;
-          }
-        }
-        if (!match) {
-          mf.add(new MediaFile(mediaFile));
-        }
-      }
-      return mf;
-    }
-
-    /**
      * gets all files recursive
      * 
      * @param path
      *          the folder to search for
-     * @param deep
-     *          how much levels to search for
      * @return a {@link Set} of all found {@link Path}s
      */
-    private Set<Path> getAllFilesRecursive(Path path, int deep) {
+    private Set<Path> getAllFilesRecursive(Path path) {
       Path folder = path.toAbsolutePath();
       AllFilesRecursive visitor = new AllFilesRecursive();
       try {
-        Files.walkFileTree(folder, EnumSet.of(FileVisitOption.FOLLOW_LINKS), deep, visitor);
+        Files.walkFileTree(folder, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
       }
       catch (IOException e) {
         // can not happen, since we've overridden visitFileFailed, which throws no exception ;)
       }
-      return visitor.fFound;
-    }
 
+      List<Path> filesFound = new ArrayList<>();
+      visitor.filesPerDir.forEach((key, value) -> filesFound.addAll(value));
+
+      return new TreeSet<>(filesFound);
+    }
   }
 
   @Override
@@ -1614,13 +1596,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private List<Path> listFilesAndDirs2(Path directory) {
     List<Path> fileNames = new ArrayList<>();
     try (Stream<Path> directoryStream = Files.walk(directory, 1, FileVisitOption.FOLLOW_LINKS)) {
-      List<Path> allElements = directoryStream.filter(Files::isDirectory).collect(Collectors.toList());
+      List<Path> allElements = directoryStream.filter(Files::isDirectory).toList();
       for (Path path : allElements) {
         if (directory.toAbsolutePath().equals(path.toAbsolutePath())) {
           continue;
         }
         String fn = path.getFileName().toString().toUpperCase(Locale.ROOT);
-        if (!SKIP_FOLDERS.contains(fn) && !fn.matches(SKIP_REGEX) && !skipFolders.contains(path.toFile().getAbsolutePath())) {
+        if (!SKIP_FOLDERS.contains(fn) && !fn.matches(SKIP_REGEX) && !isInSkipFolder(path)) {
           fileNames.add(path.toAbsolutePath());
         }
         else {
@@ -1639,44 +1621,57 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private class AllFilesRecursive extends AbstractFileVisitor {
-    private final Set<Path> fFound = new HashSet<>();
+    private final Map<Path, List<Path>> filesPerDir = new HashMap<>();
 
+    @NotNull
     @Override
-    public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
+    public FileVisitResult visitFile(Path file, @NotNull BasicFileAttributes attr) {
       if (cancel) {
         return TERMINATE;
       }
-
-      incVisFile();
 
       if (file.getFileName() == null) {
         return CONTINUE;
       }
 
       try {
-
         String filename = file.getFileName().toString();
+        Path parent = file.getParent();
+
+        List<Path> filesInCurrentDir = filesPerDir.get(parent);
+
+        // abort if one of the skip files is found
+        if (SKIP_FILES.contains(filename)) {
+          filesInCurrentDir.add(file.toAbsolutePath());
+          return SKIP_SIBLINGS;
+        }
+
+        incVisFile();
+
         String path = "";
-        if (file.getParent() != null && file.getParent().getFileName() != null) {
-          path = file.getParent().getFileName().toString();
+        if (parent != null && parent.getFileName() != null) {
+          path = parent.getFileName().toString();
         }
 
         // in a disc folder we only accept NFO files
         if (Utils.isRegularFile(attr) && path.matches(DISC_FOLDER_REGEX)) {
           if (FilenameUtils.getExtension(filename).equalsIgnoreCase("nfo")) {
-            fFound.add(file.toAbsolutePath());
+            filesInCurrentDir.add(file.toAbsolutePath());
+            // fFound.add(file.toAbsolutePath());
           }
           return CONTINUE;
         }
 
         // check if we're in dirty disc folder
         if (MediaFileHelper.isMainDiscIdentifierFile(filename)) {
-          fFound.add(file.toAbsolutePath());
+          filesInCurrentDir.add(file.toAbsolutePath());
+          // fFound.add(file.toAbsolutePath());
           return CONTINUE;
         }
 
         if (Utils.isRegularFile(attr) && !filename.matches(SKIP_REGEX)) {
-          fFound.add(file.toAbsolutePath());
+          filesInCurrentDir.add(file.toAbsolutePath());
+          // fFound.add(file.toAbsolutePath());
           return CONTINUE;
         }
       }
@@ -1687,24 +1682,28 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       return CONTINUE;
     }
 
+    @NotNull
     @Override
-    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+    public FileVisitResult preVisitDirectory(Path dir, @NotNull BasicFileAttributes attrs) {
       if (cancel) {
         return TERMINATE;
       }
 
       incPreDir();
 
+      filesPerDir.put(dir, new ArrayList<>());
+
       try {
         // getFilename returns null on DS root!
-        if (dir.getFileName() != null && (isInSkipFolder(dir) || containsSkipFile(dir))) {
+        if (dir.getFileName() != null && isInSkipFolder(dir)) {// || containsSkipFile(dir))) {
           LOGGER.debug("Skipping dir: {}", dir);
           return SKIP_SUBTREE;
         }
 
         // add the disc folder itself (clean disc folder)
         if (dir.getFileName() != null && dir.getFileName().toString().matches(DISC_FOLDER_REGEX)) {
-          fFound.add(dir.toAbsolutePath());
+          filesPerDir.get(dir).add(dir);
+          // fFound.add(dir.toAbsolutePath());
           return CONTINUE;
         }
 
@@ -1720,10 +1719,33 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       return CONTINUE;
     }
 
+    @NotNull
     @Override
     public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
       if (cancel) {
         return TERMINATE;
+      }
+
+      List<Path> filesInCurrentDir = filesPerDir.get(dir);
+      boolean skipFound = false;
+
+      // check if any skip file has been found
+      for (Path file : ListUtils.nullSafe(filesInCurrentDir)) {
+        if (SKIP_FILES.contains(file.getFileName().toString())) {
+          // skip file found -> do not add this folder or any children
+          skipFound = true;
+          break;
+        }
+      }
+
+      if (skipFound) {
+        // as skip file has been found -> remove this folder and all children from the found files
+        Set<Path> keys = new TreeSet<>(filesPerDir.keySet());
+        for (Path key : keys) {
+          if (key.startsWith(dir)) {
+            filesPerDir.remove(key);
+          }
+        }
       }
 
       incPostDir();

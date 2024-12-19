@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,14 +42,16 @@ public abstract class AbstractFileVisitor implements FileVisitor<Path> {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractFileVisitor.class);
 
   // copied the implementation from the class {@link java.nio.file.SimpleFileVisitor}
+  @NotNull
   @Override
-  public FileVisitResult preVisitDirectory(Path var1, BasicFileAttributes var2) throws IOException {
+  public FileVisitResult preVisitDirectory(Path var1, @NotNull BasicFileAttributes var2) throws IOException {
     Objects.requireNonNull(var1);
     Objects.requireNonNull(var2);
     return FileVisitResult.CONTINUE;
   }
 
   // copied the implementation from the class {@link java.nio.file.SimpleFileVisitor}
+  @NotNull
   public FileVisitResult postVisitDirectory(Path var1, IOException var2) throws IOException {
     Objects.requireNonNull(var1);
     if (var2 != null) {
@@ -61,8 +64,9 @@ public abstract class AbstractFileVisitor implements FileVisitor<Path> {
 
   // If there is some error accessing the file, let the user know.
   // If you don't override this method and an error occurs, an IOException is thrown.
+  @NotNull
   @Override
-  public FileVisitResult visitFileFailed(Path path, IOException e) {
+  public FileVisitResult visitFileFailed(Path path, @NotNull IOException e) {
     if (e instanceof FileSystemLoopException) {
       LOGGER.trace("FileSystemLoopException detected: {}", path);
       LOGGER.trace("Problematic path: {} - isDir: {} - isFile: {}", path, path.toFile().isDirectory(), path.toFile().isFile());

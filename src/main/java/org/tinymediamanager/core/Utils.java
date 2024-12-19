@@ -60,6 +60,7 @@ import java.text.SimpleDateFormat;
 import java.text.StringCharacterIterator;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -146,6 +147,7 @@ public class Utils {
 
   public static final Pattern       SEASON_NFO_PATTERN          = Pattern.compile("^season(\\d{2,}|\\-specials)?\\.nfo$", Pattern.CASE_INSENSITIVE);
   public static final String        DISC_FOLDER_REGEX           = "(?i)(VIDEO_TS|BDMV|HVDVD_TS)$";
+  public static final List<String>  SKIP_FILES                  = Arrays.asList(".tmmignore", "tmmignore", ".nomedia");
 
   private static final List<Locale> AVAILABLE_LOCALES           = new ArrayList<>();
 
@@ -2229,6 +2231,7 @@ public class Utils {
    *          the folder to check
    * @return true/false
    */
+  @Deprecated
   public static boolean containsSkipFile(Path dir) {
     return Files.exists(dir.resolve(".tmmignore")) || Files.exists(dir.resolve("tmmignore")) || Files.exists(dir.resolve(".nomedia"));
   }
