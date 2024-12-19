@@ -126,8 +126,8 @@ public class MediaFileInformationFetcherTask implements Runnable {
         mediaEntity.firePropertyChange("hasSubtitles", false, true);
       }
 
-      // add the -mediainfo.xml if it has been written
-      if (Settings.getInstance().isWriteMediaInfoXml()) {
+      // add the -mediainfo.xml if it has been written (only for video files)
+      if (Settings.getInstance().isWriteMediaInfoXml() && mediaFile.isVideo()) {
         Path xmlFile = Paths.get(mediaFile.getPath(), FilenameUtils.getBaseName(mediaFile.getFilename()) + "-mediainfo.xml");
         if (Files.exists(xmlFile)) {
           MediaFile xmlMf = new MediaFile(xmlFile);

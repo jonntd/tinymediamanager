@@ -771,11 +771,31 @@ public class MediaFileHelper {
    * @return true if the filesize changed, false otherwise
    */
   public static boolean gatherFileInformation(MediaFile mediaFile) {
+    return gatherFileInformation(mediaFile, null);
+  }
+
+  /**
+   * gather basic file information like file size, creation date and last modified date
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to gather the information for
+   * @param basicFileAttributes
+   *          offer already read {@link BasicFileAttributes} instead of querying from the filesystem again
+   * @return true if the filesize changed, false otherwise
+   */
+  public static boolean gatherFileInformation(MediaFile mediaFile, BasicFileAttributes basicFileAttributes) {
     boolean dirty = false;
 
     // get basic infos; file size, creation date and last modified
     try {
-      BasicFileAttributes view = Files.readAttributes(mediaFile.getFileAsPath(), BasicFileAttributes.class);
+      BasicFileAttributes view;
+      if (basicFileAttributes != null) {
+        view = basicFileAttributes;
+      }
+      else {
+        view = Files.readAttributes(mediaFile.getFileAsPath(), BasicFileAttributes.class);
+      }
+
       if (view.creationTime().toMillis() > 100000) {
         Date creDat = new Date(view.creationTime().toMillis());
         mediaFile.setDateCreated(creDat);

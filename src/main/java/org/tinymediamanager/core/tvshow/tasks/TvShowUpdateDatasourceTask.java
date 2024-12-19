@@ -106,25 +106,26 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
  */
 
 public class TvShowUpdateDatasourceTask extends TmmThreadPool {
-  private static final Logger          LOGGER        = LoggerFactory.getLogger(TvShowUpdateDatasourceTask.class);
+  private static final Logger                  LOGGER         = LoggerFactory.getLogger(TvShowUpdateDatasourceTask.class);
 
   // skip well-known, but unneeded folders (UPPERCASE)
-  private static final List<String>    SKIP_FOLDERS  = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
+  private static final List<String>            SKIP_FOLDERS   = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
       "SYSTEM VOLUME INFORMATION", "@EADIR", "ADV_OBJ", "EXTRATHUMB", "PLEX VERSIONS");
 
   // skip folders starting with a SINGLE "." or "._"
-  private static final String          SKIP_REGEX    = "^[.][\\w@]+.*";
+  private static final String                  SKIP_REGEX     = "^[.][\\w@]+.*";
 
-  private static long                  preDir        = 0;
-  private static long                  postDir       = 0;
-  private static long                  visFile       = 0;
+  private static long                          preDir         = 0;
+  private static long                          postDir        = 0;
+  private static long                          visFile        = 0;
 
-  private final List<String>           dataSources   = new ArrayList<>();
-  private final List<Pattern>          skipFolders   = new ArrayList<>();
-  private final List<TvShow>           showsToUpdate = new ArrayList<>();
-  private final TvShowList             tvShowList;
-  private final Set<Path>              filesFound    = new HashSet<>();
-  private final ReentrantReadWriteLock fileLock      = new ReentrantReadWriteLock();
+  private final List<String>                   dataSources    = new ArrayList<>();
+  private final List<Pattern>                  skipFolders    = new ArrayList<>();
+  private final List<TvShow>                   showsToUpdate  = new ArrayList<>();
+  private final TvShowList                     tvShowList;
+  private final Set<Path>                      filesFound     = new HashSet<>();
+  private final Map<Path, BasicFileAttributes> fileAttributes = new HashMap<>();
+  private final ReentrantReadWriteLock         fileLock       = new ReentrantReadWriteLock();
 
   /**
    * Instantiates a new scrape task - to update all datasources
@@ -438,10 +439,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       LOGGER.info("getting Mediainfo...");
 
-      initThreadPool(1, "mediainfo");
+      initThreadPool(2, "mediainfo");
       setTaskName(TmmResourceBundle.getString("update.mediainfo"));
       setTaskDescription(null);
+      setWorkUnits(0);
       setProgressDone(0);
+      publishState();
+
       // gather MediaInformation for ALL shows - TBD
       if (!cancel) {
         if (showsToUpdate.isEmpty()) {
@@ -513,14 +517,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.cleanup"));
     setTaskDescription(null);
     setProgressDone(0);
-    setWorkUnits(0);
+
+    int showCount = shows.size();
+    setWorkUnits(showCount);
     publishState();
 
     LOGGER.info("removing orphaned movies/files...");
-    for (int i = shows.size() - 1; i >= 0; i--) {
+    for (int i = showCount - 1; i >= 0; i--) {
       if (cancel) {
         break;
       }
+
+      publishState(showCount - i);
+
       TvShow tvShow = shows.get(i);
 
       // do not process locked TV shows (because filesFound has not been filled for them)
@@ -541,14 +550,20 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.cleanup"));
     setTaskDescription(null);
     setProgressDone(0);
-    setWorkUnits(0);
+
+    int showCount = tvShowList.getTvShows().size();
+    setWorkUnits(showCount);
     publishState();
+
     LOGGER.info("removing orphaned tv shows/files...");
 
-    for (int i = tvShowList.getTvShows().size() - 1; i >= 0; i--) {
+    for (int i = showCount - 1; i >= 0; i--) {
       if (cancel) {
         break;
       }
+
+      publishState(showCount - i);
+
       TvShow tvShow = tvShowList.getTvShows().get(i);
 
       // check only TV shows matching datasource
@@ -662,7 +677,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
       else {
         // // did the file dates/size change?
-        if (MediaFileHelper.gatherFileInformation(mf)) {
+        if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
           // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
           tvShow.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
             Utils.deleteFileSafely(mediaFile.getFileAsPath());
@@ -681,7 +696,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
         else {
           // // did the file dates/size change?
-          if (MediaFileHelper.gatherFileInformation(mf)) {
+          if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
             // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
             season.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
               Utils.deleteFileSafely(mediaFile.getFileAsPath());
@@ -701,7 +716,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
         else {
           // at least update the file dates
-          if (MediaFileHelper.gatherFileInformation(mf)) {
+          if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
             // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
             episode.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
               Utils.deleteFileSafely(mediaFile.getFileAsPath());
@@ -1621,7 +1636,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private class AllFilesRecursive extends AbstractFileVisitor {
-    private final Map<Path, List<Path>> filesPerDir = new HashMap<>();
+    final Map<Path, List<Path>> filesPerDir = new HashMap<>();
 
     @NotNull
     @Override
@@ -1633,6 +1648,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       if (file.getFileName() == null) {
         return CONTINUE;
       }
+
+      fileLock.writeLock().lock();
+      fileAttributes.put(file, attr);
+      fileLock.writeLock().unlock();
 
       try {
         String filename = file.getFileName().toString();
