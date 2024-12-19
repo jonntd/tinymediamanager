@@ -714,9 +714,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * @author Manuel Laggner
    */
   private class FindTvShowTask implements Callable<Object> {
-    private final Path showDir;
-    private final Path datasource;
-    private final long uniqueId;
+    private final Path          showDir;
+    private final Path          datasource;
+    private final long          uniqueId;
+    private final List<Pattern> extraMfFiletypePatterns;
 
     /**
      * Instantiates a new find tv show task.
@@ -730,6 +731,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       this.showDir = showDir;
       this.datasource = datasource;
       this.uniqueId = TmmTaskManager.getInstance().GLOB_THRD_CNT.incrementAndGet();
+
+      this.extraMfFiletypePatterns = new ArrayList<>();
+      for (String extr : MediaFileHelper.EXTRA_FOLDERS) {
+        this.extraMfFiletypePatterns.add(Pattern.compile("(?i)[_.-]" + extr + "\\d?[.].{2,4}"));
+      }
     }
 
     @Override
@@ -1403,16 +1409,23 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
      * also remove named extra files like '*-behinthescenes'
      *
      * @param mf
-     * @return
+     *          the {@link MediaFile} to be inspected
+     * @return the filename w/o file type in its name
      */
     private String getMediaFileNameWithoutType(MediaFile mf) {
       String ret = mf.getFilename();
-      // does not work for extrafanarts/landscape - but thats mostly not used on episode level
-      ret = ret.replaceFirst("(?i)[_.-]" + mf.getType() + "[.]" + mf.getExtension(), "." + mf.getExtension());
+      String ext = mf.getExtension();
 
-      for (String extr : MediaFileHelper.EXTRA_FOLDERS) {
-        ret = ret.replaceFirst("(?i)[_.-]" + extr + "\\d?[.]" + mf.getExtension(), "." + mf.getExtension());
+      // do not use regexp here since they are extremely expensive
+      ret = StringUtils.replaceIgnoreCase(ret, "-" + mf.getType() + "." + ext, "." + ext);
+      ret = StringUtils.replaceIgnoreCase(ret, "." + mf.getType() + "." + ext, "." + ext);
+      ret = StringUtils.replaceIgnoreCase(ret, "_" + mf.getType() + "." + ext, "." + ext);
+
+      // does not work for extrafanarts/landscape - but that's mostly not used on episode level
+      for (Pattern pattern : extraMfFiletypePatterns) {
+        ret = pattern.matcher(ret).replaceFirst("." + ext);
       }
+
       return ret;
     }
 
