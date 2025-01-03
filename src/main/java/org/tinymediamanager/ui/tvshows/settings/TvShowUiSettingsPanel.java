@@ -70,8 +70,8 @@ import org.tinymediamanager.ui.components.JHintCheckBox;
 import org.tinymediamanager.ui.components.JHintLabel;
 import org.tinymediamanager.ui.components.SquareIconButton;
 import org.tinymediamanager.ui.components.TmmLabel;
-import org.tinymediamanager.ui.components.combobox.AutoCompleteSupport;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -173,7 +173,7 @@ class TvShowUiSettingsPanel extends JPanel {
 
         // set text combobox text input to ""
         if (editorComponent instanceof JTextField) {
-          AutoCompleteSupport<String> autoCompleteSupport = cbRating.getAutoCompleteSupport();
+          AutocompleteSupport<String> autoCompleteSupport = cbRating.getAutoCompleteSupport();
           autoCompleteSupport.setFirstItem(null);
           cbRating.setSelectedIndex(0);
           autoCompleteSupport.removeFirstItem();

@@ -111,8 +111,8 @@ import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.TmmObligatoryTextArea;
 import org.tinymediamanager.ui.components.TmmRoundTextArea;
 import org.tinymediamanager.ui.components.TmmTabbedPane;
-import org.tinymediamanager.ui.components.combobox.AutoCompleteSupport;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 import org.tinymediamanager.ui.components.datepicker.DatePicker;
 import org.tinymediamanager.ui.components.datepicker.YearSpinner;
 import org.tinymediamanager.ui.components.table.TmmTable;
@@ -169,7 +169,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
   private JTextArea                                tfProductionCompanies;
   private JList<MediaGenres>                       listGenres;
   private AutocompleteComboBox                     cbGenres;
-  private AutoCompleteSupport                      cbGenresAutoCompleteSupport;
   private JSpinner                                 spRating;
   private JComboBox<MediaCertification>            cbCertification;
   private JCheckBox                                cbWatched;
@@ -179,7 +178,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
   private JCheckBox                                chckbxVideo3D;
 
   private AutocompleteComboBox                     cbTags;
-  private AutoCompleteSupport<String>              cbTagsAutoCompleteSupport;
   private JList<String>                            listTags;
   private JList<String>                            listShowlink;
   private JSpinner                                 spDateAdded;
@@ -740,7 +738,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         scrollPaneGenres.setViewportView(listGenres);
 
         cbGenres = new AutocompleteComboBox(MediaGenres.values());
-        cbGenresAutoCompleteSupport = cbGenres.getAutoCompleteSupport();
         InputMap im = cbGenres.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbGenres.getActionMap().put(enterAction, new AddGenreAction());
@@ -773,7 +770,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         scrollPaneTags.setViewportView(listTags);
 
         cbTags = new AutocompleteComboBox<>(movieList.getTagsInMovies());
-        cbTagsAutoCompleteSupport = cbTags.getAutoCompleteSupport();
         InputMap im = cbTags.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbTags.getActionMap().put(enterAction, new AddTagAction());
@@ -1671,7 +1667,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       MediaGenres newGenre = null;
       Object item = cbGenres.getSelectedItem();
 
-      // check, if text is selected (from auto completion), in this case we just
+      // check, if text is selected (from autocompletion), in this case we just
       // remove the selection
       Component editorComponent = cbGenres.getEditor().getEditorComponent();
       if (editorComponent instanceof JTextField textField) {
@@ -1700,9 +1696,10 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
         // set text combobox text input to ""
         if (editorComponent instanceof JTextField) {
-          cbGenresAutoCompleteSupport.setFirstItem(null);
+          AutocompleteSupport autoCompleteSupport = cbGenres.getAutoCompleteSupport();
+          autoCompleteSupport.setFirstItem(null);
           cbGenres.setSelectedIndex(0);
-          cbGenresAutoCompleteSupport.removeFirstItem();
+          autoCompleteSupport.removeFirstItem();
         }
       }
     }
@@ -1806,7 +1803,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         return;
       }
 
-      // check, if text is selected (from auto completion), in this case we just
+      // check, if text is selected (from autocompletion), in this case we just
       // remove the selection
       Component editorComponent = cbTags.getEditor().getEditorComponent();
       if (editorComponent instanceof JTextField tf) {
@@ -1825,9 +1822,10 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
         // set text combobox text input to ""
         if (editorComponent instanceof JTextField) {
-          cbTagsAutoCompleteSupport.setFirstItem(null);
+          AutocompleteSupport<String> cbTagsAutocompleteSupport = cbTags.getAutoCompleteSupport();
+          cbTagsAutocompleteSupport.setFirstItem(null);
           cbTags.setSelectedIndex(0);
-          cbTagsAutoCompleteSupport.removeFirstItem();
+          cbTagsAutocompleteSupport.removeFirstItem();
         }
       }
     }

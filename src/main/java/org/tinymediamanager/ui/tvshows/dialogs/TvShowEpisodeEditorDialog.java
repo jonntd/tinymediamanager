@@ -111,8 +111,8 @@ import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.TmmObligatoryTextArea;
 import org.tinymediamanager.ui.components.TmmRoundTextArea;
 import org.tinymediamanager.ui.components.TmmTabbedPane;
-import org.tinymediamanager.ui.components.combobox.AutoCompleteSupport;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 import org.tinymediamanager.ui.components.combobox.MediaScraperComboBox;
 import org.tinymediamanager.ui.components.datepicker.DatePicker;
 import org.tinymediamanager.ui.components.table.TmmTable;
@@ -162,7 +162,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
   private ImageLabel                                 lblThumb;
   private JTextArea                                  taPlot;
   private AutocompleteComboBox<String>               cbTags;
-  private AutoCompleteSupport<String>                cbTagsAutoCompleteSupport;
+  private AutocompleteSupport<String>                cbTagsAutocompleteSupport;
   private JList<String>                              listTags;
   private AutocompleteComboBox<MediaSource>          cbMediaSource;
   private AutocompleteComboBox<TvShowEpisodeEdition> cbEdition;
@@ -513,7 +513,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
         cbTags = new AutocompleteComboBox<>(tvShowList.getTagsInEpisodes());
         cbTags.setEditable(true);
-        cbTagsAutoCompleteSupport = cbTags.getAutoCompleteSupport();
+        cbTagsAutocompleteSupport = cbTags.getAutoCompleteSupport();
         details2Panel.add(cbTags, "cell 1 5 3 1,growx");
 
         InputMap im = cbTags.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
@@ -1262,9 +1262,9 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
         // set text combobox text input to ""
         if (editorComponent instanceof JTextField) {
-          cbTagsAutoCompleteSupport.setFirstItem("");
+          cbTagsAutocompleteSupport.setFirstItem("");
           cbTags.setSelectedIndex(0);
-          cbTagsAutoCompleteSupport.removeFirstItem();
+          cbTagsAutocompleteSupport.removeFirstItem();
         }
       }
     }
