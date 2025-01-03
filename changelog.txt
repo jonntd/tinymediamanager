@@ -1,5 +1,6 @@
 Version 5.1.1
 =======================
+x [TVDB] fixed scraping of episode original title #2810
 
 
 Version 5.1

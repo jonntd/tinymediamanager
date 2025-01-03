@@ -789,6 +789,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
             episode.setId(getProviderInfo().getId(), ep.id);
             episode.setEpisodeNumber(episodeGroup, ep.seasonNumber, ep.episodeNumber);
             episode.setTitle(ep.name);
+            episode.setOriginalTitle(ep.originalName);
             episode.setPlot(ep.overview);
             episode.setRuntime(ep.runtime);
 
