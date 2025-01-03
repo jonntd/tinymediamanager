@@ -1,5 +1,6 @@
 Version 5.1.1
 =======================
+x [Movies/TV shows] always write playcount = 0 to the NFO when the movie/episode is not watched
 x [TVDB] fixed scraping of episode original title #2810
 
 
