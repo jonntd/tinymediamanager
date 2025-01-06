@@ -235,6 +235,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
 
     for (MMDirector d : fd.directors) {
       Person cm = new Person(Person.Type.DIRECTOR, d.name);
+      cm.setRole("Director");
       md.addCastMember(cm);
     }
 

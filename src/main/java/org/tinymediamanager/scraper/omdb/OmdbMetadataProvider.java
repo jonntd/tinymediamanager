@@ -196,6 +196,7 @@ abstract class OmdbMetadataProvider implements IMediaProvider {
     for (String d : directors) {
       Person director = new Person(DIRECTOR);
       director.setName(d.strip());
+      director.setRole("Director");
       md.addCastMember(director);
     }
 
@@ -203,6 +204,7 @@ abstract class OmdbMetadataProvider implements IMediaProvider {
     for (String w : writers) {
       Person writer = new Person(WRITER);
       writer.setName(w.strip());
+      writer.setRole("Writer");
       md.addCastMember(writer);
     }
 

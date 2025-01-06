@@ -917,6 +917,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         else {
           continue;
         }
+        cm.setRole(crewMember.job);
         cm.setId(getProviderInfo().getId(), crewMember.id);
         cm.setName(crewMember.name);
 

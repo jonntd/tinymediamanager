@@ -249,10 +249,12 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
 
         case 1:
           member = new Person(DIRECTOR);
+          member.setRole(character.peopleType);
           break;
 
         case 2:
           member = new Person(WRITER);
+          member.setRole(character.peopleType);
           break;
 
         case 3:
@@ -267,6 +269,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
 
         case 7:
           member = new Person(PRODUCER);
+          member.setRole(character.peopleType);
           break;
 
         default:
