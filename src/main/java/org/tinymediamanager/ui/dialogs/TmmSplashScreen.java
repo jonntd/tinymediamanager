@@ -55,7 +55,7 @@ public class TmmSplashScreen extends JDialog {
   private final JLabel                  lblText;
   private final JLabel                  lblVersion;
 
-  public TmmSplashScreen() throws URISyntaxException {
+  public TmmSplashScreen(String version) throws URISyntaxException {
     ImageIcon splashscreen = new TmmSvgIcon(IconManager.class.getResource("images/svg/splashscreen.svg").toURI());
 
     {
@@ -79,7 +79,7 @@ public class TmmSplashScreen extends JDialog {
       TmmFontHelper.changeFont(lblText, TmmFontHelper.L2);
       panelSouth.add(lblText, "cell 0 1,growx , wmin 0");
 
-      lblVersion = new JLabel("");
+      lblVersion = new JLabel(version);
       lblVersion.setForeground(FOREGROUND_COLOR);
       TmmFontHelper.changeFont(lblVersion, TmmFontHelper.L2);
       panelSouth.add(lblVersion, "cell 1 1,alignx right");
@@ -99,16 +99,6 @@ public class TmmSplashScreen extends JDialog {
 
     pack();
     setLocationRelativeTo(null);
-  }
-
-  /**
-   * Set the version number
-   * 
-   * @param version
-   *          the version number
-   */
-  public void setVersion(String version) {
-    lblVersion.setText(version);
   }
 
   /**

@@ -127,8 +127,7 @@ public final class TinyMediaManager {
       // GUI mode - start on EDT
       EventQueue.invokeLater(() -> {
         try {
-          splashScreen = new TmmSplashScreen();
-          splashScreen.setVersion(ReleaseInfo.getHumanVersion());
+          splashScreen = new TmmSplashScreen(ReleaseInfo.getHumanVersion());
           splashScreen.setVisible(true);
         }
         catch (Exception e) {
