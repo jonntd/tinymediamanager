@@ -92,7 +92,7 @@ public class TmmUIHelper {
   public static void setLookAndFeel() {
     // load font settings
     try {
-      FlatInterFont.install();
+      FlatInterFont.installLazy();
 
       // sanity check
       Font font = Font.decode(Settings.getInstance().getFontFamily());

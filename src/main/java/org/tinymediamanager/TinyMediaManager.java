@@ -126,14 +126,6 @@ public final class TinyMediaManager {
     if (!headless) {
       // GUI mode - start on EDT
       EventQueue.invokeLater(() -> {
-        try {
-          splashScreen = new TmmSplashScreen(ReleaseInfo.getHumanVersion());
-          splashScreen.setVisible(true);
-        }
-        catch (Exception e) {
-          LOGGER.error("could not initialize splash - {}", e.getMessage());
-        }
-
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
           @Override
           protected Void doInBackground() {
@@ -142,6 +134,15 @@ public final class TinyMediaManager {
               TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
               setLookAndFeel();
+
+              // splash
+              try {
+                splashScreen = new TmmSplashScreen(ReleaseInfo.getHumanVersion());
+                splashScreen.setVisible(true);
+              }
+              catch (Exception e) {
+                LOGGER.error("could not initialize splash - {}", e.getMessage());
+              }
 
               // init ui logger
               TmmUILogCollector.init();
