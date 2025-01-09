@@ -255,6 +255,8 @@ public class ParserUtils {
     }
     else {
       ret[0] = name.toString().strip();
+      // remove AKAs
+      ret[0] = ret[0].replaceFirst("(?i) aka .*", "");
     }
     ret[1] = year.strip();
     LOGGER.trace("Movie title should be: \"{}\", from {}", ret[0], ret[1]);
