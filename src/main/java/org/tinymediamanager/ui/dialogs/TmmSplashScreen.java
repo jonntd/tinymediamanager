@@ -31,6 +31,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.SwingConstants;
 import javax.swing.plaf.basic.BasicProgressBarUI;
 
 import org.apache.commons.lang3.SystemUtils;
@@ -58,6 +59,10 @@ public class TmmSplashScreen extends JDialog {
   public TmmSplashScreen(String version) throws URISyntaxException {
     ImageIcon splashscreen = new TmmSvgIcon(IconManager.class.getResource("images/svg/splashscreen.svg").toURI());
 
+    setModal(false);
+    setUndecorated(true);
+    setDefaultLookAndFeelDecorated(false);
+
     {
       JLabel lblBackground = new JLabel(splashscreen);
       getContentPane().add(lblBackground, BorderLayout.CENTER);
@@ -67,7 +72,7 @@ public class TmmSplashScreen extends JDialog {
       JPanel panelSouth = new JPanel();
       panelSouth.setOpaque(false);
       lblBackground.add(panelSouth, BorderLayout.SOUTH);
-      panelSouth.setLayout(new MigLayout("ins 20", "[grow,fill][]", "[][]"));
+      panelSouth.setLayout(new MigLayout("ins 20lp", "[grow,fill][]", "[][]"));
 
       progressBar = new JProgressBar();
       progressBar.setUI(new TmmSplashProgressBar());
@@ -79,14 +84,12 @@ public class TmmSplashScreen extends JDialog {
       TmmFontHelper.changeFont(lblText, TmmFontHelper.L2);
       panelSouth.add(lblText, "cell 0 1,growx , wmin 0");
 
-      lblVersion = new JLabel(version);
+      lblVersion = new JLabel(version + "  "); // add two spaces to avoid clipping on 125% UI scaling. reason unknown
       lblVersion.setForeground(FOREGROUND_COLOR);
+      lblVersion.setHorizontalAlignment(SwingConstants.TRAILING);
+      TmmFontHelper.changeFont(lblVersion, TmmFontHelper.L2);
       panelSouth.add(lblVersion, "cell 1 1,alignx right");
     }
-
-    setModal(false);
-    setUndecorated(true);
-    setDefaultLookAndFeelDecorated(false);
 
     // on linux we need to set a background to avoid flicker
     if (SystemUtils.IS_OS_LINUX) {

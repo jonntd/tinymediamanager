@@ -19,6 +19,7 @@ package org.tinymediamanager.ui;
 import java.awt.Font;
 
 import javax.swing.JComponent;
+import javax.swing.plaf.FontUIResource;
 
 /**
  * The class TmmFontHelper. A helper class for manipulating fonts
@@ -58,7 +59,7 @@ public class TmmFontHelper {
    */
   public static void changeFont(JComponent comp, int style) {
     Font font = comp.getFont();
-    comp.setFont(font.deriveFont(style));
+    comp.setFont(new FontUIResource(font.deriveFont(style)));
   }
 
   /**
@@ -74,11 +75,11 @@ public class TmmFontHelper {
   public static void changeFont(JComponent comp, double scaleFactor, int style) {
     Font font = comp.getFont();
     font = scale(font, scaleFactor);
-    comp.setFont(font.deriveFont(style));
+    comp.setFont(new FontUIResource(font.deriveFont(style)));
   }
 
   private static Font scale(Font font, double factor) {
     int newSize = Math.round((float) (font.getSize() * factor));
-    return font.deriveFont((float) newSize);
+    return new FontUIResource(font.deriveFont((float) newSize));
   }
 }
