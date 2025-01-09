@@ -28,6 +28,8 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -96,6 +98,7 @@ import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
+import org.tinymediamanager.ui.ArtworkDragAndDropListener;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.ShadowLayerUI;
@@ -375,6 +378,16 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         }
       }
     });
+
+    // register dnd listener
+    registerDropTarget(lblPoster, tfPoster);
+    registerDropTarget(lblFanart, tfFanart);
+    registerDropTarget(lblBanner, tfBanner);
+    registerDropTarget(lblClearart, tfClearArt);
+    registerDropTarget(lblClearlogo, tfClearLogo);
+    registerDropTarget(lblThumb, tfThumb);
+    registerDropTarget(lblKeyart, tfKeyart);
+    registerDropTarget(lblCharacterart, tfCharacterart);
 
     tabbedPane.setSelectedIndex(selectedTab);
   }
@@ -1165,6 +1178,16 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       addButton(okButton);
     }
 
+  }
+
+  private void registerDropTarget(ImageLabel imageLabel, JTextField textField) {
+    new DropTarget(imageLabel, new ArtworkDragAndDropListener(imageLabel) {
+      @Override
+      public void drop(DropTargetDropEvent dtde) {
+        super.drop(dtde);
+        updateArtworkUrl(imageLabel, textField);
+      }
+    });
   }
 
   private void updateArtworkUrl(ImageLabel imageLabel, JTextField textField) {

@@ -26,20 +26,13 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
-import java.awt.dnd.DropTargetEvent;
-import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.InterruptedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -107,6 +100,7 @@ import org.tinymediamanager.scraper.http.Url;
 import org.tinymediamanager.scraper.interfaces.IMediaArtworkProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
+import org.tinymediamanager.ui.ArtworkDragAndDropListener;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -477,7 +471,19 @@ public class ImageChooserDialog extends TmmDialog {
     }
 
     {
-      new DropTarget(this, new FileDragAndDropListener());
+      new DropTarget(this, new ArtworkDragAndDropListener(imageLabel) {
+        @Override
+        public void drop(DropTargetDropEvent dtde) {
+          super.drop(dtde);
+
+          // cancel the task and close the dialog
+          if (task != null) {
+            task.cancel(true);
+          }
+
+          setVisible(false);
+        }
+      });
     }
   }
 
@@ -1602,101 +1608,6 @@ public class ImageChooserDialog extends TmmDialog {
       }
       else {
         clearSelection();
-      }
-    }
-  }
-
-  private class FileDragAndDropListener implements DropTargetListener {
-    private File[] getImageFiles(DropTargetDragEvent dtde) {
-      try {
-        return getImageFilesFromTransferData(dtde.getTransferable());
-      } catch (Throwable t) {
-        LOGGER.error("Failed to retrieve image files from drag-and-drop event: ", t);
-      }
-      return new File[0];
-    }
-
-    private File[] getImageFiles(DropTargetDropEvent dtde) {
-      try {
-        return getImageFilesFromTransferData(dtde.getTransferable());
-      } catch (Throwable t) {
-        LOGGER.error("Failed to retrieve image files from drag-and-drop event: ", t);
-      }
-      return new File[0];
-    }
-
-    private File[] getImageFilesFromTransferData(Transferable transferable) {
-      try {
-        Object transferData = transferable.getTransferData(DataFlavor.javaFileListFlavor);
-        if (!(transferData instanceof java.util.List)) {
-          return new File[0];
-        }
-
-        var filter = new FileNameExtensionFilter("Image files", "jpg", "jpeg", "png", "bmp", "gif", "tbn", "webp");
-
-        @SuppressWarnings("unchecked")
-        File[] imageFiles = ((java.util.List<File>) transferData).stream().filter(file -> {
-          return filter.accept(file) && Utils.isRegularFile(file.getAbsoluteFile().toPath());
-        }).toArray(File[]::new);
-
-        return imageFiles;
-      } catch (Throwable t) {
-        LOGGER.error("Failed to retrieve image files from drag-and-drop event: ", t);
-      }
-
-      return new File[0];
-    }
-
-    @Override
-    public void dragEnter(DropTargetDragEvent dtde) {
-      // This method MUST be called BEFORE extracting any files from the DND event, or an error will be thrown.
-      dtde.acceptDrag(DnDConstants.ACTION_COPY);
-
-      File[] imageFiles = getImageFiles(dtde);
-      if (imageFiles.length > 0) {
-        // TODO(acdvorak): Display green drop target icon or similar
-      }
-    }
-
-    @Override
-    public void dragOver(DropTargetDragEvent dtde) {
-      // This method MUST be called BEFORE extracting any files from the DND event, or an error will be thrown.
-      dtde.acceptDrag(DnDConstants.ACTION_COPY);
-
-      File[] imageFiles = getImageFiles(dtde);
-      if (imageFiles.length > 0) {
-        // TODO(acdvorak): Display green drop target icon or similar
-      }
-    }
-
-    @Override
-    public void dropActionChanged(DropTargetDragEvent dtde) {}
-
-    @Override
-    public void dragExit(DropTargetEvent dte) {
-      // TODO(acdvorak): Hide green drop target icon or similar
-    }
-
-    @Override
-    public void drop(DropTargetDropEvent dtde) {
-      try {
-        // This method MUST be called BEFORE extracting any files from the DND event, or an error will be thrown.
-        dtde.acceptDrop(DnDConstants.ACTION_COPY);
-
-        File[] imageFiles = getImageFiles(dtde);
-        if (imageFiles.length == 0) {
-          return;
-        }
-
-        File file = imageFiles[0];
-        String fileName = file.getAbsolutePath();
-        imageLabel.clearImage();
-        imageLabel.setImageUrl("file:/" + fileName);
-        task.cancel(true);
-        TmmProperties.getInstance().putProperty(DIALOG_ID + ".path", file.getParent());
-        setVisible(false);
-      } catch (Throwable t) {
-        LOGGER.error("An error occurred while processing the dropped file: ", t);
       }
     }
   }
