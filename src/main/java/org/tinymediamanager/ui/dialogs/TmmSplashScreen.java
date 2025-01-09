@@ -81,7 +81,6 @@ public class TmmSplashScreen extends JDialog {
 
       lblVersion = new JLabel(version);
       lblVersion.setForeground(FOREGROUND_COLOR);
-      TmmFontHelper.changeFont(lblVersion, TmmFontHelper.L2);
       panelSouth.add(lblVersion, "cell 1 1,alignx right");
     }
 
