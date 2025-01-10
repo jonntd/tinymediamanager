@@ -1053,7 +1053,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       case DEFAULT, OFFICIAL -> MediaEpisodeGroup.EpisodeGroupType.AIRED;
       case ABSOLUTE -> MediaEpisodeGroup.EpisodeGroupType.ABSOLUTE;
       case DVD -> MediaEpisodeGroup.EpisodeGroupType.DVD;
-      case ALTERNATE, REGIONAL -> MediaEpisodeGroup.EpisodeGroupType.ALTERNATE;
+      case ALTERNATE, REGIONAL, ALT_DVD, ALT_TWO -> MediaEpisodeGroup.EpisodeGroupType.ALTERNATE;
     };
   }
 }
