@@ -788,7 +788,7 @@ public class Utils {
         return false;
       }
       else {
-        LOGGER.info("Successfully moved folder {} to {}", srcDir, destDir);
+        LOGGER.debug("Successfully moved folder {} to {}", srcDir, destDir);
         return true;
       }
     }
@@ -1043,7 +1043,7 @@ public class Utils {
         return false;
       }
       else {
-        LOGGER.info("Successfully copied file from {} to {}", srcFile, destFile);
+        LOGGER.debug("Successfully copied file from {} to {}", srcFile, destFile);
         return true;
       }
     }
@@ -1486,7 +1486,7 @@ public class Utils {
         socket.send(packet);
       }
 
-      LOGGER.info("Sent WOL packet to {}", macAddr);
+      LOGGER.debug("Sent WOL packet to {}", macAddr);
     }
     catch (final Exception e) {
       LOGGER.error("Error sending WOL packet to {} - {}", macAddr, e.getMessage());
