@@ -303,7 +303,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       MediaEpisodeGroup.EpisodeGroupType episodeGroupType = mapEpisodeGroup(seasonBaseRecord.type.type);
       if (episodeGroupType != null) {
         // prefer alternative name (same as on webpage)
-        String egName = StringUtils.isBlank(seasonBaseRecord.type.alternateName) ? seasonBaseRecord.type.name : seasonBaseRecord.type.alternateName;
+        String egName = StringUtils.firstNonBlank(seasonBaseRecord.type.alternateName, seasonBaseRecord.type.name);
         MediaEpisodeGroup mediaEpisodeGroup = new MediaEpisodeGroup(episodeGroupType, egName);
         md.addEpisodeGroup(mediaEpisodeGroup);
 
@@ -777,7 +777,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
             // also inject the plots / translations for that type
             injectEpisodeTranslations(options, showId, counter, seriesEpisodesRecord, seasonTypeRecord.type);
             // prefer alternative name (same as on webpage)
-            String egName = StringUtils.isBlank(seasonTypeRecord.alternateName) ? seasonTypeRecord.name : seasonTypeRecord.alternateName;
+            String egName = StringUtils.firstNonBlank(seasonTypeRecord.alternateName, seasonTypeRecord.name);
             MediaEpisodeGroup episodeGroup = new MediaEpisodeGroup(mapEpisodeGroup(seasonTypeRecord.type), egName);
             eps.computeIfAbsent(episodeGroup, type -> new ArrayList<>()).addAll(seriesEpisodesRecord.episodes);
           }

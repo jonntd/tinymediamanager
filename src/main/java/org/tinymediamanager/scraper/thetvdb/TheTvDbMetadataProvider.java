@@ -324,7 +324,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
 
         case 4: // Official Website
         case 5: // Facebook
-        case 6: // Twitter
+        case 6: // X (Twitter)
         case 7: // Reddit
         case 8: // Fan Site
         case 9: // Instagram
