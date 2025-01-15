@@ -379,7 +379,12 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
         t.setProvider("youtube");
       }
       t.setScrapedBy(getProviderInfo().getId());
-      t.setQuality(trailer.language);
+      if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
+        t.setQuality(LanguageUtils.getLocalizedLanguageNameFromLocalizedString(options.getLanguage().toLocale(), trailer.language));
+      }
+      else {
+        t.setQuality(trailer.language);
+      }
       md.addTrailer(t);
     }
 
