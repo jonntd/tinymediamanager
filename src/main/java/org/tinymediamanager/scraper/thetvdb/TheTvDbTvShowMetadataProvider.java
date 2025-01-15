@@ -40,12 +40,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaAiredStatus;
 import org.tinymediamanager.core.entities.MediaGenres;
+import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.MediaSearchResult;
+import org.tinymediamanager.scraper.TrailerSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
@@ -58,6 +60,7 @@ import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaIdProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
+import org.tinymediamanager.scraper.interfaces.ITvShowTrailerProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowTvdbMetadataProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkTypeRecord;
@@ -77,6 +80,7 @@ import org.tinymediamanager.scraper.thetvdb.entities.SeriesEpisodesRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesEpisodesResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesExtendedRecord;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesExtendedResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.Trailer;
 import org.tinymediamanager.scraper.thetvdb.entities.Translation;
 import org.tinymediamanager.scraper.thetvdb.entities.TranslationResponse;
 import org.tinymediamanager.scraper.util.CacheMap;
@@ -94,7 +98,7 @@ import retrofit2.Response;
  * @author Manuel Laggner
  */
 public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
-    implements ITvShowMetadataProvider, ITvShowTvdbMetadataProvider, IMediaIdProvider {
+    implements ITvShowMetadataProvider, ITvShowTvdbMetadataProvider, IMediaIdProvider, ITvShowTrailerProvider {
   private static final Logger                                LOGGER                 = LoggerFactory.getLogger(TheTvDbTvShowMetadataProvider.class);
 
   private static final CacheMap<String, List<MediaMetadata>> EPISODE_LIST_CACHE_MAP = new CacheMap<>(600, 5);
@@ -363,6 +367,20 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       if (mediaArtwork != null) {
         md.addMediaArt(mediaArtwork);
       }
+    }
+
+    // trailer
+    for (Trailer trailer : ListUtils.nullSafe(show.trailers)) {
+      MediaTrailer t = new MediaTrailer();
+      t.setName(trailer.name);
+      t.setId(String.valueOf(trailer.id));
+      t.setUrl(trailer.url);
+      if (trailer.url.contains("youtube")) {
+        t.setProvider("youtube");
+      }
+      t.setScrapedBy(getProviderInfo().getId());
+      t.setQuality(trailer.language);
+      md.addTrailer(t);
     }
 
     return md;
@@ -1081,5 +1099,16 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       case DVD -> MediaEpisodeGroup.EpisodeGroupType.DVD;
       case ALTERNATE, REGIONAL, ALT_DVD, ALT_TWO -> MediaEpisodeGroup.EpisodeGroupType.ALTERNATE;
     };
+  }
+
+  @Override
+  public List<MediaTrailer> getTrailers(TrailerSearchAndScrapeOptions options) throws ScrapeException, MissingIdException {
+    LOGGER.debug("getTrailer(): {}", options);
+    if (options.getMediaType() != MediaType.TV_SHOW) {
+      return Collections.emptyList();
+    }
+    TvShowSearchAndScrapeOptions saso = new TvShowSearchAndScrapeOptions();
+    saso.setDataFromOtherOptions(options);
+    return getMetadata(saso).getTrailers();
   }
 }

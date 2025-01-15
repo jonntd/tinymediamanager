@@ -8,6 +8,7 @@ x [OFDB] refactor/reactivate german scraper
 x [TVDB] fixed scraping of episode original title #2810
 x [TVDB] fixed scraping of more alternative episode groups #2820
 x [TVDB] fixed translations for alternative orderings #2811
+x [TVDB] register as trailer provider
 x [hd-trailers] invalidate most links, since all outdated
 x [UI] fixed adding of new genres/tags via [+] button
 x [UI] fixed updating the TV show tree when changing an episode to uncategorized
