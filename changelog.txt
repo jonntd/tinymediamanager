@@ -13,6 +13,7 @@ x [UI] fixed adding of new genres/tags via [+] button
 x [UI] fixed updating the TV show tree when changing an episode to uncategorized
 x [Scrapers] parse crew job/role information
 x [UDS] ignore AKA titles if found #2816
+x [renamer] also normalize apostrophes when ASCII replacement is used #2799
 
 
 Version 5.1
