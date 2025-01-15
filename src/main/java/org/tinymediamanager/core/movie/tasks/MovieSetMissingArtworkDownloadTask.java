@@ -114,7 +114,6 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
             try {
               lock.writeLock().lock();
               artwork.addAll(artworkProvider.getArtwork(options));
-              lock.writeLock().unlock();
             }
             catch (MissingIdException ignored) {
               // no need to log a missing ID here
@@ -123,6 +122,9 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
               LOGGER.error("getArtwork", e);
               MessageManager.instance.pushMessage(
                   new Message(MessageLevel.ERROR, movieSet, "message.scrape.moviesetartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            }
+            finally {
+              lock.writeLock().unlock();
             }
           }
         });
