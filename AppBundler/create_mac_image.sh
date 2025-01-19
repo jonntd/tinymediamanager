@@ -17,7 +17,12 @@ echo "signing flatlaf dylib"
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/flatlaf-macos-*.dylib
 
 echo "signing JNA dylibs"
-codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
+unzip tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar -d jna
+codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-aarch64/libjnidispatch.jnilib
+codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-x86-64/libjnidispatch.jnilib
+cd jna
+zip -r ../jna.jar *
+cp jna.jar tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
 
 echo "signing app"
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app
@@ -70,7 +75,12 @@ echo "signing flatlaf dylib"
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/flatlaf-macos-*.dylib
 
 echo "signing JNA dylibs"
-codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
+unzip tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar -d jna
+codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-aarch64/libjnidispatch.jnilib
+codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-x86-64/libjnidispatch.jnilib
+cd jna
+zip -r ../jna.jar *
+cp jna.jar tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
 
 echo "signing app"
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" tinyMediaManager/tinyMediaManager.app
