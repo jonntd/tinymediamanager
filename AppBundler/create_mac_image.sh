@@ -22,6 +22,7 @@ codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundl
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-x86-64/libjnidispatch.jnilib
 cd jna
 zip -r ../jna.jar *
+cd ..
 cp jna.jar tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
 
 echo "signing app"
@@ -80,6 +81,7 @@ codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundl
 codesign --force --options=runtime --deep --timestamp --entitlements ../AppBundler/macos/hardened_runtime_entitlements.plist --sign "${MAC_SIGN_CERT}" jna/com/sun/jna/darwin-x86-64/libjnidispatch.jnilib
 cd jna
 zip -r ../jna.jar *
+cd ..
 cp jna.jar tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/lib/jna.jar
 
 echo "signing app"
