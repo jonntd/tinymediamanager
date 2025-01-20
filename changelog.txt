@@ -1,5 +1,7 @@
 Version 5.1.1
 =======================
++ [Tools] added enhanced management of external tools like FFmpeg/yt-dlp:
+  these tools are now decoupled of tinyMediaManager itself which offers the benefit of earlier updates
 + [UI] added drag and drop for artwork files (thx @acdvorak)
   You can now drag and drop artwork files from the file explorer directly into the editors/image chooser
 x [Movies/TV shows] always write playcount = 0 to the NFO when the movie/episode is not watched
