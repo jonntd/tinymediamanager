@@ -23,19 +23,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.tinymediamanager.core.Utils;
 
 public class ExternalToolTest {
-  @Rule
-  public TemporaryFolder tmpFolder = new TemporaryFolder();
+  private static Path addonFolder;
 
-  private Path           addonFolder;
-
-  @Before
-  public void setup() throws Exception {
+  @BeforeClass
+  public static void setup() throws Exception {
+    TemporaryFolder tmpFolder = new TemporaryFolder();
+    tmpFolder.create();
     addonFolder = tmpFolder.newFolder("addons").toPath();
     System.setProperty("tmm.addonfolder", addonFolder.toAbsolutePath().toString());
   }
@@ -54,12 +53,18 @@ public class ExternalToolTest {
 
   @Test
   public void checkToolInstalled() throws Exception {
+    Utils.deleteDirectorySafely(addonFolder);
+    Files.createDirectory(addonFolder);
+
     Files.copy(Paths.get("target/test-classes/external_tools/yt-dlp.ver"), addonFolder.resolve("yt-dlp.ver"));
     assertThat(ExternalTools.isToolInstalled("yt-dlp")).isEqualTo(true);
   }
 
   @Test
-  public void detectUpdateJtDlp() throws Exception {
+  public void detectUpdateYtDlp() throws Exception {
+    Utils.deleteDirectorySafely(addonFolder);
+    Files.createDirectory(addonFolder);
+
     Files.copy(Paths.get("target/test-classes/external_tools/yt-dlp.ver"), addonFolder.resolve("yt-dlp.ver"));
 
     ExternalTools externalTools = new ExternalTools(Paths.get("target/test-classes/external_tools/external-tools.json").toUri().toString());
