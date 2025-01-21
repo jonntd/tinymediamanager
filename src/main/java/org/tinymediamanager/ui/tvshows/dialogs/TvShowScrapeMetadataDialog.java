@@ -236,10 +236,6 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
     if (cbEpisodeScraperConfig != null) {
       List<TvShowEpisodeScraperMetadataConfig> config = new ArrayList<>(
           TvShowModuleManager.getInstance().getSettings().getEpisodeScraperMetadataConfig());
-      // if automatic artwork scrape is not wanted, strip out artwork options
-      if (!TvShowModuleManager.getInstance().getSettings().isScrapeBestImage()) {
-        config.removeAll(TvShowEpisodeScraperMetadataConfig.valuesForType(ScraperMetadataConfig.Type.ARTWORK));
-      }
       cbEpisodeScraperConfig.setSelectedItems(config);
     }
     chckbxDoNotOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());

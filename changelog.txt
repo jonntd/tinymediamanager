@@ -14,6 +14,7 @@ x [TVDB] register as trailer provider
 x [hd-trailers] invalidate most links, since all outdated
 x [UI] fixed adding of new genres/tags via [+] button
 x [UI] fixed updating the TV show tree when changing an episode to uncategorized
+x [UI] do not remove scraping presets for episode thumbs #2807
 x [Scrapers] parse crew job/role information
 x [UDS] ignore AKA titles if found #2816
 x [renamer] also normalize apostrophes when ASCII replacement is used #2799
