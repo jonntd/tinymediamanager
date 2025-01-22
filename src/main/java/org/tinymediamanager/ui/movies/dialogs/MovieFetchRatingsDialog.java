@@ -28,8 +28,8 @@ import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.combobox.TmmCheckComboBox;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

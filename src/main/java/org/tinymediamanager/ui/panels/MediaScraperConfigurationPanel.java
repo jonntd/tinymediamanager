@@ -44,8 +44,8 @@ import org.tinymediamanager.scraper.config.MediaProviderConfig;
 import org.tinymediamanager.scraper.config.MediaProviderConfigObject;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.combobox.TmmCheckComboBox;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 import com.google.gson.Gson;
 

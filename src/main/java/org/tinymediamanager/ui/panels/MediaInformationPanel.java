@@ -38,11 +38,11 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.LinkTextArea;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.components.table.TmmTableModel;
+import org.tinymediamanager.ui.components.textfield.LinkTextArea;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;

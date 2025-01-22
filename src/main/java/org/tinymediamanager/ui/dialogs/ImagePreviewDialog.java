@@ -44,7 +44,7 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.actions.TmmAction;
-import org.tinymediamanager.ui.components.LinkLabel;
+import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.thirdparty.imageviewer.ImageViewer;
 
 import net.miginfocom.swing.MigLayout;

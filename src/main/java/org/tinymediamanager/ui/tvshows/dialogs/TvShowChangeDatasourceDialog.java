@@ -36,8 +36,8 @@ import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.tasks.TvShowChangeDatasourceTask;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 
 import net.miginfocom.swing.MigLayout;

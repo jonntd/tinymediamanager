@@ -19,7 +19,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.ui.components.MediaTrailerTable;
+import org.tinymediamanager.ui.components.table.MediaTrailerTable;
 import org.tinymediamanager.ui.components.table.NullSelectionModel;
 
 import ca.odell.glazedlists.BasicEventList;

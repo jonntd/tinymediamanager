@@ -23,7 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.scraper.util.StrgUtils;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * the class {@link MoviePathFilter} is used to offer a filter for the movie path

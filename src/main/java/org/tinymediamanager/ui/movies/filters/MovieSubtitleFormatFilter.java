@@ -29,7 +29,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * the class {@link MovieSubtitleFormatFilter} is used to provide a filter for the movie subtitle formats

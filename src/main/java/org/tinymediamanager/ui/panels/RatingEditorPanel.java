@@ -28,8 +28,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.scraper.rating.RatingProvider;
-import org.tinymediamanager.ui.components.MediaRatingTable;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.table.MediaRatingTable;
 
 import net.miginfocom.swing.MigLayout;
 

@@ -40,9 +40,9 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.actions.UnlockAction;
-import org.tinymediamanager.ui.components.FlatButton;
-import org.tinymediamanager.ui.components.LinkLabel;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.FlatButton;
+import org.tinymediamanager.ui.components.label.LinkLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.images.Logo;
 
 import net.miginfocom.swing.MigLayout;

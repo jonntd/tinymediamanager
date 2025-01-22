@@ -24,7 +24,7 @@ import org.jsoup.Jsoup;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.actions.ImportV4DataAction;
-import org.tinymediamanager.ui.components.ReadOnlyTextPane;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.images.Logo;
 
 import net.miginfocom.swing.MigLayout;

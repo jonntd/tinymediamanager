@@ -29,6 +29,7 @@ import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskHandle.TaskState;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
+import org.tinymediamanager.ui.components.button.FlatButton;
 
 import net.miginfocom.swing.MigLayout;
 

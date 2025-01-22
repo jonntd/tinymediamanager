@@ -52,8 +52,8 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.WrapLayout;
-import org.tinymediamanager.ui.components.ImageLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
+import org.tinymediamanager.ui.components.label.ImageLabel;
 
 import com.madgag.gif.fmsware.GifDecoder;
 

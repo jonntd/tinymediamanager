@@ -74,10 +74,10 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.IntegerInputVerifier;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
-import org.tinymediamanager.ui.components.MediaFileAudioStreamEditTable;
-import org.tinymediamanager.ui.components.MediaFileSubtitleEditTable;
-import org.tinymediamanager.ui.components.SquareIconButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.table.MediaFileAudioStreamEditTable;
+import org.tinymediamanager.ui.components.table.MediaFileSubtitleEditTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 
 import ca.odell.glazedlists.BasicEventList;

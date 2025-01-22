@@ -61,13 +61,13 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.ColumnLayout;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
-import org.tinymediamanager.ui.components.ImageLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.ReadOnlyTextPane;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.components.table.TmmTableModel;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.panels.InformationPanel;
 import org.tinymediamanager.ui.tvshows.TvShowSeasonSelectionModel;
 

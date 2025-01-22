@@ -39,10 +39,10 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.DocsButton;
-import org.tinymediamanager.ui.components.SquareIconButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 
 import net.miginfocom.swing.MigLayout;
 

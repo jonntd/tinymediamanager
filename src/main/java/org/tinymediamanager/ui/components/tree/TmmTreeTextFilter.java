@@ -29,7 +29,7 @@ import javax.swing.event.DocumentListener;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.EnhancedTextField;
+import org.tinymediamanager.ui.components.textfield.EnhancedTextField;
 
 /**
  * The class TmmTreeTextFilter provides a textual filter for the TmmTree

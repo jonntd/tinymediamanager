@@ -47,11 +47,11 @@ import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.ui.ScraperInTable;
 import org.tinymediamanager.ui.TableColumnResizer;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.DocsButton;
-import org.tinymediamanager.ui.components.ReadOnlyTextPane;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 import org.tinymediamanager.ui.components.table.TmmTable;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.panels.MediaScraperConfigurationPanel;
 import org.tinymediamanager.ui.panels.ScrollablePanel;
 

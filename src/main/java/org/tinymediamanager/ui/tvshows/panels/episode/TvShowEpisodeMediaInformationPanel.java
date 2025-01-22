@@ -36,7 +36,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
-import org.tinymediamanager.ui.components.LinkTextArea;
+import org.tinymediamanager.ui.components.textfield.LinkTextArea;
 import org.tinymediamanager.ui.panels.MediaInformationPanel;
 import org.tinymediamanager.ui.tvshows.TvShowEpisodeSelectionModel;
 

@@ -44,10 +44,10 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
-import org.tinymediamanager.ui.components.LinkTextArea;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.ReadOnlyTextPaneHTML;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.textfield.LinkTextArea;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPaneHTML;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;

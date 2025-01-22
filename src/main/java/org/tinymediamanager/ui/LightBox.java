@@ -31,8 +31,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import org.apache.commons.lang3.StringUtils;
-import org.tinymediamanager.ui.components.ImageLabel;
-import org.tinymediamanager.ui.components.ImageLabel.Position;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel.Position;
 
 import net.miginfocom.swing.MigLayout;
 

@@ -6,7 +6,7 @@ import javax.swing.SpinnerNumberModel;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 public class MovieClearLogoSizeFilter extends AbstractNumberMovieFilter {
 

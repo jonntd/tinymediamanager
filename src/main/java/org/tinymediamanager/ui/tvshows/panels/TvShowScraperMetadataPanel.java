@@ -38,8 +38,8 @@ import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.JHintCheckBox;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * The Class TvShowScraperMetadataPanel.

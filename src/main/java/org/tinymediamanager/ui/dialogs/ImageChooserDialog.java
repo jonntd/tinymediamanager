@@ -106,15 +106,15 @@ import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.WrapLayout;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.EnhancedTextField;
-import org.tinymediamanager.ui.components.ImageLabel;
-import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.SquareIconButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.combobox.MediaScraperCheckComboBox;
 import org.tinymediamanager.ui.components.combobox.TmmCheckComboBox;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.LinkLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
+import org.tinymediamanager.ui.components.textfield.EnhancedTextField;
 
 import net.miginfocom.swing.MigLayout;
 

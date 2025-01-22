@@ -35,7 +35,7 @@ import javax.swing.text.JTextComponent;
 
 import org.jetbrains.annotations.NotNull;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.ui.components.TriStateCheckBox;
+import org.tinymediamanager.ui.components.button.TriStateCheckBox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

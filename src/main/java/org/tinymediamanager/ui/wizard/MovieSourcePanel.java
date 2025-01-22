@@ -41,8 +41,8 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
-import org.tinymediamanager.ui.components.SquareIconButton;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 
 import net.miginfocom.swing.MigLayout;
 

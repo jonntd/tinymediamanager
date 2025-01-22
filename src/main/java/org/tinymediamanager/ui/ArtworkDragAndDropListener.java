@@ -30,7 +30,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Utils;
-import org.tinymediamanager.ui.components.ImageLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel;
 
 /**
  * The class {@link ArtworkDragAndDropListener} is used to offer file (artwork) drag and drop support for some UI components

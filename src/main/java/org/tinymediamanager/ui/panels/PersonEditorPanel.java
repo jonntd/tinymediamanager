@@ -33,9 +33,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.MediaIdTable;
-import org.tinymediamanager.ui.components.SquareIconButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.table.MediaIdTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.dialogs.ImagePreviewDialog;
 

@@ -35,9 +35,9 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.ReadOnlyTextPane;
+import org.tinymediamanager.ui.components.label.LinkLabel;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 
 import net.miginfocom.swing.MigLayout;
 

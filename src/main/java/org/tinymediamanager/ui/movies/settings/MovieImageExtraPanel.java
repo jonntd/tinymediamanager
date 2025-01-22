@@ -34,9 +34,9 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.filenaming.MovieExtraFanartNaming;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.DocsButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 
 import net.miginfocom.swing.MigLayout;
 

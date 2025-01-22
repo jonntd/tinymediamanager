@@ -65,14 +65,14 @@ import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.MovieTextMatcherList;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.DocsButton;
-import org.tinymediamanager.ui.components.JHintCheckBox;
-import org.tinymediamanager.ui.components.JHintLabel;
-import org.tinymediamanager.ui.components.SquareIconButton;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
+import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
 import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
+import org.tinymediamanager.ui.components.label.JHintLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 
 import net.miginfocom.swing.MigLayout;
 

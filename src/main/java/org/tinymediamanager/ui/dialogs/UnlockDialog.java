@@ -43,7 +43,7 @@ import org.tinymediamanager.license.License;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 
 import net.miginfocom.swing.MigLayout;
 

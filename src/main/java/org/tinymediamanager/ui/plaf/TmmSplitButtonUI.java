@@ -31,7 +31,7 @@ import javax.swing.border.Border;
 import javax.swing.plaf.ComponentUI;
 import javax.swing.plaf.UIResource;
 
-import org.tinymediamanager.ui.components.SplitButton;
+import org.tinymediamanager.ui.components.button.SplitButton;
 
 import com.formdev.flatlaf.ui.FlatUIUtils;
 import com.formdev.flatlaf.util.UIScale;

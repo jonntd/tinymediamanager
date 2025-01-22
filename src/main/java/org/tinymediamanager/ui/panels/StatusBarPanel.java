@@ -45,7 +45,7 @@ import org.tinymediamanager.core.threading.TmmTaskListener;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmTaskbar;
-import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.button.FlatButton;
 import org.tinymediamanager.ui.dialogs.TaskListDialog;
 
 import net.miginfocom.swing.MigLayout;

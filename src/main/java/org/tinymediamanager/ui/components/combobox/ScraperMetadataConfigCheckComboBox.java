@@ -31,7 +31,7 @@ import javax.swing.UIManager;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.button.FlatButton;
 
 /**
  * the class ScraperMetadataConfigCheckComboBox is used to display a CheckCombBox for the scraper metadata config

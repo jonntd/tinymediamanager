@@ -48,7 +48,7 @@ import javax.swing.UIManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.WrapLayout;
-import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.button.FlatButton;
 
 /**
  * the class TmmCheckComboBox extends the JComboBox by a checkbox for multiple selections

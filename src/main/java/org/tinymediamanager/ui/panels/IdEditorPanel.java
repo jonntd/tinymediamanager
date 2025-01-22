@@ -29,8 +29,8 @@ import org.jetbrains.annotations.NotNull;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
-import org.tinymediamanager.ui.components.MediaIdTable;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.table.MediaIdTable;
 
 import net.miginfocom.swing.MigLayout;
 

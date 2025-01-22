@@ -30,9 +30,9 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIMessageCollector;
-import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.LinkLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.panels.MessagePanel;
 
 import ca.odell.glazedlists.EventList;

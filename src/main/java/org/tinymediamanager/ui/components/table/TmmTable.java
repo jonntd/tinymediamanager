@@ -57,7 +57,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.button.FlatButton;
 
 import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.impl.gui.SortingStrategy;

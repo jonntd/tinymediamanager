@@ -20,7 +20,7 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.LayoutManager2;
 
-import org.tinymediamanager.ui.components.ImageLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel;
 
 /**
  * Class ColumnLayout - used to layout all components in a single column with a fixed width

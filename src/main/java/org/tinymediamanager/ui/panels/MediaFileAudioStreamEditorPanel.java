@@ -32,8 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.scraper.util.LanguageUtils;
-import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 
 import net.miginfocom.swing.MigLayout;

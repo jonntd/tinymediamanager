@@ -49,11 +49,11 @@ import org.tinymediamanager.core.movie.connector.MovieSetConnectors;
 import org.tinymediamanager.core.movie.filenaming.MovieSetNfoNaming;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.CollapsiblePanel;
-import org.tinymediamanager.ui.components.DocsButton;
-import org.tinymediamanager.ui.components.JHintCheckBox;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 
 import net.miginfocom.swing.MigLayout;
 

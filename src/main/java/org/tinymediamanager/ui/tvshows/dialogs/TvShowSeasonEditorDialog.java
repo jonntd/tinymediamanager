@@ -64,11 +64,11 @@ import org.tinymediamanager.ui.ArtworkDragAndDropListener;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.ShadowLayerUI;
-import org.tinymediamanager.ui.components.FlatButton;
-import org.tinymediamanager.ui.components.ImageLabel;
-import org.tinymediamanager.ui.components.LinkLabel;
-import org.tinymediamanager.ui.components.TmmLabel;
-import org.tinymediamanager.ui.components.TmmTabbedPane;
+import org.tinymediamanager.ui.components.button.FlatButton;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.LinkLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
 import org.tinymediamanager.ui.dialogs.AbstractEditorDialog;
 import org.tinymediamanager.ui.dialogs.ImageChooserDialog;
 

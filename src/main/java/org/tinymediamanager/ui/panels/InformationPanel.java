@@ -34,7 +34,7 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.scraper.util.ListUtils;
-import org.tinymediamanager.ui.components.ImageLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel;
 
 /**
  * the class {@link InformationPanel} is used to provide some boilerplate code for the information panels

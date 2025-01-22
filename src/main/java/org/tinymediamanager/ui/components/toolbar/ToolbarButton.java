@@ -24,7 +24,7 @@ import javax.swing.Icon;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingConstants;
 
-import org.tinymediamanager.ui.components.FlatButton;
+import org.tinymediamanager.ui.components.button.FlatButton;
 
 public class ToolbarButton extends FlatButton {
   private JPopupMenu popupMenu;

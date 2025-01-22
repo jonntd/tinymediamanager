@@ -40,8 +40,8 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.LinkLabel;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
+import org.tinymediamanager.ui.components.label.LinkLabel;
 
 import net.miginfocom.swing.MigLayout;
 

@@ -33,7 +33,7 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.ui.IconManager;
-import org.tinymediamanager.ui.components.JHintCheckBox;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
 
 /**
  * The Class MovieScraperMetadataPanel.

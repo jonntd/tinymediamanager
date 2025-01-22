@@ -21,7 +21,7 @@ import javax.swing.SpinnerNumberModel;
 
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * the class {@link MovieDifferentRuntimeFilter} is used to provide a filter for runtime difference between mediainfo data and scraped data

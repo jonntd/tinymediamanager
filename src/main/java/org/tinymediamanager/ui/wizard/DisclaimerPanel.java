@@ -27,7 +27,7 @@ import javax.swing.ScrollPaneConstants;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 
 import net.miginfocom.swing.MigLayout;
 

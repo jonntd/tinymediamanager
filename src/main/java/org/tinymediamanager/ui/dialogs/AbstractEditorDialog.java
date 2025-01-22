@@ -35,8 +35,8 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
-import org.tinymediamanager.ui.components.ImageLabel;
-import org.tinymediamanager.ui.components.LinkLabel;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.LinkLabel;
 
 /**
  * the class {@link AbstractEditorDialog} is a template for all editor dialogs

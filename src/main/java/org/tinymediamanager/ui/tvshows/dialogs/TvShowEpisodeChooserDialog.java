@@ -59,10 +59,10 @@ import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
-import org.tinymediamanager.ui.components.EnhancedTextField;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.ReadOnlyTextArea;
 import org.tinymediamanager.ui.components.table.TmmTable;
+import org.tinymediamanager.ui.components.textfield.EnhancedTextField;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 import org.tinymediamanager.ui.tvshows.TvShowEpisodeChooserModel;
 

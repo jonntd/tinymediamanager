@@ -38,8 +38,8 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.LinkTextArea;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.textfield.LinkTextArea;
 import org.tinymediamanager.ui.panels.MediaFilesPanel;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel;
 

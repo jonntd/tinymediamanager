@@ -26,8 +26,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.ui.components.TmmLabel;
 import org.tinymediamanager.ui.components.datepicker.DatePicker;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * this the class {@link MovieDateAddedFilter} is used for a date added movie filter

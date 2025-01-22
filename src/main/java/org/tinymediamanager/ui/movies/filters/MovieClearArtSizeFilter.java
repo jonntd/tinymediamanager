@@ -21,7 +21,7 @@ import javax.swing.SpinnerNumberModel;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.ui.components.TmmLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
 
 /**
  * the class {@link MovieClearArtSizeFilter} provides a filter for movie clearart width
