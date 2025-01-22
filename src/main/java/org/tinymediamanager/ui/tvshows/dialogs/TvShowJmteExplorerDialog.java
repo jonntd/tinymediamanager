@@ -164,10 +164,10 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
 
     initComponents();
 
+    setListeners();
+
     buildAndInstallTvShowArray();
     buildAndInstallEpisodeArray();
-
-    setListeners();
 
     // make tokens copyable
     JPopupMenu popupMenu = new JPopupMenu();
