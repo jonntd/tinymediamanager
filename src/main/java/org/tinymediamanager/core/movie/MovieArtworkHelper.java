@@ -1021,7 +1021,10 @@ public class MovieArtworkHelper {
 
     MediaArtwork ffmpegArtwork = null;
 
-    if (!artworkFromFfmpeg.isEmpty()) {
+    if (artworkFromFfmpeg.size() == 1) {
+      ffmpegArtwork = artworkFromFfmpeg.get(0);
+    }
+    else if (artworkFromFfmpeg.size() > 1) {
       ffmpegArtwork = artworkFromFfmpeg.get(artworkFromFfmpeg.size() / 2 + 1);
     }
 
