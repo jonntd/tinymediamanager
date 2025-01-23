@@ -52,7 +52,6 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
     addTop250();
     addLastplayed();
     addStatusAndCode();
-    addFileinfo();
   }
 
   @Override
@@ -161,9 +160,9 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   }
 
   /**
-   * add the <fileinfo>xx</fileinfo> tag with mediainfo data
+   * add the <fileinfo>xx</fileinfo> tag with mediainfo data - legacy XBMC format
    */
-  private void addFileinfo() {
+  protected void addFileinfo() {
     if (MovieModuleManager.getInstance().getSettings().isNfoWriteFileinfo()) {
       Element fileinfo = document.createElement("fileinfo");
       Element streamdetails = document.createElement("streamdetails");

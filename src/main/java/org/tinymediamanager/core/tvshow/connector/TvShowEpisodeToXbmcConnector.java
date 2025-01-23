@@ -42,7 +42,6 @@ public class TvShowEpisodeToXbmcConnector extends TvShowEpisodeGenericXmlConnect
   protected void addOwnTags(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
     addEpbookmark(episode, parser);
     addCode(episode, parser);
-    addFileinfo(episode, parser);
   }
 
   /**
@@ -68,7 +67,7 @@ public class TvShowEpisodeToXbmcConnector extends TvShowEpisodeGenericXmlConnect
   }
 
   /**
-   * add the fileinfo structure <fileinfo><streamdetails><video>...</video><audio>...</audio></streamdetails></fileinfo>
+   * add the fileinfo structure <fileinfo><streamdetails><video>...</video><audio>...</audio></streamdetails></fileinfo> - legacy XMBC format
    */
   protected void addFileinfo(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
     if (TvShowModuleManager.getInstance().getSettings().isNfoWriteFileinfo()) {

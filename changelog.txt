@@ -6,6 +6,7 @@ Version 5.1.1
   You can now drag and drop artwork files from the file explorer directly into the editors/image chooser
 x [Movies/TV shows] always write playcount = 0 to the NFO when the movie/episode is not watched
 x [Movies/TV shows] prevent stuck threads on scrape errors #2824
+x [Movies/TV shows] enabled writing of <fileinfo> in all NFO formats (can be deactivated in the settings)
 x [OFDB] refactor/reactivate german scraper
 x [TVDB] fixed scraping of episode original title #2810
 x [TVDB] fixed scraping of more alternative episode groups #2820
