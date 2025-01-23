@@ -147,6 +147,54 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
     // https://opensubtitles.stoplight.io/docs/opensubtitles-api/a172317bd5ccc-search-for-subtitles
     Map<String, String> query = new TreeMap<>();
 
+    // pass moviehash
+    MediaFile mediaFile = options.getMediaFile();
+    if (mediaFile != null && mediaFile.exists() && mediaFile.getFilesize() > 0) {
+      File file = mediaFile.getFile().toFile();
+      long fileSize = file.length();
+      String hash = computeOpenSubtitlesHash(file);
+      query.put("moviehash", hash);
+
+      getLogger().debug("moviebytesize: {}; moviehash: {}", fileSize, hash);
+    }
+
+    // pass imdb/tmdb id
+    if (MediaIdUtil.isValidImdbId(options.getImdbId())) {
+      getLogger().debug("searching subtitle for imdb id '{}'", options.getImdbId());
+      query.put("imdb_id", String.valueOf(formatImdbId(options.getImdbId())));
+    }
+    else if (options.getTmdbId() > 0) {
+      getLogger().debug("searching subtitle for tmdb id '{}'", options.getTmdbId());
+      query.put("tmdb_id", String.valueOf(options.getTmdbId()));
+    }
+    else if (options.getIds().get("tvShowIds") instanceof Map) {
+      Map<String, Object> tvShowIds = (Map<String, Object>) options.getIds().get("tvShowIds");
+
+      String tvShowImdbId = String.valueOf(tvShowIds.get(IMDB));
+      int tvShowTmdbId = MetadataUtil.parseInt(String.valueOf(tvShowIds.get(MediaMetadata.TMDB)), 0);
+
+      if (MediaIdUtil.isValidImdbId(tvShowImdbId)) {
+        getLogger().debug("searching subtitle for TV show imdb id '{}'", tvShowImdbId);
+        query.put("parent_imdb_id", String.valueOf(formatImdbId(tvShowImdbId)));
+      }
+      else if (tvShowTmdbId > 0) {
+        getLogger().debug("searching subtitle for TV show tmdb id '{}'", tvShowTmdbId);
+        query.put("parent_tmdb_id", String.valueOf(tvShowTmdbId));
+      }
+
+      if (options.getEpisode() > -1) {
+        query.put("episode_number", String.valueOf(options.getEpisode()));
+      }
+      if (options.getSeason() > -1) {
+        query.put("season_number", String.valueOf(options.getSeason()));
+      }
+    }
+
+    if (query.isEmpty()) {
+      getLogger().debug("nothing to search for");
+      return Collections.emptyList();
+    }
+
     // the API docs do not show _how_ the languages should be sent, but testing with the website we saw that _some_
     // languages need to be sent along with the country code
     String language;
@@ -182,51 +230,6 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
     }
     else {
       query.put("machine_translated", "exclude");
-    }
-
-    // pass moviehash
-    MediaFile mediaFile = options.getMediaFile();
-    if (mediaFile != null && mediaFile.exists() && mediaFile.getFilesize() > 0) {
-      File file = mediaFile.getFile().toFile();
-      long fileSize = file.length();
-      String hash = computeOpenSubtitlesHash(file);
-      query.put("moviehash", hash);
-
-      getLogger().debug("moviebytesize: {}; moviehash: {}", fileSize, hash);
-    }
-
-    // pass imdb/tmdb id
-    if (MediaIdUtil.isValidImdbId(options.getImdbId()) || options.getTmdbId() > 0) {
-      if (MediaIdUtil.isValidImdbId(options.getImdbId())) {
-        getLogger().debug("searching subtitle for imdb id '{}'", options.getImdbId());
-        query.put("imdb_id", String.valueOf(formatImdbId(options.getImdbId())));
-      }
-      else if (options.getTmdbId() > 0) {
-        getLogger().debug("searching subtitle for tmdb id '{}'", options.getTmdbId());
-        query.put("tmdb_id", String.valueOf(options.getTmdbId()));
-      }
-      else if (options.getIds().get("tvShowIds") instanceof Map) {
-        Map<String, Object> tvShowIds = (Map<String, Object>) options.getIds().get("tvShowIds");
-
-        String tvShowImdbId = String.valueOf(tvShowIds.get(IMDB));
-        int tvShowTmdbId = MetadataUtil.parseInt(String.valueOf(tvShowIds.get(MediaMetadata.TMDB)), 0);
-
-        if (MediaIdUtil.isValidImdbId(tvShowImdbId)) {
-          getLogger().debug("searching subtitle for TV show imdb id '{}'", tvShowImdbId);
-          query.put("parent_imdb_id", String.valueOf(formatImdbId(tvShowImdbId)));
-        }
-        else if (tvShowTmdbId > 0) {
-          getLogger().debug("searching subtitle for TV show tmdb id '{}'", tvShowTmdbId);
-          query.put("parent_tmdb_id", String.valueOf(tvShowTmdbId));
-        }
-
-        if (options.getEpisode() > -1) {
-          query.put("episode_number", String.valueOf(options.getEpisode()));
-        }
-        if (options.getSeason() > -1) {
-          query.put("season_number", String.valueOf(options.getSeason()));
-        }
-      }
     }
 
     getLogger().debug("searching subtitle");
