@@ -30,6 +30,7 @@ import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.ScrollPaneConstants;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,7 +117,7 @@ public class UnlockDialog extends TmmDialog {
       JButton btnUnlock = new JButton(TmmResourceBundle.getString("tmm.license.unlock"));
       btnUnlock.addActionListener(arg0 -> {
         try {
-          String cleanedLicenseCode = taLicenseCode.getText().replaceAll("\\s", "");
+          String cleanedLicenseCode = StringUtils.strip(taLicenseCode.getText());
           License.getInstance().setLicenseCode(cleanedLicenseCode);
 
           if (License.getInstance().validUntil() != null && License.getInstance().validUntil().isBefore(LocalDate.now())) {

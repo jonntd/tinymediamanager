@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.AesUtil;
 import org.tinymediamanager.scraper.MediaProviderInfo;
+import org.tinymediamanager.scraper.util.ListUtils;
 
 /**
  * This class is used to provide a configuration interface for scrapers
@@ -170,7 +172,7 @@ public class MediaProviderConfig {
   public MediaProviderConfigObject getConfigObject(String key) {
     MediaProviderConfigObject co = settings.get(key);
     if (co == null) {
-      return new MediaProviderConfigObject();
+      return MediaProviderConfigObject.EMPTY_OBJECT;
     }
     return co;
   }
@@ -178,7 +180,7 @@ public class MediaProviderConfig {
   /**
    * gets the config value as string (or the default)<br>
    * You might want to parse it to boolean if it is true|false<br>
-   * You might get a number if it was setup to return the index<br>
+   * You might get a number if it was set up to return the index<br>
    * might return an empty string!
    * 
    * @param key
@@ -186,7 +188,12 @@ public class MediaProviderConfig {
    * @return the value or an empty string
    */
   public String getValue(String key) {
-    return getConfigObject(key).getValue().strip();
+    String result = getConfigObject(key).getValue();
+    if (StringUtils.isBlank(result)) {
+      return "";
+    }
+
+    return StringUtils.strip(result);
   }
 
   /**
@@ -255,7 +262,7 @@ public class MediaProviderConfig {
    */
   public void setValue(String key, String value) {
     MediaProviderConfigObject co = getConfigObject(key);
-    if (co.isEmpty()) {
+    if (co == MediaProviderConfigObject.EMPTY_OBJECT) {
       return;
     }
     co.setValue(value);
@@ -271,7 +278,7 @@ public class MediaProviderConfig {
    */
   public void setValue(String key, boolean value) {
     MediaProviderConfigObject co = getConfigObject(key);
-    if (co.isEmpty()) {
+    if (co == MediaProviderConfigObject.EMPTY_OBJECT) {
       return;
     }
     co.setValue(value);
@@ -287,7 +294,7 @@ public class MediaProviderConfig {
    */
   public void setValue(String key, Integer value) {
     MediaProviderConfigObject co = getConfigObject(key);
-    if (co.isEmpty()) {
+    if (co == MediaProviderConfigObject.EMPTY_OBJECT) {
       return;
     }
     co.setValue(value);
@@ -302,9 +309,7 @@ public class MediaProviderConfig {
    *          the text for this label
    */
   public void addLabel(String key, String keyDescription) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.LABEL);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.LABEL);
     co.setKeyDescription(keyDescription);
     settings.put(key, co);
   }
@@ -332,9 +337,7 @@ public class MediaProviderConfig {
    *          the default value
    */
   public void addBoolean(String key, String keyDescription, boolean defaultValue) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.BOOL);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.BOOL);
     co.setKeyDescription(keyDescription);
     co.setDefaultValue(String.valueOf(defaultValue));
     co.setValue(String.valueOf(defaultValue));
@@ -394,9 +397,7 @@ public class MediaProviderConfig {
    *          enable/disable encryption
    */
   public void addText(String key, String keyDescription, String defaultValue, boolean encrypt) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.TEXT);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.TEXT);
     co.setKeyDescription(keyDescription);
     co.setDefaultValue(defaultValue);
     co.setValue(defaultValue);
@@ -427,9 +428,7 @@ public class MediaProviderConfig {
    *          the default value
    */
   public void addInteger(String key, String keyDescription, Integer defaultValue) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.INTEGER);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.INTEGER);
     co.setKeyDescription(keyDescription);
     co.setDefaultValue(defaultValue.toString());
     co.setValue(defaultValue);
@@ -507,12 +506,10 @@ public class MediaProviderConfig {
    *          the default value
    */
   public void addSelect(String key, String keyDescription, List<String> possibleValues, String defaultValue) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.SELECT);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.SELECT);
     co.setKeyDescription(keyDescription);
-    for (String s : possibleValues) {
-      co.addPossibleValues(s);
+    for (String s : ListUtils.nullSafe(possibleValues)) {
+      co.addPossibleValue(s);
     }
     co.setDefaultValue(defaultValue);
     co.setValue(defaultValue);
@@ -576,13 +573,10 @@ public class MediaProviderConfig {
    *          the default value
    */
   public void addSelectIndex(String key, String keyDescription, List<String> possibleValues, String defaultValue) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.SELECT_INDEX);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.SELECT_INDEX);
     co.setKeyDescription(keyDescription);
-    co.setReturnListAsInt(true);
     for (String s : possibleValues) {
-      co.addPossibleValues(s);
+      co.addPossibleValue(s);
     }
     co.setDefaultValue(defaultValue);
     co.setValue(defaultValue);
@@ -602,12 +596,10 @@ public class MediaProviderConfig {
    *          the default values
    */
   public void addMultiSelect(String key, String keyDescription, List<String> possibleValues, String... defaultValues) {
-    MediaProviderConfigObject co = new MediaProviderConfigObject();
-    co.setType(MediaProviderConfigObject.ConfigType.MULTI_SELECT);
-    co.setKey(key);
+    MediaProviderConfigObject co = new MediaProviderConfigObject(key, MediaProviderConfigObject.ConfigType.MULTI_SELECT);
     co.setKeyDescription(keyDescription);
     for (String s : possibleValues) {
-      co.addPossibleValues(s);
+      co.addPossibleValue(s);
     }
 
     if (defaultValues != null) {

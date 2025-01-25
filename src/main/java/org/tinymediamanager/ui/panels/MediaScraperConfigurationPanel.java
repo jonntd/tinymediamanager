@@ -285,7 +285,7 @@ public class MediaScraperConfigurationPanel extends JPanel {
             mediaProvider.getProviderInfo().getConfig().setValue(entry.getKey(), (Integer) (((JSpinner) comp).getValue()));
           }
           else {
-            mediaProvider.getProviderInfo().getConfig().setValue(entry.getKey(), ((JTextField) comp).getText());
+            mediaProvider.getProviderInfo().getConfig().setValue(entry.getKey(), StringUtils.strip(((JTextField) comp).getText()));
           }
         }
         catch (Exception ignored) {
