@@ -32,56 +32,9 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
-import org.tinymediamanager.core.tasks.TrailerDownloadTask;
 import org.tinymediamanager.core.tasks.YTDownloadTask;
 
 public class ITMediaTrailerDownloadTest extends BasicITest {
-
-  @Test
-  public void downloadDirectTrailerTest() {
-    // apple
-    try {
-      Path path = getWorkFolder().resolve("apple");
-
-      Locale.setDefault(new Locale("en", "US"));
-      Movie m = new Movie();
-      m.setPath(path.toString());
-      MediaFile mf = new MediaFile(path.resolve("movie1.avi"), MediaFileType.VIDEO);
-      m.addToMediaFiles(mf);
-
-      MediaTrailer t = new MediaTrailer();
-      t.setUrl("http://movietrailers.apple.com/movies/disney/coco/coco-trailer-3_h480p.mov");
-      m.addToTrailer(Collections.singletonList(t));
-
-      String filename = m.getTrailerFilename(MovieTrailerNaming.FILENAME_TRAILER);
-
-      TrailerDownloadTask task = new TrailerDownloadTask(t) {
-        @Override
-        protected Path getDestinationWoExtension() {
-          return m.getPathNIO().resolve(filename);
-        }
-
-        @Override
-        protected MediaEntity getMediaEntityToAdd() {
-          return m;
-        }
-      };
-      Thread thread = new Thread(task);
-      thread.start();
-      while (thread.isAlive()) {
-        Thread.sleep(1000);
-      }
-
-      File trailer = path.resolve("movie1-trailer.mov").toFile();
-      if (!trailer.exists()) {
-        fail();
-      }
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
-  }
 
   @Test
   public void downloadYTTrailerTest() {

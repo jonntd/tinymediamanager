@@ -61,7 +61,7 @@ public class ITMovieSubtitleSearchTest extends BasicITest {
   public void testSubtitleSearch() {
     // OpenSubtitles.org
     try {
-      MediaScraper scraper = MediaScraper.getMediaScraperById("opensubtitles", ScraperType.MOVIE_SUBTITLE);
+      MediaScraper scraper = MediaScraper.getMediaScraperById("opensubtitles2", ScraperType.MOVIE_SUBTITLE);
       assertThat(scraper).isNotNull();
 
       for (Movie movie : MovieModuleManager.getInstance().getMovieList().getMovies()) {

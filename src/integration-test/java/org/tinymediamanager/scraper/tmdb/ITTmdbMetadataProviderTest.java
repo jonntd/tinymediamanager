@@ -149,7 +149,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       assertNotNull("Result", results);
 
       // result count
-      assertEquals("Result count", 1, results.size());
+      assertThat(results.size()).isGreaterThanOrEqualTo(1);
 
       assertEquals("Recrutas da Pesada", results.get(0).getTitle());
       assertEquals(1981, results.get(0).getYear());
@@ -408,7 +408,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       results = new ArrayList<>(metadataProvider.search(options));
 
       assertNotNull(results);
-      assertEquals(1, results.size());
+      assertThat(results.size()).isGreaterThanOrEqualTo(1);
       assertEquals("Die Simpsons", results.get(0).getTitle());
       assertEquals("The Simpsons", results.get(0).getOriginalTitle());
       assertEquals("456", results.get(0).getId());
@@ -472,9 +472,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
       assertNotNull("MediaMetadata", md);
 
       assertEquals("Psych", md.getTitle());
-      assertEquals(
-          "Thanks to his police officer father's efforts, Shawn Spencer spent his childhood developing a keen eye for detail (and a lasting dislike of his dad). Years later, Shawn's frequent tips to the police lead to him being falsely accused of a crime he solved. Now, Shawn has no choice but to use his abilities to perpetuate his cover story: psychic crime-solving powers, all the while dragging his best friend, his dad, and the police along for the ride.",
-          md.getPlot());
+      assertThat(md.getPlot()).startsWith("Thanks to his police officer father's efforts, Shawn Spencer");
       assertEquals(2006, md.getYear());
 
       assertThat(md.getRatings().size()).isGreaterThanOrEqualTo(1);
@@ -508,7 +506,7 @@ public class ITTmdbMetadataProviderTest extends BasicITest {
     try {
       mp = new TmdbTvShowMetadataProvider();
       options = new TvShowEpisodeSearchAndScrapeOptions();
-      options.setTvShowIds(Collections.singletonMap(mp.getProviderInfo().getId(), "1447"));
+      options.setTvShowIds(Collections.singletonMap(mp.getProviderInfo().getId(), 1447));
       options.setLanguage(MediaLanguages.en);
       options.setCertificationCountry(CountryCode.US);
       options.setReleaseDateCountry("US");

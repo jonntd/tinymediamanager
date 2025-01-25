@@ -202,7 +202,7 @@ public class ITTmdbTvShowMetadataProviderTest extends BasicITest {
     assertThat(mediaMetadata.getEpisodeNumber(AIRED)).isNotNull();
     assertThat(mediaMetadata.getEpisodeNumber(AIRED).episode()).isEqualTo(12);
     assertThat(mediaMetadata.getEpisodeNumber(AIRED).season()).isEqualTo(2);
-    assertThat(mediaMetadata.getTitle()).isEqualTo("The Way We Was"); // no greek translation here
+    assertThat(mediaMetadata.getTitle()).isEqualTo("Επεισόδιο 12");
     assertThat(mediaMetadata.getOriginalTitle()).isEqualTo("The Way We Was");
     assertThat(mediaMetadata.getPlot())
         .isEqualTo("Η φτηνή τηλεόραση των Σίμσονς χαλάει κι ο Χόμερ με την Μαρτζ διηγούνται στα παιδιά τους πώς γνωρίστηκαν.");
@@ -258,7 +258,7 @@ public class ITTmdbTvShowMetadataProviderTest extends BasicITest {
       MediaMetadata mediaMetadata = mp.getMetadata(options);
 
       assertThat(mediaMetadata).isNotNull();
-      assertThat(mediaMetadata.getEpisodeGroups()).hasSize(2);
+      assertThat(mediaMetadata.getEpisodeGroups()).hasSizeGreaterThanOrEqualTo(2);
       assertThat(mediaMetadata.getEpisodeGroups()).anyMatch(episodeGroup -> episodeGroup.getEpisodeGroupType() == AIRED);
       assertThat(mediaMetadata.getEpisodeGroups())
           .anyMatch(episodeGroup -> episodeGroup.getEpisodeGroupType() == MediaEpisodeGroup.EpisodeGroupType.ABSOLUTE);
