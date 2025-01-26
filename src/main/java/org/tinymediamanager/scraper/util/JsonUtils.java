@@ -11,47 +11,54 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
 
+/**
+ * The class {@link JsonUtils} is used as a helper for JSON operations
+ * 
+ * @author Myron Byole
+ */
 public class JsonUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(JsonUtils.class);
 
   private JsonUtils() {
+    throw new IllegalAccessError();
   }
 
   public static <E> E parseObject(ObjectMapper mapper, JsonNode jsonNode, Class<E> clazz) {
-    if (jsonNode == null || jsonNode.isMissingNode()) {
-      LOGGER.warn("JsonNode NULL or missing (parsing {})", clazz.getCanonicalName());
+    if (jsonNode == null || jsonNode.isMissingNode() || jsonNode instanceof NullNode) {
+      LOGGER.debug("JsonNode NULL or missing (parsing {})", clazz.getCanonicalName());
       return null;
     }
     JsonParser jsonParser = mapper.treeAsTokens(jsonNode);
     try {
       E ret = mapper.readValue(jsonParser, clazz);
       if (ret == null) {
-        LOGGER.warn("JsonNode returning NULL (readValue {})", clazz.getCanonicalName());
+        LOGGER.debug("JsonNode returning NULL (readValue {})", clazz.getCanonicalName());
       }
       return ret;
     }
     catch (Exception e) {
-      LOGGER.warn("mapping to {} failed: {}", clazz, e);
+      LOGGER.debug("mapping to {} failed: {}", clazz, e);
       return null;
     }
   }
 
   public static <E> List<E> parseList(ObjectMapper mapper, JsonNode jsonNode, Class<E> clazz) {
     if (jsonNode == null || jsonNode.isMissingNode()) {
-      LOGGER.warn("JsonNode NULL or missing (parsing {})", clazz.getCanonicalName());
+      LOGGER.debug("JsonNode NULL or missing (parsing {})", clazz.getCanonicalName());
       return Collections.emptyList();
     }
     JsonParser jsonParser = mapper.treeAsTokens(jsonNode);
     try {
       List<E> ret = mapper.readValue(jsonParser, JsonUtils.listType(mapper, clazz));
       if (ret == null) {
-        LOGGER.warn("JsonNode returning NULL (readValue {})", clazz.getCanonicalName());
+        LOGGER.debug("JsonNode returning NULL (readValue {})", clazz.getCanonicalName());
       }
       return ret;
     }
     catch (Exception e) {
-      LOGGER.warn("mapping to {} failed: {}", clazz, e);
+      LOGGER.debug("mapping to {} failed: {}", clazz, e);
       return Collections.emptyList();
     }
   }
@@ -70,7 +77,7 @@ public class JsonUtils {
   public static JsonNode at(JsonNode node, String jsonPtrExpr) {
     JsonNode ret = node.at(JsonPointer.compile(jsonPtrExpr));
     if (ret == null || ret.isMissingNode()) {
-      LOGGER.warn("Cannot parse JSON at '{}', because is was missing/empty/non-existent", jsonPtrExpr);
+      LOGGER.debug("Cannot parse JSON at '{}', because is was missing/empty/non-existent", jsonPtrExpr);
     }
     return ret;
   }

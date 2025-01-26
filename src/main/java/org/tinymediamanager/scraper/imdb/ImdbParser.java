@@ -38,7 +38,6 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,7 +67,6 @@ import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.http.InMemoryCachedUrl;
-import org.tinymediamanager.scraper.http.OnDiskCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
 import org.tinymediamanager.scraper.imdb.entities.ImdbAdvancedSearchResult;
 import org.tinymediamanager.scraper.imdb.entities.ImdbCast;
@@ -1160,7 +1158,7 @@ public abstract class ImdbParser {
 
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing JSON: '{}'", e);
+      getLogger().warn("Error parsing JSON: '{}'", e.getMessage());
       throw e;
     }
   }
@@ -2124,16 +2122,18 @@ public abstract class ImdbParser {
       Url url;
 
       try {
+        // inject language into the url for correct caching
+        String urlWithHeader = this.pageUrl + "|Accept-Language=" + getAcceptLanguage(language, country);
         if (useCachedUrl) {
-          url = new OnDiskCachedUrl(this.pageUrl, 15, TimeUnit.MINUTES);
+          url = new InMemoryCachedUrl(urlWithHeader);
         }
         else {
-          url = new Url(this.pageUrl);
+          url = new Url(urlWithHeader);
         }
-        url.addHeader("Accept-Language", getAcceptLanguage(language, country));
+        // url.addHeader("Accept-Language", getAcceptLanguage(language, country));
       }
       catch (Exception e) {
-        getLogger().debug("tried to fetch imdb page {} - {}", this.pageUrl, e);
+        getLogger().debug("tried to fetch imdb page {} - {}", this.pageUrl, e.getMessage());
         throw new ScrapeException(e);
       }
 
@@ -2145,7 +2145,7 @@ public abstract class ImdbParser {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        getLogger().debug("tried to fetch imdb page {} - {}", this.pageUrl, e);
+        getLogger().debug("tried to fetch imdb page {} - {}", this.pageUrl, e.getMessage());
         throw e;
       }
 
