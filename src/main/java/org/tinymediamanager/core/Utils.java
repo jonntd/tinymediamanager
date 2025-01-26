@@ -2285,9 +2285,11 @@ public class Utils {
 
     Set<Path> fileList = new HashSet<>();
     for (Path file : Utils.getUnknownFilesByRegex(me.getPathNIO(), regexPatterns)) {
-      if (fileList.contains(file)) {
+      if (me.getPathNIO().equals(file)) {
+        // do not remove the whole root of the media entity
         continue;
       }
+
       fileList.add(file);
     }
 
@@ -2310,6 +2312,7 @@ public class Utils {
           // prevent users from doing something stupid
           continue;
         }
+
         LOGGER.debug("Deleting file - {}", file);
         Utils.deleteFileWithBackup(file, me.getDataSource());
         // remove possible MediaFiles too
