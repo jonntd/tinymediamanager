@@ -21,7 +21,7 @@ x [FFmpeg] avoid crash when only 1 artwork is generated #2832
 x [Scrapers] strip whitespaces from scraper config values (especially usernames, passwords, API keys)
 x [Scrapers] parse crew job/role information
 x [UDS] ignore AKA titles if found #2816
-x [Rrenamer] also normalize apostrophes when ASCII replacement is used #2799
+x [Renamer] also normalize apostrophes when ASCII replacement is used #2799
 x [Unwanted files] prevent removing the whole entity by using weird regular expressions
 
 
