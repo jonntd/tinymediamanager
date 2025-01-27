@@ -59,7 +59,7 @@ import com.google.gson.reflect.TypeToken;
 import retrofit2.Response;
 
 abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
-  private static final String                                      ID              = "opensubtitles2";
+  public static final String                                       ID              = "opensubtitles2";
   private static final int                                         HASH_CHUNK_SIZE = 64 * 1024;
 
   private static final CacheMap<DownloadRequest, DownloadResponse> DOWNLOAD_CACHE  = new CacheMap<>(7200 * 3, 60);

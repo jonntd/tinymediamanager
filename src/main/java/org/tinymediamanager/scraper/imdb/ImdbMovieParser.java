@@ -152,7 +152,6 @@ public class ImdbMovieParser extends ImdbParser {
           md.setCastMembers(md2.getCastMembers()); // overwrite all
           md.setTop250(md2.getTop250());
           md2.getCertifications().forEach(md::addCertification); // reference page has more certifications
-          md2.getTags().forEach(md::addTag);
         }
 
         // if we have more that 5 keywords, we need to scrape dedicated page, as only 5 on detail page...

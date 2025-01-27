@@ -103,6 +103,7 @@ public class ITImdbMetadataProviderTest extends BasicITest {
      */
     try {
       mp = new ImdbMovieMetadataProvider();
+      mp.getProviderInfo().getConfig().setValue(ImdbParser.SCRAPE_LANGUAGE_NAMES, false);
       MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
       options.setSearchQuery("Inglorious Basterds");
       options.setLanguage(MediaLanguages.en);
@@ -410,8 +411,8 @@ public class ITImdbMetadataProviderTest extends BasicITest {
      */
     try {
       mp = new ImdbMovieMetadataProvider();
-      mp.getProviderInfo().getConfig().addBoolean("scrapeLanguageNames", false);
-      mp.getProviderInfo().getConfig().addBoolean("scrapeKeywordsPage", true);
+      mp.getProviderInfo().getConfig().setValue(ImdbParser.SCRAPE_LANGUAGE_NAMES, false);
+      mp.getProviderInfo().getConfig().setValue(ImdbParser.SCRAPE_KEYWORDS_PAGE, true);
       options = new MovieSearchAndScrapeOptions();
       options.setImdbId("tt0472033");
       options.setLanguage(MediaLanguages.en);
@@ -449,8 +450,8 @@ public class ITImdbMetadataProviderTest extends BasicITest {
      */
     try {
       mp = new ImdbMovieMetadataProvider();
-      mp.getProviderInfo().getConfig().setValue("localReleaseDate", true);
-      mp.getProviderInfo().getConfig().setValue("scrapeLanguageNames", false);
+      mp.getProviderInfo().getConfig().setValue(ImdbParser.LOCAL_RELEASE_DATE, true);
+      mp.getProviderInfo().getConfig().setValue(ImdbParser.SCRAPE_LANGUAGE_NAMES, false);
       options = new MovieSearchAndScrapeOptions();
       options.setImdbId("tt0114746");
       options.setLanguage(MediaLanguages.de);

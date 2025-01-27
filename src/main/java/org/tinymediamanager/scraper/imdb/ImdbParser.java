@@ -1012,11 +1012,9 @@ public abstract class ImdbParser {
         md.addGenre(genre.toTmm());
       }
 
-      if (isScrapeKeywordsPage()) {
-        JsonNode keywordsNode = JsonUtils.at(node, "/props/pageProps/aboveTheFoldData/keywords/edges");
-        for (ImdbKeyword kw : JsonUtils.parseList(mapper, keywordsNode, ImdbKeyword.class)) {
-          md.addTag(kw.node.text);
-        }
+      JsonNode keywordsNode = JsonUtils.at(node, "/props/pageProps/aboveTheFoldData/keywords/edges");
+      for (ImdbKeyword kw : JsonUtils.parseList(mapper, keywordsNode, ImdbKeyword.class)) {
+        md.addTag(kw.node.text);
       }
 
       // poster

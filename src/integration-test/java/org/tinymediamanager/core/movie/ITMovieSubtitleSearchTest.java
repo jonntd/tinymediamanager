@@ -37,6 +37,7 @@ import org.tinymediamanager.scraper.SubtitleSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.SubtitleSearchResult;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.interfaces.IMovieSubtitleProvider;
+import org.tinymediamanager.scraper.opensubtitles_com.OpenSubtitlesComMovieSubtitleProvider;
 
 public class ITMovieSubtitleSearchTest extends BasicITest {
 
@@ -61,7 +62,7 @@ public class ITMovieSubtitleSearchTest extends BasicITest {
   public void testSubtitleSearch() {
     // OpenSubtitles.org
     try {
-      MediaScraper scraper = MediaScraper.getMediaScraperById("opensubtitles2", ScraperType.MOVIE_SUBTITLE);
+      MediaScraper scraper = MediaScraper.getMediaScraperById(OpenSubtitlesComMovieSubtitleProvider.ID, ScraperType.MOVIE_SUBTITLE);
       assertThat(scraper).isNotNull();
 
       for (Movie movie : MovieModuleManager.getInstance().getMovieList().getMovies()) {
