@@ -13,7 +13,7 @@ public class ImdbSearchResult extends BaseJsonEntity {
   public String          titleTypeText         = "";
   public ImdbImageString titlePosterImageModel = null;
   public List<String>    topCredits            = new ArrayList<>();
-  public ImdbTitleType   imageType             = null;
+  public String          imageType             = "";
   public String          seriesId              = "";
   public String          seriesNameText        = "";
   public String          seriesReleaseText     = "";

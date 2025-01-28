@@ -103,7 +103,6 @@ public class ITImdbMetadataProviderTest extends BasicITest {
      */
     try {
       mp = new ImdbMovieMetadataProvider();
-      mp.getProviderInfo().getConfig().setValue(ImdbParser.SCRAPE_LANGUAGE_NAMES, false);
       MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
       options.setSearchQuery("Inglorious Basterds");
       options.setLanguage(MediaLanguages.en);
@@ -697,6 +696,7 @@ public class ITImdbMetadataProviderTest extends BasicITest {
 
   @Test
   public void testMovieArtworkScrapeWithTmdbId() throws Exception {
+    // TODO: how should this work? IMDB scraper with TMDB?!???
     IMovieArtworkProvider mp = new ImdbMovieArtworkProvider();
 
     ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.MOVIE);
