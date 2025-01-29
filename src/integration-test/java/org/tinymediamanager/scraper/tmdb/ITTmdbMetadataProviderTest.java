@@ -22,10 +22,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import org.tinymediamanager.core.BasicITest;
@@ -40,11 +42,58 @@ import org.tinymediamanager.scraper.MediaSearchResult;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieSetMetadataProvider;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications;
+import org.tinymediamanager.scraper.tmdb.entities.Certifications.Certification;
+
+import retrofit2.Response;
 
 public class ITTmdbMetadataProviderTest extends BasicITest {
+
+  @Test
+  public void matchCerts() throws ScrapeException, IOException {
+    TmdbMovieMetadataProvider mp = new TmdbMovieMetadataProvider();
+    mp.initAPI(); // load certs et all
+
+    int cntCerts = 0;
+    int unknownCerts = 0;
+
+    // load known certs from TMDB
+    Response<Certifications> certs = mp.api.certificationService().getMovieCertification().execute();
+    Certifications movieCerts = certs.body();
+    System.out.println("found " + movieCerts.certifications.size() + " movie certs");
+    certs = mp.api.certificationService().getTvShowCertification().execute();
+    Certifications tvCerts = certs.body();
+    System.out.println("found " + tvCerts.certifications.size() + " tvshow certs");
+
+    // a short test, if all TMDB certs could be matched to TMM certs...
+    for (Map.Entry<String, List<Certification>> country : movieCerts.certifications.entrySet()) {
+      for (Certification cert : country.getValue()) {
+        cntCerts++;
+        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+        if (tmmCert == MediaCertification.UNKNOWN) {
+          unknownCerts++;
+          System.out.println("Did not find a TMM cert for TMDBs movie " + country.getKey() + " - " + cert.certification);
+        }
+      }
+    }
+
+    for (Map.Entry<String, List<Certification>> country : tvCerts.certifications.entrySet()) {
+      for (Certification cert : country.getValue()) {
+        cntCerts++;
+        MediaCertification tmmCert = MediaCertification.getCertification(country.getKey(), cert.certification);
+        if (tmmCert == MediaCertification.UNKNOWN) {
+          unknownCerts++;
+          System.out.println("Did not find a TMM cert for TMDBs tv " + country.getKey() + " - " + cert.certification);
+        }
+      }
+    }
+
+    System.out.println("Found " + cntCerts + " certs in TMDB, could match to TMM " + (cntCerts - unknownCerts) + " (missing " + unknownCerts + ")");
+  }
 
   @Test
   public void testMovieSearch() {

@@ -34,6 +34,7 @@ import org.tinymediamanager.scraper.tmdb.entities.PersonCrewCredit;
 import org.tinymediamanager.scraper.tmdb.enumerations.MediaType;
 import org.tinymediamanager.scraper.tmdb.enumerations.Status;
 import org.tinymediamanager.scraper.tmdb.enumerations.VideoType;
+import org.tinymediamanager.scraper.tmdb.services.CertificationService;
 import org.tinymediamanager.scraper.tmdb.services.CollectionsService;
 import org.tinymediamanager.scraper.tmdb.services.ConfigurationService;
 import org.tinymediamanager.scraper.tmdb.services.FindService;
@@ -212,6 +213,10 @@ class TmdbController {
 
   CollectionsService collectionService() {
     return getRetrofit().create(CollectionsService.class);
+  }
+
+  CertificationService certificationService() {
+    return getRetrofit().create(CertificationService.class);
   }
 
   ConfigurationService configurationService() {
