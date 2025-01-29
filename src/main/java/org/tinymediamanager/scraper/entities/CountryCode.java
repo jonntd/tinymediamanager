@@ -1061,7 +1061,7 @@ public enum CountryCode {
 
   private static CountryCode getByAlpha2Code(String code) {
     try {
-      return Enum.valueOf(CountryCode.class, code);
+      return Enum.valueOf(CountryCode.class, code.toUpperCase(Locale.ROOT));
     }
     catch (IllegalArgumentException e) {
       return null;
@@ -1069,7 +1069,7 @@ public enum CountryCode {
   }
 
   private static CountryCode getByAlpha3Code(String code) {
-    return alpha3Map.get(code);
+    return alpha3Map.get(code.toUpperCase(Locale.ROOT));
   }
 
   /**
