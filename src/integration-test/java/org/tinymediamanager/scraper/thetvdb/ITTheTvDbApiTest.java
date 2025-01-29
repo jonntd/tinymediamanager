@@ -67,8 +67,8 @@ public class ITTheTvDbApiTest extends BasicITest {
         if (cc == null) {
           System.out.println("Country not found: " + cert.country);
         }
-        if (cert.fullName != null && !cert.name.equalsIgnoreCase(cert.fullName)) {
-          System.out.println("name differs: " + cert.name + " - " + cert.fullName);
+        if (cert.fullname != null && !cert.name.equalsIgnoreCase(cert.fullname)) {
+          System.out.println(cc.getAlpha2() + ": name differs: " + cert.name + " - " + cert.fullname);
         }
         if (!cert.contentType.equalsIgnoreCase("movie") && !cert.contentType.equalsIgnoreCase("episode")) {
           System.out.println("contentType no yet known :)" + cert.contentType);

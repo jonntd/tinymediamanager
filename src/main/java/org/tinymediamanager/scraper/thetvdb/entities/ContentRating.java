@@ -43,6 +43,6 @@ public class ContentRating {
   @SerializedName("order")
   public Integer order       = null;
 
-  @SerializedName("fullName")
-  public String  fullName    = null;
+  @SerializedName("fullname")
+  public String  fullname    = null;
 }
