@@ -17,10 +17,17 @@ package org.tinymediamanager.scraper.thetvdb;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.tinymediamanager.core.BasicITest;
+import org.tinymediamanager.scraper.entities.CountryCode;
+import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.thetvdb.entities.AllSeriesResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.ContentRating;
+import org.tinymediamanager.scraper.thetvdb.entities.ContentRatingResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.EpisodeBaseResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.EpisodeExtendedResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.SeasonBaseResponse;
@@ -29,6 +36,8 @@ import org.tinymediamanager.scraper.thetvdb.entities.SeasonType;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesBaseResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesEpisodesResponse;
 import org.tinymediamanager.scraper.thetvdb.entities.SeriesExtendedResponse;
+
+import retrofit2.Response;
 
 public class ITTheTvDbApiTest extends BasicITest {
   private TheTvDbController theTvDbController;
@@ -40,6 +49,43 @@ public class ITTheTvDbApiTest extends BasicITest {
 
     theTvDbController = new TheTvDbController();
     theTvDbController.setAuthToken(md.getAuthToken());
+  }
+
+  @Test
+  public void matchCerts() throws ScrapeException, IOException {
+    TheTvDbMovieMetadataProvider mp = new TheTvDbMovieMetadataProvider();
+    mp.initAPI();
+    int cntCerts = 0;
+    int unknownCerts = 0;
+
+    Response<ContentRatingResponse> response = mp.tvdb.getConfigService().getCertifications().execute();
+    if (response.isSuccessful()) {
+      for (ContentRating cert : response.body().data) {
+        cntCerts++;
+        // sanity checks
+        CountryCode cc = CountryCode.getByCode(cert.country);
+        if (cc == null) {
+          System.out.println("Country not found: " + cert.country);
+        }
+        if (cert.fullName != null && !cert.name.equalsIgnoreCase(cert.fullName)) {
+          System.out.println("name differs: " + cert.name + " - " + cert.fullName);
+        }
+        if (!cert.contentType.equalsIgnoreCase("movie") && !cert.contentType.equalsIgnoreCase("episode")) {
+          System.out.println("contentType no yet known :)" + cert.contentType);
+        }
+
+        // now check for TMM match
+        MediaCertification tmmCert = MediaCertification.getCertification(cc.getAlpha2(), cert.name);
+        if (tmmCert == MediaCertification.UNKNOWN) {
+          unknownCerts++;
+          System.out.println("Did not find a TMM cert for TVDBs " + cc.getAlpha2() + " - " + cert.name);
+        }
+      }
+    }
+
+    System.out.println("Found " + cntCerts + " certs in TVDB, could match " + (cntCerts - unknownCerts) + " to TMM (missing " + unknownCerts + ")");
+    System.out.println();
+
   }
 
   @Test

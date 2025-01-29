@@ -13,36 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.tinymediamanager.scraper.thetvdb.entities;
+
+import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
-public class ContentRating {
-  @SerializedName("id")
-  public Integer id          = null;
-
-  @SerializedName("name")
-  public String  name        = null;
-
-  /**
-   * ISO3 char
-   */
-  @SerializedName("country")
-  public String  country     = null;
-
-  @SerializedName("cdescription")
-  public String  description = null;
-
-  /**
-   * movie or episode
-   */
-  @SerializedName("contentType")
-  public String  contentType = null;
-
-  @SerializedName("order")
-  public Integer order       = null;
-
-  @SerializedName("fullName")
-  public String  fullName    = null;
+/**
+ * the response for all content ratings
+ */
+public class ContentRatingResponse {
+  @SerializedName("data")
+  public List<ContentRating> data = null;
 }

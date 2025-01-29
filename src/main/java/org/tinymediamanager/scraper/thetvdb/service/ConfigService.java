@@ -16,6 +16,7 @@
 package org.tinymediamanager.scraper.thetvdb.service;
 
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkTypeResponse;
+import org.tinymediamanager.scraper.thetvdb.entities.ContentRatingResponse;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -28,4 +29,12 @@ public interface ConfigService {
    */
   @GET("artwork/types")
   Call<ArtworkTypeResponse> getArtworkTypes();
+
+  /**
+   * Returns all rating types
+   *
+   * @return Call&lt;ContentRatingResponse&gt;
+   */
+  @GET("content/ratings")
+  Call<ContentRatingResponse> getCertifications();
 }
