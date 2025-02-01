@@ -77,21 +77,21 @@ public class UnlockDialog extends TmmDialog {
         JTextArea taPurchaseHint = new ReadOnlyTextArea(TmmResourceBundle.getString("tmm.license.hint2"));
         taPurchaseHint.setLineWrap(true);
         panelContent.add(taPurchaseHint, "cell 0 2 2 1,grow, wmin 0");
-
-        JButton btnOpenPaddle = new JButton(TmmResourceBundle.getString("tmm.license.buy"));
-        btnOpenPaddle.addActionListener(e -> {
-          String url = StringEscapeUtils.unescapeHtml4("https://www.tinymediamanager.org/purchase/");
-          try {
-            TmmUIHelper.browseUrl(url);
-          }
-          catch (Exception e1) {
-            LOGGER.error("FAQ", e1);
-            MessageManager.instance
-                .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
-          }
-        });
-        panelContent.add(btnOpenPaddle, "cell 0 3 2 1");
       }
+
+      JButton btnOpenPaddle = new JButton(TmmResourceBundle.getString("tmm.license.buy"));
+      btnOpenPaddle.addActionListener(e -> {
+        String url = StringEscapeUtils.unescapeHtml4("https://www.tinymediamanager.org/purchase/");
+        try {
+          TmmUIHelper.browseUrl(url);
+        }
+        catch (Exception e1) {
+          LOGGER.error("FAQ", e1);
+          MessageManager.instance
+              .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
+        }
+      });
+      panelContent.add(btnOpenPaddle, "cell 0 3 2 1");
     }
     {
       JSeparator separator = new JSeparator();
