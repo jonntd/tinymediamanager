@@ -1,5 +1,6 @@
 Version 5.1.2
 =======================
++ [Exporter] the copyArtwork renderer will fall back to the image cache if the original image is not available
 
 
 Version 5.1.1

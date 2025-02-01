@@ -36,6 +36,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.ImageUtils;
 import org.tinymediamanager.core.MediaEntityExporter;
 import org.tinymediamanager.core.Utils;
@@ -307,6 +308,16 @@ public class MovieExporter extends MediaEntityExporter {
           imageDir = pathToExport;
         }
         try {
+          Path image = mf.getFileAsPath();
+
+          // no accessible or deleted? try to use the cache
+          if (!Files.exists(image)) {
+            Path cachedFile = ImageCache.getCachedFile(image);
+            if (cachedFile != null && Files.exists(cachedFile)) {
+              image = cachedFile;
+            }
+          }
+
           // create the image dir
           if (!Files.exists(imageDir)) {
             Files.createDirectory(imageDir);
@@ -319,12 +330,12 @@ public class MovieExporter extends MediaEntityExporter {
             if (parameters.get("width") != null) {
               width = (int) parameters.get("width");
             }
-            InputStream is = ImageUtils.scaleImage(mf.getFileAsPath(), width);
+            InputStream is = ImageUtils.scaleImage(image, width);
             Files.copy(is, imageDir.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
           }
           else {
             filename += "." + FilenameUtils.getExtension(mf.getFilename());
-            Files.copy(mf.getFileAsPath(), imageDir.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(image, imageDir.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
           }
         }
         catch (Exception e) {
