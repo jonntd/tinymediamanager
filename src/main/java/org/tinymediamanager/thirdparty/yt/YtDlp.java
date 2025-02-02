@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tinymediamanager.thirdparty;
+package org.tinymediamanager.thirdparty.yt;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -26,11 +28,13 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.Globals;
 import org.tinymediamanager.addon.YtDlpAddon;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
+import org.tinymediamanager.thirdparty.FFmpeg;
 
 /**
  * the class {@link YtDlp} is used to access yt-dlp for downloading trailers from yt
@@ -82,6 +86,12 @@ public class YtDlp {
     if (FFmpeg.isAvailable()) {
       cmdList.add("--ffmpeg-location");
       cmdList.add(FFmpeg.getFfmpegExecutable());
+    }
+
+    Path cookieFile = Paths.get(Globals.DATA_FOLDER, "yt-dlp-cookies.txt");
+    if (Files.exists(cookieFile)) {
+      cmdList.add("--cookies");
+      cmdList.add(cookieFile.toAbsolutePath().toString());
     }
 
     cmdList.add("-f");

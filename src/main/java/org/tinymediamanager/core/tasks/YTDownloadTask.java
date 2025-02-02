@@ -50,8 +50,8 @@ import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.scraper.http.StreamingUrl;
 import org.tinymediamanager.scraper.http.Url;
-import org.tinymediamanager.thirdparty.YtDlp;
 import org.tinymediamanager.thirdparty.yt.YTDownloader;
+import org.tinymediamanager.thirdparty.yt.YtDlp;
 
 import com.github.kiulian.downloader.downloader.request.RequestVideoInfo;
 import com.github.kiulian.downloader.downloader.response.Response;

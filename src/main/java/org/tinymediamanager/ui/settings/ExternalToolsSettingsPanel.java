@@ -23,6 +23,7 @@ import java.nio.file.Path;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -34,6 +35,8 @@ import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Bindings;
 import org.jdesktop.beansbinding.Property;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
@@ -70,6 +73,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
   private JRadioButton      rdbtnYtDlpExternal;
   private JTextField        tfYtDlpPath;
   private JButton           btnSearchYtDlpBinary;
+  private JCheckBox         chkbxYtCookies;
 
   ExternalToolsSettingsPanel() {
     initComponents();
@@ -175,7 +179,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
     }
     {
       JPanel panelYtDlp = new JPanel();
-      panelYtDlp.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][400lp,grow][]", "[][][][]"));
+      panelYtDlp.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][400lp,grow][]", "[][][][]15lp![][]"));
       JLabel lblYtDlpT = new TmmLabel("yt-dlp", H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelYtDlp, lblYtDlpT, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#yt-dlp"));
@@ -199,8 +203,24 @@ public class ExternalToolsSettingsPanel extends JPanel {
         panelYtDlp.add(btnSearchYtDlpBinary, "cell 2 2");
 
         JTextArea tpYtDlpLocation = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.ytdlp.hint"));
-        panelYtDlp.add(tpYtDlpLocation, "cell 2 3,growx");
+        panelYtDlp.add(tpYtDlpLocation, "cell 2 3,growx, wmin 0");
         TmmFontHelper.changeFont(tpYtDlpLocation, L2);
+
+        JTextArea taYtCookieHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.ytdlp.cookies.hint"));
+        panelYtDlp.add(taYtCookieHint, "cell 2 4, growx, wmin 0");
+
+        JButton btnOpenFaq = new JButton("yt-dlp FAQ");
+        btnOpenFaq.addActionListener(e -> {
+          String url = "https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp";
+          try {
+            TmmUIHelper.browseUrl(url);
+          }
+          catch (Exception e1) {
+            MessageManager.instance
+                .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
+          }
+        });
+        panelYtDlp.add(btnOpenFaq, "cell 2 5");
       }
     }
   }
