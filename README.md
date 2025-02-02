@@ -28,11 +28,11 @@ Each release's major improvements are announced on our [project blog][11] or you
 
 ## [Screenshots][13]
 
-[![movies01](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/movies/movies01-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/movies/movies01.png) [![movies04](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/movies/movies04-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/movies/movies04.png)
+[![movies01](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/movies/movies01-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/movies/movies01.png) [![movies04](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/movies/movies04-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/movies/movies04.png)
 
-[![movies08](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/movies/movies08-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/movies/movies08.png) [![movies14](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/movies/movies14-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/movies/movies14.png)
+[![movies08](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/movies/movies08-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/movies/movies08.png) [![movies14](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/movies/movies14-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/movies/movies14.png)
 
-[![tvshows01](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/tvshows/tvshows01-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/tvshows/tvshows01.png) [![tvshows02](https://www.tinymediamanager.org/images/screenshots/thumbs/v3/tvshows/tvshows02-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v3/tvshows/tvshows02.png)
+[![tvshows01](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/tvshows/tvshows01-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/tvshows/tvshows01.png) [![tvshows02](https://www.tinymediamanager.org/images/screenshots/thumbs/v5/tvshows/tvshows02-thumb.png)](https://www.tinymediamanager.org/images/screenshots/v5/tvshows/tvshows02.png)
 
 The complete gallery of screenshots can be viewed on our website [here][13].
 
