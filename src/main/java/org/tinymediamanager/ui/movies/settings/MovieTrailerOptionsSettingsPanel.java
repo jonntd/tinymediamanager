@@ -40,7 +40,6 @@ import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.ScraperInTable;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
@@ -71,7 +70,7 @@ class MovieTrailerOptionsSettingsPanel extends JPanel {
   private JCheckBox                  cbTrailerFilename4;
   private JLabel                     lblAutomaticTrailerDownloadHint;
   private JCheckBox                  chckbxTrailerDiscKodiStyle;
-  private JHintCheckBox              chckbxYtDlp;
+  private JCheckBox                  chckbxYtDlp;
 
   MovieTrailerOptionsSettingsPanel() {
     checkBoxListener = e -> checkChanges();
@@ -160,7 +159,6 @@ class MovieTrailerOptionsSettingsPanel extends JPanel {
       {
         chckbxYtDlp = new JHintCheckBox(TmmResourceBundle.getString("Settings.trailer.ytdlp"));
         chckbxYtDlp.setToolTipText(TmmResourceBundle.getString("Settings.trailer.ytdlp.desc"));
-        chckbxYtDlp.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxYtDlp, "cell 1 0 2 1");
 
         checkBox = new JCheckBox(TmmResourceBundle.getString("Settings.trailer.preferred"));

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -58,7 +59,7 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
   private final MediaScraperCheckComboBox                                      cbArtworkScraper;
   private final MediaScraperCheckComboBox                                      cbTrailerScraper;
   private final ScraperMetadataConfigCheckComboBox<MovieScraperMetadataConfig> cbScraperConfig;
-  private final JHintCheckBox                                                  chckbxDoNotOverwrite;
+  private final JCheckBox                                                      chckbxDoNotOverwrite;
 
   private boolean                                                              startScrape = false;
 
@@ -145,7 +146,6 @@ public class MovieScrapeMetadataDialog extends TmmDialog {
       {
         chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
         chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-        chckbxDoNotOverwrite.setHintIcon(IconManager.HINT);
         panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 2");
       }
     }

@@ -119,8 +119,8 @@ class MovieUiSettingsPanel extends JPanel {
   private JCheckBox                                        chckbxUniversalPlot;
   private JCheckBox                                        chckbxUniversalTagLine;
   private JCheckBox                                        chckbxStoreFilter;
-  private JHintCheckBox                                    chckbxDisplayAllMissingMetadata;
-  private JHintCheckBox                                    chckbxDisplayAllMissingArtwork;
+  private JCheckBox                                        chckbxDisplayAllMissingMetadata;
+  private JCheckBox                                        chckbxDisplayAllMissingArtwork;
 
   private final Map<MovieScraperMetadataConfig, JCheckBox> metadataCheckBoxes;
   private final Map<MovieScraperMetadataConfig, JCheckBox> artworkCheckBoxes;
@@ -472,7 +472,6 @@ class MovieUiSettingsPanel extends JPanel {
 
         chckbxDisplayAllMissingMetadata = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkmetadata.displayall"));
         chckbxDisplayAllMissingMetadata.setToolTipText(TmmResourceBundle.getString("Settings.checkmetadata.displayall.desc"));
-        chckbxDisplayAllMissingMetadata.setHintIcon(IconManager.HINT);
         panelUiSettings.add(chckbxDisplayAllMissingMetadata, "cell 2 6");
       }
 
@@ -500,7 +499,6 @@ class MovieUiSettingsPanel extends JPanel {
 
         chckbxDisplayAllMissingArtwork = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkimages.displayall"));
         chckbxDisplayAllMissingArtwork.setToolTipText(TmmResourceBundle.getString("Settings.checkimages.displayall.desc"));
-        chckbxDisplayAllMissingArtwork.setHintIcon(IconManager.HINT);
         panelUiSettings.add(chckbxDisplayAllMissingArtwork, "cell 2 10");
       }
       {

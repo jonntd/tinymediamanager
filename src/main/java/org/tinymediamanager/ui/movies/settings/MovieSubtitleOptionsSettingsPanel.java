@@ -32,7 +32,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -51,7 +50,7 @@ class MovieSubtitleOptionsSettingsPanel extends JPanel {
   private JComboBox                cbScraperLanguage;
   private JComboBox<LanguageStyle> cbSubtitleLanguageStyle;
   private JCheckBox                chckbxSuppressLanguageTag;
-  private JHintCheckBox            chckbxForceBestMatch;
+  private JCheckBox                chckbxForceBestMatch;
 
   MovieSubtitleOptionsSettingsPanel() {
     // UI init
@@ -78,7 +77,6 @@ class MovieSubtitleOptionsSettingsPanel extends JPanel {
 
         chckbxForceBestMatch = new JHintCheckBox(TmmResourceBundle.getString("subtitle.download.force"));
         chckbxForceBestMatch.setToolTipText(TmmResourceBundle.getString("subtitle.download.force.desc"));
-        chckbxForceBestMatch.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxForceBestMatch, "cell 1 1 2 1");
 
         JLabel lblSubtitleLanguageStyle = new JLabel(TmmResourceBundle.getString("Settings.renamer.language"));

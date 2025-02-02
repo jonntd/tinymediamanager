@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -60,7 +61,7 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
   private final JComboBox                                                              cbLanguage;
   private final MediaScraperCheckComboBox                                              cbArtworkScraper;
   private final ScraperMetadataConfigCheckComboBox<TvShowEpisodeScraperMetadataConfig> cbEpisodeScraperConfig;
-  private final JHintCheckBox                                                          chckbxDoNotOverwrite;
+  private final JCheckBox                                                              chckbxDoNotOverwrite;
 
   private MediaScraperComboBox                                                         cbMetadataScraper;
   private MediaScraperCheckComboBox                                                    cbTrailerScraper;
@@ -165,7 +166,6 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
     {
       chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      chckbxDoNotOverwrite.setHintIcon(IconManager.HINT);
       panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 3 2 1");
 
     }

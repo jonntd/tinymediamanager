@@ -42,7 +42,6 @@ import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowTrailerNaming;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.ScraperInTable;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
@@ -66,7 +65,7 @@ public class TvShowTrailerOptionsSettingsPanel extends JPanel {
   private JCheckBox                  cbTrailerFilename2;
   private JCheckBox                  cbTrailerFilename3;
   private JCheckBox                  cbTrailerFilename4;
-  private JHintCheckBox              chckbxUseYtDlp;
+  private JCheckBox                  chckbxUseYtDlp;
 
   TvShowTrailerOptionsSettingsPanel() {
     checkBoxListener = e -> checkChanges();
@@ -152,7 +151,6 @@ public class TvShowTrailerOptionsSettingsPanel extends JPanel {
       {
         chckbxUseYtDlp = new JHintCheckBox(TmmResourceBundle.getString("Settings.trailer.ytdlp"));
         chckbxUseYtDlp.setToolTipText(TmmResourceBundle.getString("Settings.trailer.ytdlp.desc"));
-        chckbxUseYtDlp.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxUseYtDlp, "cell 1 0 2 1");
 
         checkBox = new JCheckBox(TmmResourceBundle.getString("Settings.trailer.preferred"));

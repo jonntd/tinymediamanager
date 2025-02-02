@@ -17,6 +17,7 @@ package org.tinymediamanager.ui.tvshows.settings;
 
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -31,7 +32,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -49,7 +49,7 @@ class TvShowSubtitleOptionsSettingsPanel extends JPanel {
 
   private JComboBox                cbScraperLanguage;
   private JComboBox<LanguageStyle> cbLanguageStyle;
-  private JHintCheckBox            chckbxForceBestMatch;
+  private JCheckBox                chckbxForceBestMatch;
 
   TvShowSubtitleOptionsSettingsPanel() {
     // UI init
@@ -77,7 +77,6 @@ class TvShowSubtitleOptionsSettingsPanel extends JPanel {
 
         chckbxForceBestMatch = new JHintCheckBox(TmmResourceBundle.getString("subtitle.download.force"));
         chckbxForceBestMatch.setToolTipText(TmmResourceBundle.getString("subtitle.download.force.desc"));
-        chckbxForceBestMatch.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxForceBestMatch, "cell 1 1 2 1");
 
         JLabel lblLanguageStyle = new JLabel(TmmResourceBundle.getString("Settings.renamer.language"));

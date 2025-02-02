@@ -43,7 +43,6 @@ import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.connector.MovieConnectors;
 import org.tinymediamanager.core.movie.filenaming.MovieNfoNaming;
 import org.tinymediamanager.scraper.entities.MediaCertification;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.combobox.LocaleComboBox;
@@ -70,13 +69,13 @@ class MovieScraperNfoSettingsPanel extends JPanel {
   private final List<LocaleComboBox>           locales  = new ArrayList<>();
   private JComboBox                            cbNfoLanguage;
   private JComboBox<DateField>                 cbDatefield;
-  private JHintCheckBox                        chckbxCreateOutline;
+  private JCheckBox                            chckbxCreateOutline;
   private JCheckBox                            chckbxOutlineFirstSentence;
   private JCheckBox                            chckbxSingleStudio;
   private JCheckBox                            chckbxNfoDiscKodiStyle;
-  private JHintCheckBox                        chckbxLockdata;
-  private JHintCheckBox                        chckbxTrailer;
-  private JHintCheckBox                        chckbxFileinfo;
+  private JCheckBox                            chckbxLockdata;
+  private JCheckBox                            chckbxTrailer;
+  private JCheckBox                            chckbxFileinfo;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -255,7 +254,6 @@ class MovieScraperNfoSettingsPanel extends JPanel {
 
         chckbxCreateOutline = new JHintCheckBox(TmmResourceBundle.getString("Settings.createoutline"));
         chckbxCreateOutline.setToolTipText(TmmResourceBundle.getString("Settings.createoutline.hint"));
-        chckbxCreateOutline.setHintIcon(IconManager.HINT);
         panelNfo.add(chckbxCreateOutline, "cell 1 10 2 1");
 
         chckbxOutlineFirstSentence = new JCheckBox(TmmResourceBundle.getString("Settings.outlinefirstsentence"));
@@ -268,17 +266,14 @@ class MovieScraperNfoSettingsPanel extends JPanel {
       {
         chckbxTrailer = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.trailer"));
         chckbxTrailer.setToolTipText(TmmResourceBundle.getString("Settings.nfo.trailer.hint"));
-        chckbxTrailer.setHintIcon(IconManager.HINT);
         panelNfo.add(chckbxTrailer, "cell 1 14 2 1");
 
         chckbxFileinfo = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.fileinfo"));
         chckbxFileinfo.setToolTipText(TmmResourceBundle.getString("Settings.nfo.fileinfo.hint"));
-        chckbxFileinfo.setHintIcon(IconManager.HINT);
         panelNfo.add(chckbxFileinfo, "cell 1 15 2 1");
 
         chckbxLockdata = new JHintCheckBox(TmmResourceBundle.getString("Settings.lockdata"));
         chckbxLockdata.setToolTipText(TmmResourceBundle.getString("Settings.lockdata.hint"));
-        chckbxLockdata.setHintIcon(IconManager.HINT);
         panelNfo.add(chckbxLockdata, "cell 1 16 2 1");
       }
     }

@@ -34,7 +34,6 @@ import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -56,7 +55,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
   private JComboBox<CountryItem>    cbReleaseCountry;
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
-  private JHintCheckBox             chckbxFetchAllRatings;
+  private JCheckBox                 chckbxFetchAllRatings;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -108,7 +107,6 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
 
         chckbxFetchAllRatings = new JHintCheckBox(TmmResourceBundle.getString("Settings.fetchallratings"));
         chckbxFetchAllRatings.setToolTipText(TmmResourceBundle.getString("Settings.fetchallratings.desc"));
-        chckbxFetchAllRatings.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxFetchAllRatings, "cell 1 3 2 1");
 
         chckbxCapitalizeWords = new JCheckBox(TmmResourceBundle.getString("Settings.scraper.capitalizeWords"));

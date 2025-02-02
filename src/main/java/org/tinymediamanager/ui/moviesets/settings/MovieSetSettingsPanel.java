@@ -69,8 +69,8 @@ public class MovieSetSettingsPanel extends JPanel {
 
   private JCheckBox                                           chckbxShowMissingMovies;
   private JCheckBox                                           chckbxTvShowTableTooltips;
-  private JHintCheckBox                                       chckbxDisplayAllMissingMetadata;
-  private JHintCheckBox                                       chckbxDisplayAllMissingArtwork;
+  private JCheckBox                                           chckbxDisplayAllMissingMetadata;
+  private JCheckBox                                           chckbxDisplayAllMissingArtwork;
   private JTextField                                          tfMovieSetArtworkFolder;
   private JButton                                             btnSelectFolder;
   private JComboBox                                           cbNfoFormat;
@@ -289,7 +289,6 @@ public class MovieSetSettingsPanel extends JPanel {
 
         chckbxDisplayAllMissingMetadata = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkmetadata.displayall"));
         chckbxDisplayAllMissingMetadata.setToolTipText(TmmResourceBundle.getString("Settings.checkmetadata.displayall.desc"));
-        chckbxDisplayAllMissingMetadata.setHintIcon(IconManager.HINT);
         panelMisc.add(chckbxDisplayAllMissingMetadata, "cell 2 2");
       }
       {
@@ -316,7 +315,6 @@ public class MovieSetSettingsPanel extends JPanel {
 
         chckbxDisplayAllMissingArtwork = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkimages.displayall"));
         chckbxDisplayAllMissingArtwork.setToolTipText(TmmResourceBundle.getString("Settings.checkimages.displayall.desc"));
-        chckbxDisplayAllMissingArtwork.setHintIcon(IconManager.HINT);
         panelMisc.add(chckbxDisplayAllMissingArtwork, "cell 2 6");
       }
     }

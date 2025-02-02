@@ -113,15 +113,15 @@ class TvShowUiSettingsPanel extends JPanel {
 
   private final Map<TvShowScraperMetadataConfig, JCheckBox>        tvShowMetadataCheckBoxes;
   private final Map<TvShowEpisodeScraperMetadataConfig, JCheckBox> episodeMetadataCheckBoxes;
-  private JHintCheckBox                                            chckbxTvShowDisplayAllMissingMetadata;
-  private JHintCheckBox                                            chckbxEpisodeDisplayAllMissingMetadata;
+  private JCheckBox                                                chckbxTvShowDisplayAllMissingMetadata;
+  private JCheckBox                                                chckbxEpisodeDisplayAllMissingMetadata;
   private JCheckBox                                                chckbxEpisodeSpecialsCheckMissingMetadata;
   private final Map<TvShowScraperMetadataConfig, JCheckBox>        tvShowArtworkCheckBoxes;
   private final Map<TvShowScraperMetadataConfig, JCheckBox>        seasonArtworkCheckBoxes;
   private final Map<TvShowEpisodeScraperMetadataConfig, JCheckBox> episodeArtworkCheckBoxes;
-  private JHintCheckBox                                            chckbxTvShowDisplayAllMissingArtwork;
-  private JHintCheckBox                                            chckbxSeasonDisplayAllMissingArtwork;
-  private JHintCheckBox                                            chckbxEpisodeDisplayAllMissingArtwork;
+  private JCheckBox                                                chckbxTvShowDisplayAllMissingArtwork;
+  private JCheckBox                                                chckbxSeasonDisplayAllMissingArtwork;
+  private JCheckBox                                                chckbxEpisodeDisplayAllMissingArtwork;
   private JCheckBox                                                chckbxEpisodeSpecialsCheckMissingArtwork;
   private JCheckBox                                                chckbxTvShowPoster;
   private JCheckBox                                                chckbxTvShowFanart;
@@ -657,7 +657,6 @@ class TvShowUiSettingsPanel extends JPanel {
           gbc.gridwidth = COL_COUNT;
           chckbxTvShowDisplayAllMissingMetadata = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkmetadata.displayall"));
           chckbxTvShowDisplayAllMissingMetadata.setToolTipText(TmmResourceBundle.getString("Settings.checkmetadata.displayall.desc"));
-          chckbxTvShowDisplayAllMissingMetadata.setHintIcon(IconManager.HINT);
           panelCheckMetadata.add(chckbxTvShowDisplayAllMissingMetadata, gbc.clone());
 
           // spacer
@@ -701,7 +700,6 @@ class TvShowUiSettingsPanel extends JPanel {
           gbc.gridwidth = COL_COUNT;
           chckbxEpisodeDisplayAllMissingMetadata = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkmetadata.displayall"));
           chckbxEpisodeDisplayAllMissingMetadata.setToolTipText(TmmResourceBundle.getString("Settings.checkmetadata.displayall.desc"));
-          chckbxEpisodeDisplayAllMissingMetadata.setHintIcon(IconManager.HINT);
           panelCheckMetadata.add(chckbxEpisodeDisplayAllMissingMetadata, gbc.clone());
 
           gbc.gridx = 1;
@@ -746,7 +744,6 @@ class TvShowUiSettingsPanel extends JPanel {
           gbc.gridwidth = COL_COUNT;
           chckbxTvShowDisplayAllMissingArtwork = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkimages.displayall"));
           chckbxTvShowDisplayAllMissingArtwork.setToolTipText(TmmResourceBundle.getString("Settings.checkimages.displayall.desc"));
-          chckbxTvShowDisplayAllMissingArtwork.setHintIcon(IconManager.HINT);
           panelCheckArtwork.add(chckbxTvShowDisplayAllMissingArtwork, gbc.clone());
 
           // spacer
@@ -780,7 +777,6 @@ class TvShowUiSettingsPanel extends JPanel {
           gbc.gridwidth = COL_COUNT;
           chckbxSeasonDisplayAllMissingArtwork = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkimages.displayall"));
           chckbxSeasonDisplayAllMissingArtwork.setToolTipText(TmmResourceBundle.getString("Settings.checkimages.displayall.desc"));
-          chckbxSeasonDisplayAllMissingArtwork.setHintIcon(IconManager.HINT);
           panelCheckArtwork.add(chckbxSeasonDisplayAllMissingArtwork, gbc.clone());
 
           // spacer
@@ -814,7 +810,6 @@ class TvShowUiSettingsPanel extends JPanel {
           gbc.gridwidth = COL_COUNT;
           chckbxEpisodeDisplayAllMissingArtwork = new JHintCheckBox(TmmResourceBundle.getString("Settings.checkimages.displayall"));
           chckbxEpisodeDisplayAllMissingArtwork.setToolTipText(TmmResourceBundle.getString("Settings.checkimages.displayall.desc"));
-          chckbxEpisodeDisplayAllMissingArtwork.setHintIcon(IconManager.HINT);
           panelCheckArtwork.add(chckbxEpisodeDisplayAllMissingArtwork, gbc.clone());
 
           gbc.gridx = 1;

@@ -48,6 +48,7 @@ import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -166,7 +167,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
   private final JLabel                                                         lblOriginalTitle;
   private final TmmTable                                                       tableCastMembers;
   private final ScraperMetadataConfigCheckComboBox<MovieScraperMetadataConfig> cbScraperConfig;
-  private final JHintCheckBox                                                  chckbxDoNotOverwrite;
+  private final JCheckBox                                                      chckbxDoNotOverwrite;
 
   private JTextField                                                           textFieldSearchString;
 
@@ -348,7 +349,6 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     {
       chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      chckbxDoNotOverwrite.setHintIcon(IconManager.HINT);
       contentPanel.add(chckbxDoNotOverwrite, "cell 0 6");
     }
     {

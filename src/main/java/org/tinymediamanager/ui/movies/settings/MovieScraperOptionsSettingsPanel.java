@@ -39,7 +39,6 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
@@ -65,7 +64,7 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxScraperFallback;
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
-  private JHintCheckBox             chckbxFetchAllRatings;
+  private JCheckBox                 chckbxFetchAllRatings;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -128,7 +127,6 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
 
         chckbxFetchAllRatings = new JHintCheckBox(TmmResourceBundle.getString("Settings.fetchallratings"));
         chckbxFetchAllRatings.setToolTipText(TmmResourceBundle.getString("Settings.fetchallratings.desc"));
-        chckbxFetchAllRatings.setHintIcon(IconManager.HINT);
         panelOptions.add(chckbxFetchAllRatings, "cell 1 4 2 1");
 
         chckbxScraperFallback = new JCheckBox(TmmResourceBundle.getString("Settings.scraperfallback"));

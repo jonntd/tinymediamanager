@@ -28,6 +28,8 @@ import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 
+import org.tinymediamanager.ui.IconManager;
+
 /**
  * The class JHintCheckBox. To provide a Checkbox with a hint icon and an extended tooltip
  * 
@@ -57,17 +59,16 @@ public class JHintCheckBox extends JCheckBox {
   }
 
   public JHintCheckBox() {
-    super();
-    this.hintIcon = null;
-
-    Border border = UIManager.getBorder("CheckBox.border");
-    JTextField dummy = new JTextField();
-    this.dummyInsets = border.getBorderInsets(dummy);
+    this(null, IconManager.HINT);
   }
 
   public JHintCheckBox(String text) {
+    this(text, IconManager.HINT);
+  }
+
+  public JHintCheckBox(String text, Icon icon) {
     super(text);
-    this.hintIcon = null;
+    this.hintIcon = icon;
 
     Border border = UIManager.getBorder("CheckBox.border");
     JTextField dummy = new JTextField();
@@ -101,7 +102,7 @@ public class JHintCheckBox extends JCheckBox {
       int iconWidth = hintIcon.getIconWidth();
       int x = getWidth() - dummyInsets.right - iconWidth - 2;
       textX = dummyInsets.right + iconWidth + 4;
-      int y = 4;
+      int y = 2;
       hintIcon.paintIcon(this, g, x, y);
     }
 

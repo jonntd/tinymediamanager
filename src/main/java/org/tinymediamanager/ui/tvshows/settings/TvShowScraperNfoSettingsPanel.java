@@ -50,7 +50,6 @@ import org.tinymediamanager.core.tvshow.filenaming.TvShowEpisodeNfoNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowNfoNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
 import org.tinymediamanager.scraper.entities.MediaCertification;
-import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
@@ -86,10 +85,10 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
   private JCheckBox                            chckbxWriteDateEnded;
   private JCheckBox                            chckbxEmbedAllActors;
   private JCheckBox                            chckbxFirstStudio;
-  private JHintCheckBox                        chckbxLockdata;
+  private JCheckBox                            chckbxLockdata;
   private JCheckBox                            chckbxNewEpisodeguideFormat;
-  private JHintCheckBox                        chckbxTrailer;
-  private JHintCheckBox                        chckbxFileinfo;
+  private JCheckBox                            chckbxTrailer;
+  private JCheckBox                            chckbxFileinfo;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -239,12 +238,10 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
 
       chckbxTrailer = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.trailer"));
       chckbxTrailer.setToolTipText(TmmResourceBundle.getString("Settings.nfo.trailer.hint"));
-      chckbxTrailer.setHintIcon(IconManager.HINT);
       panelNfo.add(chckbxTrailer, "cell 1 15 2 1");
 
       chckbxFileinfo = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.fileinfo"));
       chckbxFileinfo.setToolTipText(TmmResourceBundle.getString("Settings.nfo.fileinfo.hint"));
-      chckbxFileinfo.setHintIcon(IconManager.HINT);
       panelNfo.add(chckbxFileinfo, "cell 1 16 2 1");
 
       chckbxWriteDateEnded = new JCheckBox(TmmResourceBundle.getString("Settings.nfo.writeenddate"));
@@ -252,7 +249,6 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
 
       chckbxLockdata = new JHintCheckBox(TmmResourceBundle.getString("Settings.lockdata"));
       chckbxLockdata.setToolTipText(TmmResourceBundle.getString("Settings.lockdata.hint"));
-      chckbxLockdata.setHintIcon(IconManager.HINT);
       panelNfo.add(chckbxLockdata, "cell 1 18 2 1");
     }
   }
