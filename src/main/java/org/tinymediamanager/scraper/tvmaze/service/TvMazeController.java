@@ -36,7 +36,7 @@ import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class Controller {
+public class TvMazeController {
 
   Retrofit       retrofit;
   private String apiKey;
@@ -47,7 +47,7 @@ public class Controller {
    * @param debug
    *          true or false
    */
-  public Controller(String apiKey) {
+  public TvMazeController(String apiKey) {
     this.apiKey = apiKey;
     OkHttpClient.Builder builder = TmmHttpClient.newBuilderWithForcedCache(15, TimeUnit.MINUTES);
     builder.addInterceptor(new TvMazeInterceptor(this));

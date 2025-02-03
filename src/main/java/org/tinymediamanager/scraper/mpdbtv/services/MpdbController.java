@@ -34,12 +34,12 @@ import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class Controller {
+public class MpdbController {
 
   private final Retrofit retrofit;
   private String         apiKey;
 
-  public Controller() {
+  public MpdbController() {
     OkHttpClient.Builder builder = TmmHttpClient.newBuilder();
     builder.addInterceptor(chain -> {
       Request request = chain.request();

@@ -66,7 +66,7 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
 
   private final MediaProviderInfo                                  providerInfo;
 
-  protected Controller                                             controller      = null;
+  protected OpenSubtitlesComController                                             controller      = null;
 
   protected OpenSubtitlesComSubtitleProvider() {
     providerInfo = createMediaProviderInfo();
@@ -113,7 +113,7 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
         throw new ScrapeException(new FeatureNotEnabledException(this));
       }
 
-      controller = new Controller();
+      controller = new OpenSubtitlesComController();
     }
 
     // API key check

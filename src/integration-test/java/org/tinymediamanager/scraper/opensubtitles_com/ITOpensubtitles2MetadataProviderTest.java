@@ -34,11 +34,11 @@ import retrofit2.Response;
 
 public class ITOpensubtitles2MetadataProviderTest extends BasicITest {
 
-  private static Controller controller;
+  private static OpenSubtitlesComController controller;
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    controller = new Controller();
+    controller = new OpenSubtitlesComController();
     controller.setApiKey(System.getenv("OPEN_SUBTITLES_COM_API_KEY"));
     controller.setUsername(System.getenv("OPEN_SUBTITLES_COM_USERNAME"));
     controller.setPassword(System.getenv("OPEN_SUBTITLES_COM_PASSWORD"));
@@ -47,7 +47,7 @@ public class ITOpensubtitles2MetadataProviderTest extends BasicITest {
 
   @Test
   public void testLogin() throws Exception {
-    Controller controller = new Controller();
+    OpenSubtitlesComController controller = new OpenSubtitlesComController();
     controller.setApiKey(System.getenv("OPEN_SUBTITLES_COM_API_KEY"));
 
     LoginRequest loginRequest = new LoginRequest();

@@ -36,7 +36,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-class Controller {
+class OpenSubtitlesComController {
   private static final String DEFAULT_API_URL     = "https://api.opensubtitles.com";
   private static final String PARAM_API_KEY       = "Api-Key";
   private static final String PARAM_AUTHORIZATION = "Authorization";
@@ -49,7 +49,7 @@ class Controller {
   private String              password;
   private String              token;
 
-  Controller() {
+  OpenSubtitlesComController() {
     apiKey = "";
   }
 

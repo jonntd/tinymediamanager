@@ -30,9 +30,9 @@ import okhttp3.Response;
  */
 public class TvMazeInterceptor implements Interceptor {
 
-  private final Controller controller;
+  private final TvMazeController controller;
 
-  public TvMazeInterceptor(Controller tmdbController) {
+  public TvMazeInterceptor(TvMazeController tmdbController) {
     this.controller = tmdbController;
   }
 
@@ -41,7 +41,7 @@ public class TvMazeInterceptor implements Interceptor {
     return handleIntercept(chain, controller);
   }
 
-  public static Response handleIntercept(Chain chain, Controller controller) throws IOException {
+  public static Response handleIntercept(Chain chain, TvMazeController controller) throws IOException {
     Request request = chain.request();
     Response response = chain.proceed(request);
 

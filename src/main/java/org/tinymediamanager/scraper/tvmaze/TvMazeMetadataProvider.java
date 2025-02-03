@@ -26,7 +26,7 @@ import org.tinymediamanager.core.FeatureNotEnabledException;
 import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
-import org.tinymediamanager.scraper.tvmaze.service.Controller;
+import org.tinymediamanager.scraper.tvmaze.service.TvMazeController;
 
 /**
  * The class @{@link TvMazeMetadataProvider} is a metadata provider for the site tvmaze.com
@@ -38,7 +38,7 @@ abstract class TvMazeMetadataProvider implements IMediaProvider {
   public static final String        ID = "tvmaze";
 
   protected final MediaProviderInfo providerInfo;
-  protected Controller              controller;
+  protected TvMazeController              controller;
 
   TvMazeMetadataProvider() {
     providerInfo = createMediaProviderInfo();
@@ -67,7 +67,7 @@ abstract class TvMazeMetadataProvider implements IMediaProvider {
       }
 
       try {
-        controller = new Controller(getApiKey());
+        controller = new TvMazeController(getApiKey());
       }
       catch (Exception e) {
         getLogger().error("could not initialize the API: {}", e.getMessage());

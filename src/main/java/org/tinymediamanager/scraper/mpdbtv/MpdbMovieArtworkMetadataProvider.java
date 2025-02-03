@@ -38,7 +38,7 @@ import org.tinymediamanager.scraper.mpdbtv.entities.HDLogo;
 import org.tinymediamanager.scraper.mpdbtv.entities.Languages;
 import org.tinymediamanager.scraper.mpdbtv.entities.MovieEntity;
 import org.tinymediamanager.scraper.mpdbtv.entities.Poster;
-import org.tinymediamanager.scraper.mpdbtv.services.Controller;
+import org.tinymediamanager.scraper.mpdbtv.services.MpdbController;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 
@@ -56,7 +56,7 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
 
   public MpdbMovieArtworkMetadataProvider() {
     this.providerInfo = createMediaProviderInfo();
-    controller = new Controller();
+    controller = new MpdbController();
   }
 
   @Override
