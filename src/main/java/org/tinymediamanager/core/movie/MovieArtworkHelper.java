@@ -50,6 +50,7 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.VSMeta;
 
 /**
@@ -1019,14 +1020,7 @@ public class MovieArtworkHelper {
         .sorted((o1, o2) -> o2.getLikes() - o1.getLikes()) // descending
         .toList());
 
-    MediaArtwork ffmpegArtwork = null;
-
-    if (artworkFromFfmpeg.size() == 1) {
-      ffmpegArtwork = artworkFromFfmpeg.get(0);
-    }
-    else if (artworkFromFfmpeg.size() > 1) {
-      ffmpegArtwork = artworkFromFfmpeg.get(artworkFromFfmpeg.size() / 2 + 1);
-    }
+    MediaArtwork ffmpegArtwork = ListUtils.getMiddle(artworkFromFfmpeg);
 
     if (artworkForType.isEmpty() && ffmpegArtwork == null) {
       return Collections.emptyList();

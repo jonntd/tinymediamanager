@@ -186,7 +186,7 @@ public class ListUtils {
   }
 
   /**
-   * gets the first entry of the given {@link List} or null otherwise
+   * Gets the first entry of the given {@link List} or null otherwise
    * 
    * @param list
    *          the {@link List} to get the first entry from
@@ -200,5 +200,24 @@ public class ListUtils {
     }
 
     return list.get(0);
+  }
+
+  /**
+   * Gets the middle entry of the given {@link List} or null otherwise. For lists with an odd entry amount this is the real middle element, for even
+   * sized lists this is the entry above the middle
+   * 
+   * @param list
+   *          the {@link List} to get the middle entry from
+   * @return the middle entry or null
+   * @param <E>
+   *          the type of the value
+   */
+  public static <E> E getMiddle(List<E> list) {
+    if (isEmpty(list)) {
+      return null;
+    }
+
+    int middleIndex = list.size() / 2;
+    return list.get(middleIndex);
   }
 }
