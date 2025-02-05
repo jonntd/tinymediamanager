@@ -304,6 +304,7 @@ public abstract class ImdbParser {
     if (MediaIdUtil.isValidImdbId(options.getImdbId())) {
       MediaMetadata result = getMetadata(options);
       MediaSearchResult msr = result.toSearchResult(options.getMediaType());
+      msr.setScore(1f);
       results.add(msr);
       return results;
     }
