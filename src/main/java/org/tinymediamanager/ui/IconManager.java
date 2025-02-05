@@ -156,6 +156,7 @@ public class IconManager {
   public static final ImageIcon              ERROR                        = createSVGIcon("circle-xmark.svg", Color.RED);
   public static final ImageIcon              EXPANDED                     = createSVGIcon("square-chevron-right.svg");
   public static final ImageIcon              WARN                         = createSVGIcon("triangle-exclamation.svg");
+  public static final ImageIcon              WARN_RED                     = createSVGIcon("triangle-exclamation.svg", Color.RED);
   public static final ImageIcon              INFO                         = createSVGIcon("circle-info.svg");
   public static final ImageIcon              FILTER_ACTIVE                = createSVGIcon("lightbulb-on.svg", new Color(255, 119, 0));
   public static final ImageIcon              NEW_GREEN                    = createSVGIcon("circle-plus.svg", new Color(31, 187, 0));

@@ -16,15 +16,9 @@
 
 package org.tinymediamanager.ui.panels;
 
-import static org.tinymediamanager.ui.plaf.UIUtils.fitToScreen;
-
-import java.awt.Component;
 import java.awt.Cursor;
-import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.Taskbar;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -231,30 +225,10 @@ public class StatusBarPanel extends JPanel implements TmmTaskListener {
   }
 
   /**
-   * calculate the tooltip {@link Point} for the given tooltip {@link Dimension} and the actual mouse location
-   *
-   * @param owner
-   *          the {@link Component} showing the tooltip
-   * @param popupSize
-   *          the {@link Dimension} of the tooltip
-   * @return the origin point where the tooltip should be shown
+   * Call this when an OutOfMemoryError has been detected! This will force the panel to draw an exception mark until tmm is newly launched
    */
-  private Point getTooltipPointFor(Component owner, Dimension popupSize) {
-    Point location = new Point(0, owner.getHeight());
-    location.y += 5; // 5 ... tooltip offset
-    SwingUtilities.convertPointToScreen(location, owner);
-
-    Rectangle r = new Rectangle(location, popupSize);
-    fitToScreen(r);
-    location = r.getLocation();
-    SwingUtilities.convertPointFromScreen(location, owner);
-    r.setLocation(location);
-
-    if (r.intersects(new Rectangle(0, 0, owner.getWidth(), owner.getHeight()))) {
-      location.y = -r.height - 5;
-    }
-
-    return location;
+  public static void setOomDetected() {
+    MemoryUsagePanel.setOomDetected();
   }
 
   /****************************************************************************************

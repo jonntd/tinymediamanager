@@ -19,7 +19,10 @@ import java.awt.GraphicsEnvironment;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.ui.dialogs.MessageDialog;
+import org.tinymediamanager.ui.panels.StatusBarPanel;
 
 /**
  * The Class Log4jBackstop.
@@ -36,6 +39,15 @@ class Log4jBackstop implements Thread.UncaughtExceptionHandler {
     }
     else if ("Null child not allowed".equals(ex.getMessage())) {
       // do not show drawing problems of the JTree (which may occur)
+      return;
+    }
+    else if (ex instanceof OutOfMemoryError) {
+      // delegate out of memory errors to the message history dialog
+      LOGGER.debug("hit memory cap: {}", ex.getMessage());
+      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.oom.title", "tmm.oom", new String[] {}));
+      if (!GraphicsEnvironment.isHeadless()) {
+        StatusBarPanel.setOomDetected();
+      }
       return;
     }
 

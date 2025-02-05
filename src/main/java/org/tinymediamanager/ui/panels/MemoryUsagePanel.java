@@ -28,6 +28,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.ui.IconManager;
 
 /**
  * the class {@link MemoryUsagePanel} is used to print the memory statistics to the status bar
@@ -35,7 +36,9 @@ import org.tinymediamanager.core.TmmResourceBundle;
  * @author Manuel Laggner
  */
 class MemoryUsagePanel extends JPanel {
-  private static final int MB = 1048576;
+  private static final int MB          = 1048576;
+
+  private static boolean   oomDetected = false;
 
   private final Timer      timer;
   private final JLabel     lblMemory;
@@ -54,7 +57,7 @@ class MemoryUsagePanel extends JPanel {
     getMemory();
 
     lblMemory = new JLabel();
-    lblMemory.setHorizontalTextPosition(SwingConstants.CENTER);
+    lblMemory.setHorizontalTextPosition(SwingConstants.LEFT);
     lblMemory.setMinimumSize(getLabelMinimumSize());
     lblMemory.setOpaque(false);
     add(lblMemory);
@@ -63,6 +66,9 @@ class MemoryUsagePanel extends JPanel {
 
     timer = new Timer(1000, null);
     timer.addActionListener(evt -> {
+      if (oomDetected && lblMemory.getIcon() == null) {
+        lblMemory.setIcon(IconManager.WARN_RED);
+      }
       getMemory();
       setMemoryText();
       repaint();
@@ -118,9 +124,14 @@ class MemoryUsagePanel extends JPanel {
     long used = totalMem - freeMem;
     long free = maxMem - used;
 
-    String phys = "";
-    return TmmResourceBundle.getString("tmm.memoryused") + " " + used / megs + " MiB  /  " + TmmResourceBundle.getString("tmm.memoryfree") + " "
-        + free / megs + " MiB  /  " + TmmResourceBundle.getString("tmm.memorymax") + " " + maxMem / megs + " MiB" + phys;
+    String text = TmmResourceBundle.getString("tmm.memoryused") + " " + used / megs + " MiB  /  " + TmmResourceBundle.getString("tmm.memoryfree")
+        + " " + free / megs + " MiB  /  " + TmmResourceBundle.getString("tmm.memorymax") + " " + maxMem / megs + " MiB";
+
+    if (oomDetected) {
+      text += "\n\n" + TmmResourceBundle.getString("tmm.oom");
+    }
+
+    return text;
   }
 
   private Dimension getLabelMinimumSize() {
@@ -129,5 +140,12 @@ class MemoryUsagePanel extends JPanel {
     int width = insets.left + insets.right + lblMemory.getFontMetrics(lblMemory.getFont()).stringWidth(text);
     int height = lblMemory.getMinimumSize().height;
     return new Dimension(width, height);
+  }
+
+  /**
+   * Call this when an OutOfMemoryError has been detected! This will force the panel to draw an exception mark until tmm is newly launched
+   */
+  static void setOomDetected() {
+    oomDetected = true;
   }
 }

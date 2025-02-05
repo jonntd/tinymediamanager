@@ -5,6 +5,7 @@ Version 5.1.2
 + [Exporter] the copyArtwork renderer will fall back to the image cache if the original image is not available
 + [Java] updated/change the Java runtime to Jetbrains JBR 21.0.6
 x [UI] always show the buy license link inside the UnlockDialog #2834
+x [UI] enhanced notifications for OutOfMemoryErrors #2845
 x [MediaInfo] upgraded to 24.12
 x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
 x [IMDB] fix scraping with "best match" - didn't find anything
