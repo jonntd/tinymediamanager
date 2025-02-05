@@ -24,7 +24,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -192,6 +195,30 @@ public class TraktTv implements TmmFeature {
       TraktError error = api.checkForTraktError(response);
       if (error != null && error.message != null) {
         message += " message: " + error.message;
+      }
+      // only sent on VIP methods? so always false:/
+      boolean isVip = Boolean.valueOf(response.headers().get("x-vip-user"));
+      String msg = "";
+      switch (response.code()) {
+        case 420:
+          if (!isVip) {
+            msg += "\n";
+            msg += TmmResourceBundle.getString("trakt.error.420.nonvip");
+          }
+          // no break - let fall through here!!!
+        case 423:
+        case 426:
+        case 429: {
+          // prepend
+          msg = TmmResourceBundle.getString("trakt.error." + response.code()) + msg;
+          break;
+        }
+
+        default:
+          break;
+      }
+      if (!msg.isEmpty()) {
+        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
       }
       throw new HttpException(response.code(), message);
     }

@@ -38,7 +38,10 @@ import org.slf4j.LoggerFactory;
 import org.threeten.bp.DateTimeUtils;
 import org.threeten.bp.OffsetDateTime;
 import org.threeten.bp.ZoneOffset;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
@@ -97,6 +100,30 @@ class TraktTvTvShow {
       TraktError error = api.checkForTraktError(response);
       if (error != null && error.message != null) {
         message += " message: " + error.message;
+      }
+      // only sent on VIP methods? so always false:/
+      boolean isVip = Boolean.valueOf(response.headers().get("x-vip-user"));
+      String msg = "";
+      switch (response.code()) {
+        case 420:
+          if (!isVip) {
+            msg += "\n";
+            msg += TmmResourceBundle.getString("trakt.error.420.nonvip");
+          }
+          // no break - let fall through here!!!
+        case 423:
+        case 426:
+        case 429: {
+          // prepend
+          msg = TmmResourceBundle.getString("trakt.error." + response.code()) + msg;
+          break;
+        }
+
+        default:
+          break;
+      }
+      if (!msg.isEmpty()) {
+        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
       }
       throw new HttpException(response.code(), message);
     }

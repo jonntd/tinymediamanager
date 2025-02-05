@@ -7,6 +7,7 @@ x [UI] always show the buy license link inside the UnlockDialog #2834
 x [MediaInfo] upgraded to 24.12
 x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
 x [IMDB] fix scraping with "best match" - didn't find anything
+x [Trakt.tv] Free users get quite limited now - expose more errors to GUI #2844
 
 
 Version 5.1.1
