@@ -37,6 +37,7 @@ import org.tinymediamanager.core.ImageCache.CacheType;
 import org.tinymediamanager.core.http.TmmHttpServer;
 import org.tinymediamanager.scraper.http.ProxySettings;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
+import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -673,8 +674,8 @@ public final class Settings extends AbstractSettings {
       }
     }
     try {
-      ProxySettings.setProxySettings(getProxyHost(), getProxyPort() == null ? 0 : Integer.parseInt(getProxyPort().strip()), getProxyUsername(),
-          getProxyPassword());
+      int port = MetadataUtil.parseInt(getProxyPort(), 0);
+      ProxySettings.setProxySettings(getProxyHost(), port, getProxyUsername(), getProxyPassword());
     }
     catch (NumberFormatException e) {
       LOGGER.error("could not parse proxy port: {}", e.getMessage());
