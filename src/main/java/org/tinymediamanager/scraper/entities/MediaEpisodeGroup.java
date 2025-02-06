@@ -33,6 +33,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class MediaEpisodeGroup implements Comparable<MediaEpisodeGroup> {
 
+  /**
+   * all can be multiple, except AIRED!!!
+   * 
+   * @author Manuel Laggner
+   *
+   */
   public enum EpisodeGroupType {
     AIRED,
     DVD,
@@ -92,14 +98,13 @@ public class MediaEpisodeGroup implements Comparable<MediaEpisodeGroup> {
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
     MediaEpisodeGroup that = (MediaEpisodeGroup) o;
     boolean result = episodeGroupType == that.episodeGroupType;
-    if (episodeGroupType != EpisodeGroupType.AIRED && episodeGroupType != EpisodeGroupType.ABSOLUTE && result) {
+    if (episodeGroupType != EpisodeGroupType.AIRED && result) {
       result = Objects.equals(name, that.name);
     }
     return result;
@@ -107,7 +112,7 @@ public class MediaEpisodeGroup implements Comparable<MediaEpisodeGroup> {
 
   @Override
   public int hashCode() {
-    if (episodeGroupType != EpisodeGroupType.AIRED && episodeGroupType != EpisodeGroupType.ABSOLUTE) {
+    if (episodeGroupType != EpisodeGroupType.AIRED) {
       return Objects.hash(episodeGroupType, name);
     }
     else {
@@ -118,11 +123,9 @@ public class MediaEpisodeGroup implements Comparable<MediaEpisodeGroup> {
   @Override
   public int compareTo(@NotNull MediaEpisodeGroup o) {
     int result = Integer.compare(episodeGroupType.ordinal(), o.episodeGroupType.ordinal());
-
-    if (episodeGroupType != EpisodeGroupType.AIRED && episodeGroupType != EpisodeGroupType.ABSOLUTE && result == 0) {
+    if (episodeGroupType != EpisodeGroupType.AIRED && result == 0) {
       result = name.compareTo(o.name);
     }
-
     return result;
   }
 }

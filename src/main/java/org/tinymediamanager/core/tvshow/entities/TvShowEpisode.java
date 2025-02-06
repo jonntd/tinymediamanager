@@ -586,14 +586,15 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
         }
       }
     }
-    else if (episodeNumber == null && episodeGroup.getEpisodeGroupType() == ABSOLUTE) {
-      for (MediaEpisodeNumber mediaEpisodeNumber : episodeNumbers) {
-        if (mediaEpisodeNumber.episodeGroup().getEpisodeGroupType() == ABSOLUTE) {
-          episodeNumber = mediaEpisodeNumber;
-          break;
-        }
-      }
-    }
+    // since ABSOLUTE can now be multiple, better remove that, to not get the wrong
+    // else if (episodeNumber == null && episodeGroup.getEpisodeGroupType() == ABSOLUTE) {
+    // for (MediaEpisodeNumber mediaEpisodeNumber : episodeNumbers) {
+    // if (mediaEpisodeNumber.episodeGroup().getEpisodeGroupType() == ABSOLUTE) {
+    // episodeNumber = mediaEpisodeNumber;
+    // break;
+    // }
+    // }
+    // }
 
     return episodeNumber;
   }

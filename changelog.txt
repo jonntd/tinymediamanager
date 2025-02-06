@@ -9,6 +9,7 @@ x [MediaInfo] upgraded to 24.12
 x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
 x [IMDB] fix scraping with "best match" - didn't find anything
 x [Trakt.tv] Free users get quite limited now - expose more errors to GUI #2844
+x [TMDB] allow multiple ABSOLUTE episode groups
 
 
 Version 5.1.1
