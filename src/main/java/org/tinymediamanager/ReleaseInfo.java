@@ -15,7 +15,6 @@
  */
 package org.tinymediamanager;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.URL;
@@ -29,6 +28,8 @@ import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * The Class ReleaseInfo.
  *
@@ -40,36 +41,42 @@ public class ReleaseInfo {
   private static String build;
   private static String buildDate;
 
-  static {
-    try (InputStream inputStream = Files.newInputStream(Paths.get("version"))) { // NOSONAR
-      Properties releaseInfoProp = new Properties();
-      releaseInfoProp.load(inputStream);
-      version = releaseInfoProp.getProperty("version");
-      humanVersion = releaseInfoProp.getProperty("human.version");
-      build = releaseInfoProp.getProperty("build");
-      buildDate = releaseInfoProp.getProperty("date");
-    }
-    catch (IOException e) {
-      try (InputStream inputStream = Files.newInputStream(Paths.get("target/classes/eclipse.properties"))) {
+  private ReleaseInfo() {
+    // hide constructor for utility classes
+    throw new IllegalAccessError();
+  }
+
+  /**
+   * prepare version information
+   */
+  public static void init() {
+    if (StringUtils.isBlank(build)) {
+      try (InputStream inputStream = Files.newInputStream(Paths.get("version"))) { // NOSONAR
         Properties releaseInfoProp = new Properties();
         releaseInfoProp.load(inputStream);
         version = releaseInfoProp.getProperty("version");
         humanVersion = releaseInfoProp.getProperty("human.version");
-        build = "git";
-        Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        buildDate = formatter.format(new Date());
+        build = releaseInfoProp.getProperty("build");
+        buildDate = releaseInfoProp.getProperty("date");
       }
-      catch (IOException e2) {
-        version = "";
-        humanVersion = "";
-        build = "git"; // no file - we must be in GIT
-        buildDate = "";
+      catch (Exception e) {
+        try (InputStream inputStream = Files.newInputStream(Paths.get("target/classes/eclipse.properties"))) {
+          Properties releaseInfoProp = new Properties();
+          releaseInfoProp.load(inputStream);
+          version = releaseInfoProp.getProperty("version");
+          humanVersion = releaseInfoProp.getProperty("human.version");
+          build = "git";
+          Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+          buildDate = formatter.format(new Date());
+        }
+        catch (Exception e2) {
+          version = "";
+          humanVersion = "";
+          build = "git"; // no file - we must be in GIT
+          buildDate = "";
+        }
       }
     }
-  }
-
-  private ReleaseInfo() {
-    // hide contructor for utility classes
   }
 
   /**

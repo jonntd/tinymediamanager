@@ -35,6 +35,7 @@ import javax.swing.SwingConstants;
 import javax.swing.plaf.basic.BasicProgressBarUI;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.tinymediamanager.ReleaseInfo;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -56,7 +57,7 @@ public class TmmSplashScreen extends JDialog {
   private final JLabel                  lblText;
   private final JLabel                  lblVersion;
 
-  public TmmSplashScreen(String version) throws URISyntaxException {
+  public TmmSplashScreen() throws URISyntaxException {
     ImageIcon splashscreen = new TmmSvgIcon(IconManager.class.getResource("images/svg/splashscreen.svg").toURI());
 
     setModal(false);
@@ -84,7 +85,7 @@ public class TmmSplashScreen extends JDialog {
       TmmFontHelper.changeFont(lblText, TmmFontHelper.L2);
       panelSouth.add(lblText, "cell 0 1,growx , wmin 0");
 
-      lblVersion = new JLabel(version + "  "); // add two spaces to avoid clipping on 125% UI scaling. reason unknown
+      lblVersion = new JLabel(ReleaseInfo.getHumanVersion() + "  "); // add two spaces to avoid clipping on 125% UI scaling. reason unknown
       lblVersion.setForeground(FOREGROUND_COLOR);
       lblVersion.setHorizontalAlignment(SwingConstants.TRAILING);
       TmmFontHelper.changeFont(lblVersion, TmmFontHelper.L2);

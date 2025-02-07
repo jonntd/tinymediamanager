@@ -41,6 +41,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.ELProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,8 +82,6 @@ import org.tinymediamanager.ui.dialogs.TmmSplashScreen;
 import org.tinymediamanager.ui.dialogs.WhatsNewDialog;
 import org.tinymediamanager.ui.images.LogoCircle;
 import org.tinymediamanager.ui.wizard.TinyMediaManagerWizard;
-
-import com.sun.jna.Platform;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -125,7 +124,9 @@ public final class TinyMediaManager {
     printLogHeader();
 
     if (!headless) {
-      // GUI mode - start on EDT
+      // GUI mode - load LaF and start tmm on EDT
+      setLookAndFeel();
+
       EventQueue.invokeLater(() -> {
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
           @Override
@@ -134,11 +135,9 @@ public final class TinyMediaManager {
               Thread.currentThread().setName("main");
               TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
-              setLookAndFeel();
-
               // splash
               try {
-                splashScreen = new TmmSplashScreen(ReleaseInfo.getHumanVersion());
+                splashScreen = new TmmSplashScreen();
                 splashScreen.setVisible(true);
               }
               catch (Exception e) {
@@ -518,7 +517,7 @@ public final class TinyMediaManager {
     Utils.deleteOldBackupFile(db, 5);
 
     // check if a .desktop file exists
-    if (Platform.isLinux()) {
+    if (SystemUtils.IS_OS_LINUX) {
       if (!TmmOsUtils.existsDesktopFileForLinux()) {
         Path desktopFile = Paths.get(System.getProperty("user.home"), ".local", "share", "applications", "tinyMediaManager.desktop").toAbsolutePath();
         if (Files.isWritable(desktopFile.getParent())) {
@@ -545,6 +544,7 @@ public final class TinyMediaManager {
    *          the text
    */
   private void updateProgress(String text, int progress) {
+    LOGGER.debug("{} - {}%", text, progress);
     if (splashScreen == null) {
       return;
     }
@@ -567,6 +567,8 @@ public final class TinyMediaManager {
     catch (Exception e) {
       LOGGER.error("Could not initialize license module!");
     }
+
+    ReleaseInfo.init();
 
     // simple parse command line
     if (args != null && args.length > 0) {

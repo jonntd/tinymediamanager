@@ -25,13 +25,13 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
  * The Class TmmUILogCollector, collect all logs and store it for the UI.
  */
 public class TmmUILogCollector {
-  public static final String            APPENDER = "UI";
   public static final TmmUILogCollector instance = new TmmUILogCollector();
 
   private final TmmUILogAppender        logAppender;
 
   // just to trigger class loading and initializing
   public static void init() {
+    // do nothing
   }
 
   private TmmUILogCollector() {
