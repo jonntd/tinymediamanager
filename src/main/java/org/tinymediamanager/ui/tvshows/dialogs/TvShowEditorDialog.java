@@ -1451,11 +1451,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableRatings.getSelectedRow();
-      if (row > -1) {
-        row = tableRatings.convertRowIndexToModel(row);
-        ratings.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableRatings, ratings);
     }
   }
 
@@ -1697,11 +1693,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableIds.getSelectedRow();
-      if (row > -1) {
-        row = tableIds.convertRowIndexToModel(row);
-        ids.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableIds, ids);
     }
   }
 
@@ -1872,11 +1864,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableEpisodes.getSelectedRow();
-      if (row > -1) {
-        row = tableEpisodes.convertRowIndexToModel(row);
-        episodes.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableEpisodes, episodes);
     }
   }
 
@@ -1960,11 +1948,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableTrailer.getSelectedRow();
-      if (row > -1) {
-        row = tableTrailer.convertRowIndexToModel(row);
-        trailers.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableTrailer, trailers);
     }
   }
 
@@ -2105,13 +2089,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         add(btnAddEpisodeNumber, "cell 0 2,alignx right,aligny top");
 
         JButton btnRemoveEpisodeNumber = new SquareIconButton(IconManager.REMOVE_INV);
-        btnRemoveEpisodeNumber.addActionListener(e -> {
-          int row = tableEpisodeNumbers.getSelectedRow();
-          if (row > -1) {
-            row = tableEpisodeNumbers.convertRowIndexToModel(row);
-            episodeNumbers.remove(row);
-          }
-        });
+        btnRemoveEpisodeNumber.addActionListener(e -> TmmUIHelper.removeSelectedRowsFromJTable(tableEpisodeNumbers, episodeNumbers));
         add(btnRemoveEpisodeNumber, "cell 0 2,alignx right,aligny top");
       }
     }

@@ -1166,11 +1166,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableEpisodeNumbers.getSelectedRow();
-      if (row > -1) {
-        row = tableEpisodeNumbers.convertRowIndexToModel(row);
-        episodeNumbers.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableEpisodeNumbers, episodeNumbers);
     }
   }
 
@@ -1210,11 +1206,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableRatings.getSelectedRow();
-      if (row > -1) {
-        row = tableRatings.convertRowIndexToModel(row);
-        ratings.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableRatings, ratings);
     }
   }
 
@@ -1353,11 +1345,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableIds.getSelectedRow();
-      if (row > -1) {
-        row = tableIds.convertRowIndexToModel(row);
-        ids.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableIds, ids);
     }
   }
 

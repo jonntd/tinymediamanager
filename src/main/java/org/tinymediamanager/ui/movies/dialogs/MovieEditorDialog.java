@@ -1558,11 +1558,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableRatings.getSelectedRow();
-      if (row > -1) {
-        row = tableRatings.convertRowIndexToModel(row);
-        ratings.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableRatings, ratings);
     }
   }
 
@@ -1599,11 +1595,8 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableIds.getSelectedRow();
-      if (row > -1) {
-        row = tableIds.convertRowIndexToModel(row);
-        ids.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableIds, ids);
+
     }
   }
 
@@ -1739,11 +1732,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableTrailer.getSelectedRow();
-      if (row > -1) {
-        row = tableTrailer.convertRowIndexToModel(row);
-        trailers.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableTrailer, trailers);
     }
   }
 

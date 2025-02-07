@@ -39,11 +39,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JSplitPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -73,6 +71,7 @@ import org.tinymediamanager.thirdparty.FFmpeg;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.IntegerInputVerifier;
 import org.tinymediamanager.ui.TmmFontHelper;
+import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -203,7 +202,7 @@ public class MediaFileEditorPanel extends JPanel {
         }
         {
           btnARD = new JButton(new ScanAspectRationAction());
-            btnARD.setFocusable(false);
+          btnARD.setFocusable(false);
           MediaFile mf = MediaFileEditorPanel.this.mediaFiles.get(0).mediaFile;
           btnARD.setEnabled(videoTypes.contains(mf.getType()));
           panelDetails.add(btnARD, "cell 7 1");
@@ -426,7 +425,7 @@ public class MediaFileEditorPanel extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int[] audioRows = convertSelectedRowsToModelRows(tableAudioStreams);
+      int[] audioRows = TmmUIHelper.getSelectedRowsAsModelRows(tableAudioStreams);
       for (int index : audioRows) {
         audioStreams.remove(index);
       }
@@ -455,7 +454,7 @@ public class MediaFileEditorPanel extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int[] subtitleRows = convertSelectedRowsToModelRows(tableSubtitles);
+      int[] subtitleRows = TmmUIHelper.getSelectedRowsAsModelRows(tableSubtitles);
       for (int index : subtitleRows) {
         subtitles.remove(index);
       }
@@ -492,18 +491,6 @@ public class MediaFileEditorPanel extends JPanel {
         btnARD.setEnabled(true);
       }
     }
-  }
-
-  private int[] convertSelectedRowsToModelRows(JTable table) {
-    int[] tableRows = table.getSelectedRows();
-    int[] modelRows = new int[tableRows.length];
-    for (int i = 0; i < tableRows.length; i++) {
-      modelRows[i] = table.convertRowIndexToModel(tableRows[i]);
-    }
-
-    // sort it (descending)
-    ArrayUtils.reverse(modelRows);
-    return modelRows;
   }
 
   /*

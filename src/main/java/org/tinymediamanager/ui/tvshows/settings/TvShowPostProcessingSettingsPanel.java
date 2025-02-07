@@ -33,6 +33,7 @@ import org.tinymediamanager.core.PostProcess;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
+import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
@@ -72,14 +73,19 @@ public class TvShowPostProcessingSettingsPanel extends JPanel {
     });
 
     btnRemoveProcessTvShow.addActionListener(e -> {
-      int row = tablePostProcessesTvShow.getSelectedRow();
-      row = tablePostProcessesTvShow.convertRowIndexToModel(row);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(tablePostProcessesTvShow);
 
-      if (row != -1) {
-        PostProcess process = settings.getPostProcessTvShow().get(row);
-        settings.removePostProcessTvShow(process);
-        tablePostProcessesTvShow.adjustColumnPreferredWidths(5);
+      for (int indexRow : indexRows) {
+        try {
+          PostProcess process = settings.getPostProcessTvShow().get(indexRow);
+          settings.removePostProcessTvShow(process);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
+
+      tablePostProcessesTvShow.adjustColumnPreferredWidths(5);
     });
 
     btnEditProcessTvShow.addActionListener(e -> {
@@ -101,13 +107,19 @@ public class TvShowPostProcessingSettingsPanel extends JPanel {
     });
 
     btnRemoveProcessEpisode.addActionListener(e -> {
-      int row = tablePostProcessesEpisode.getSelectedRow();
-      row = tablePostProcessesEpisode.convertRowIndexToModel(row);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(tablePostProcessesEpisode);
 
-      if (row != -1) {
-        PostProcess process = settings.getPostProcessEpisode().get(row);
-        settings.removePostProcessEpisode(process);
+      for (int indexRow : indexRows) {
+        try {
+          PostProcess process = settings.getPostProcessEpisode().get(indexRow);
+          settings.removePostProcessEpisode(process);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
+
+      tablePostProcessesEpisode.adjustColumnPreferredWidths(5);
     });
 
     btnEditProcessEpisode.addActionListener(e -> {

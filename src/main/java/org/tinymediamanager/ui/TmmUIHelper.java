@@ -37,6 +37,7 @@ import java.util.Locale;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
@@ -45,6 +46,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.FontUIResource;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.jetbrains.annotations.NotNull;
@@ -93,6 +95,7 @@ public class TmmUIHelper {
   public static void setLookAndFeel() {
     // load font settings
     try {
+      // no lazy loading here - causes JNI loading errors and JVM crashes!
       FlatInterFont.install();
 
       // sanity check
@@ -842,5 +845,47 @@ public class TmmUIHelper {
     else {
       TmmTaskManager.getInstance().addUnnamedTask(runnable);
     }
+  }
+
+  /**
+   * Removes the selected rows of the given {@link JTable} from the given {@link List}. The given {@link List} needs to be bound to the model!
+   *
+   * @param table
+   *          the {@link JTable} to get the selected rows from
+   * @param list
+   *          the {@link List} to remove the entries from
+   * @param <E>
+   *          the type of the rows
+   */
+  public static <E> void removeSelectedRowsFromJTable(JTable table, List<E> list) {
+    int[] indexRows = getSelectedRowsAsModelRows(table);
+
+    for (int indexRow : indexRows) {
+      try {
+        list.remove(indexRow);
+      }
+      catch (Exception e) {
+        LOGGER.debug("Could not remove entry from the list - '{}'", e.getMessage());
+      }
+    }
+  }
+
+  /**
+   * Get all selected rows from the given {@link JTable} as rows from the underlying model
+   * 
+   * @param table
+   *          the {@link JTable}
+   * @return an int[] containing the model indices of all selected rows
+   */
+  public static int[] getSelectedRowsAsModelRows(JTable table) {
+    int[] tableRows = table.getSelectedRows();
+    int[] modelRows = new int[tableRows.length];
+    for (int i = 0; i < tableRows.length; i++) {
+      modelRows[i] = table.convertRowIndexToModel(tableRows[i]);
+    }
+
+    // sort it (descending)
+    ArrayUtils.reverse(modelRows);
+    return modelRows;
   }
 }

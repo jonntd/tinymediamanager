@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.MediaIdTable;
@@ -215,11 +216,7 @@ public class PersonEditorPanel extends AbstractModalInputPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableIds.getSelectedRow();
-      if (row > -1) {
-        row = tableIds.convertRowIndexToModel(row);
-        ids.remove(row);
-      }
+      TmmUIHelper.removeSelectedRowsFromJTable(tableIds, ids);
     }
   }
 }

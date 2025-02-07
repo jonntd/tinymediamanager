@@ -43,6 +43,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.WolDevice;
 import org.tinymediamanager.jsonrpc.config.HostConfig;
 import org.tinymediamanager.thirdparty.KodiRPC;
+import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
@@ -63,7 +64,7 @@ class ExternalDevicesSettingsPanel extends JPanel {
 
   private final Settings      settings = Settings.getInstance();
 
-  private JTable              tableWolDevices;
+  private TmmTable            tableWolDevices;
   private JTextField          tfKodiHost;
   private JTextField          tfKodiTcpPort;
   private JTextField          tfKodiHttpPort;
@@ -101,11 +102,16 @@ class ExternalDevicesSettingsPanel extends JPanel {
     });
 
     btnRemoveWolDevice.addActionListener(e -> {
-      int row = tableWolDevices.getSelectedRow();
-      row = tableWolDevices.convertRowIndexToModel(row);
-      if (row != -1) {
-        WolDevice device = Settings.getInstance().getWolDevices().get(row);
-        Settings.getInstance().removeWolDevices(device);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(tableWolDevices);
+
+      for (int indexRow : indexRows) {
+        try {
+          WolDevice device = settings.getWolDevices().get(indexRow);
+          settings.removeWolDevices(device);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
 

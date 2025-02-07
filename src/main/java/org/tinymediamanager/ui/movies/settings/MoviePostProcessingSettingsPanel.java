@@ -34,6 +34,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.ui.MainWindow;
+import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
@@ -72,14 +73,19 @@ public class MoviePostProcessingSettingsPanel extends JPanel {
     });
 
     btnRemoveProcess.addActionListener(e -> {
-      int row = tablePostProcesses.getSelectedRow();
-      row = tablePostProcesses.convertRowIndexToModel(row);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(tablePostProcesses);
 
-      if (row != -1) {
-        PostProcess process = settings.getPostProcess().get(row);
-        settings.removePostProcess(process);
-        tablePostProcesses.adjustColumnPreferredWidths(5);
+      for (int indexRow : indexRows) {
+        try {
+          PostProcess process = settings.getPostProcess().get(indexRow);
+          settings.removePostProcess(process);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
+
+      tablePostProcesses.adjustColumnPreferredWidths(5);
     });
 
     btnEditProcess.addActionListener(e -> {
@@ -149,5 +155,4 @@ public class MoviePostProcessingSettingsPanel extends JPanel {
     jTableBinding.setEditable(false);
     jTableBinding.bind();
   }
-
 }

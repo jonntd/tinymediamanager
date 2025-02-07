@@ -6,9 +6,10 @@ Version 5.1.2
 + [Java] updated/change the Java runtime to Jetbrains JBR 21.0.6
 x [UI] reverted lazy loading of Inter font #2842 #2852 #2854
 x [UI] many enhancements to focus-management and focus traversal #2829
-x [UI] added hotkey CTRL+SHIFT+E to edit current selected row in an editable table29 #2829
+x [UI] added hotkey CTRL+SHIFT+E to edit current selected row in an editable table #2829
 x [UI] always show the buy license link inside the UnlockDialog #2834
 x [UI] enhanced notifications for OutOfMemoryErrors #2845
+x [UI] enabled deletion of multiple table entries #2829
 x [MediaInfo] upgraded to 24.12
 x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
 x [IMDB] fix scraping with "best match" - didn't find anything
