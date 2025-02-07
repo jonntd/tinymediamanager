@@ -35,5 +35,6 @@ public class TmmTabbedPane extends JTabbedPane {
     putClientProperty("fullWidth", Boolean.TRUE);
     super.updateUI();
     setBorder(null);
+    setFocusable(false);
   }
 }

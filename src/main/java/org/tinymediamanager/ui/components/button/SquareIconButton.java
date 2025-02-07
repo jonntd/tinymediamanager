@@ -29,10 +29,12 @@ public class SquareIconButton extends JButton {
   public SquareIconButton(Icon icon) {
     super(icon);
     putClientProperty("JButton.squareSize", true);
+    setFocusable(false);
   }
 
   public SquareIconButton(Action action) {
     super(action);
     putClientProperty("JButton.squareSize", true);
+    setFocusable(false);
   }
 }

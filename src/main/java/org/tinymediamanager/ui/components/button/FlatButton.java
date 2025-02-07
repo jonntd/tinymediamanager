@@ -68,6 +68,7 @@ public class FlatButton extends JButton {
   protected void init(String text, Icon icon) {
     setOpaque(false);
     setContentAreaFilled(false);
+    setFocusable(false);
     super.init(text, icon);
 
     addMouseListener(new MouseAdapter() {

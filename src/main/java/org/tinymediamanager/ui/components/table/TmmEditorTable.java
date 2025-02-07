@@ -17,10 +17,19 @@ package org.tinymediamanager.ui.components.table;
 
 import java.awt.Cursor;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
+import javax.swing.JComponent;
 import javax.swing.JTable;
+import javax.swing.KeyStroke;
 import javax.swing.table.TableModel;
 
 /**
@@ -36,11 +45,61 @@ public abstract class TmmEditorTable extends TmmTable {
     TableButtonListener listener = new TableButtonListener(this);
     addMouseListener(listener);
     addMouseMotionListener(listener);
+
+    ActionMap am = getActionMap();
+    am.put("edit", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        editButtonClicked(convertRowIndexToModel(getSelectedRow()));
+      }
+    });
+    am.put("tabPressed", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        int selectedRow = getSelectedRow();
+        if (selectedRow == getRowCount() - 1) {
+          clearSelection();
+          transferFocus();
+        }
+        else {
+          changeSelection(selectedRow + 1, 0, false, false);
+        }
+      }
+    });
+    am.put("tabPressedReverse", new AbstractAction() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        int selectedRow = getSelectedRow();
+        if (selectedRow == 0) {
+          clearSelection();
+          transferFocusBackward();
+        }
+        else {
+          changeSelection(selectedRow - 1, 0, false, false);
+        }
+      }
+    });
+
+    InputMap im = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK), "edit");
+
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "tabPressed");
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "tabPressedReverse");
   }
 
   public TmmEditorTable(TableModel tableModel) {
     this();
     setModel(tableModel);
+  }
+
+  @Override
+  protected void processFocusEvent(FocusEvent e) {
+    super.processFocusEvent(e);
+
+    // per default select the first row of the table when we get the focus
+    if (e.paramString().startsWith("FOCUS_GAINED") && getRowCount() > 0 && getSelectedRow() == -1) {
+      changeSelection(0, 0, false, false);
+    }
   }
 
   /**

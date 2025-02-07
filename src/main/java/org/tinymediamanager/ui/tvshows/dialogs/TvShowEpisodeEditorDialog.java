@@ -22,6 +22,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.KeyboardFocusManager;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
@@ -119,6 +120,7 @@ import org.tinymediamanager.ui.components.table.MediaRatingTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.textfield.TmmObligatoryTextArea;
 import org.tinymediamanager.ui.components.textfield.TmmRoundTextArea;
+import org.tinymediamanager.ui.components.textfield.TmmTextArea;
 import org.tinymediamanager.ui.dialogs.AbstractEditorDialog;
 import org.tinymediamanager.ui.dialogs.ImageChooserDialog;
 import org.tinymediamanager.ui.panels.IdEditorPanel;
@@ -286,7 +288,6 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         detailsPanel.add(tfTitle, "flowx,cell 1 0 4 1,growx, wmin 0");
 
         final JButton btnPlay = new SquareIconButton(IconManager.PLAY_INV);
-        btnPlay.setFocusable(false);
         btnPlay.addActionListener(e -> {
           MediaFile mf = episodeToEdit.getMainVideoFile();
           try {
@@ -338,15 +339,12 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
           }
         };
         tableEpisodeNumbers.configureScrollPane(scrollPaneEpisodeNumbers);
-        tableEpisodeNumbers.setFocusable(false);
         detailsPanel.add(scrollPaneEpisodeNumbers, "cell 1 2 3 1,grow");
 
         JButton btnAddEpisodeNumber = new SquareIconButton(new AddEpisodeNumberAction());
-        btnAddEpisodeNumber.setFocusable(false);
         detailsPanel.add(btnAddEpisodeNumber, "cell 0 2,alignx right");
 
         JButton btnRemoveEpisodeNumber = new SquareIconButton(new RemoveEpisodeNumberAction());
-        btnRemoveEpisodeNumber.setFocusable(false);
         detailsPanel.add(btnRemoveEpisodeNumber, "cell 0 2,alignx right");
       }
       {
@@ -363,9 +361,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         JScrollPane scrollPane = new JScrollPane();
         detailsPanel.add(scrollPane, "cell 1 4 4 1,grow");
 
-        taPlot = new JTextArea();
-        taPlot.setLineWrap(true);
-        taPlot.setWrapStyleWord(true);
+        taPlot = new TmmTextArea();
         scrollPane.setViewportView(taPlot);
       }
       {
@@ -380,7 +376,6 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
           lblThumb.clearImage();
           tfThumb.setText("");
         });
-        btnDeleteThumb.setFocusable(false);
         detailsPanel.add(btnDeleteThumb, "cell 6 0");
 
         lblThumb = new ImageLabel();
@@ -430,14 +425,11 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
-        tableRatings.setFocusable(false);
 
         JButton btnAddRating = new SquareIconButton(new AddRatingAction());
-        btnAddRating.setFocusable(false);
         detailsPanel.add(btnAddRating, "cell 0 8,alignx right,aligny top");
 
         JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
-        btnRemoveRating.setFocusable(false);
         detailsPanel.add(btnRemoveRating, "cell 0 8,alignx right,aligny top");
       }
       {
@@ -451,6 +443,8 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         taNote.setLineWrap(true);
         taNote.setWrapStyleWord(true);
         taNote.setForeground(UIManager.getColor("TextField.foreground"));
+        taNote.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
+        taNote.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
         scrollPane.setViewportView(taNote);
       }
     }
@@ -502,19 +496,15 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         scrollPaneTags.setViewportView(listTags);
 
         JButton btnAddTag = new SquareIconButton(new AddTagAction());
-        btnAddTag.setFocusable(false);
         details2Panel.add(btnAddTag, "cell 0 4,alignx right,aligny top");
 
         JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
-        btnRemoveTag.setFocusable(false);
         details2Panel.add(btnRemoveTag, "cell 0 4,alignx right,aligny top");
 
         JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
-        btnMoveTagUp.setFocusable(false);
         details2Panel.add(btnMoveTagUp, "cell 0 4,alignx right,aligny top");
 
         JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
-        btnMoveTagDown.setFocusable(false);
         details2Panel.add(btnMoveTagDown, "cell 0 4,alignx right,aligny top");
 
         cbTags = new AutocompleteComboBox<>(tvShowList.getTagsInEpisodes());
@@ -535,14 +525,11 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
         tableIds = new MediaIdTable(ids, ScraperType.TV_SHOW);
         tableIds.configureScrollPane(scrollPaneIds);
-        tableIds.setFocusable(false);
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
-        btnAddId.setFocusable(false);
         details2Panel.add(btnAddId, "cell 5 4,alignx right,aligny top");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
-        btnRemoveId.setFocusable(false);
         details2Panel.add(btnRemoveId, "cell 5 4,alignx right,aligny top");
       }
 

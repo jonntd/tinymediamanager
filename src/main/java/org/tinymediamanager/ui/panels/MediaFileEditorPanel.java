@@ -203,7 +203,7 @@ public class MediaFileEditorPanel extends JPanel {
         }
         {
           btnARD = new JButton(new ScanAspectRationAction());
-          btnARD.setFocusable(false);
+            btnARD.setFocusable(false);
           MediaFile mf = MediaFileEditorPanel.this.mediaFiles.get(0).mediaFile;
           btnARD.setEnabled(videoTypes.contains(mf.getType()));
           panelDetails.add(btnARD, "cell 7 1");
@@ -290,7 +290,6 @@ public class MediaFileEditorPanel extends JPanel {
             }
           };
           tableAudioStreams.configureScrollPane(scrollPane);
-          tableAudioStreams.setFocusable(false);
         }
         {
           JLabel lblSubtitles = new TmmLabel(TmmResourceBundle.getString("metatag.subtitles"));
@@ -311,24 +310,19 @@ public class MediaFileEditorPanel extends JPanel {
             }
           };
           tableSubtitles.configureScrollPane(scrollPane);
-          tableSubtitles.setFocusable(false);
         }
         {
           btnAddAudioStream = new SquareIconButton(new AddAudioStreamAction());
-          btnAddAudioStream.setFocusable(false);
           panelDetails.add(btnAddAudioStream, "cell 0 6,alignx right,aligny top");
 
           btnRemoveAudioStream = new SquareIconButton(new RemoveAudioStreamAction());
-          btnRemoveAudioStream.setFocusable(false);
           panelDetails.add(btnRemoveAudioStream, "cell 0 6,alignx right,aligny top");
         }
         {
           btnAddSubtitle = new SquareIconButton(new AddSubtitleAction());
-          btnAddSubtitle.setFocusable(false);
           panelDetails.add(btnAddSubtitle, "cell 0 7,alignx right,aligny top");
 
           btnRemoveSubtitle = new SquareIconButton(new RemoveSubtitleAction());
-          btnRemoveSubtitle.setFocusable(false);
           panelDetails.add(btnRemoveSubtitle, "cell 0 7,alignx right,aligny top");
         }
       }

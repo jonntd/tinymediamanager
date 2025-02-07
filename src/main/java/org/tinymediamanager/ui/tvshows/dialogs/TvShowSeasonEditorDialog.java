@@ -23,6 +23,7 @@ import static org.tinymediamanager.core.MediaFileType.SEASON_THUMB;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.KeyboardFocusManager;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
@@ -203,6 +204,8 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
         taNote.setLineWrap(true);
         taNote.setWrapStyleWord(true);
         taNote.setForeground(UIManager.getColor("TextField.foreground"));
+        taNote.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
+        taNote.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
         scrollPane.setViewportView(taNote);
       }
 
@@ -220,7 +223,6 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
           lblPoster.clearImage();
           tfPoster.setText("");
         });
-        btnDeletePoster.setFocusable(false);
         detailsPanel.add(btnDeletePoster, "cell 3 0");
 
         lblPoster = new ImageLabel();
