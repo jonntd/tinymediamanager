@@ -11,6 +11,7 @@ x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
 x [IMDB] fix scraping with "best match" - didn't find anything
 x [Trakt.tv] Free users get quite limited now - expose more errors to GUI #2844
 x [TMDB] allow multiple ABSOLUTE episode groups
+x [MediaInfo] XML cache file gets removed on other video updates #2855
 
 
 Version 5.1.1

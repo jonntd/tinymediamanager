@@ -540,7 +540,6 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    * @return the file name without the stacking info
    */
   public String getFilenameWithoutStacking() {
-
     if (stackingMarker.isEmpty()) {
       // no stacking, remove all occurrences
       // fname = Utils.cleanStackingMarkers(filename);
@@ -571,6 +570,16 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    */
   public String getBasename() {
     return FilenameUtils.getBaseName(filename);
+  }
+
+  /**
+   * returns the (possible) MediaInfo XML cache filename<br>
+   * &lt;basename&gt;-mediainfo.xml
+   * 
+   * @return
+   */
+  public String getMediaInfoXmlFilename() {
+    return getBasename() + "-mediainfo.xml";
   }
 
   public void setFiledate(long newValue) {

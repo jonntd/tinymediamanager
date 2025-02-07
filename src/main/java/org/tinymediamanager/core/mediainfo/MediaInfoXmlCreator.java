@@ -119,7 +119,7 @@ public class MediaInfoXmlCreator {
     if (!hasValidTracks) {
       return;
     }
-    File file = new File(mediaFile.getPath(), mediaFile.getBasename() + "-mediainfo.xml");
+    File file = new File(mediaFile.getPath(), mediaFile.getMediaInfoXmlFilename());
     try (FileWriter out = new FileWriter(file)) {
       getTransformer().transform(new DOMSource(document), new StreamResult(out));
     }

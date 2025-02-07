@@ -678,11 +678,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       else {
         // // did the file dates/size change?
         if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-          // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
-          tvShow.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-            Utils.deleteFileSafely(mediaFile.getFileAsPath());
-            tvShow.removeFromMediaFiles(mediaFile);
-          });
+          // okay, something changed with that show file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
+          if (mf.getType() == MediaFileType.VIDEO) {
+            tvShow.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
+              Utils.deleteFileSafely(mediaFile.getFileAsPath());
+              tvShow.removeFromMediaFiles(mediaFile);
+            });
+          }
           submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, true));
         }
       }
@@ -697,11 +699,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         else {
           // // did the file dates/size change?
           if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-            // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
-            season.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-              Utils.deleteFileSafely(mediaFile.getFileAsPath());
-              tvShow.removeFromMediaFiles(mediaFile);
-            });
+            // okay, something changed with that season file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
+            if (mf.getType() == MediaFileType.VIDEO) {
+              season.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
+                Utils.deleteFileSafely(mediaFile.getFileAsPath());
+                tvShow.removeFromMediaFiles(mediaFile);
+              });
+            }
             submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, true));
           }
         }
@@ -717,11 +721,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         else {
           // at least update the file dates
           if (MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()))) {
-            // okay, something changed with that show file - force fetching mediainfo and drop medianfo.xml
-            episode.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
-              Utils.deleteFileSafely(mediaFile.getFileAsPath());
-              episode.removeFromMediaFiles(mediaFile);
-            });
+            // okay, something changed with that episode file - force fetching mediainfo (and drop medianfo.xml for MAIN video only)
+            if (mf.getType() == MediaFileType.VIDEO) {
+              episode.getMediaFiles(MediaFileType.MEDIAINFO).forEach(mediaFile -> {
+                Utils.deleteFileSafely(mediaFile.getFileAsPath());
+                episode.removeFromMediaFiles(mediaFile);
+              });
+            }
             submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, true));
           }
         }

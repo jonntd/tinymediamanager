@@ -890,11 +890,16 @@ public class MediaFileHelper {
     List<MediaInfoFile> mediaInfoFiles = new ArrayList<>();
 
     // read mediainfo.xml only if the file size has not been changed,
-    // and ONLY for VIDEO files (else external audio files would ALSO read XML)
+    // and ONLY for files, which DO NOT HAVE the same basename as the video!!!
+    // But since we cannot check that entity, lets keep it simple an do that only for MAIN video files
+    // VIDEO = vid.mp4 -> vid-mediainfo.xml
+    // TRAIL = vid-trailer.mp4 -> vid-trailer-mediainfo.xml
+    // AUDIO = vid.mp3 -> uh-oh! Same vid-mediainfo.xml as for video!!!!
+
     if (!fileSizeChanged && mediaFile.getType() == MediaFileType.VIDEO) {
       try {
         // just parse via XML
-        Path xmlFile = Paths.get(mediaFile.getPath(), FilenameUtils.getBaseName(mediaFile.getFilename()) + "-mediainfo.xml");
+        Path xmlFile = Paths.get(mediaFile.getPath(), mediaFile.getMediaInfoXmlFilename());
         mediaInfoFiles.addAll(detectRelevantFiles(parseMediaInfoXml(xmlFile)));
 
         if (!mediaInfoFiles.isEmpty()) {

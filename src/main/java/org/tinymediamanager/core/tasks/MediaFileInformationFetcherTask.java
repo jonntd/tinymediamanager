@@ -21,7 +21,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,9 +125,9 @@ public class MediaFileInformationFetcherTask implements Runnable {
         mediaEntity.firePropertyChange("hasSubtitles", false, true);
       }
 
-      // add the -mediainfo.xml if it has been written (only for video files)
-      if (Settings.getInstance().isWriteMediaInfoXml() && mediaFile.isVideo()) {
-        Path xmlFile = Paths.get(mediaFile.getPath(), FilenameUtils.getBaseName(mediaFile.getFilename()) + "-mediainfo.xml");
+      // add the -mediainfo.xml if it has been written (only for MAIN video files, not trailers et all)
+      if (Settings.getInstance().isWriteMediaInfoXml() && mediaFile.getType() == MediaFileType.VIDEO) {
+        Path xmlFile = Paths.get(mediaFile.getPath(), mediaFile.getMediaInfoXmlFilename());
         if (Files.exists(xmlFile)) {
           MediaFile xmlMf = new MediaFile(xmlFile);
           xmlMf.gatherMediaInformation();
