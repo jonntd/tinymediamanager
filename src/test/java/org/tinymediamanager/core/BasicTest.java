@@ -33,6 +33,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.ReleaseInfo;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
@@ -73,6 +74,7 @@ public abstract class BasicTest {
     settingsFolder.toFile().mkdir();
     workFolder.toFile().mkdir();
 
+    ReleaseInfo.init();
     TmmModuleManager.clearInstances();
     Settings.getInstance(settingsFolder.toString());
 
