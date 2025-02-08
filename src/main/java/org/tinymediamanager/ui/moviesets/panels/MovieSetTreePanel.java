@@ -333,15 +333,23 @@ public class MovieSetTreePanel extends TmmListPanel {
       private String searchTerm   = "";
 
       @Override
-      public void keyTyped(KeyEvent e) {
+      public void keyTyped(KeyEvent keyEvent) {
+        // shortcut - open the editor on pressing enter
+        if (!keyEvent.isConsumed() && keyEvent.getKeyChar() == KeyEvent.VK_ENTER) {
+          new MovieSetEditAction().actionPerformed(new ActionEvent(keyEvent, 0, ""));
+          keyEvent.consume();
+          return;
+        }
+
+        // for all other keys pressed, try to locate the right entry and move the selection
         long now = System.currentTimeMillis();
         if (now - lastKeypress > 500) {
           searchTerm = "";
         }
         lastKeypress = now;
 
-        if (e.getKeyChar() != KeyEvent.CHAR_UNDEFINED) {
-          searchTerm += e.getKeyChar();
+        if (keyEvent.getKeyChar() != KeyEvent.CHAR_UNDEFINED) {
+          searchTerm += keyEvent.getKeyChar();
           searchTerm = searchTerm.toLowerCase();
         }
 
