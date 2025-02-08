@@ -21,6 +21,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.Stack;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -53,13 +54,15 @@ import net.miginfocom.swing.MigLayout;
  */
 public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvider {
 
-  protected BindingGroup bindingGroup = null;
+  private final Stack<Component> focusedComponents = new Stack<>();
 
-  protected JPanel       topPanel     = null;
-  protected JPanel       bottomPanel  = null;
-  protected JPanel       buttonPanel  = null;
+  protected BindingGroup         bindingGroup      = null;
 
-  private int            popupIndex   = JLayeredPane.MODAL_LAYER;
+  protected JPanel               topPanel          = null;
+  protected JPanel               bottomPanel       = null;
+  protected JPanel               buttonPanel       = null;
+
+  private int                    popupIndex        = JLayeredPane.MODAL_LAYER;
 
   /**
    * @wbp.parser.constructor
@@ -302,6 +305,12 @@ public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvi
 
   @Override
   public void showModalPopupPanel(ModalPopupPanel popupPanel) {
+    // remember last focused component
+    Component focusOwner = getFocusOwner();
+    if (focusOwner != null) {
+      focusedComponents.push(focusOwner);
+    }
+
     popupPanel.setBounds(getContentPane().getBounds());
     getLayeredPane().add(popupPanel, popupIndex++, 0);
   }
@@ -312,5 +321,11 @@ public abstract class TmmDialog extends JDialog implements IModalPopupPanelProvi
     popupIndex--;
     validate();
     repaint();
+
+    // restore last focused component
+    if (!focusedComponents.isEmpty()) {
+      Component comp = focusedComponents.pop();
+      comp.requestFocusInWindow();
+    }
   }
 }

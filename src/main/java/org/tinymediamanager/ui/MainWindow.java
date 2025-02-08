@@ -21,6 +21,7 @@ import java.awt.AWTEvent;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -31,6 +32,7 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BaseMultiResolutionImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -81,18 +83,20 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class MainWindow extends JFrame implements IModalPopupPanelProvider {
-  private static final Logger LOGGER     = LoggerFactory.getLogger(MainWindow.class);
-  public static final Image   LOGOS      = createLogos();
+  private static final Logger    LOGGER            = LoggerFactory.getLogger(MainWindow.class);
+  public static final Image      LOGOS             = createLogos();
 
-  private static MainWindow   instance;
+  private static MainWindow      instance;
 
-  private JMenuBar            topMenuBar;
-  private ToolbarPanel        toolbarPanel;
+  private final Stack<Component> focusedComponents = new Stack<>();
 
-  private JPanel              masterPanel;
-  private MainMenuPanel       menuPanel;
-  private JPanel              detailPanel;
-  private int                 popupIndex = JLayeredPane.MODAL_LAYER;
+  private JMenuBar               topMenuBar;
+  private ToolbarPanel           toolbarPanel;
+
+  private JPanel                 masterPanel;
+  private MainMenuPanel          menuPanel;
+  private JPanel                 detailPanel;
+  private int                    popupIndex        = JLayeredPane.MODAL_LAYER;
 
   /**
    * Gets the active instance.
@@ -330,6 +334,12 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
 
   @Override
   public void showModalPopupPanel(ModalPopupPanel popupPanel) {
+    // remember last focused component
+    Component focusOwner = getFocusOwner();
+    if (focusOwner != null) {
+      focusedComponents.push(focusOwner);
+    }
+
     popupPanel.setBounds(getContentPane().getBounds());
     getLayeredPane().add(popupPanel, popupIndex++, 0);
   }
@@ -340,6 +350,12 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
     popupIndex--;
     validate();
     repaint();
+
+    // restore last focused component
+    if (!focusedComponents.isEmpty()) {
+      Component comp = focusedComponents.pop();
+      comp.requestFocusInWindow();
+    }
   }
 
   void setActiveModule(ITmmUIModule module) {
