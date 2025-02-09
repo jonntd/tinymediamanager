@@ -280,7 +280,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
           searchResult.setId(Integer.toString(collection.id));
           searchResult.setTitle(collection.name);
           searchResult.setPosterUrl(artworkBaseUrl + "w342" + collection.poster_path);
-          searchResult.setScore(MetadataUtil.calculateScore(searchString, collection.name));
+          searchResult.calculateScore(options);
           if (searchResult.getScore() < 0.5 && Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("titleFallback"))) {
             if (verifyMovieSetTitleLanguage(movieSetsFound, resultsPage, options)) {
               break;
@@ -989,12 +989,12 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
             fallbackCollection.name)) {
           searchResult.setTitle(originalCollection.name);
           searchResult.setPosterUrl(artworkBaseUrl + "w342" + originalCollection.poster_path);
-          searchResult.setScore(MetadataUtil.calculateScore(query.getSearchQuery(), originalCollection.name));
+          searchResult.calculateScore(query);
         }
         else {
           searchResult.setTitle(fallbackCollection.name);
           searchResult.setPosterUrl(artworkBaseUrl + "w342" + fallbackCollection.poster_path);
-          searchResult.setScore(MetadataUtil.calculateScore(query.getSearchQuery(), fallbackCollection.name));
+          searchResult.calculateScore(query);
         }
         movieSetsFound.add(searchResult);
       }
