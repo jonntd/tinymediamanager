@@ -4,6 +4,7 @@ Version 5.1.2
   You can extract your cookies from a browser and pass them to yt-dlp. More infos at #2841 and on our homepage
 + [Exporter] the copyArtwork renderer will fall back to the image cache if the original image is not available
 + [Java] updated/change the Java runtime to Jetbrains JBR 21.0.6
+x [TV shows] fixed saving of episodes in the TV show/episode bulk editor #2857
 x [UI] reverted lazy loading of Inter font #2842 #2852 #2854
 x [UI] many enhancements to focus-management and focus traversal #2829
 x [UI] added hotkey CTRL+SHIFT+E to edit current selected row in an editable table #2829
