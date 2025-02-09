@@ -270,6 +270,13 @@ public class MovieSetFilterDialog extends TmmDialog {
     panel.add(filter.getCheckBox(), "");
     panel.add(filter.getLabel(), "");
 
+    if (filter.getFilterOptionComboBox() != null) {
+      panel.add(filter.getFilterOptionComboBox(), "");
+    }
+    else {
+      panel.add(Box.createGlue(), "");
+    }
+
     if (filter.getFilterComponent() != null) {
       panel.add(filter.getFilterComponent(), "wmin 100, grow, wrap");
     }
