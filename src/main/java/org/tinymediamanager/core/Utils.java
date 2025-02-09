@@ -2461,9 +2461,15 @@ public class Utils {
    * @return the formatted file size as {@link String}
    */
   public static String formatFileSizeForDisplay(long filesize) {
+    double base = 1000.0;
+
+    if (!Settings.getInstance().isFileSizeBase10()) {
+      base = 1024.0;
+    }
+
     if (!Settings.getInstance().isFileSizeDisplayHumanReadable()) {
       // in MB
-      double sizeInMb = filesize / (1000.0 * 1000.0);
+      double sizeInMb = filesize / (base * base);
       DecimalFormat df;
 
       if (sizeInMb < 1) {
@@ -2478,18 +2484,18 @@ public class Utils {
 
     long bytes = filesize;
 
-    if (-1000 < bytes && bytes < 1000) {
+    if (-base < bytes && bytes < base) {
       return bytes + " B";
     }
 
     CharacterIterator ci = new StringCharacterIterator("kMGTPE");
-    while (bytes <= -999_950 || bytes >= 999_950) {
-      bytes /= 1000;
+    while (bytes <= -base * 999.95 || bytes >= base * 999.95) {
+      bytes /= base;
       ci.next();
     }
 
     DecimalFormat df = new DecimalFormat("#0.00");
-    return df.format(bytes / 1000.0) + " " + ci.current();
+    return df.format(bytes / base) + " " + ci.current();
   }
 
   /**

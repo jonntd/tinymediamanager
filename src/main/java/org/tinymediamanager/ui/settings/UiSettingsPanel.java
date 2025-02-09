@@ -87,6 +87,8 @@ class UiSettingsPanel extends JPanel {
   private JComboBox                  cbDatefield;
   private JCheckBox                  chckbxFileSizeH;
   private JCheckBox                  chckbxFileSizeM;
+  private JCheckBox                  chckbxFileSizeCalculationMB;
+  private JCheckBox                  chckbxFileSizeCalculationMiB;
   private JCheckBox                  chckbxImageChooserLastFolder;
   private JCheckBox                  chckbxImageChooserEntityFolder;
   private JSpinner                   spUpdateInterval;
@@ -211,6 +213,20 @@ class UiSettingsPanel extends JPanel {
     chckbxFileSizeH.addActionListener(actionListener);
     chckbxFileSizeM.addActionListener(actionListener);
 
+    buttonGroup = new ButtonGroup();
+    buttonGroup.add(chckbxFileSizeCalculationMB);
+    buttonGroup.add(chckbxFileSizeCalculationMiB);
+
+    if (settings.isFileSizeBase10()) {
+      chckbxFileSizeCalculationMB.setSelected(true);
+    }
+    else {
+      chckbxFileSizeCalculationMiB.setSelected(true);
+    }
+
+    chckbxFileSizeCalculationMB.addActionListener(actionListener);
+    chckbxFileSizeCalculationMiB.addActionListener(actionListener);
+
     if (!chckbxAutomaticUpdates.isSelected()) {
       lblUpdateHint.setText(TmmResourceBundle.getString("Settings.updatecheck.hint"));
     }
@@ -280,8 +296,8 @@ class UiSettingsPanel extends JPanel {
 
     {
       JPanel panelMisc = new JPanel();
-      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][10lp!][][][][10lp!][][][][10lp!][][]")); // 16lp ~ width
-                                                                                                                                       // of the
+      // 16lp ~ width of the
+      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][10lp!][][][][10lp!][][][][10lp!][][][][10lp!][][]"));
 
       JLabel lblMiscT = new TmmLabel(TmmResourceBundle.getString("Settings.misc"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMisc, lblMiscT, true);
@@ -297,33 +313,44 @@ class UiSettingsPanel extends JPanel {
         JLabel lblDatefieldHint = new JLabel(TmmResourceBundle.getString("Settings.datefield.desc"));
         panelMisc.add(lblDatefieldHint, "cell 2 1");
       }
+
+      {
+        JLabel lblFileSizeFormula = new JLabel(TmmResourceBundle.getString("Settings.filesize.formula"));
+        panelMisc.add(lblFileSizeFormula, "cell 1 3 2 1");
+
+        chckbxFileSizeCalculationMB = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.1000"));
+        panelMisc.add(chckbxFileSizeCalculationMB, "cell 2 4");
+
+        chckbxFileSizeCalculationMiB = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.1024"));
+        panelMisc.add(chckbxFileSizeCalculationMiB, "cell 2 5");
+      }
       {
         JLabel lblFileSizeT = new JLabel(TmmResourceBundle.getString("Settings.filesize"));
-        panelMisc.add(lblFileSizeT, "cell 1 3 2 1");
+        panelMisc.add(lblFileSizeT, "cell 1 7 2 1");
 
         chckbxFileSizeH = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.human"));
-        panelMisc.add(chckbxFileSizeH, "cell 2 4");
+        panelMisc.add(chckbxFileSizeH, "cell 2 8");
 
         chckbxFileSizeM = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.megabyte"));
-        panelMisc.add(chckbxFileSizeM, "cell 2 5");
+        panelMisc.add(chckbxFileSizeM, "cell 2 9");
       }
       {
         JLabel lblImageChooserDefaultFolderT = new JLabel(TmmResourceBundle.getString("Settings.imagechooser.folder"));
-        panelMisc.add(lblImageChooserDefaultFolderT, "cell 1 7 2 1");
+        panelMisc.add(lblImageChooserDefaultFolderT, "cell 1 11 2 1");
 
         chckbxImageChooserLastFolder = new JCheckBox(TmmResourceBundle.getString("Settings.imagechooser.last"));
-        panelMisc.add(chckbxImageChooserLastFolder, "cell 2 8");
+        panelMisc.add(chckbxImageChooserLastFolder, "cell 2 12");
 
         chckbxImageChooserEntityFolder = new JCheckBox(TmmResourceBundle.getString("Settings.imagechooser.entity"));
-        panelMisc.add(chckbxImageChooserEntityFolder, "cell 2 9");
+        panelMisc.add(chckbxImageChooserEntityFolder, "cell 2 13");
       }
       {
         chckbxStoreWindowPreferences = new JCheckBox(TmmResourceBundle.getString("Settings.storewindowpreferences"));
-        panelMisc.add(chckbxStoreWindowPreferences, "cell 1 11 2 1");
+        panelMisc.add(chckbxStoreWindowPreferences, "cell 1 15 2 1");
       }
       {
         chckbxShowMemory = new JCheckBox(TmmResourceBundle.getString("Settings.showmemory"));
-        panelMisc.add(chckbxShowMemory, "cell 1 12 2 1");
+        panelMisc.add(chckbxShowMemory, "cell 1 16 2 1");
       }
     }
     {
@@ -398,6 +425,9 @@ class UiSettingsPanel extends JPanel {
 
     // image chooser folder
     settings.setImageChooserUseEntityFolder(chckbxImageChooserEntityFolder.isSelected());
+
+    // file size calculation
+    settings.setFileSizeBase10(chckbxFileSizeCalculationMB.isSelected());
 
     // file size display
     settings.setFileSizeDisplayHumanReadable(chckbxFileSizeH.isSelected());

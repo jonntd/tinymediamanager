@@ -117,6 +117,7 @@ public final class Settings extends AbstractSettings {
   private boolean                                          storeWindowPreferences       = true;
   private DateField                                        dateField                    = DateField.DATE_ADDED;
   private boolean                                          fileSizeDisplayHumanReadable = true;
+  private boolean                                          fileSizeBase10               = true;
 
   private boolean                                          enableTrash                  = true;
   private boolean                                          deleteTrashOnExit            = false;
@@ -1104,6 +1105,16 @@ public final class Settings extends AbstractSettings {
     boolean oldValue = this.fileSizeDisplayHumanReadable;
     fileSizeDisplayHumanReadable = newValue;
     firePropertyChange("fileSizeDisplayHumanReadable", oldValue, newValue);
+  }
+
+  public boolean isFileSizeBase10() {
+    return fileSizeBase10;
+  }
+
+  public void setFileSizeBase10(boolean newValue) {
+    boolean oldValue = this.fileSizeBase10;
+    this.fileSizeBase10 = newValue;
+    firePropertyChange("fileSizeBase10", oldValue, newValue);
   }
 
   /**
