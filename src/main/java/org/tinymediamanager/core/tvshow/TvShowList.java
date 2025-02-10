@@ -1143,7 +1143,6 @@ public final class TvShowList extends AbstractModelObject {
         }
         // subtitle formats
         for (MediaFileSubtitle subtitle : mf.getSubtitles()) {
-          subtitleCount++;
           subtitleFormats.add(subtitle.getCodec());
         }
       }
