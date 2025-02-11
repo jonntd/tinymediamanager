@@ -191,6 +191,9 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
 
   void removeDummyEpisodes() {
     dummyEpisodes.clear();
+
+    // invalidate cache
+    episodesForDisplay.clear();
   }
 
   boolean isEmpty() {
@@ -209,9 +212,6 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
       episodesForDisplayBefore.addAll(getEpisodesForDisplay());
     }
 
-    // invalidate cache
-    episodesForDisplay.clear();
-
     if (episode.isDummy()) {
       if (!dummyEpisodes.contains(episode)) {
         dummyEpisodes.add(episode);
@@ -224,6 +224,9 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
         episodes.sort(TvShowEpisode::compareTo);
       }
     }
+
+    // invalidate cache
+    episodesForDisplay.clear();
 
     episode.addPropertyChangeListener(listener);
 
@@ -257,15 +260,15 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
     // to find out the delta (dummy)
     List<TvShowEpisode> episodesForDisplayBefore = getEpisodesForDisplay();
 
-    // invalidate cache
-    episodesForDisplay.clear();
-
     if (episode.isDummy()) {
       dummyEpisodes.remove(episode);
     }
     else {
       episodes.remove(episode);
     }
+
+    // invalidate cache
+    episodesForDisplay.clear();
 
     episode.removePropertyChangeListener(listener);
     if (episodesForDisplayBefore.contains(episode)) {

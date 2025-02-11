@@ -661,6 +661,13 @@ public final class TvShowList extends AbstractModelObject {
           return;
         }
 
+        if (episode.isDummy()) {
+          // should not happen! remove this episode here
+          LOGGER.error("Removing dummy episode from wrong storage: S{}E{} - {}", episode.getSeason(), episode.getEpisode(), episode.getTitle());
+          toRemove.add(uuid);
+          return;
+        }
+
         // inline upgrade from v4 - performance!
         if (module.getDbVersion() < 5002) {
           UpgradeTasks.upgradeEpisodeNumbers(episode);
