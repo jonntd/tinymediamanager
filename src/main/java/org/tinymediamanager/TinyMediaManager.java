@@ -106,6 +106,8 @@ public final class TinyMediaManager {
   }
 
   private void launch(String[] args) {
+    LOGGER.trace("entered launch");
+
     // read the license code
     Path license = Paths.get(Globals.DATA_FOLDER, "tmm.lic");
     if (Files.exists(license)) {
@@ -124,6 +126,8 @@ public final class TinyMediaManager {
     printLogHeader();
 
     if (!headless) {
+      LOGGER.trace("entered GUI mode");
+
       // GUI mode - load LaF and start tmm on EDT
       setLookAndFeel();
 
@@ -131,12 +135,15 @@ public final class TinyMediaManager {
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
           @Override
           protected Void doInBackground() {
+            LOGGER.trace("entered doInBackground");
+
             try {
               Thread.currentThread().setName("main");
               TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
               // splash
               try {
+                LOGGER.trace("loading splash");
                 splashScreen = new TmmSplashScreen();
                 splashScreen.setVisible(true);
               }
@@ -158,6 +165,8 @@ public final class TinyMediaManager {
                 boolean wizardRun = false;
 
                 if (Settings.getInstance().isNewConfig()) {
+                  LOGGER.trace("show wizard");
+
                   TinyMediaManagerWizard wizard = new TinyMediaManagerWizard();
                   wizard.setLocationRelativeTo(null); // center
                   wizard.setVisible(true);
@@ -256,6 +265,8 @@ public final class TinyMediaManager {
       });
     }
     else {
+      LOGGER.trace("entered CLI mode");
+
       // console mode - start directly
       Thread.currentThread().setName("headless");
       LOGGER.debug("starting without GUI...");
@@ -402,6 +413,8 @@ public final class TinyMediaManager {
   }
 
   private void doUpgradeTasks() {
+    LOGGER.trace("entered doUpgradeTasks");
+
     UpgradeTasks.setOldVersion();
     if (newVersion) {
       LOGGER.info("Upgrade from '{}' to '{}'", UpgradeTasks.getOldVersion(), ReleaseInfo.getVersion());
@@ -419,6 +432,7 @@ public final class TinyMediaManager {
   }
 
   private void loadInternals() {
+    LOGGER.trace("entered loadInternals");
     updateProgress("splash.internals", 20);
 
     TmmOsUtils.loadNativeLibs();
@@ -447,6 +461,8 @@ public final class TinyMediaManager {
   }
 
   private void loadModules() throws Exception {
+    LOGGER.trace("entered loadModules");
+
     // load modules //////////////////////////////////////////////////
     updateProgress("splash.movie", 30);
     TmmModuleManager.getInstance().startUp();
@@ -460,6 +476,8 @@ public final class TinyMediaManager {
   }
 
   private void loadPlugins() {
+    LOGGER.trace("entered loadPlugins");
+
     updateProgress("splash.plugins", 60);
     // just instantiate static - will block (takes a few secs)
     MediaProviders.loadMediaProviders();
@@ -474,6 +492,8 @@ public final class TinyMediaManager {
   }
 
   private void loadServices() {
+    LOGGER.trace("entered loadServices");
+
     updateProgress("splash.services", 70);
     try {
       if (Settings.getInstance().isUpnpShareLibrary()) {
@@ -508,6 +528,8 @@ public final class TinyMediaManager {
   }
 
   private void doPreStartupTasks() {
+    LOGGER.trace("entered doPreStartupTasks");
+
     // clean old log files
     Utils.cleanOldLogs();
 
@@ -531,6 +553,8 @@ public final class TinyMediaManager {
   }
 
   private void doPostStartupTasks() {
+    LOGGER.trace("entered doPostStartupTasks");
+
     // do upgrade tasks after database loading
     updateProgress("splash.upgrade2", 80);
     new MovieUpgradeTasks().performDbUpgrades();
@@ -544,7 +568,7 @@ public final class TinyMediaManager {
    *          the text
    */
   private void updateProgress(String text, int progress) {
-    LOGGER.debug("{} - {}%", text, progress);
+    LOGGER.trace("{} - {}%", text, progress);
     if (splashScreen == null) {
       return;
     }

@@ -84,7 +84,7 @@
 
     <appender name="FILE_STARTUP" class="ch.qos.logback.core.FileAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>TRACE</level>
         </filter>
         <file>${logfolder}/startup.log</file>
         <append>true</append>
