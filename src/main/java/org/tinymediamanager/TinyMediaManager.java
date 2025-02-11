@@ -128,10 +128,10 @@ public final class TinyMediaManager {
     if (!headless) {
       LOGGER.trace("entered GUI mode");
 
-      // GUI mode - load LaF and start tmm on EDT
-      setLookAndFeel();
-
       EventQueue.invokeLater(() -> {
+        // GUI mode - load LaF and tmm on EDT
+        setLookAndFeel();
+
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
           @Override
           protected Void doInBackground() {
