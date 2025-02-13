@@ -76,7 +76,6 @@ import org.tinymediamanager.updater.UpdateCheck;
 import org.tinymediamanager.updater.UpdaterTask;
 
 import com.formdev.flatlaf.FlatLaf;
-import com.formdev.flatlaf.fonts.inter.FlatInterFont;
 
 import io.github.jacksonbrienen.jwfd.JWindowsFileDialog;
 
@@ -95,6 +94,7 @@ public class TmmUIHelper {
   public static void setLookAndFeel() {
     try {
       LOGGER.trace("load theme");
+
       TmmUIHelper.setTheme();
       // decrease the tooltip timeout
       ToolTipManager.sharedInstance().setInitialDelay(300);
@@ -106,8 +106,6 @@ public class TmmUIHelper {
     // load font settings
     try {
       LOGGER.trace("load font settings");
-      // no lazy loading here - causes JNI loading errors and JVM crashes!
-      FlatInterFont.install();
 
       // sanity check
       Font font = Font.decode(Settings.getInstance().getFontFamily());
