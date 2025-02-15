@@ -75,9 +75,7 @@ import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.MediaAiredStatus;
 import org.tinymediamanager.core.MediaFileType;
-import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmDateFormat;
-import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.Utils;
@@ -88,9 +86,6 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
-import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowArtworkHelper;
 import org.tinymediamanager.core.tvshow.TvShowHelpers;
@@ -107,7 +102,6 @@ import org.tinymediamanager.core.tvshow.connector.TvShowToXbmcConnector;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowNfoNaming;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowTrailerNaming;
 import org.tinymediamanager.core.tvshow.tasks.TvShowActorImageFetcherTask;
-import org.tinymediamanager.core.tvshow.tasks.TvShowRenameTask;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
@@ -1344,9 +1338,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     seasons.forEach(TvShowSeason::writeNfo);
 
     saveToDb();
-
-    // and post-process
-    postProcess(config, overwriteExistingItems);
   }
 
   /**
@@ -1395,25 +1386,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       catch (Exception e) {
         LOGGER.error("could not write NFO file - '{}'", e.getMessage());
       }
-    }
-  }
-
-  private void postProcess(List<TvShowScraperMetadataConfig> config, boolean overwriteExistingItems) {
-    TmmTaskChain taskChain = TmmTaskChain.getInstance(this);
-
-    // rename the TV show if that has been chosen in the settings
-    if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-      taskChain.add(new TvShowRenameTask(this));
-    }
-
-    // write actor images after possible rename (to have a good folder structure)
-    if (ScraperMetadataConfig.containsAnyCast(config) && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
-      taskChain.add(new TmmTask(TmmResourceBundle.getString("tvshow.downloadactorimages"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
-        @Override
-        protected void doInBackground() {
-          writeActorImages(overwriteExistingItems);
-        }
-      });
     }
   }
 

@@ -34,13 +34,14 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
-import org.tinymediamanager.core.movie.MovieHelpers;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.tasks.MovieTrailerDownloadTask;
+import org.tinymediamanager.core.tasks.QueueTask;
 import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -70,6 +71,8 @@ public class MovieChooserModel extends AbstractModelObject {
   public static final MovieChooserModel emptyResult      = new MovieChooserModel();
 
   private final Movie                   movieToScrape;
+  private final QueueTask               queueTask;
+
   private MediaScraper                  metadataProvider = null;
   private List<MediaScraper>            artworkScrapers  = null;
   private List<MediaScraper>            trailerScrapers  = null;
@@ -98,6 +101,7 @@ public class MovieChooserModel extends AbstractModelObject {
     this.trailerScrapers = trailerScrapers;
     this.result = result;
     this.language = language;
+    this.queueTask = new QueueTask(TmmResourceBundle.getString("movie.scrape.metadata"));
 
     score = result.getScore();
     setTitle(result.getTitle());
@@ -119,6 +123,7 @@ public class MovieChooserModel extends AbstractModelObject {
     setTitle(TmmResourceBundle.getString("chooser.nothingfound"));
     movieToScrape = null;
     combinedName = title;
+    queueTask = null;
   }
 
   public void setTitle(String title) {
@@ -359,12 +364,20 @@ public class MovieChooserModel extends AbstractModelObject {
     return tagline;
   }
 
+  public void addTask(TmmTask task) {
+    queueTask.addTask(task);
+  }
+
+  public void startTasks() {
+    TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+  }
+
   public void startArtworkScrapeTask(List<MovieScraperMetadataConfig> config, boolean overwrite) {
-    TmmTaskChain.getInstance(movieToScrape).add(new ArtworkScrapeTask(movieToScrape, config, overwrite));
+    queueTask.addTask(new ArtworkScrapeTask(movieToScrape, config, overwrite));
   }
 
   public void startTrailerScrapeTask(boolean overwrite) {
-    TmmTaskChain.getInstance(movieToScrape).add(new TrailerScrapeTask(movieToScrape, overwrite));
+    queueTask.addTask(new TrailerScrapeTask(movieToScrape, overwrite));
   }
 
   public List<MediaArtwork> getArtwork() {
@@ -488,7 +501,12 @@ public class MovieChooserModel extends AbstractModelObject {
       movieToScrape.writeNFO();
 
       // start automatic movie trailer download
-      MovieHelpers.startAutomaticTrailerDownload(movieToScrape);
+      if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
+          && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
+          && movieToScrape.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !movieToScrape.getTrailer().isEmpty()) {
+        TmmTask task = new MovieTrailerDownloadTask(movieToScrape);
+        TmmTaskManager.getInstance().addDownloadTask(task);
+      }
     }
   }
 }

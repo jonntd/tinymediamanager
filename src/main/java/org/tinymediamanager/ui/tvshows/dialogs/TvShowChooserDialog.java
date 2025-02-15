@@ -77,7 +77,8 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.threading.TmmTask;
+import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.tvshow.TvShowArtworkHelper;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
@@ -550,6 +551,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
           MediaMetadata md = model.getMetadata();
 
+          setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
           // check if there is at leat a title in the metadata -> otherwise take the title from the search result
           if (StringUtils.isBlank(md.getTitle())) {
             md.setTitle(model.getTitle());
@@ -598,7 +601,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           tvShowToScrape.setEpisodeGroup(desiredEpisodeGroup);
 
           // get other ratings too?
-          if (TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()) {
+          if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.RATING)
+              && TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()) {
             for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
               if (!md.getRatings().contains(rating)) {
                 md.addRating(rating);
@@ -613,16 +617,74 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
           // get the episode list for display?
           if (TvShowModuleManager.getInstance().getSettings().isDisplayMissingEpisodes()) {
-            tvShowToScrape.setDummyEpisodes(model.getEpisodesForDisplay());
-            tvShowToScrape.saveToDb();
+            model.addTask(new TmmTask(TmmResourceBundle.getString("tvshow.scrape.missingepisodes"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                tvShowToScrape.setDummyEpisodes(model.getEpisodesForDisplay());
+                tvShowToScrape.saveToDb();
+              }
+            });
           }
 
-          setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+          // automatic rename? rename the TV show itself
+          if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+            model.addTask(new TvShowRenameTask(tvShowToScrape));
+          }
+
+          // write actor images after possible rename (to have a good folder structure)
+          if (ScraperMetadataConfig.containsAnyCast(tvShowScraperMetadataConfig)
+              && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
+            model.addTask(new TmmTask(TmmResourceBundle.getString("tvshow.downloadactorimages"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                tvShowToScrape.writeActorImages(overwrite);
+              }
+            });
+          }
+
+          // scrape episodes
+          if (!episodeScraperMetadataConfig.isEmpty()) {
+            List<TvShowEpisode> episodesToScrape = tvShowToScrape.getEpisodesToScrape();
+            // scrape episodes in a task
+            if (!episodesToScrape.isEmpty()) {
+              // create the episode scrape options
+              TvShowEpisodeSearchAndScrapeOptions scrapeOptions = new TvShowEpisodeSearchAndScrapeOptions(md.getIds());
+              scrapeOptions.loadDefaults();
+              scrapeOptions.setMetadataScraper(model.getMediaScraper());
+              scrapeOptions.setArtworkScraper(model.getArtworkScrapers());
+              scrapeOptions.setLanguage(model.getLanguage());
+              scrapeOptions.setEpisodeGroup(desiredEpisodeGroup);
+
+              model.addTask(new TvShowEpisodeScrapeTask(episodesToScrape, scrapeOptions, episodeScraperMetadataConfig, overwrite));
+            }
+          }
+
+          // get trailers?
+          if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.TRAILER)) {
+            model.startTrailerScrapeTask(overwrite);
+          }
+
+          // get theme?
+          if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.THEME)) {
+            model.startThemeDownloadTask(overwrite);
+          }
+
+          if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
+            TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(tvShowToScrape));
+            task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+            task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+            task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+
+            model.addTask(task);
+          }
 
           // get images?
           if (ScraperMetadataConfig.containsAnyArtwork(tvShowScraperMetadataConfig)) {
             // let the user choose the images
             if (!TvShowModuleManager.getInstance().getSettings().isScrapeBestImage()) {
+              // we can already start the tasks here to save some time
+              model.startTasks();
+
               // get _all_ artwork sync and let the chooser just display it
               List<MediaArtwork> artwork = model.getArtwork();
 
@@ -692,52 +754,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             else {
               // get artwork asynchronous
               model.startArtworkScrapeTask(tvShowScraperMetadataConfig, overwrite);
+              model.startTasks();
             }
-          }
-
-          // scrape episodes
-          if (!episodeScraperMetadataConfig.isEmpty()) {
-            List<TvShowEpisode> episodesToScrape = tvShowToScrape.getEpisodesToScrape();
-            // scrape episodes in a task
-            if (!episodesToScrape.isEmpty()) {
-              // create the episode scrape options
-              TvShowEpisodeSearchAndScrapeOptions scrapeOptions = new TvShowEpisodeSearchAndScrapeOptions(md.getIds());
-              scrapeOptions.loadDefaults();
-              scrapeOptions.setMetadataScraper(model.getMediaScraper());
-              scrapeOptions.setArtworkScraper(model.getArtworkScrapers());
-              scrapeOptions.setLanguage(model.getLanguage());
-              scrapeOptions.setEpisodeGroup(desiredEpisodeGroup);
-
-              TmmTaskChain.getInstance(tvShowToScrape)
-                  .add(new TvShowEpisodeScrapeTask(episodesToScrape, scrapeOptions, episodeScraperMetadataConfig, overwrite));
-            }
-          }
-
-          // get trailers?
-          if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.TRAILER)) {
-            model.startTrailerScrapeTask(overwrite);
-          }
-
-          // get theme?
-          if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.THEME)) {
-            model.startThemeDownloadTask(overwrite);
           }
 
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-
-          if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
-            TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(tvShowToScrape));
-            task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-            task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-            task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
-
-            TmmTaskChain.getInstance(tvShowToScrape).add(task);
-          }
-
-          // last but not least call a further rename task on the TV show root to move the season fanart into the right folders
-          if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-            TmmTaskChain.getInstance(tvShowToScrape).add(new TvShowRenameTask(tvShowToScrape));
-          }
 
           setVisible(false);
         }

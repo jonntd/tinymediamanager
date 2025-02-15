@@ -78,10 +78,8 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
-import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
-import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.Utils;
@@ -112,11 +110,7 @@ import org.tinymediamanager.core.movie.connector.MovieToXbmcConnector;
 import org.tinymediamanager.core.movie.filenaming.MovieNfoNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
 import org.tinymediamanager.core.movie.tasks.MovieActorImageFetcherTask;
-import org.tinymediamanager.core.movie.tasks.MovieRenameTask;
 import org.tinymediamanager.core.movie.tasks.MovieSetScrapeTask;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
-import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -1048,8 +1042,6 @@ public class Movie extends MediaEntity implements IMediaInformation {
     // update DB
     writeNFO();
     saveToDb();
-
-    postProcess(config, overwriteExistingItems);
   }
 
   /**
@@ -3031,24 +3023,6 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     return null;
-  }
-
-  protected void postProcess(List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems) {
-    TmmTaskChain taskChain = TmmTaskChain.getInstance(this);
-
-    if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-      taskChain.add(new MovieRenameTask(Collections.singletonList(this)));
-    }
-
-    // write actor images after possible rename (to have a good folder structure)
-    if (ScraperMetadataConfig.containsAnyCast(config) && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
-      taskChain.add(new TmmTask(TmmResourceBundle.getString("movie.downloadactorimages"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
-        @Override
-        protected void doInBackground() {
-          writeActorImages(overwriteExistingItems);
-        }
-      });
-    }
   }
 
   @Override

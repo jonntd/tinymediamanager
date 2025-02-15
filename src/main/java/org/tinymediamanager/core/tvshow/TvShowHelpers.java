@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Utils;
@@ -38,12 +37,10 @@ import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
 import org.tinymediamanager.core.tasks.YTDownloadTask;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowTrailerNaming;
-import org.tinymediamanager.core.tvshow.tasks.TvShowTrailerDownloadTask;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
@@ -205,34 +202,6 @@ public class TvShowHelpers {
   }
 
   /**
-   * start the automatic trailer download for the given movie
-   *
-   * @param tvShow
-   *          the TV show to start the trailer download for
-   */
-  public static void startAutomaticTrailerDownload(TvShow tvShow) {
-    // start movie trailer download?
-    if (TvShowModuleManager.getInstance().getSettings().isUseTrailerPreference()
-        && TvShowModuleManager.getInstance().getSettings().isAutomaticTrailerDownload() && tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty()
-        && !tvShow.getTrailer().isEmpty()) {
-      downloadBestTrailer(tvShow);
-    }
-  }
-
-  /**
-   * download the best trailer for the given TV show
-   *
-   * @param tvShow
-   *          the TV show to download the trailer for
-   */
-  public static void downloadBestTrailer(TvShow tvShow) {
-    if (!tvShow.getTrailer().isEmpty()) {
-      TmmTask task = new TvShowTrailerDownloadTask(tvShow);
-      TmmTaskChain.getInstance(tvShow).add(task);
-    }
-  }
-
-  /**
    * download the given trailer for the given TV show
    *
    * @param tvshow
@@ -291,7 +260,7 @@ public class TvShowHelpers {
             return tvshow;
           }
         };
-        TmmTaskChain.getInstance(tvshow).add(task);
+        TmmTaskManager.getInstance().addDownloadTask(task);
       }
       else {
         TrailerDownloadTask task = new TrailerDownloadTask(trailer) {
@@ -306,7 +275,7 @@ public class TvShowHelpers {
             return tvshow;
           }
         };
-        TmmTaskChain.getInstance(tvshow).add(task);
+        TmmTaskManager.getInstance().addDownloadTask(task);
       }
     }
     catch (Exception e) {

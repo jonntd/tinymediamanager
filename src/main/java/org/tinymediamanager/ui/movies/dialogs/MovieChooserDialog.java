@@ -81,7 +81,9 @@ import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.movie.tasks.MovieRenameTask;
+import org.tinymediamanager.core.threading.TmmTask;
+import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.MediaSearchResult;
@@ -500,6 +502,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             return;
           }
 
+          setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
           MediaMetadata md = model.getMetadata();
 
           // check if there is at leat a title in the metadata -> otherwise take the title from the search result
@@ -517,7 +521,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           boolean overwrite = !chckbxDoNotOverwrite.isSelected();
 
           // get other ratings too?
-          if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()) {
+          if (scraperConfig.contains(MovieScraperMetadataConfig.RATING) && MovieModuleManager.getInstance().getSettings().isFetchAllRatings()) {
             for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
               if (!md.getRatings().contains(rating)) {
                 md.addRating(rating);
@@ -529,12 +533,43 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           movieToScrape.setLastScraperId(model.getMetadataProvider().getId());
           movieToScrape.setLastScrapeLanguage(model.getLanguage().name());
 
-          setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+          // automatic rename?
+          if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+            model.addTask(new MovieRenameTask(Collections.singletonList(movieToScrape)));
+          }
+
+          // write actor images after possible rename (to have a good folder structure)
+          if (ScraperMetadataConfig.containsAnyCast(scraperConfig) && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
+            model.addTask(new TmmTask(TmmResourceBundle.getString("movie.downloadactorimages"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                movieToScrape.writeActorImages(overwrite);
+              }
+            });
+          }
+
+          // get trailers?
+          if (scraperConfig.contains(MovieScraperMetadataConfig.TRAILER)) {
+            model.startTrailerScrapeTask(overwrite);
+          }
+
+          // if configured - sync with trakt.tv
+          if (MovieModuleManager.getInstance().getSettings().getSyncTrakt()) {
+            MovieSyncTraktTvTask task = new MovieSyncTraktTvTask(Collections.singletonList(movieToScrape));
+            task.setSyncCollection(MovieModuleManager.getInstance().getSettings().getSyncTraktCollection());
+            task.setSyncWatched(MovieModuleManager.getInstance().getSettings().getSyncTraktWatched());
+            task.setSyncRating(MovieModuleManager.getInstance().getSettings().getSyncTraktRating());
+
+            model.addTask(task);
+          }
 
           // get images?
           if (ScraperMetadataConfig.containsAnyArtwork(scraperConfig)) {
             // let the user choose the images
             if (!MovieModuleManager.getInstance().getSettings().isScrapeBestImage()) {
+              // we can already start the tasks here to save some time
+              model.startTasks();
+
               // get _all_ artwork sync and let the chooser just display it
               List<MediaArtwork> artwork = model.getArtwork();
 
@@ -577,22 +612,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             else {
               // get artwork asynchronous
               model.startArtworkScrapeTask(scraperConfig, overwrite);
+              model.startTasks();
             }
-          }
-
-          // get trailers?
-          if (scraperConfig.contains(MovieScraperMetadataConfig.TRAILER)) {
-            model.startTrailerScrapeTask(overwrite);
-          }
-
-          // if configured - sync with trakt.tv
-          if (MovieModuleManager.getInstance().getSettings().getSyncTrakt()) {
-            MovieSyncTraktTvTask task = new MovieSyncTraktTvTask(Collections.singletonList(movieToScrape));
-            task.setSyncCollection(MovieModuleManager.getInstance().getSettings().getSyncTraktCollection());
-            task.setSyncWatched(MovieModuleManager.getInstance().getSettings().getSyncTraktWatched());
-            task.setSyncRating(MovieModuleManager.getInstance().getSettings().getSyncTraktRating());
-
-            TmmTaskChain.getInstance(movieToScrape).add(task);
           }
 
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));

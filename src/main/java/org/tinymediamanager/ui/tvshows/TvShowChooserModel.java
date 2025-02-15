@@ -24,14 +24,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.core.tasks.QueueTask;
 import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowHelpers;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
@@ -39,6 +41,7 @@ import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.tasks.TvShowThemeDownloadTask;
+import org.tinymediamanager.core.tvshow.tasks.TvShowTrailerDownloadTask;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -70,6 +73,8 @@ public class TvShowChooserModel extends AbstractModelObject {
   private final MediaScraper             mediaScraper;
   private final List<MediaScraper>       artworkScrapers;
   private final List<MediaScraper>       trailerScrapers;
+  private final QueueTask                queueTask;
+
   private MediaLanguages                 language      = null;
   private MediaSearchResult              result        = null;
   private MediaMetadata                  metadata      = null;
@@ -95,6 +100,7 @@ public class TvShowChooserModel extends AbstractModelObject {
     this.result = result;
     this.language = language;
     this.trailerScrapers = trailerScrapers;
+    this.queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scrape.metadata"));
 
     setTitle(result.getTitle());
     setOriginalTitle(result.getOriginalTitle());
@@ -121,6 +127,7 @@ public class TvShowChooserModel extends AbstractModelObject {
     artworkScrapers = null;
     trailerScrapers = null;
     combinedName = title;
+    queueTask = null;
   }
 
   public float getScore() {
@@ -211,12 +218,20 @@ public class TvShowChooserModel extends AbstractModelObject {
     return artworkScrapers;
   }
 
+  public void addTask(TmmTask task) {
+    queueTask.addTask(task);
+  }
+
+  public void startTasks() {
+    TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+  }
+
   public void startTrailerScrapeTask(boolean overwrite) {
-    TmmTaskChain.getInstance(tvShow).add(new TrailerScrapeTask(tvShow, overwrite));
+    queueTask.addTask(new TrailerScrapeTask(tvShow, overwrite));
   }
 
   public void startThemeDownloadTask(boolean overwrite) {
-    TmmTaskChain.getInstance(tvShow).add(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), overwrite));
+    queueTask.addTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), overwrite));
   }
 
   /**
@@ -370,7 +385,7 @@ public class TvShowChooserModel extends AbstractModelObject {
   }
 
   public void startArtworkScrapeTask(List<TvShowScraperMetadataConfig> config, boolean overwrite) {
-    TmmTaskChain.getInstance(tvShow).add(new ArtworkScrapeTask(tvShow, config, overwrite));
+    queueTask.addTask(new ArtworkScrapeTask(tvShow, config, overwrite));
   }
 
   public List<MediaArtwork> getArtwork() {
@@ -491,7 +506,11 @@ public class TvShowChooserModel extends AbstractModelObject {
       tvShowtoScrape.writeNFO();
 
       // start automatic movie trailer download
-      TvShowHelpers.startAutomaticTrailerDownload(tvShowtoScrape);
+      if (TvShowModuleManager.getInstance().getSettings().isUseTrailerPreference()
+          && TvShowModuleManager.getInstance().getSettings().isAutomaticTrailerDownload() && tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty()
+          && !tvShow.getTrailer().isEmpty()) {
+        TmmTaskManager.getInstance().addDownloadTask(new TvShowTrailerDownloadTask(tvShow));
+      }
     }
   }
 }

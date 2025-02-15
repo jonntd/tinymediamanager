@@ -800,11 +800,6 @@ public class MovieSet extends MediaEntity {
     }
 
     @Override
-    protected void postProcess(List<MovieScraperMetadataConfig> config, boolean overwriteExistingItems) {
-      // no postprocessing needed
-    }
-
-    @Override
     protected List<MediaFile> listActorFiles() {
       return Collections.emptyList();
     }

@@ -17,6 +17,7 @@ package org.tinymediamanager.core.movie.tasks;
 
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -32,12 +33,12 @@ import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.movie.MovieHelpers;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
@@ -215,6 +216,10 @@ public class MovieScrapeTask extends TmmThreadPool {
                 }
               }
 
+              if (cancel) {
+                return;
+              }
+
               // also inject other ids
               MediaIdUtil.injectMissingIds(md.getIds(), MediaType.MOVIE);
 
@@ -243,12 +248,32 @@ public class MovieScrapeTask extends TmmThreadPool {
               movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems);
               movie.setLastScraperId(movieScrapeParams.searchAndScrapeOptions.getMetadataScraper().getId());
               movie.setLastScrapeLanguage(movieScrapeParams.searchAndScrapeOptions.getLanguage().name());
+
+              if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+                TmmTask task = new MovieRenameTask(Collections.singletonList(movie));
+                // blocking
+                task.run();
+              }
+
+              // write actor images after possible rename (to have a good folder structure)
+              if (ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig)
+                  && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
+                movie.writeActorImages(movieScrapeParams.overwriteExistingItems);
+              }
+            }
+
+            if (cancel) {
+              return;
             }
 
             // scrape artwork if wanted
             if (ScraperMetadataConfig.containsAnyArtwork(movieScrapeParams.scraperMetadataConfig)) {
               movie.setArtwork(getArtwork(movie, md, artworkScrapers), movieScrapeParams.scraperMetadataConfig,
                   movieScrapeParams.overwriteExistingItems);
+            }
+
+            if (cancel) {
+              return;
             }
 
             // scrape trailer if wanted
@@ -258,7 +283,11 @@ public class MovieScrapeTask extends TmmThreadPool {
               movie.writeNFO();
 
               // start automatic movie trailer download
-              MovieHelpers.startAutomaticTrailerDownload(movie);
+              if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
+                  && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
+                  && movie.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !movie.getTrailer().isEmpty()) {
+                TmmTaskManager.getInstance().addDownloadTask(new MovieTrailerDownloadTask(movie));
+              }
             }
           }
         }

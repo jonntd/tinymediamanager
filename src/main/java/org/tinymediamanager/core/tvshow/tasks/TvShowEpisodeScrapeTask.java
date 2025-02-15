@@ -19,9 +19,7 @@ import static org.tinymediamanager.core.tvshow.TvShowArtworkHelper.sortArtworkUr
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.THUMB;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -33,12 +31,10 @@ import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowRenamer;
-import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
@@ -53,7 +49,6 @@ import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
 import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
-import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 
 /**
  * The Class TvShowEpisodeScrapeTask.
@@ -220,17 +215,11 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
       }
     }
 
-    if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
-      Set<TvShow> tvShows = new HashSet<>();
+    // and scrape actor images
+    if (ScraperMetadataConfig.containsAnyCast(config) && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
       for (TvShowEpisode episode : episodes) {
-        tvShows.add(episode.getTvShow());
+        episode.writeActorImages(overwrite);
       }
-      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(new ArrayList<>(tvShows));
-      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktCollection());
-      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
-
-      TmmTaskManager.getInstance().addUnnamedTask(task);
     }
   }
 

@@ -17,17 +17,21 @@ package org.tinymediamanager.ui.tvshows.actions;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.tasks.QueueTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
+import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.tasks.TvShowEpisodeScrapeTask;
+import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
@@ -76,8 +80,16 @@ public class TvShowScrapeEpisodesAction extends TmmAction {
 
     // scrape
     for (Map.Entry<TvShow, List<TvShowEpisode>> entry : newEpisodes.entrySet()) {
-      TvShowEpisodeScrapeTask task = new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite);
-      TmmTaskManager.getInstance().addUnnamedTask(task);
+      QueueTask queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scraping"));
+      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite));
+
+      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));
+      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+      queueTask.addTask(task);
+
+      TmmTaskManager.getInstance().addUnnamedTask(queueTask);
     }
   }
 }

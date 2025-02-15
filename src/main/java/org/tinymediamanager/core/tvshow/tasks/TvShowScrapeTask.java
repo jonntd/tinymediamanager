@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
@@ -34,6 +35,7 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
@@ -197,6 +199,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
               LOGGER.info("=====================================================");
               md = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
 
+              if (cancel) {
+                return;
+              }
+
               // also inject other ids
               MediaIdUtil.injectMissingIds(md.getIds(), MediaType.TV_SHOW);
 
@@ -231,6 +237,19 @@ public class TvShowScrapeTask extends TmmThreadPool {
               tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
               tvShow.setLastScraperId(tvShowScrapeParams.scrapeOptions.getMetadataScraper().getId());
               tvShow.setLastScrapeLanguage(tvShowScrapeParams.scrapeOptions.getLanguage().name());
+
+              // automatic rename? rename the TV show itself
+              if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+                TmmTask task = new TvShowRenameTask(tvShow);
+                // blocking
+                task.run();
+              }
+
+              // write actor images after possible rename (to have a good folder structure)
+              if (ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)
+                  && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
+                tvShow.writeActorImages(tvShowScrapeParams.overwriteExistingItems);
+              }
             }
 
             // always add all episode data (for missing episodes and episode list)
@@ -296,7 +315,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
               tvShow.saveToDb();
 
               // start automatic movie trailer download
-              TvShowHelpers.startAutomaticTrailerDownload(tvShow);
+              if (TvShowModuleManager.getInstance().getSettings().isUseTrailerPreference()
+                  && TvShowModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
+                  && tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !tvShow.getTrailer().isEmpty()) {
+                TmmTaskManager.getInstance().addDownloadTask(new TvShowTrailerDownloadTask(tvShow));
+              }
             }
 
             if (cancel) {

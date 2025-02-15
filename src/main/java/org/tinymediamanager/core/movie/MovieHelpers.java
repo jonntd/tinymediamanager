@@ -25,7 +25,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
-import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Utils;
@@ -33,11 +32,9 @@ import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
-import org.tinymediamanager.core.movie.tasks.MovieTrailerDownloadTask;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
 import org.tinymediamanager.core.tasks.YTDownloadTask;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.imdb.ImdbMovieTrailerProvider;
 
@@ -126,34 +123,6 @@ public class MovieHelpers {
   }
 
   /**
-   * start the automatic trailer download for the given movie
-   *
-   * @param movie
-   *          the movie to start the trailer download for
-   */
-  public static void startAutomaticTrailerDownload(Movie movie) {
-    // start movie trailer download?
-    if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
-        && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload() && movie.getMediaFiles(MediaFileType.TRAILER).isEmpty()
-        && !movie.getTrailer().isEmpty()) {
-      downloadBestTrailer(movie);
-    }
-  }
-
-  /**
-   * download the best trailer for the given movie
-   *
-   * @param movie
-   *          the movie to download the trailer for
-   */
-  public static void downloadBestTrailer(Movie movie) {
-    if (!movie.getTrailer().isEmpty()) {
-      TmmTask task = new MovieTrailerDownloadTask(movie);
-      TmmTaskChain.getInstance(movie).add(task);
-    }
-  }
-
-  /**
    * download the given trailer for the given movie
    *
    * @param movie
@@ -234,7 +203,7 @@ public class MovieHelpers {
             return movie;
           }
         };
-        TmmTaskChain.getInstance(movie).add(task);
+        TmmTaskManager.getInstance().addDownloadTask(task);
       }
       else {
         TrailerDownloadTask task = new TrailerDownloadTask(trailer) {
@@ -248,7 +217,7 @@ public class MovieHelpers {
             return movie;
           }
         };
-        TmmTaskChain.getInstance(movie).add(task);
+        TmmTaskManager.getInstance().addDownloadTask(task);
       }
     }
     catch (Exception e) {

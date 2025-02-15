@@ -25,8 +25,10 @@ import javax.swing.KeyStroke;
 
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.tvshow.TvShowHelpers;
+import org.tinymediamanager.core.threading.TmmTask;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.tasks.TvShowTrailerDownloadTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
@@ -84,7 +86,9 @@ public class TvShowTrailerDownloadAction extends TmmAction {
       if (tvShow.getTrailer().isEmpty()) {
         continue;
       }
-      TvShowHelpers.downloadBestTrailer(tvShow);
+
+      TmmTask task = new TvShowTrailerDownloadTask(tvShow);
+      TmmTaskManager.getInstance().addDownloadTask(task);
     }
   }
 }

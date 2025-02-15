@@ -31,7 +31,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.threading.TmmTaskChain;
 import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskListener;
 import org.tinymediamanager.core.threading.TmmTaskManager;
@@ -80,13 +79,10 @@ public class TaskListDialog extends TmmDialog implements TmmTaskListener {
       getContentPane().add(rootPanel, BorderLayout.CENTER);
 
       JButton btnAbortAll = new JButton(TmmResourceBundle.getString("Button.abortqueue"));
-      btnAbortAll.addActionListener(e -> {
-        TmmTaskChain.abortAllOpenTasks();
-        taskMap.forEach((task, component) -> {
-          task.cancel();
-          // removeListItem(task);// hmm... nah, not yet.
-        });
-      });
+      btnAbortAll.addActionListener(e -> taskMap.forEach((task, component) -> {
+        task.cancel();
+        // removeListItem(task);// hmm... nah, not yet.
+      }));
       addButton(btnAbortAll);
     }
     TmmTaskManager.getInstance().addTaskListener(this);

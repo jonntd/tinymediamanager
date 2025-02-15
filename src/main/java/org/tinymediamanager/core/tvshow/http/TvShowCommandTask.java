@@ -69,6 +69,7 @@ import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 
 /**
  * the class {@link TvShowCommandTask} handles movie related API calls
@@ -361,6 +362,21 @@ class TvShowCommandTask extends TmmThreadPool {
         // done
         activeTask = null;
       }
+    }
+
+    // sync to trakt?
+    if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
+      Set<TvShow> tvShows = new HashSet<>(tvShowsToScrape);
+      for (TvShowEpisode episode : episodesToScrape) {
+        tvShows.add(episode.getTvShow());
+      }
+
+      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(new ArrayList<>(tvShows));
+      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktCollection());
+      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+
+      TmmTaskManager.getInstance().addUnnamedTask(task);
     }
   }
 

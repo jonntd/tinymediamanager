@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import javax.swing.KeyStroke;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.tasks.QueueTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
@@ -37,6 +39,7 @@ import org.tinymediamanager.core.tvshow.tasks.TvShowEpisodeScrapeTask;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
@@ -133,8 +136,16 @@ public class TvShowScrapeNewItemsAction extends TmmAction {
       boolean overwrite = dialog.getOverwriteExistingItems();
 
       // scrape
-      TvShowEpisodeScrapeTask task = new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite);
-      TmmTaskManager.getInstance().addUnnamedTask(task);
+      QueueTask queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scraping"));
+      queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite));
+
+      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));
+      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+      queueTask.addTask(task);
+
+      TmmTaskManager.getInstance().addUnnamedTask(queueTask);
     }
   }
 }

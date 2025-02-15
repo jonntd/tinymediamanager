@@ -25,8 +25,10 @@ import javax.swing.KeyStroke;
 
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.movie.MovieHelpers;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.tasks.MovieTrailerDownloadTask;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
@@ -83,7 +85,12 @@ public class MovieTrailerDownloadAction extends TmmAction {
       if (movie.getTrailer().isEmpty()) {
         continue;
       }
-      MovieHelpers.downloadBestTrailer(movie);
+
+      if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
+          && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload() && movie.getMediaFiles(MediaFileType.TRAILER).isEmpty()
+          && !movie.getTrailer().isEmpty()) {
+        TmmTaskManager.getInstance().addDownloadTask(new MovieTrailerDownloadTask(movie));
+      }
     }
   }
 }

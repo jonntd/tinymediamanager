@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -38,7 +37,6 @@ import org.tinymediamanager.core.tvshow.TvShowComparator;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowExporter;
-import org.tinymediamanager.core.tvshow.TvShowHelpers;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
@@ -51,11 +49,13 @@ import org.tinymediamanager.core.tvshow.tasks.TvShowReloadMediaInformationTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowRenameTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowScrapeTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowSubtitleSearchAndDownloadTask;
+import org.tinymediamanager.core.tvshow.tasks.TvShowTrailerDownloadTask;
 import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 
 import picocli.CommandLine;
 
@@ -284,6 +284,21 @@ class TvShowCommand implements Runnable {
         }
       }
     }
+
+    // sync to trakt?
+    if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
+      Set<TvShow> tvShows = new HashSet<>(showsToScrape);
+      for (TvShowEpisode episode : episodesToScrape) {
+        tvShows.add(episode.getTvShow());
+      }
+
+      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(new ArrayList<>(tvShows));
+      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktCollection());
+      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+
+      task.run(); // blocking
+    }
   }
 
   private void detectAspectRatio() {
@@ -316,11 +331,12 @@ class TvShowCommand implements Runnable {
         .getTvShowList()
         .getTvShows()
         .stream()
-        .filter(tvShow -> tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty())
-        .collect(Collectors.toList());
+        .filter(tvShow -> tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !tvShow.getTrailer().isEmpty())
+        .toList();
 
     for (TvShow tvShow : tvShowsWithoutTrailer) {
-      TvShowHelpers.downloadBestTrailer(tvShow);
+      TmmTask task = new TvShowTrailerDownloadTask(tvShow);
+      TmmTaskManager.getInstance().addDownloadTask(task);
     }
 
     // wait for other download threads

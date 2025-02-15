@@ -71,9 +71,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
-import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmDateFormat;
-import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -81,9 +79,6 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.tasks.MediaEntityImageFetcherTask;
-import org.tinymediamanager.core.threading.TmmTask;
-import org.tinymediamanager.core.threading.TmmTaskChain;
-import org.tinymediamanager.core.threading.TmmTaskHandle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeEdition;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
@@ -1107,8 +1102,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     // update DB
     writeNFO();
     saveToDb();
-
-    postProcess(config, overwriteExistingItems);
   }
 
   /**
@@ -2161,19 +2154,5 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     }
 
     return null;
-  }
-
-  protected void postProcess(List<TvShowEpisodeScraperMetadataConfig> config, boolean overwriteExistingItems) {
-    TmmTaskChain taskChain = TmmTaskChain.getInstance(tvShow != null ? tvShow : this);
-
-    // write actor images after possible rename (to have a good folder structure)
-    if (ScraperMetadataConfig.containsAnyCast(config) && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
-      taskChain.add(new TmmTask(TmmResourceBundle.getString("tvshow.downloadactorimages"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
-        @Override
-        protected void doInBackground() {
-          writeActorImages(overwriteExistingItems);
-        }
-      });
-    }
   }
 }
