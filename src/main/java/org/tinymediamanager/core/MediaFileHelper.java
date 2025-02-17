@@ -154,7 +154,7 @@ public class MediaFileHelper {
   public static final String       HVDVD_TS           = "HVDVD_TS";
 
   static {
-    SUPPORTED_ARTWORK_FILETYPES = List.of("jpg", "jpeg,", "png", "tbn", "gif", "bmp", "webp");
+    SUPPORTED_ARTWORK_FILETYPES = List.of("jpg", "jpeg", "png", "tbn", "gif", "bmp", "webp");
 
     // .disc = video stubs
     // .evo = hd-dvd
@@ -183,7 +183,7 @@ public class MediaFileHelper {
     BANNER_PATTERN = Pattern.compile("(?i)(.*-banner|banner)\\.(" + extensions + ")$");
     THUMB_PATTERN = Pattern.compile("(?i)(.*-thumb|thumb|.*-landscape|landscape)[0-9]{0,2}\\.(" + extensions + ")$");
     SEASON_POSTER_PATTERN = Pattern.compile("(?i)season([0-9]{1,6}|-specials|-all)(-poster)?\\.(" + extensions + ")$");
-    SEASON_FANART_PATTERN = Pattern.compile("(?i)season([0-9]{1,6}|-specials|-all)(-fanart)?\\.(" + extensions + ")$");
+    SEASON_FANART_PATTERN = Pattern.compile("(?i)season([0-9]{1,6}|-specials|-all)-fanart\\.(" + extensions + ")$");
     SEASON_BANNER_PATTERN = Pattern.compile("(?i)season([0-9]{1,6}|-specials|-all)-banner\\.(" + extensions + ")$");
     SEASON_THUMB_PATTERN = Pattern.compile("(?i)season([0-9]{1,6}|-specials|-all)-(thumb|landscape)\\.(" + extensions + ")$");
     LOGO_PATTERN = Pattern.compile("(?i)(.*-logo|logo)\\.(" + extensions + ")$");
@@ -315,10 +315,7 @@ public class MediaFileHelper {
       return MediaFileType.VSMETA;
     }
 
-    if (basename.endsWith("-mediainfo") && "xml".equalsIgnoreCase(ext)) {
-      return MediaFileType.MEDIAINFO;
-    }
-    if (filename.endsWith(".mediainfo.xml")) { // MI export sidecar file naming
+    if ((basename.endsWith("-mediainfo") || basename.endsWith(".mediainfo")) && "xml".equalsIgnoreCase(ext)) {
       return MediaFileType.MEDIAINFO;
     }
 
@@ -346,7 +343,7 @@ public class MediaFileHelper {
       }
 
       // we have some false positives too - make a more precise check
-      if (basename.matches("(?i).*[\\[\\]\\(\\)_.-]+sample[\\[\\]\\(\\)_.-]?$") || basename.equalsIgnoreCase("sample")
+      if (basename.matches("(?i).*[\\[\\]\\(\\)_.-]+sample[\\[\\]\\(\\)]?$") || basename.equalsIgnoreCase("sample")
           || foldername.equalsIgnoreCase("sample")) { // sample folder name
         return MediaFileType.SAMPLE;
       }
@@ -393,7 +390,6 @@ public class MediaFileHelper {
     }
 
     // season(XX|-specials)-fanart.*
-    // seasonXX.*
     matcher = MediaFileHelper.SEASON_FANART_PATTERN.matcher(filename);
     if (matcher.matches()) {
       return MediaFileType.SEASON_FANART;
