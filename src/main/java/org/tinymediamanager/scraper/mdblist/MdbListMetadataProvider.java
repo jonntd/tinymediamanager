@@ -34,7 +34,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
 
   protected MediaProviderInfo createMediaProviderInfo() {
     return new MediaProviderInfo(ID, "", "mdblist.com",
-        "MDBLIst - The Ultimate Dynamic List Manager<br>br>mdblist.com is your go-to tool for creating dynamic, auto-updating movie and show lists tailored to your preferences. Seamlessly integrated with Stremio, it combines the power of multiple rating platforms like IMDb, TMDb, Letterboxd, Rotten Tomatoes, Metacritic, MyAnimeList, and RogerEbert. Whether you’re building a watchlist, tracking ratings, or syncing your library progress, mdblist.com makes it effortless.",
+        "MDBLIst - The Ultimate Dynamic List Manager<br><br>mdblist.com is your go-to tool for creating dynamic, auto-updating movie and show lists tailored to your preferences. Seamlessly integrated with Stremio, it combines the power of multiple rating platforms like IMDb, TMDb, Letterboxd, Rotten Tomatoes, Metacritic, MyAnimeList, and RogerEbert. Whether you’re building a watchlist, tracking ratings, or syncing your library progress, mdblist.com makes it effortless.",
         MdbListMetadataProvider.class.getResource("/org/tinymediamanager/scraper/mdblist.png"));
   }
 
