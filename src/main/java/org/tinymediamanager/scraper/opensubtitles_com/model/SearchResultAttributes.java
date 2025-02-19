@@ -39,9 +39,6 @@ public class SearchResultAttributes {
   @JsonProperty("hd")
   public boolean            hd;
 
-  @JsonProperty("format")
-  public String             format            = "";
-
   @JsonProperty("fps")
   public float              fps;
 
@@ -59,9 +56,6 @@ public class SearchResultAttributes {
 
   @JsonProperty("foreign_parts_only")
   public boolean            foreignPartsOnly;
-
-  @JsonProperty("auto_translation")
-  public boolean            autoTranslation;
 
   @JsonProperty("ai_translated")
   public boolean            aiTranslated;

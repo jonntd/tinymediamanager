@@ -27,6 +27,7 @@ public class DownloadResponse {
   @JsonProperty("requests")
   public int    requestsConsumed;
 
+  @Deprecated
   @JsonProperty("allowed")
   public int    requestsAllowed;
 
@@ -35,4 +36,22 @@ public class DownloadResponse {
 
   @JsonProperty("message")
   public String message;
+
+  @JsonProperty("reset_time")
+  public String resetTime;
+
+  @JsonProperty("reset_time_utc")
+  public String resetTimeUtc;
+
+  // EXAMPLE
+  // {
+  // "link":
+  // "https://www.opensubtitles.com/download/A184A5EA6302F2CAxxxxxxxxx7C603156926FC6C74AA1D14AABEA6E20/subfile/casstle.rook.s01e03.webrip.x264-tbs.ettv.-eng.ro.srt",
+  // "file_name": "casstle.rook.s01e03.webrip.x264-tbs.ettv.-eng.ro.srt",
+  // "requests": 3,
+  // "remaining": 97,
+  // "message": "Your quota will be renewed in 07 hours and 30 minutes (2022-04-08 13:03:16 UTC) ",
+  // "reset_time": "07 hours and 30 minutes",
+  // "reset_time_utc": "2022-04-08T13:03:16.000Z"
+  // }
 }
