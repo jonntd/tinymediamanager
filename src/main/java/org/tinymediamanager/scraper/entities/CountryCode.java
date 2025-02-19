@@ -1063,13 +1063,18 @@ public enum CountryCode {
     try {
       return Enum.valueOf(CountryCode.class, code.toUpperCase(Locale.ROOT));
     }
-    catch (IllegalArgumentException e) {
+    catch (Exception e) {
       return null;
     }
   }
 
   private static CountryCode getByAlpha3Code(String code) {
-    return alpha3Map.get(code.toUpperCase(Locale.ROOT));
+    try {
+      return alpha3Map.get(code.toUpperCase(Locale.ROOT));
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 
   /**
