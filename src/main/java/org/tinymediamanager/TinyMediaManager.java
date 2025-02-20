@@ -20,7 +20,6 @@ import static java.awt.Desktop.getDesktop;
 import static org.tinymediamanager.ui.TmmUIHelper.setLookAndFeel;
 
 import java.awt.Desktop;
-import java.awt.EventQueue;
 import java.awt.GraphicsEnvironment;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -128,10 +127,19 @@ public final class TinyMediaManager {
     if (!headless) {
       LOGGER.trace("entered GUI mode");
 
-      EventQueue.invokeLater(() -> {
-        // GUI mode - load LaF and tmm on EDT
+      SwingUtilities.invokeLater(() -> {
+        // GUI mode - load LaF and some UI related components
         setLookAndFeel();
+        try {
+          LOGGER.trace("loading splash");
+          splashScreen = new TmmSplashScreen();
+        }
+        catch (Exception e) {
+          LOGGER.error("could not initialize splash - {}", e.getMessage());
+        }
+        TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
+        // load tmm
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
           @Override
           protected Void doInBackground() {
@@ -139,17 +147,9 @@ public final class TinyMediaManager {
 
             try {
               Thread.currentThread().setName("main");
-              TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
-              // splash
-              try {
-                LOGGER.trace("loading splash");
-                splashScreen = new TmmSplashScreen();
-                splashScreen.setVisible(true);
-              }
-              catch (Exception e) {
-                LOGGER.error("could not initialize splash - {}", e.getMessage());
-              }
+              // displaying splash
+              SwingUtilities.invokeLater(() -> splashScreen.setVisible(true));
 
               // init ui logger
               TmmUILogCollector.init();
@@ -573,7 +573,7 @@ public final class TinyMediaManager {
       return;
     }
 
-    splashScreen.setProgress(progress, text);
+    SwingUtilities.invokeLater(() -> splashScreen.setProgress(progress, text));
   }
 
   /**
