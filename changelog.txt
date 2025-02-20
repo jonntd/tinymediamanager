@@ -1,5 +1,6 @@
 Version 5.1.3
 =======================
++ [UI] added more clickable IDs #2840
 x [Movies/TV shows] reworked task queueing to avoid concurrency problems #2864
 x [Movies] re-enabled getting artwork from FFmpeg using the automatic scraper #2866
 x [TV shows] added new season poster file naming scheme "<season_folder>/seasonXX.ext" #2817

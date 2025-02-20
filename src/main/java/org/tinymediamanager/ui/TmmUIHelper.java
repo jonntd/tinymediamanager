@@ -59,12 +59,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.entities.MediaEntity;
-import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTaskManager;
-import org.tinymediamanager.core.tvshow.entities.TvShow;
-import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
-import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.thirdparty.TinyFileDialogs;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.LinkLabel;
@@ -621,114 +616,6 @@ public class TmmUIHelper {
     });
 
     return linklabel;
-  }
-
-  /**
-   * Given an ID, the method returns the web detail page of movie/show.
-   * 
-   * @param me
-   *          the MediaEntity (movie/show) for generating correct links
-   * @param id
-   *          the ID to generate the url for (IMDB, TMDB, ...)
-   * @return the https url for GUI, or empty
-   */
-  public static String createUrlForID(MediaEntity me, String id) {
-    String url = "";
-    String value = me.getIdAsString(id);
-    if (value.isEmpty()) {
-      return "";
-    }
-
-    // same url, regardless if movie or tv
-    switch (id) {
-      case MediaMetadata.IMDB:
-        url = "https://www.imdb.com/title/" + value;
-        break;
-
-      case MediaMetadata.ANIDB:
-        url = "https://anidb.net/anime/" + value;
-        break;
-
-      case "moviemeter":
-        url = "https://www.moviemeter.nl/film/" + value;
-        break;
-
-      case "mpdbtv":
-        url = "https://mpdb.tv/movie/en_us/" + value;
-        break;
-
-      case "ofdb":
-        url = "https://ssl.ofdb.de/film/" + value + "," + me.getTitle();
-        break;
-
-      case "omdbapi":
-        url = "https://www.omdb.org/movie/" + value + "-" + me.getTitle();
-        break;
-
-      case MediaMetadata.TVMAZE:
-        url = "https://www.tvmaze.com/shows/" + value;
-        break;
-
-      default:
-        break;
-    }
-
-    if (me instanceof Movie) {
-      switch (id) {
-        case MediaMetadata.TRAKT_TV:
-          url = "https://trakt.tv/search/trakt/" + value + "?id_type=movie";
-          break;
-
-        case MediaMetadata.TMDB:
-          url = "https://www.themoviedb.org/movie/" + value;
-          break;
-
-        case MediaMetadata.TVDB:
-          url = "https://thetvdb.com/dereferrer/movie/" + value;
-          break;
-
-        default:
-          break;
-      }
-    }
-    else if (me instanceof TvShow) {
-      switch (id) {
-        case MediaMetadata.TRAKT_TV:
-          url = "https://trakt.tv/search/trakt/" + value + "?id_type=show";
-          break;
-
-        case MediaMetadata.TMDB:
-          url = "https://www.themoviedb.org/tv/" + value;
-          break;
-
-        case MediaMetadata.TVDB:
-          url = "https://thetvdb.com/dereferrer/series/" + value;
-          break;
-
-        default:
-          break;
-      }
-    }
-    else if (me instanceof TvShowEpisode) {
-      switch (id) {
-        case MediaMetadata.TRAKT_TV:
-          url = "https://trakt.tv/search/trakt/" + value + "?id_type=episode";
-          break;
-
-        case MediaMetadata.TMDB:
-          url = "https://www.themoviedb.org/tv/" + value;
-          break;
-
-        case MediaMetadata.TVDB:
-          url = "https://thetvdb.com/dereferrer/episode/" + value;
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    return url;
   }
 
   /**

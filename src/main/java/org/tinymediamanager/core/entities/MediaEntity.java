@@ -25,6 +25,7 @@ import static org.tinymediamanager.core.Constants.DATE_ADDED_AS_STRING;
 import static org.tinymediamanager.core.Constants.DISC;
 import static org.tinymediamanager.core.Constants.FANART;
 import static org.tinymediamanager.core.Constants.HAS_IMAGES;
+import static org.tinymediamanager.core.Constants.ID;
 import static org.tinymediamanager.core.Constants.KEYART;
 import static org.tinymediamanager.core.Constants.LOCKED;
 import static org.tinymediamanager.core.Constants.LOGO;
@@ -854,6 +855,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
       ids.put(key, value);
     }
     firePropertyChange(key, null, value);
+    firePropertyChange(ID, null, value);
 
     // fire special events for our well known IDs
     if (MediaMetadata.TMDB.equals(key) || MediaMetadata.IMDB.equals(key) || MediaMetadata.TVDB.equals(key) || MediaMetadata.TRAKT_TV.equals(key)) {

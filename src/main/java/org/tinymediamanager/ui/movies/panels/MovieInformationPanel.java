@@ -18,6 +18,7 @@ package org.tinymediamanager.ui.movies.panels;
 import static org.tinymediamanager.core.Constants.BANNER;
 import static org.tinymediamanager.core.Constants.CLEARLOGO;
 import static org.tinymediamanager.core.Constants.FANART;
+import static org.tinymediamanager.core.Constants.ID;
 import static org.tinymediamanager.core.Constants.MEDIA_FILES;
 import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
 import static org.tinymediamanager.core.Constants.POSTER;
@@ -25,6 +26,7 @@ import static org.tinymediamanager.core.Constants.RATING;
 import static org.tinymediamanager.core.Constants.THUMB;
 
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.beans.PropertyChangeListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,10 +64,12 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.ui.ColumnLayout;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.WrapLayout;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
 import org.tinymediamanager.ui.components.button.FlatButton;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.panel.IdLinkPanel;
 import org.tinymediamanager.ui.components.textfield.LinkTextArea;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPaneHTML;
@@ -103,7 +107,7 @@ public class MovieInformationPanel extends InformationPanel {
   private JTextPane                  taGenres;
   private JTextPane                  taPlot;
   private JLabel                     lblCertification;
-  private JTextPane                  taOtherIds;
+  private JPanel                     panelOtherIds;
   private MediaInformationLogosPanel panelLogos;
   private JLabel                     lblOriginalTitle;
   private JButton                    btnPlay;
@@ -118,7 +122,6 @@ public class MovieInformationPanel extends InformationPanel {
   private JLabel                     lblReleaseDate;
   private JTextPane                  taNote;
   private JLabel                     lblCertificationLogo;
-  private LinkLabel                  lblTraktTvId;
   private JLabel                     lblShowlink;
   private JLabel                     lblDirector;
 
@@ -156,18 +159,6 @@ public class MovieInformationPanel extends InformationPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
-            .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
-      }
-    });
-
-    lblTraktTvId.addActionListener(arg0 -> {
-      String url = "https://trakt.tv/search/trakt/" + lblTraktTvId.getText() + "?id_type=movie";
-      try {
-        TmmUIHelper.browseUrl(url);
-      }
-      catch (Exception e) {
-        LOGGER.error("browse to trakt.tv", e);
         MessageManager.instance
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -216,6 +207,21 @@ public class MovieInformationPanel extends InformationPanel {
 
       if ("selectedMovie".equals(property) || MEDIA_FILES.equals(property) || MEDIA_INFORMATION.equals(property)) {
         panelLogos.setMediaInformationSource(movie);
+      }
+
+      if ("selectedMovie".equals(property) || ID.equals(property)) {
+        // other IDs
+        panelOtherIds.removeAll();
+        for (String key : movie.getIds().keySet()) {
+          // all but IMDB and TMDB
+          if (MediaMetadata.IMDB.equals(key) || MediaMetadata.TMDB.equals(key)) {
+            continue;
+          }
+
+          panelOtherIds.add(new IdLinkPanel(key, movie));
+        }
+        panelOtherIds.invalidate();
+        panelOtherIds.repaint();
       }
 
       if ("selectedMovie".equals(property)) {
@@ -316,11 +322,11 @@ public class MovieInformationPanel extends InformationPanel {
           panelTopDetails.add(lblYear, "cell 1 0,growx");
         }
         {
-          JLabel lblImdbIdT = new TmmLabel(TmmResourceBundle.getString("metatag.imdb"));
+          JLabel lblImdbIdT = new TmmLabel("IMDb:");
           panelTopDetails.add(lblImdbIdT, "cell 3 0");
 
           lblImdbid = new LinkLabel("");
-          panelTopDetails.add(lblImdbid, "cell 4 0");
+          panelTopDetails.add(lblImdbid, "cell 3 0");
         }
         {
           lblCertificationLogo = new JLabel("");
@@ -334,11 +340,11 @@ public class MovieInformationPanel extends InformationPanel {
           panelTopDetails.add(lblReleaseDate, "cell 1 1");
         }
         {
-          JLabel lblTmdbIdT = new TmmLabel(TmmResourceBundle.getString("metatag.tmdb"));
+          JLabel lblTmdbIdT = new TmmLabel("TMDB:");
           panelTopDetails.add(lblTmdbIdT, "cell 3 1");
 
           lblTmdbid = new LinkLabel("");
-          panelTopDetails.add(lblTmdbid, "cell 4 1");
+          panelTopDetails.add(lblTmdbid, "cell 3 1");
         }
         {
           JLabel lblCertificationT = new TmmLabel(TmmResourceBundle.getString("metatag.certification"));
@@ -348,18 +354,8 @@ public class MovieInformationPanel extends InformationPanel {
           panelTopDetails.add(lblCertification, "cell 1 2,growx");
         }
         {
-          JLabel lblTraktTvIdT = new TmmLabel("Trakt.tv ID");
-          panelTopDetails.add(lblTraktTvIdT, "cell 3 2");
-
-          lblTraktTvId = new LinkLabel();
-          panelTopDetails.add(lblTraktTvId, "cell 4 2");
-        }
-        {
-          JLabel lblOtherIdsT = new TmmLabel(TmmResourceBundle.getString("metatag.otherids"));
-          panelTopDetails.add(lblOtherIdsT, "cell 3 3");
-
-          taOtherIds = new ReadOnlyTextPane();
-          panelTopDetails.add(taOtherIds, "cell 4 3 2 1,growx,wmin 0");
+          panelOtherIds = new JPanel(new WrapLayout(FlowLayout.LEFT, 0, 0));
+          panelTopDetails.add(panelOtherIds, "cell 3 2 3 2,growx,top,wmin 0");
         }
         {
           JLabel lblRunningTimeT = new TmmLabel(TmmResourceBundle.getString("metatag.runtime"));
@@ -583,11 +579,6 @@ public class MovieInformationPanel extends InformationPanel {
         lblOriginalTitle, jLabelBeanProperty);
     autoBinding_8.bind();
     //
-    Property movieSelectionModelBeanProperty_5 = BeanProperty.create("selectedMovie.otherIds");
-    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_5, taOtherIds,
-        JTextPaneBeanProperty);
-    autoBinding_6.bind();
-    //
     Property movieSelectionModelBeanProperty_1 = BeanProperty.create("selectedMovie.releaseDateAsString");
     AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_1,
         lblReleaseDate, jLabelBeanProperty);
@@ -639,12 +630,6 @@ public class MovieInformationPanel extends InformationPanel {
         lblCertificationLogo, jLabelBeanProperty_2);
     autoBinding_23.setConverter(new CertificationImageConverter());
     autoBinding_23.bind();
-    //
-    Property movieSelectionModelBeanProperty_24 = BeanProperty.create("selectedMovie.traktId");
-    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_24,
-        lblTraktTvId, JTextPaneBeanProperty);
-    autoBinding_24.setConverter(new ZeroIdConverter());
-    autoBinding_24.bind();
     //
     Property movieSelectionModelBeanProperty_25 = BeanProperty.create("selectedMovie.showlinksAsString");
     AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_25, lblShowlink,

@@ -60,6 +60,7 @@ public final class Constants {
   public static final String GENRES_AS_STRING       = "genresAsString";
   public static final String HAS_IMAGES             = "hasImages";
   public static final String HAS_NFO_FILE           = "hasNfoFile";
+  public static final String ID                     = "id";
   public static final String KEYART                 = "keyart";
   public static final String LOCKED                 = "locked";
   public static final String LOGO                   = "logo";
