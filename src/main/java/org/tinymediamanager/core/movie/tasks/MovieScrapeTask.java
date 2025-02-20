@@ -357,11 +357,6 @@ public class MovieScrapeTask extends TmmThreadPool {
 
       // scrape providers
       artworkScrapers.parallelStream().forEach(scraper -> {
-        if ("ffmpeg".equals(scraper.getId())) {
-          // do not use FFmpeg here
-          return;
-        }
-
         IMovieArtworkProvider artworkProvider = (IMovieArtworkProvider) scraper.getMediaProvider();
         try {
           lock.writeLock().lock();
