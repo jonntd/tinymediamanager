@@ -318,13 +318,16 @@ public class ImageChooserDialog extends TmmDialog {
       panelFilter.add(lblLanguageT, "cell 4 0");
 
       cbScraper = new MediaScraperCheckComboBox(artworkScrapers);
+      cbScraper.setFocusable(false);
       panelFilter.add(cbScraper, "cell 0 1,growx,wmin 0");
 
       cbSize = new TmmCheckComboBox();
+      cbSize.setFocusable(false);
       cbSize.setSingleLineEditor();
       panelFilter.add(cbSize, "cell 2 1,growx,wmin 0");
 
       cbLanguage = new TmmCheckComboBox();
+      cbLanguage.setFocusable(false);
       cbLanguage.setSingleLineEditor(); // looks weird when preselecting langu?
       // our preferred should be activated?
       // List<MediaLanguages> preferred = TvShowModuleManager.getInstance().getSettings().getImageScraperLanguages();
@@ -630,12 +633,7 @@ public class ImageChooserDialog extends TmmDialog {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(5, 5, 5, 5);
 
-    JToggleButton button = new JToggleButton() {
-      @Override
-      public void setSelected(boolean b) {
-        super.setSelected(b);
-      }
-    };
+    JToggleButton button = new JToggleButton();
     button.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
@@ -670,7 +668,7 @@ public class ImageChooserDialog extends TmmDialog {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(0, 5, 0, 5);
 
-    JComboBox cb = null;
+    JComboBox cb;
     if (!artwork.getImageSizes().isEmpty()) {
       cb = new JComboBox(artwork.getImageSizes().toArray());
     }
@@ -786,10 +784,11 @@ public class ImageChooserDialog extends TmmDialog {
     });
 
     // update filters
-    updateSizeCombobox(artwork.getImageSizes());
-    updateLanguageCombobox(artwork.getLanguage());
-
-    filterChanged();
+    SwingUtilities.invokeLater(() -> {
+      updateSizeCombobox(artwork.getImageSizes());
+      updateLanguageCombobox(artwork.getLanguage());
+      filterChanged();
+    });
   }
 
   private void updateSizeCombobox(List<ImageSizeAndUrl> newSizes) {
@@ -957,9 +956,10 @@ public class ImageChooserDialog extends TmmDialog {
 
     viewport.setLocked(true);
     panelImages.revalidate();
-    scrollPane.repaint();
-
-    SwingUtilities.invokeLater(() -> viewport.setLocked(false));
+    scrollPane.revalidate();
+    getContentPane().revalidate();
+    getContentPane().repaint();
+    viewport.setLocked(false);
   }
 
   private void downloadAndPreviewImage(String url) {
