@@ -134,6 +134,13 @@ public abstract class MediaFileSubtitleEditTable extends TmmEditorTable {
       addColumn(col);
 
       /*
+       * default
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.default"), "default", MediaFileSubtitle::isDefaultStream, Boolean.class);
+      col.setColumnResizeable(false);
+      addColumn(col);
+
+      /*
        * forced
        */
       col = new Column(TmmResourceBundle.getString("metatag.forced"), "forced", MediaFileSubtitle::isForced, Boolean.class);

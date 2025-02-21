@@ -21,6 +21,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
@@ -47,6 +48,8 @@ public class MediaFileAudioStreamEditorPanel extends AbstractModalInputPanel {
 
   private final MediaFileAudioStream            audioStream;
 
+  private final JCheckBox                       chkbxDefault;
+  private final JCheckBox                       chkbxForced;
   private final JTextField                      tfCodec;
   private final JSpinner                        spChannels;
   private final JSpinner                        spBitrate;
@@ -111,12 +114,26 @@ public class MediaFileAudioStreamEditorPanel extends AbstractModalInputPanel {
         add(cbLanguage, "cell 1 4 2 1, wmin 50%");
       }
       {
+        JLabel lblDefaultT = new TmmLabel(TmmResourceBundle.getString("metatag.default"));
+        add(lblDefaultT, "cell 0 5,alignx trailing");
+
+        chkbxDefault = new JCheckBox();
+        add(chkbxDefault, "cell 1 5, growx");
+      }
+      {
+        JLabel lblForcedT = new TmmLabel(TmmResourceBundle.getString("metatag.forced"));
+        add(lblForcedT, "cell 0 6,alignx trailing");
+
+        chkbxForced = new JCheckBox();
+        add(chkbxForced, "cell 1 6, growx");
+      }
+      {
         JLabel lblTitleT = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
-        add(lblTitleT, "cell 0 5,alignx trailing");
+        add(lblTitleT, "cell 0 7,alignx trailing");
 
         tfTitle = new JTextField();
         tfTitle.setColumns(30);
-        add(tfTitle, "cell 1 5 2 1, growx");
+        add(tfTitle, "cell 1 7 2 1, growx");
       }
     }
 
@@ -124,6 +141,8 @@ public class MediaFileAudioStreamEditorPanel extends AbstractModalInputPanel {
     spChannels.setValue(audioStream.getAudioChannels());
     spBitrate.setValue(audioStream.getBitrate());
     spBitdepth.setValue(audioStream.getBitDepth());
+    chkbxDefault.setSelected(audioStream.isDefaultStream());
+    chkbxForced.setSelected(audioStream.isForced());
     tfTitle.setText(audioStream.getTitle());
 
     Optional<LanguageContainer> foundByValue = languages.stream().filter(v -> v.value.equalsIgnoreCase(audioStream.getLanguage())).findFirst();
@@ -144,6 +163,8 @@ public class MediaFileAudioStreamEditorPanel extends AbstractModalInputPanel {
     audioStream.setAudioChannels((int) spChannels.getValue());
     audioStream.setBitrate((int) spBitrate.getValue());
     audioStream.setBitDepth((int) spBitdepth.getValue());
+    audioStream.setDefaultStream(chkbxDefault.isSelected());
+    audioStream.setForced(chkbxForced.isSelected());
 
     Object obj = cbLanguage.getSelectedItem();
     if (obj instanceof LanguageContainer localeContainer) {

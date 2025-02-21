@@ -301,6 +301,19 @@ public abstract class MediaInformationPanel extends JPanel {
       addColumn(col);
 
       /*
+       * default
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.default"), "default", container -> container.audioStream.isDefaultStream(),
+          Boolean.class);
+      addColumn(col);
+
+      /*
+       * forced
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.forced"), "forced", container -> container.audioStream.isForced(), Boolean.class);
+      addColumn(col);
+
+      /*
        * Audio title
        */
       col = new Column(TmmResourceBundle.getString("metatag.title"), "title", container -> container.audioStream.getTitle(), String.class);
@@ -335,6 +348,13 @@ public abstract class MediaInformationPanel extends JPanel {
        */
       col = new Column(TmmResourceBundle.getString("metatag.language"), "language", container -> container.subtitle.getLanguage(), String.class);
       col.setColumnComparator(stringComparator);
+      addColumn(col);
+
+      /*
+       * default
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.default"), "default", container -> container.subtitle.isDefaultStream(), Boolean.class);
+      col.setColumnComparator(booleanComparator);
       addColumn(col);
 
       /*

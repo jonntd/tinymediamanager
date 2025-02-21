@@ -162,6 +162,20 @@ public abstract class MediaFileAudioStreamEditTable extends TmmEditorTable {
       addColumn(col);
 
       /*
+       * default
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.default"), "default", MediaFileAudioStream::isDefaultStream, Boolean.class);
+      col.setColumnResizeable(false);
+      addColumn(col);
+
+      /*
+       * forced
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.forced"), "forced", MediaFileAudioStream::isForced, Boolean.class);
+      col.setColumnResizeable(false);
+      addColumn(col);
+
+      /*
        * title
        */
       col = new Column(TmmResourceBundle.getString("metatag.title"), "title", MediaFileAudioStream::getTitle, String.class);

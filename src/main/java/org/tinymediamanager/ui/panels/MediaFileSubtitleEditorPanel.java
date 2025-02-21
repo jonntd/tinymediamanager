@@ -45,6 +45,7 @@ public class MediaFileSubtitleEditorPanel extends AbstractModalInputPanel {
   private final MediaFileSubtitle               subtitle;
 
   private final AutocompleteComboBox            cbLanguage;
+  private final JCheckBox                       chkbxDefault;
   private final JCheckBox                       chkbxForced;
   private final JCheckBox                       chkbxSdh;
   private final JTextField                      tfFormat;
@@ -87,38 +88,46 @@ public class MediaFileSubtitleEditorPanel extends AbstractModalInputPanel {
         add(cbLanguage, "cell 1 0 2 1, wmin 50%");
       }
       {
+        JLabel lblDefaultT = new TmmLabel(TmmResourceBundle.getString("metatag.default"));
+        add(lblDefaultT, "cell 0 1,alignx trailing");
+
+        chkbxDefault = new JCheckBox();
+        add(chkbxDefault, "cell 1 1, growx");
+      }
+      {
         JLabel lblForcedT = new TmmLabel(TmmResourceBundle.getString("metatag.forced"));
-        add(lblForcedT, "cell 0 1,alignx trailing");
+        add(lblForcedT, "cell 0 2,alignx trailing");
 
         chkbxForced = new JCheckBox();
-        add(chkbxForced, "cell 1 1, growx");
+        add(chkbxForced, "cell 1 2, growx");
       }
       {
         JLabel lblSdhT = new TmmLabel(TmmResourceBundle.getString("metatag.sdh"));
-        add(lblSdhT, "cell 0 2,alignx trailing");
+        add(lblSdhT, "cell 0 3,alignx trailing");
 
         chkbxSdh = new JCheckBox();
-        add(chkbxSdh, "cell 1 2, growx");
+        add(chkbxSdh, "cell 1 3, growx");
       }
       {
         JLabel lblFormatT = new TmmLabel(TmmResourceBundle.getString("metatag.format"));
-        add(lblFormatT, "cell 0 3,alignx trailing");
+        add(lblFormatT, "cell 0 4,alignx trailing");
 
         tfFormat = new JTextField();
         tfFormat.setColumns(8);
-        add(tfFormat, "cell 1 3, growx");
+        add(tfFormat, "cell 1 4, growx");
       }
       {
         JLabel lblTitleT = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
-        add(lblTitleT, "cell 0 4,alignx trailing");
+        add(lblTitleT, "cell 0 5,alignx trailing");
 
         tfTitle = new JTextField();
         tfTitle.setColumns(30);
-        add(tfTitle, "cell 1 4 2 1, growx");
+        add(tfTitle, "cell 1 5 2 1, growx");
       }
     }
 
     tfFormat.setText(subtitle.getCodec());
+    chkbxDefault.setSelected(subtitle.isDefaultStream());
     chkbxForced.setSelected(subtitle.isForced());
     chkbxSdh.setSelected(subtitle.isSdh());
     tfTitle.setText(subtitle.getTitle());
@@ -133,6 +142,7 @@ public class MediaFileSubtitleEditorPanel extends AbstractModalInputPanel {
   @Override
   protected void onClose() {
     subtitle.setCodec(tfFormat.getText());
+    subtitle.setDefaultStream(chkbxDefault.isSelected());
     subtitle.setForced(chkbxForced.isSelected());
     subtitle.setSdh(chkbxSdh.isSelected());
 
