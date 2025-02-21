@@ -316,7 +316,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
       sr.setTitle(fd.title);
       sr.setUrl(fd.url);
       sr.setYear(fd.year);
-      sr.setScore(1);
+      sr.setScore(1f);
       results.add(sr);
     }
     for (MMFilm film : moviesFound) {

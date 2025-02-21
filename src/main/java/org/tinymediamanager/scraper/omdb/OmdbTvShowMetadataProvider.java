@@ -196,7 +196,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
           result.setPosterUrl(artwork.getPreviewUrl());
         }
 
-        result.setScore(1);
+        result.setScore(1f);
         mediaResult.add(result);
 
         return mediaResult;

@@ -479,7 +479,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         break;
       }
     }
-    searchResult.setScore(1);
+    searchResult.setScore(1f);
 
     return searchResult;
   }

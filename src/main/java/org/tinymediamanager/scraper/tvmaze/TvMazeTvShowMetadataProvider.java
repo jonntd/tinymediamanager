@@ -427,6 +427,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       MediaMetadata md = getMetadata(options);
       MediaSearchResult msr = new MediaSearchResult(getId(), MediaType.TV_SHOW);
       msr.mergeFrom(md);
+      msr.setScore(1f);
       searchResults.add(msr);
       return searchResults;
     }
@@ -475,7 +476,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       if (StringUtils.isNotBlank(options.getImdbId()) && options.getImdbId().equals(msr.getIMDBId())
           || String.valueOf(options.getTmdbId()).equals(msr.getId())) {
         LOGGER.debug("perfect match by ID - set score to 1");
-        msr.setScore(1);
+        msr.setScore(1f);
       }
       else {
         // calculate the score by comparing the search result with the search options

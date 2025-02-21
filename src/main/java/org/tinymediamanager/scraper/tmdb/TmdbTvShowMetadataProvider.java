@@ -1525,7 +1525,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
     if ((StringUtils.isNotBlank(query.getImdbId()) && query.getImdbId().equals(result.getIMDBId()))
         || String.valueOf(query.getTmdbId()).equals(result.getId())) {
       LOGGER.debug("perfect match by ID - set score to 1");
-      result.setScore(1);
+      result.setScore(1f);
     }
     else {
       // calculate the score by comparing the search result with the search options

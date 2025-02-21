@@ -763,7 +763,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     if ((StringUtils.isNotBlank(query.getImdbId()) && query.getImdbId().equals(searchResult.getIMDBId()))
         || String.valueOf(query.getTmdbId()).equals(searchResult.getId())) {
       LOGGER.debug("perfect match by ID - set score to 1");
-      searchResult.setScore(1);
+      searchResult.setScore(1f);
     }
     else {
       // calculate the score by comparing the search result with the search options

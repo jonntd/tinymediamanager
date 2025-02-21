@@ -127,7 +127,7 @@ public class OmdbMovieMetadataProvider extends OmdbMetadataProvider implements I
           result.setPosterUrl(artwork.getPreviewUrl());
         }
 
-        result.setScore(1);
+        result.setScore(1f);
         mediaResult.add(result);
 
         return mediaResult;

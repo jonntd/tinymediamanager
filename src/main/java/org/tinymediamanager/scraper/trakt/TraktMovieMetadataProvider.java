@@ -100,6 +100,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
         MediaMetadata md = getMetadata(options);
         MediaSearchResult msr = new MediaSearchResult(id, options.getMediaType());
         msr.mergeFrom(md);
+        msr.setScore(1f);
         results.add(msr);
         return results;
       }
@@ -130,7 +131,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
       if ((StringUtils.isNotBlank(options.getImdbId()) && options.getImdbId().equals(m.getIMDBId()))
           || String.valueOf(options.getTmdbId()).equals(m.getId()) || (id != null && id.equals(m.getId()))) {
         LOGGER.debug("perfect match by ID - set score to 1");
-        m.setScore(1);
+        m.setScore(1f);
       }
       else {
         // calculate the score by comparing the search result with the search options
