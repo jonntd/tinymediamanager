@@ -314,6 +314,7 @@ public class TvShowRenamer {
             for (TvShowEpisode episode : show.getEpisodes()) {
               episode.replacePathForRenamedTvShowRoot(srcDir, destDir);
               episode.updateMediaFilePath(srcDir, destDir);
+              episode.saveToDb();
             }
 
             // ######################################################################
