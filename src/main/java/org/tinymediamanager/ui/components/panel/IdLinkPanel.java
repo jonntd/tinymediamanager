@@ -130,8 +130,12 @@ public class IdLinkPanel extends JPanel {
         url = "https://www.tvmaze.com/shows/" + id;
         break;
 
-      case "wikidata":
+      case MediaMetadata.WIKIDATA:
         url = "https://www.wikidata.org/wiki/" + id;
+        break;
+
+      case "eidr":
+        url = "https://ui.eidr.org/view/content?id=" + id;
         break;
 
       case MediaMetadata.TMDB_SET:
