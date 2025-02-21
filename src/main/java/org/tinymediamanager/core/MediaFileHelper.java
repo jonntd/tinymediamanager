@@ -2241,10 +2241,16 @@ public class MediaFileHelper {
         stream.setLanguage(parseLanguageFromString(language));
       }
 
+      // https://gitlab.com/mbunkus/mkvtoolnix/-/wikis/Default-and-forced-flags-and-default-yes-no-in-the-GUI
       // "default" audio stream?
       String def = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Audio, i, "Default");
-      if (def.equalsIgnoreCase("yes")) {
+      if (def.equalsIgnoreCase("true") || def.equalsIgnoreCase("yes")) {
         stream.setDefaultStream(true);
+      }
+      // "force" audio stream?
+      String forced = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Audio, i, "Forced");
+      if (forced.equalsIgnoreCase("true") || forced.equalsIgnoreCase("yes")) {
+        stream.setForced(true);
       }
 
       // Title of audiostream
