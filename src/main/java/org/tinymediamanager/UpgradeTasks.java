@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -200,6 +201,50 @@ public abstract class UpgradeTasks {
       }
     }
     return changed;
+  }
+
+  /**
+   * migrate old ID keys to the current ones
+   * 
+   * @param mediaEntity
+   *          the {@link MediaEntity} to migrate the IDs for
+   * @return true if something has been changed / false otherwise
+   */
+  protected boolean migrateIds(MediaEntity mediaEntity) {
+    boolean changed = false;
+
+    // imdbId -> imdb
+    changed |= migrateId("imdbId", MediaMetadata.IMDB, mediaEntity);
+
+    // tmdbId -> tmdb
+    changed |= migrateId("tmdbId", MediaMetadata.TMDB, mediaEntity);
+
+    // traktId -> trakt
+    changed |= migrateId("traktId", MediaMetadata.TRAKT_TV, mediaEntity);
+
+    return changed;
+  }
+
+  private boolean migrateId(String oldKey, String newKey, MediaEntity mediaEntity) {
+    Map<String, Object> ids = mediaEntity.getIds();
+
+    Object oldId = ids.get(oldKey);
+    if (oldId == null) {
+      // old ID not available -> nothing to do
+      return false;
+    }
+
+    Object newId = ids.get(newKey);
+    if (newId == null) {
+      // no new ID, but an old one -> migrate
+      mediaEntity.setId(newKey, oldId);
+    }
+
+    // remove the old one
+    mediaEntity.removeId(oldKey);
+
+    // we changed the map (removed old and _maybe_ added new)
+    return true;
   }
 
   public static void upgradeEpisodeNumbers(TvShowEpisode episode) {

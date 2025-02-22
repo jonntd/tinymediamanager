@@ -267,6 +267,31 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
       module.setDbVersion(5008);
     }
 
+    // remove legacy IDs
+    if (module.getDbVersion() < 5009) {
+      for (TvShow tvShow : tvShowList.getTvShows()) {
+        boolean changed = migrateIds(tvShow);
+
+        for (TvShowEpisode episode : tvShow.getDummyEpisodes()) {
+          changed |= migrateIds(episode);
+        }
+
+        if (changed) {
+          registerForSaving(tvShow);
+        }
+
+        for (TvShowEpisode episode : tvShow.getEpisodes()) {
+          changed = migrateIds(episode);
+
+          if (changed) {
+            registerForSaving(episode);
+          }
+        }
+      }
+
+      module.setDbVersion(5009);
+    }
+
     saveAll();
   }
 

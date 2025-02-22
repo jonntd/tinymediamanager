@@ -390,19 +390,11 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
     }
 
     // legacy ID
-    if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      obj = ids.get("imdbId");
-      if (obj != null) {
-        imdbId = obj.toString();
-      }
+    if (MediaIdUtil.isValidImdbId(imdbId)) {
+      return imdbId;
     }
 
-    // prevent NPE
-    if (StringUtils.isBlank(imdbId)) {
-      return "";
-    }
-
-    return imdbId;
+    return "";
   }
 
   /**

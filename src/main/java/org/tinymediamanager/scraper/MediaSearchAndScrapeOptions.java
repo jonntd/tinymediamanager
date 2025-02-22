@@ -309,11 +309,7 @@ public abstract class MediaSearchAndScrapeOptions {
   public String getImdbId() {
     Object obj = ids.get(MediaMetadata.IMDB);
     if (obj == null) {
-      // legacy
-      obj = ids.get("imdbId");
-      if (obj == null) {
-        return "";
-      }
+      return "";
     }
     return obj.toString();
   }
@@ -325,9 +321,6 @@ public abstract class MediaSearchAndScrapeOptions {
    */
   public int getTmdbId() {
     Integer id = getIdAsInteger(MediaMetadata.TMDB);
-    if (id == null || id == 0) {
-      id = getIdAsInteger("tmdbId");
-    }
     if (id != null) {
       return id;
     }

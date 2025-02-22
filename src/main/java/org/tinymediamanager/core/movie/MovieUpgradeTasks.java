@@ -101,6 +101,19 @@ public class MovieUpgradeTasks extends UpgradeTasks {
       module.setDbVersion(5004);
     }
 
+    // remove legacy IDs
+    if (module.getDbVersion() < 5005) {
+      for (Movie movie : movieList.getMovies()) {
+        boolean changed = migrateIds(movie);
+
+        if (changed) {
+          registerForSaving(movie);
+        }
+      }
+
+      module.setDbVersion(5005);
+    }
+
     saveAll();
   }
 

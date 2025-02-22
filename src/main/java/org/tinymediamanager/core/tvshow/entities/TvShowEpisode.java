@@ -147,7 +147,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   private TvShow                             tvShow                = null;
   private String                             titleSortable         = "";
-  private String                             otherIds              = "";
   private Date                               lastWatched           = null;
   private boolean                            dummy                 = false;
   private MediaEpisodeNumber                 mainEpisodeNumber     = null;
@@ -210,7 +209,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     stacked = source.stacked;
     multiEpisode = source.multiEpisode;
     titleSortable = source.titleSortable;
-    otherIds = source.otherIds;
     lastWatched = source.lastWatched;
     watched = source.watched;
     playcount = source.playcount;
@@ -232,40 +230,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     productionCompany = source.productionCompany;
     dummy = source.dummy;
     note = source.note;
-  }
-
-  @Override
-  public void setId(String key, Object value) {
-    super.setId(key, value);
-
-    otherIds = "";
-    firePropertyChange("otherIds", null, key + ":" + value);
-  }
-
-  public String getOtherIds() {
-    if (StringUtils.isNotBlank(otherIds)) {
-      return otherIds;
-    }
-
-    for (Map.Entry<String, Object> entry : getIds().entrySet()) {
-      switch (entry.getKey()) {
-        case MediaMetadata.TVDB, MediaMetadata.IMDB, MediaMetadata.TMDB, MediaMetadata.TRAKT_TV:
-          // already in UI - skip
-          continue;
-
-        case "imdbId", "tvShowSeason":
-          // legacy format
-          continue;
-
-        default:
-          if (StringUtils.isNotBlank(otherIds)) {
-            otherIds += "; ";
-          }
-          otherIds += entry.getKey() + ": " + entry.getValue();
-      }
-    }
-
-    return otherIds;
   }
 
   /**
