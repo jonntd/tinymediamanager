@@ -9,6 +9,7 @@ x [TV shows] added new season poster file naming scheme "<season_folder>/seasonX
 x [UI] fixed focus handling in the image chooser #2869
 x [MdbList] fix getting ratings due to changed API
 x [Scrapers] fix scraping with "best match" - didn't find anything (thx u/BadLuckFistFuck666)
+x [source] recognize SDTV as TV MediaSource (thx u/Gullible_Eagle4280)
 
 
 Version 5.1.2
