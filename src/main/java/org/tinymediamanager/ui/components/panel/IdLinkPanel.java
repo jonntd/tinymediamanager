@@ -126,10 +126,6 @@ public class IdLinkPanel extends JPanel {
         url = "https://www.omdb.org/movie/" + id + "-" + mediaEntity.getTitle();
         break;
 
-      case MediaMetadata.TVMAZE:
-        url = "https://www.tvmaze.com/shows/" + id;
-        break;
-
       case MediaMetadata.WIKIDATA:
         url = "https://www.wikidata.org/wiki/" + id;
         break;
@@ -178,6 +174,10 @@ public class IdLinkPanel extends JPanel {
           url = "https://thetvdb.com/dereferrer/series/" + id;
           break;
 
+        case MediaMetadata.TVMAZE:
+          url = "https://www.tvmaze.com/shows/" + id;
+          break;
+
         // do not use zap2it for now, because most IDs are broken
         // case "zap2it":
         // url = "https://tvschedule.zap2it.com/overview.html?programSeriesId=" + id;
@@ -199,6 +199,10 @@ public class IdLinkPanel extends JPanel {
 
         case MediaMetadata.TVDB:
           url = "https://thetvdb.com/dereferrer/episode/" + id;
+          break;
+
+        case MediaMetadata.TVMAZE:
+          url = "https://www.tvmaze.com/episodes/" + id;
           break;
 
         default:
