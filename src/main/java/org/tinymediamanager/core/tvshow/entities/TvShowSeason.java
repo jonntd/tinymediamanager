@@ -260,12 +260,8 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
     // to find out the delta (dummy)
     List<TvShowEpisode> episodesForDisplayBefore = getEpisodesForDisplay();
 
-    if (episode.isDummy()) {
-      dummyEpisodes.remove(episode);
-    }
-    else {
-      episodes.remove(episode);
-    }
+    dummyEpisodes.remove(episode);
+    episodes.remove(episode);
 
     // invalidate cache
     episodesForDisplay.clear();
