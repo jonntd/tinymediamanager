@@ -207,10 +207,15 @@ public class TmmTable extends JTable {
 
       // rows
       for (int row = 0; row < getRowCount(); row++) {
-        rend = getCellRenderer(row, col);
-        value = getValueAt(row, col);
-        comp = rend.getTableCellRendererComponent(this, value, false, false, row, col);
-        maxWidth = Math.max(comp.getPreferredSize().width + margin, maxWidth);
+        try {
+          rend = getCellRenderer(row, col);
+          value = getValueAt(row, col);
+          comp = rend.getTableCellRendererComponent(this, value, false, false, row, col);
+          maxWidth = Math.max(comp.getPreferredSize().width + margin, maxWidth);
+        }
+        catch (Exception e) {
+          // catch any issues getting the value
+        }
       }
 
       // do not set the max width below the min width
