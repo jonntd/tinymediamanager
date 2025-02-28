@@ -187,7 +187,7 @@ public class IdLinkPanel extends JPanel {
           break;
       }
     }
-    else if (mediaEntity instanceof TvShowEpisode) {
+    else if (mediaEntity instanceof TvShowEpisode episode) {
       switch (key) {
         case MediaMetadata.TRAKT_TV:
           url = "https://trakt.tv/search/trakt/" + id + "?id_type=episode";
@@ -195,10 +195,15 @@ public class IdLinkPanel extends JPanel {
 
         case MediaMetadata.TMDB:
           // TMDB does not support linking to episode IDs? at least, didn't find a working url....
-          int tvShowId = ((TvShowEpisode) mediaEntity).getTvShow().getTmdbId();
-          int seasonId = ((TvShowEpisode) mediaEntity).getAiredSeason();
-          int episodeId = ((TvShowEpisode) mediaEntity).getAiredEpisode();
-          url = "https://www.themoviedb.org/tv/" + tvShowId + "/season/" + seasonId + "/episode/" + episodeId;
+          try {
+            int tvShowId = episode.getTvShow().getTmdbId();
+            int seasonId = episode.getAiredSeason();
+            int episodeId = episode.getAiredEpisode();
+            url = "https://www.themoviedb.org/tv/" + tvShowId + "/season/" + seasonId + "/episode/" + episodeId;
+          }
+          catch (Exception ignored) {
+            // just catch any possible exception here
+          }
           break;
 
         case MediaMetadata.TVDB:
