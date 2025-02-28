@@ -47,7 +47,10 @@ public class ExternalToolTest {
   }
 
   @Test
-  public void checkToolNotInstalled() {
+  public void checkToolNotInstalled() throws Exception {
+    Utils.deleteDirectorySafely(addonFolder);
+    Files.createDirectory(addonFolder);
+
     assertThat(ExternalTools.isToolInstalled("ffmpeg")).isEqualTo(false);
   }
 
