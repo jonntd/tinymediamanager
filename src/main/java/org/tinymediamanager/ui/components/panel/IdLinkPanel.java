@@ -194,7 +194,11 @@ public class IdLinkPanel extends JPanel {
           break;
 
         case MediaMetadata.TMDB:
-          url = "https://www.themoviedb.org/tv/" + id;
+          // TMDB does not support linking to episode IDs? at least, didn't find a working url....
+          int tvShowId = ((TvShowEpisode) mediaEntity).getTvShow().getTmdbId();
+          int seasonId = ((TvShowEpisode) mediaEntity).getAiredSeason();
+          int episodeId = ((TvShowEpisode) mediaEntity).getAiredEpisode();
+          url = "https://www.themoviedb.org/tv/" + tvShowId + "/season/" + seasonId + "/episode/" + episodeId;
           break;
 
         case MediaMetadata.TVDB:
