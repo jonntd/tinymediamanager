@@ -35,6 +35,7 @@ import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.dialogs.TmmOptionDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
 
 /**
@@ -64,10 +65,8 @@ public class MovieRemoveAction extends TmmAction {
       TmmFontHelper.changeFont(checkBox, L1);
       checkBox.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-      Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
-      Object[] params = { TmmResourceBundle.getString("movie.remove.desc"), checkBox };
-      int answer = JOptionPane.showOptionDialog(MainWindow.getInstance(), params, TmmResourceBundle.getString("movie.remove"),
-          JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+      int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.remove"),
+          TmmResourceBundle.getString("movie.remove.desc"), checkBox);
 
       // the user don't want to show this dialog again
       if (checkBox.isSelected()) {

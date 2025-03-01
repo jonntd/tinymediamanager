@@ -36,6 +36,7 @@ import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.dialogs.TmmOptionDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
 
 /**
@@ -65,10 +66,8 @@ public class MovieRenameAction extends TmmAction {
       TmmFontHelper.changeFont(checkBox, L1);
       checkBox.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-      Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
-      Object[] params = { TmmResourceBundle.getString("movie.rename.desc"), checkBox };
-      int answer = JOptionPane.showOptionDialog(MainWindow.getInstance(), params, TmmResourceBundle.getString("movie.rename"),
-          JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+      int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.rename"),
+          TmmResourceBundle.getString("movie.rename.desc"), checkBox);
 
       // the user don't want to show this dialog again
       if (checkBox.isSelected()) {

@@ -91,7 +91,7 @@ public abstract class ExporterPanel extends AbstractModalInputPanel {
     panelExporterDetails.setLayout(new MigLayout("", "[100lp,grow]", "[][][][200lp,grow][]"));
 
     JLabel lblTemplateName = new JLabel("");
-    TmmFontHelper.changeFont(lblTemplateName, TmmFontHelper.H1);
+    TmmFontHelper.changeFont(lblTemplateName, TmmFontHelper.H2);
     panelExporterDetails.add(lblTemplateName, "cell 0 0,growx");
 
     JLabel lblUrl = new JLabel("");

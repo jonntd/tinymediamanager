@@ -31,6 +31,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.dialogs.TmmOptionDialog;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 
@@ -42,7 +43,7 @@ import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 public class TvShowDeleteAction extends TmmAction {
   public TvShowDeleteAction() {
     putValue(NAME, TmmResourceBundle.getString("tvshow.delete"));
-    putValue(SMALL_ICON, IconManager.DELETE_FOREVER);
+    putValue(SMALL_ICON, IconManager.DELETE_FOREVER_RED);
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("tvshow.delete.hint"));
     putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
   }
@@ -56,9 +57,8 @@ public class TvShowDeleteAction extends TmmAction {
     }
 
     // display warning and ask the user again
-    Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
-    int answer = JOptionPane.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tvshow.delete.desc"),
-        TmmResourceBundle.getString("tvshow.delete"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tvshow.delete"),
+        TmmResourceBundle.getString("tvshow.delete.desc"));
     if (answer != JOptionPane.YES_OPTION) {
       return;
     }

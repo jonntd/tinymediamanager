@@ -47,6 +47,8 @@ public class IconManager {
   private static final Set<TmmTextIconCache> TEXT_ICON_CACHE              = new HashSet<>();
   private static final Map<URI, ImageIcon>   ICON_CACHE                   = new HashMap<>();
 
+  private static final Color                 RED                          = new Color(204, 2, 2);
+
   // toolbar icons
   public static final ImageIcon              TOOLBAR_ABOUT                = createSVGIcon("icn_about.svg", new Dimension(24, 24));
   public static final ImageIcon              TOOLBAR_ABOUT_HOVER          = createSVGIcon("icn_about_hover.svg", new Dimension(24, 24));
@@ -108,6 +110,7 @@ public class IconManager {
   public static final ImageIcon              COPY                         = createMenuIcon("clone.svg");
   public static final ImageIcon              DELETE                       = createMenuIcon("xmark.svg");
   public static final ImageIcon              DELETE_FOREVER               = createMenuIcon("trash-alt.svg");
+  public static final ImageIcon              DELETE_FOREVER_RED           = createSVGIcon("trash-alt.svg", RED, TmmFontHelper.H3);
   public static final ImageIcon              DISCONNECT                   = createMenuIcon("unlink.svg");
   public static final ImageIcon              DOWNLOAD                     = createMenuIcon("download.svg");
   public static final ImageIcon              FEEDBACK                     = createMenuIcon("envelope.svg");
@@ -142,7 +145,7 @@ public class IconManager {
   // font awesome icons for the table/tree
   public static final ImageIcon              TABLE_OK                     = createSVGIcon("check.svg", new Color(31, 187, 0));
   public static final ImageIcon              TABLE_PROBLEM                = createSVGIcon("triangle-exclamation.svg", new Color(204, 120, 50));
-  public static final ImageIcon              TABLE_NOT_OK                 = createSVGIcon("xmark.svg", new Color(204, 2, 2));
+  public static final ImageIcon              TABLE_NOT_OK                 = createSVGIcon("xmark.svg", RED);
 
   // font awesome icons normal
   public static final ImageIcon              CANCEL                       = createSVGIcon("circle-xmark.svg");
@@ -153,15 +156,17 @@ public class IconManager {
   public static final ImageIcon              CONFIGURE                    = createSVGIcon("wrench.svg");
   public static final ImageIcon              DATE_PICKER                  = createSVGIcon("calendar-lines.svg");
   public static final ImageIcon              DELETE_GRAY                  = createSVGIcon("trash-alt.svg");
-  public static final ImageIcon              ERROR                        = createSVGIcon("circle-xmark.svg", Color.RED);
+  public static final ImageIcon              ERROR                        = createSVGIcon("circle-xmark.svg", RED);
   public static final ImageIcon              EXPANDED                     = createSVGIcon("square-chevron-right.svg");
   public static final ImageIcon              WARN                         = createSVGIcon("triangle-exclamation.svg");
-  public static final ImageIcon              WARN_RED                     = createSVGIcon("triangle-exclamation.svg", Color.RED);
+  public static final ImageIcon              WARN_RED                     = createSVGIcon("triangle-exclamation.svg", RED);
   public static final ImageIcon              INFO                         = createSVGIcon("circle-info.svg");
   public static final ImageIcon              FILTER_ACTIVE                = createSVGIcon("lightbulb-on.svg", new Color(255, 119, 0));
   public static final ImageIcon              NEW_GREEN                    = createSVGIcon("circle-plus.svg", new Color(31, 187, 0));
   public static final ImageIcon              NEW_ORANGE                   = createSVGIcon("circle-plus.svg", new Color(204, 120, 50));
   public static final ImageIcon              PLAY_LARGE                   = createSVGIcon("play-circle.svg", 2.33333);
+  public static final ImageIcon              QUESTION_BIG                 = createSVGIcon("question.svg", RED, 2);
+
   public static final ImageIcon              SAVE                         = createSVGIcon("save.svg");
   public static final ImageIcon              SEARCH_GREY                  = createSVGIcon("search.svg");
   public static final ImageIcon              STOP                         = createSVGIcon("circle-stop.svg");

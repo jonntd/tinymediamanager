@@ -51,7 +51,7 @@ class EntrancePanel extends JPanel {
 
     String greetingText = Jsoup.parse(TmmResourceBundle.getString("wizard.greeting.header")).text();
     final JTextPane tpGreetingHeader = new ReadOnlyTextPane(greetingText);
-    TmmFontHelper.changeFont(tpGreetingHeader, TmmFontHelper.H1);
+    TmmFontHelper.changeFont(tpGreetingHeader, TmmFontHelper.H2);
     add(tpGreetingHeader, "cell 0 2 5 1,alignx center");
 
     JTextPane tpGreetingText = new ReadOnlyTextPane(TmmResourceBundle.getString("wizard.greeting.text"));

@@ -28,7 +28,7 @@ import javax.swing.plaf.FontUIResource;
  */
 public class TmmFontHelper {
 
-  public static final double H1 = 1.33333;
+  public static final double H1 = 1.50;
   public static final double H2 = 1.33333;
   public static final double H3 = 1.16667;
 

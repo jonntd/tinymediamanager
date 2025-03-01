@@ -34,6 +34,7 @@ import org.tinymediamanager.core.tvshow.tasks.TvShowRenameTask;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.dialogs.TmmOptionDialog;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 
@@ -66,10 +67,9 @@ public class TvShowRenameAction extends TmmAction {
       JCheckBox checkBox = new JCheckBox(TmmResourceBundle.getString("tmm.donotshowagain"));
       TmmFontHelper.changeFont(checkBox, L1);
       checkBox.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-      Object[] params = { TmmResourceBundle.getString("tvshow.rename.desc"), checkBox };
-      Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
-      int answer = JOptionPane.showOptionDialog(MainWindow.getInstance(), params, TmmResourceBundle.getString("tvshow.rename"),
-          JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+
+      int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tvshow.rename"),
+          TmmResourceBundle.getString("tvshow.rename.desc"), checkBox);
 
       // the user don't want to show this dialog again
       if (checkBox.isSelected()) {
