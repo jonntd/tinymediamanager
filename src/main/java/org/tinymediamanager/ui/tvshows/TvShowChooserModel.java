@@ -73,7 +73,6 @@ public class TvShowChooserModel extends AbstractModelObject {
   private final MediaScraper             mediaScraper;
   private final List<MediaScraper>       artworkScrapers;
   private final List<MediaScraper>       trailerScrapers;
-  private final QueueTask                queueTask;
 
   private MediaLanguages                 language      = null;
   private MediaSearchResult              result        = null;
@@ -91,6 +90,7 @@ public class TvShowChooserModel extends AbstractModelObject {
   private MediaEpisodeGroup              episodeGroup  = null;
   private List<MediaMetadata>            episodeList   = new ArrayList<>();
   private boolean                        scraped       = false;
+  private QueueTask                      queueTask;
 
   public TvShowChooserModel(TvShow tvShow, MediaScraper mediaScraper, List<MediaScraper> artworkScrapers, List<MediaScraper> trailerScrapers,
       MediaSearchResult result, MediaLanguages language) {
@@ -100,7 +100,6 @@ public class TvShowChooserModel extends AbstractModelObject {
     this.result = result;
     this.language = language;
     this.trailerScrapers = trailerScrapers;
-    this.queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scrape.metadata"));
 
     setTitle(result.getTitle());
     setOriginalTitle(result.getOriginalTitle());
@@ -127,7 +126,6 @@ public class TvShowChooserModel extends AbstractModelObject {
     artworkScrapers = null;
     trailerScrapers = null;
     combinedName = title;
-    queueTask = null;
   }
 
   public float getScore() {
@@ -219,19 +217,25 @@ public class TvShowChooserModel extends AbstractModelObject {
   }
 
   public void addTask(TmmTask task) {
+    if (queueTask == null) {
+      queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scrape.metadata"));
+    }
     queueTask.addTask(task);
   }
 
   public void startTasks() {
-    TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+    if (queueTask != null) {
+      TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+      queueTask = null;
+    }
   }
 
   public void startTrailerScrapeTask(boolean overwrite) {
-    queueTask.addTask(new TrailerScrapeTask(tvShow, overwrite));
+    addTask(new TrailerScrapeTask(tvShow, overwrite));
   }
 
   public void startThemeDownloadTask(boolean overwrite) {
-    queueTask.addTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), overwrite));
+    addTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), overwrite));
   }
 
   /**
@@ -385,7 +389,7 @@ public class TvShowChooserModel extends AbstractModelObject {
   }
 
   public void startArtworkScrapeTask(List<TvShowScraperMetadataConfig> config, boolean overwrite) {
-    queueTask.addTask(new ArtworkScrapeTask(tvShow, config, overwrite));
+    addTask(new ArtworkScrapeTask(tvShow, config, overwrite));
   }
 
   public List<MediaArtwork> getArtwork() {

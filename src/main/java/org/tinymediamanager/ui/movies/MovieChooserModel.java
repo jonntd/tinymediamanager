@@ -71,7 +71,6 @@ public class MovieChooserModel extends AbstractModelObject {
   public static final MovieChooserModel emptyResult      = new MovieChooserModel();
 
   private final Movie                   movieToScrape;
-  private final QueueTask               queueTask;
 
   private MediaScraper                  metadataProvider = null;
   private List<MediaScraper>            artworkScrapers  = null;
@@ -92,6 +91,7 @@ public class MovieChooserModel extends AbstractModelObject {
   private String                        tagline          = "";
   private final List<Person>            castMembers      = new ArrayList<>();
   private boolean                       scraped          = false;
+  private QueueTask                     queueTask;
 
   public MovieChooserModel(Movie movie, MediaScraper metadataProvider, List<MediaScraper> artworkScrapers, List<MediaScraper> trailerScrapers,
       MediaSearchResult result, MediaLanguages language) {
@@ -101,7 +101,6 @@ public class MovieChooserModel extends AbstractModelObject {
     this.trailerScrapers = trailerScrapers;
     this.result = result;
     this.language = language;
-    this.queueTask = new QueueTask(TmmResourceBundle.getString("movie.scrape.metadata"));
 
     score = result.getScore();
     setTitle(result.getTitle());
@@ -123,7 +122,6 @@ public class MovieChooserModel extends AbstractModelObject {
     setTitle(TmmResourceBundle.getString("chooser.nothingfound"));
     movieToScrape = null;
     combinedName = title;
-    queueTask = null;
   }
 
   public void setTitle(String title) {
@@ -365,19 +363,25 @@ public class MovieChooserModel extends AbstractModelObject {
   }
 
   public void addTask(TmmTask task) {
+    if (queueTask == null) {
+      queueTask = new QueueTask(TmmResourceBundle.getString("movie.scrape.metadata"));
+    }
     queueTask.addTask(task);
   }
 
   public void startTasks() {
-    TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+    if (queueTask != null) {
+      TmmTaskManager.getInstance().addUnnamedTask(queueTask);
+      queueTask = null;
+    }
   }
 
   public void startArtworkScrapeTask(List<MovieScraperMetadataConfig> config, boolean overwrite) {
-    queueTask.addTask(new ArtworkScrapeTask(movieToScrape, config, overwrite));
+    addTask(new ArtworkScrapeTask(movieToScrape, config, overwrite));
   }
 
   public void startTrailerScrapeTask(boolean overwrite) {
-    queueTask.addTask(new TrailerScrapeTask(movieToScrape, overwrite));
+    addTask(new TrailerScrapeTask(movieToScrape, overwrite));
   }
 
   public List<MediaArtwork> getArtwork() {

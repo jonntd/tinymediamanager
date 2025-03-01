@@ -754,9 +754,10 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             else {
               // get artwork asynchronous
               model.startArtworkScrapeTask(tvShowScraperMetadataConfig, overwrite);
-              model.startTasks();
             }
           }
+
+          model.startTasks();
 
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 

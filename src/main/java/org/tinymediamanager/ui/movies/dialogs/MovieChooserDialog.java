@@ -612,9 +612,10 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             else {
               // get artwork asynchronous
               model.startArtworkScrapeTask(scraperConfig, overwrite);
-              model.startTasks();
             }
           }
+
+          model.startTasks();
 
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 

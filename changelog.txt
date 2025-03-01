@@ -1,6 +1,7 @@
 Version 5.1.4
 =======================
 x [TMDB] fix web link to episode #2875
+x [Movies/TV shows] fixed starting of sub-tasks in the chooser #2876
 x [UI] reworked message dialog for long texts/messages
 x [UI] use clearer messages when deleting movies/TV shows
 
