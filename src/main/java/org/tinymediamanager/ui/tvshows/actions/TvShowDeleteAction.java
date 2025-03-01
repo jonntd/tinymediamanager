@@ -22,6 +22,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
@@ -57,8 +58,9 @@ public class TvShowDeleteAction extends TmmAction {
     }
 
     // display warning and ask the user again
-    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tvshow.delete"),
-        TmmResourceBundle.getString("tvshow.delete.desc"));
+    String message = Settings.getInstance().isEnableTrash() ? TmmResourceBundle.getString("tvshow.delete.desc")
+        : TmmResourceBundle.getString("tvshow.delete.desc2");
+    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tvshow.delete"), message);
     if (answer != JOptionPane.YES_OPTION) {
       return;
     }

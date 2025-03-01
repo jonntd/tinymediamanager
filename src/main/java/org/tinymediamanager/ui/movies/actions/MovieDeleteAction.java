@@ -23,6 +23,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -56,8 +57,9 @@ public class MovieDeleteAction extends TmmAction {
     }
 
     // display warning and ask the user again
-    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.delete"),
-        TmmResourceBundle.getString("movie.delete.desc"));
+    String message = Settings.getInstance().isEnableTrash() ? TmmResourceBundle.getString("movie.delete.desc")
+        : TmmResourceBundle.getString("movie.delete.desc2");
+    int answer = TmmOptionDialog.showOptionDialog(MainWindow.getInstance(), TmmResourceBundle.getString("movie.delete"), message);
     if (answer != JOptionPane.YES_OPTION) {
       return;
     }
