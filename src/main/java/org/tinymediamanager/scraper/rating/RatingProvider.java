@@ -30,7 +30,6 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.entities.MediaType;
-import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IRatingProvider;
 import org.tinymediamanager.scraper.mdblist.MdbListMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
@@ -174,17 +173,20 @@ public class RatingProvider {
       // FIXME: does not work yet, since the scraper is no movie/show provider yet...
       // callScraper(MediaMetadata.MDBLIST, mediaType, missingRatings, ids, ratings);
       try {
-        List<MediaRating> ratingsFromMdblist = new MdbListMetadataProvider().getRatings(ids, mediaType);
-        for (MediaRating rating : ratingsFromMdblist) {
-          RatingSource source = parseRatingSource(rating.getId());
-          if (missingRatings.contains(source) && !ratings.contains(rating)) {
-            ratings.add(rating);
-            missingRatings.remove(source);
+        MdbListMetadataProvider mdbListMetadataProvider = new MdbListMetadataProvider();
+        if (mdbListMetadataProvider.isActive()) {
+          List<MediaRating> ratingsFromMdblist = mdbListMetadataProvider.getRatings(ids, mediaType);
+          for (MediaRating rating : ratingsFromMdblist) {
+            RatingSource source = parseRatingSource(rating.getId());
+            if (missingRatings.contains(source) && !ratings.contains(rating)) {
+              ratings.add(rating);
+              missingRatings.remove(source);
+            }
           }
         }
       }
-      catch (ScrapeException e) {
-        // ignore
+      catch (Exception e) {
+        LOGGER.debug("could not get mbdlist ratings - '{}'", e.getMessage());
       }
     }
 

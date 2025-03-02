@@ -27,7 +27,7 @@ import org.tinymediamanager.scraper.MediaProviderInfo;
  */
 public interface IMediaProvider extends TmmFeature {
   /**
-   * Gets a general information about the metadata provider
+   * Gets general information about the metadata provider
    * 
    * @return the provider info containing metadata of the provider
    */

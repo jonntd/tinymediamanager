@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 - 2025 Manuel Laggner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.tinymediamanager.scraper.mdblist;
 
 import java.io.IOException;
@@ -13,6 +28,7 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.entities.MediaType;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
 import org.tinymediamanager.scraper.interfaces.IRatingProvider;
@@ -21,6 +37,11 @@ import org.tinymediamanager.scraper.mdblist.entities.MdbRating;
 
 import retrofit2.Response;
 
+/**
+ * The class {@link MdbListMetadataProvider} is used to offer ratings from MDBList
+ * 
+ * @author Myron Boyle
+ */
 public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider {
   public static final String        ID     = "mdblist";
   private static final Logger       LOGGER = LoggerFactory.getLogger(MdbListMetadataProvider.class);
@@ -40,7 +61,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
 
   @Override
   public boolean isActive() {
-    return isFeatureEnabled();
+    return isFeatureEnabled() && isApiKeyAvailable(Settings.getInstance().getMdbListApiKey());
   }
 
   protected synchronized void initAPI() throws ScrapeException {
@@ -75,7 +96,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
     initAPI();
     List<MediaRating> mediaRatingList = new ArrayList<>();
 
-    // MDBList does only has show (and movie) ratings, so skip for episodes
+    // MDBList does only have show (and movie) ratings, so skip for episodes
     if (mediaType == MediaType.TV_EPISODE) {
       return mediaRatingList;
     }
@@ -84,7 +105,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
     for (Map.Entry<String, Object> entry : ids.entrySet()) {
       // Fetch the ratings with the first found ID
       try {
-        response = controller.getMediaEntity(entry.getKey().toString(), mediaType, entry.getValue().toString()).execute();
+        response = controller.getMediaEntity(entry.getKey(), mediaType, entry.getValue().toString()).execute();
         if (!response.isSuccessful()) {
           String message = "";
           try {
@@ -93,15 +114,19 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
           catch (IOException e) {
             // ignore
           }
-          LOGGER.warn("request was not successful: HTTP/{} - {}", response.code(), message);
+          LOGGER.debug("request was not successful: HTTP/{} - {}", response.code(), message);
         }
         else {
           break;
         }
       }
       catch (Exception e) {
-        LOGGER.error("request was not successful:{}", e);
+        LOGGER.debug("request was not successful : '{}'", e.getMessage());
       }
+    }
+
+    if (response == null || response.body() == null) {
+      throw new NothingFoundException();
     }
 
     List<MdbRating> ratings = response.body().ratings;
