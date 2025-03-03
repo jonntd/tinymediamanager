@@ -28,7 +28,9 @@ import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.connector.TvShowNfoParser;
+import org.tinymediamanager.core.tvshow.connector.TvShowSeasonNfoParser;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 
@@ -58,55 +60,113 @@ public class TvShowReadNfoAction extends TmmAction {
           protected void doInBackground() {
             int i = 0;
             for (TvShow tvShow : selectedTvShows) {
-              TvShow tempTvShow = null;
+              boolean dirty = processTvShow(tvShow);
 
-              // process all registered NFOs
-              for (MediaFile mf : tvShow.getMediaFiles(MediaFileType.NFO)) {
-                // at the first NFO we get a movie object
-                if (tempTvShow == null) {
-                  try {
-                    tempTvShow = TvShowNfoParser.parseNfo(mf.getFileAsPath()).toTvShow();
-                  }
-                  catch (Exception ignored) {
-                  }
-                  continue;
-                }
-
-                // every other NFO gets merged into that temp. movie object
-                if (tempTvShow != null) {
-                  try {
-                    tempTvShow.merge(TvShowNfoParser.parseNfo(mf.getFileAsPath()).toTvShow());
-                  }
-                  catch (Exception ignored) {
-                  }
-                }
+              // and do that for seasons too
+              for (TvShowSeason season : tvShow.getSeasons()) {
+                dirty |= processSeason(season);
               }
 
-              // no MF (yet)? try to find NFO...
-              // it might have been added w/o UDS, and since we FORCE a read...
-              if (tempTvShow == null) {
-                Path nfo = tvShow.getPathNIO().resolve("tvshow.nfo");
-                if (Files.exists(nfo)) {
-                  tvShow.addToMediaFiles(new MediaFile(nfo));
-                  try {
-                    tempTvShow = TvShowNfoParser.parseNfo(nfo).toTvShow();
-                  }
-                  catch (IOException ignored) {
-                  }
-                }
-              }
-
-              // did we get movie data from our NFOs
-              if (tempTvShow != null) {
-                // force merge it to the actual movie object
-                tvShow.forceMerge(tempTvShow);
+              if (dirty) {
                 tvShow.saveToDb();
               }
+
               publishState(++i);
               if (cancel) {
                 break;
               }
             }
+          }
+
+          private boolean processTvShow(TvShow tvShow) {
+            TvShow tempTvShow = null;
+
+            // process all registered NFOs
+            for (MediaFile mf : tvShow.getMediaFiles(MediaFileType.NFO)) {
+              // at the first NFO we get a TV show object
+              if (tempTvShow == null) {
+                try {
+                  tempTvShow = TvShowNfoParser.parseNfo(mf.getFileAsPath()).toTvShow();
+                }
+                catch (Exception ignored) {
+                  // just ignore
+                }
+              }
+              else {
+                // every other NFO gets merged into that temp. TV show object
+                try {
+                  tempTvShow.merge(TvShowNfoParser.parseNfo(mf.getFileAsPath()).toTvShow());
+                }
+                catch (Exception ignored) {
+                  // just ignore
+                }
+              }
+            }
+
+            // no MF (yet)? try to find NFO...
+            // it might have been added w/o UDS, and since we FORCE a read...
+            if (tempTvShow == null) {
+              Path nfo = tvShow.getPathNIO().resolve("tvshow.nfo");
+              if (Files.exists(nfo)) {
+                tvShow.addToMediaFiles(new MediaFile(nfo));
+                try {
+                  tempTvShow = TvShowNfoParser.parseNfo(nfo).toTvShow();
+                }
+                catch (IOException ignored) {
+                  // just ignore
+                }
+              }
+            }
+
+            // did we get movie data from our NFOs
+            if (tempTvShow != null) {
+              // force merge it to the actual movie object
+              tvShow.forceMerge(tempTvShow);
+
+              // dirty
+              return true;
+            }
+
+            // not dirty
+            return false;
+          }
+
+          private boolean processSeason(TvShowSeason season) {
+            TvShowSeason tempSeason = null;
+
+            // process all registered NFOs
+            for (MediaFile mf : season.getMediaFiles(MediaFileType.NFO)) {
+              // at the first NFO we get a season object
+              if (tempSeason == null) {
+                try {
+                  tempSeason = TvShowSeasonNfoParser.parseNfo(mf.getFileAsPath()).toTvShowSeason();
+                }
+                catch (Exception ignored) {
+                  // just ignore
+                }
+              }
+              else {
+                // every other NFO gets merged into that temp. season object
+                try {
+                  tempSeason.merge(TvShowSeasonNfoParser.parseNfo(mf.getFileAsPath()).toTvShowSeason());
+                }
+                catch (Exception ignored) {
+                  // just ignore
+                }
+              }
+            }
+
+            // did we get movie data from our NFOs
+            if (tempSeason != null) {
+              // force merge it to the actual movie object
+              season.forceMerge(tempSeason);
+
+              // dirty
+              return true;
+            }
+
+            // not dirty
+            return false;
           }
         });
   }

@@ -27,6 +27,7 @@ import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
 
@@ -56,9 +57,19 @@ public class TvShowRewriteNfoAction extends TmmAction {
           protected void doInBackground() {
             int i = 0;
             for (TvShow tvShow : selectedTvShows) {
+              // the TV show
               tvShow.writeNFO();
+
+              // and all seasons
+              for (TvShowSeason season : tvShow.getSeasons()) {
+                if (!season.isDummy()) {
+                  season.writeNfo();
+                }
+              }
+
               tvShow.saveToDb();
               publishState(++i);
+
               if (cancel) {
                 break;
               }
