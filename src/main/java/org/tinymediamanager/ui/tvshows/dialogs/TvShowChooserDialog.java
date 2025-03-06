@@ -364,7 +364,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
         cbTvShowScraperConfig = new ScraperMetadataConfigCheckComboBox(TvShowScraperMetadataConfig.getValuesWithout(TvShowScraperMetadataConfig.ID));
         cbTvShowScraperConfig.enableFilter(
-            (movieScraperMetadataConfig, s) -> movieScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
+            (tvShowScraperMetadataConfig, s) -> tvShowScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
         panelScraperConfig.add(cbTvShowScraperConfig, "cell 1 1,grow, wmin 0");
       }
       {
@@ -373,7 +373,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
 
         cbEpisodeScraperConfig = new ScraperMetadataConfigCheckComboBox(TvShowEpisodeScraperMetadataConfig.getValues());
         cbEpisodeScraperConfig.enableFilter(
-            (movieScraperMetadataConfig, s) -> movieScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
+            (episodeScraperMetadataConfig, s) -> episodeScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
         panelScraperConfig.add(cbEpisodeScraperConfig, "cell 1 2,grow, wmin 0");
       }
       {
@@ -603,11 +603,27 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           // get other ratings too?
           if (tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.RATING)
               && TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()) {
-            for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
-              if (!md.getRatings().contains(rating)) {
-                md.addRating(rating);
+            // move ratings from the scraper MD to an own MD (otherwise we may get problems re-add other ratings afterward when overwrite is NOT
+            // activated)
+            List<MediaRating> ratingsFromMd = md.getRatings();
+            md.removeRatings();
+
+            // start fetch ratings async
+            model.addTask(new TmmTask(TmmResourceBundle.getString("metatag.rating"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                MediaMetadata ratingMediaMetadata = new MediaMetadata(md.getProviderId());
+                ratingMediaMetadata.setIds(md.getIds());
+
+                ratingMediaMetadata.setRatings(ratingsFromMd);
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
+                  if (!ratingMediaMetadata.getRatings().contains(rating)) {
+                    ratingMediaMetadata.addRating(rating);
+                  }
+                }
+                tvShowToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(TvShowScraperMetadataConfig.RATING), overwrite);
               }
-            }
+            });
           }
 
           // set scraped metadata

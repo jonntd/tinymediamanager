@@ -522,11 +522,27 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
 
           // get other ratings too?
           if (scraperConfig.contains(MovieScraperMetadataConfig.RATING) && MovieModuleManager.getInstance().getSettings().isFetchAllRatings()) {
-            for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
-              if (!md.getRatings().contains(rating)) {
-                md.addRating(rating);
+            // move ratings from the scraper MD to an own MD (otherwise we may get problems re-add other ratings afterward when overwrite is NOT
+            // activated)
+            List<MediaRating> ratingsFromMd = md.getRatings();
+            md.removeRatings();
+
+            // start fetch ratings async
+            model.addTask(new TmmTask(TmmResourceBundle.getString("metatag.rating"), 1, TmmTaskHandle.TaskType.BACKGROUND_TASK) {
+              @Override
+              protected void doInBackground() {
+                MediaMetadata ratingMediaMetadata = new MediaMetadata(md.getProviderId());
+                ratingMediaMetadata.setIds(md.getIds());
+
+                ratingMediaMetadata.setRatings(ratingsFromMd);
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
+                  if (!ratingMediaMetadata.getRatings().contains(rating)) {
+                    ratingMediaMetadata.addRating(rating);
+                  }
+                }
+                movieToScrape.setMetadata(ratingMediaMetadata, Collections.singletonList(MovieScraperMetadataConfig.RATING), overwrite);
               }
-            }
+            });
           }
 
           movieToScrape.setMetadata(md, scraperConfig, overwrite);

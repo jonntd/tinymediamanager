@@ -529,6 +529,18 @@ public class MediaMetadata {
   }
 
   /**
+   * Set all given IDs
+   * 
+   * @param newIds
+   *          a {@link Map} containing all given IDs
+   */
+  public void setIds(Map<String, Object> newIds) {
+    for (Map.Entry<String, Object> id : newIds.entrySet()) {
+      setId(id.getKey(), id.getValue());
+    }
+  }
+
+  /**
    * remove the given key from the ids table
    *
    * @param key
@@ -1003,6 +1015,13 @@ public class MediaMetadata {
         ratings.add(rating);
       }
     }
+  }
+
+  /**
+   * remove all {@link MediaRating}s
+   */
+  public void removeRatings() {
+    ratings.clear();
   }
 
   /**
