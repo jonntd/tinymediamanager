@@ -92,7 +92,7 @@ class ImdbRating {
       mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compressHigh().autoCommitDisabled().open();
       ratingMap = mvStore.openMap("ratings");
 
-      Url cachedUrl = new OnDiskCachedUrl("https://datasets.imdbws.com/title.ratings.tsv.gz", 1, TimeUnit.DAYS);
+      Url cachedUrl = new OnDiskCachedUrl("https://datasets.imdbws.com/title.ratings.tsv.gz", 2, TimeUnit.DAYS);
 
       try (InputStream httpInputStream = cachedUrl.getInputStream()) {
         // performance hack: even if we re-zip the same file we get a different file size
