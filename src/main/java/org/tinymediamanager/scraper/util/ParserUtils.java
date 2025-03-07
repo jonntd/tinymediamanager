@@ -138,6 +138,18 @@ public class ParserUtils {
     if (s.length == 0) {
       s = opt.toArray(new String[opt.size()]);
     }
+
+    // if we have a splitted "video" and "ts", reassemble this is "video_ts"
+    String before = "";
+    for (int i = 0; i < s.length; i++) {
+      String stop = s[i];
+      if (stop.equalsIgnoreCase("TS") && before.equalsIgnoreCase("VIDEO")) {
+        s[i - 1] = before + "_" + stop;
+        s[i] = "";
+      }
+      before = stop;
+    }
+
     int firstFoundStopwordPosition = s.length;
 
     // iterate over all splitted items
@@ -145,6 +157,10 @@ public class ParserUtils {
       // search for stopword position
       for (String stop : HARD_STOPWORDS) {
         if (s[i].equalsIgnoreCase(stop)) {
+          // (ts): VIDEO_TS -> VIDEO_ - noooo
+          if (stop.equals("ts") && fname.toUpperCase(Locale.ROOT).contains("VIDEO_TS")) {
+            continue;
+          }
           s[i] = ""; // delete stopword
           // remember lowest position, but not lower than 2!!!
           if (i < firstFoundStopwordPosition && i >= 2) {
@@ -348,10 +364,13 @@ public class ParserUtils {
     basename = basename.replaceFirst("(?i)(" + DELIMITER + ")\\d{3,4}x\\d{3,4}" + "(" + DELIMITER + "|$)", "$1");
 
     for (String s : HARD_STOPWORDS) {
+      // (ts): VIDEO_TS -> VIDEO_ - noooo
+      if (s.equals("ts") && basename.toUpperCase(Locale.ROOT).contains("VIDEO_TS")) {
+        continue;
+      }
       // TV stop words must start AND END with a non-word (else too global) or line end (replaced by SAME delimiter)
       basename = basename.replaceAll("(?i)(" + DELIMITER + ")" + s + "(" + DELIMITER + "|$)", "$1");
       if (LOGGER.isTraceEnabled() && basename.length() != before.length()) {
-        // TODO: (ts): VIDEO_TS -> VIDEO - noooo
         LOGGER.trace("Removed some TV stopword (" + s + "): " + before + " -> " + basename);
         before = basename;
       }

@@ -12,8 +12,19 @@ import org.tinymediamanager.scraper.util.ParserUtils;
 public class ParserUtilsTest extends BasicTest {
 
   @Test
+  public void testEpisodeNamingDetection() {
+    setTraceLogging();
+    assertEqual("VIDEO_TS", ParserUtils.removeStopwordsAndBadwordsFromTvEpisodeName("VIDEO_TS")); // do NOT replace "ts"
+    assertEqual("this is a VIDEO_TS file with a TS", ParserUtils.removeStopwordsAndBadwordsFromTvEpisodeName("this is a VIDEO_TS file with a TS"));
+    assertEqual("Video is quality", ParserUtils.removeStopwordsAndBadwordsFromTvEpisodeName("Video is TS quality")); // DO remove TS
+  }
+
+  @Test
   public void testNamingDetection() {
     setTraceLogging();
+    assertEqual("VIDEO_TS", detectTY("VIDEO_TS")); // do NOT replace "ts"
+    assertEqual("this is a VIDEO_TS file with a TS", detectTY("this is a VIDEO_TS file with a TS"));
+    assertEqual("Video is", detectTY("Video is TS quality")); // DO remove TS, and cut off
 
     assertEqual("2012", detectTY("2012.WEB-DL.1080p.AVC.mkv"));
     assertEqual("2012 | 2008", detectTY("2012.(2008).WEB-DL.1080p.mkv"));
