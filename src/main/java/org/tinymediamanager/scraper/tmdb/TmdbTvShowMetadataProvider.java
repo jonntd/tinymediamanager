@@ -900,6 +900,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
 
     md.setEpisodeNumbers(episodeMediaMetadata.getEpisodeNumbers());
     md.setId(getId(), episode.id);
+    md.setRuntime(episode.runtime);
 
     parseExternalIDs(episode.external_ids).forEach(md::setId);
 

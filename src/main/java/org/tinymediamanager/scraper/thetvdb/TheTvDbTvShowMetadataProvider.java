@@ -553,10 +553,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     md.setTitle(foundEpisode.getTitle());
     md.setOriginalTitle(foundEpisode.getOriginalTitle());
     md.setPlot(foundEpisode.getPlot());
-
-    if (episode.runtime != null) {
-      md.setRuntime(episode.runtime.intValue());
-    }
+    md.setRuntime(episode.runtime);
 
     try {
       md.setReleaseDate(StrgUtils.parseDate(episode.aired));

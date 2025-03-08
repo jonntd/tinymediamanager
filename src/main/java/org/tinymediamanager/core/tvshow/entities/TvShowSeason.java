@@ -400,6 +400,21 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
   }
 
   /**
+   * Gets the sum of all episodes runtime
+   * 
+   * @return the sum of all episode runtime
+   */
+  public int getRuntimeOfEpisodes() {
+    int runtime = 0;
+
+    for (TvShowEpisode episode : episodes) {
+      runtime += episode.getRuntime();
+    }
+
+    return runtime;
+  }
+
+  /**
    * Gets the dummy episode count
    *
    * @return the dummy episode count

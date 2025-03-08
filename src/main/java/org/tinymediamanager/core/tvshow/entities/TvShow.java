@@ -1598,6 +1598,21 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   /**
+   * Gets the sum of all episodes runtime
+   *
+   * @return the sum of all episode runtime
+   */
+  public int getRuntimeOfEpisodes() {
+    int runtime = 0;
+
+    for (TvShowEpisode episode : episodes) {
+      runtime += episode.getRuntime();
+    }
+
+    return runtime;
+  }
+
+  /**
    * Sets the runtime.
    *
    * @param newValue

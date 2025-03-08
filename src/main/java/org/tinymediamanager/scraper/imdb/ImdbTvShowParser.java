@@ -330,6 +330,7 @@ public class ImdbTvShowParser extends ImdbParser {
       md.setPlot(wantedEpisode.getPlot());
       md.setRatings(wantedEpisode.getRatings());
       md.setReleaseDate(wantedEpisode.getReleaseDate());
+      md.setRuntime(wantedEpisode.getRuntime());
     }
 
     // and finally the cast which needed to be fetched from the reference page (or json detail page)

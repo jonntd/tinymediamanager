@@ -13,5 +13,5 @@ public class TvEpisode extends BaseTvEpisode {
   public Credits          credits;
   public Videos           videos;
   public Translations     translations;
-
+  public Integer          runtime;
 }

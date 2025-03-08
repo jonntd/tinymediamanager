@@ -1,5 +1,7 @@
 Version 5.1.5
 =======================
++ [TV shows] added runtime into for episodes too
++ [TV shows] enabled using runtime from mediainfo instead of scraped one #2838
 
 
 Version 5.1.4

@@ -167,6 +167,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
   private ImageLabel                                 lblThumb;
   private JTextArea                                  taPlot;
   private AutocompleteComboBox<String>               cbTags;
+  private JSpinner                                   spRuntime;
   private AutocompleteSupport<String>                cbTagsAutocompleteSupport;
   private JList<String>                              listTags;
   private AutocompleteComboBox<MediaSource>          cbMediaSource;
@@ -235,6 +236,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       cbMediaSource.setSelectedItem(episodeToEdit.getMediaSource());
       cbEdition.setSelectedItem(episodeToEdit.getEdition());
       taNote.setText(episodeToEdit.getNote());
+      spRuntime.setValue(episodeToEdit.getRuntime());
 
       episodeNumbers.addAll(episodeToEdit.getEpisodeNumbers());
 
@@ -278,7 +280,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       JPanel detailsPanel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details"), detailsPanel);
       detailsPanel.setLayout(new MigLayout("", "[][20lp:100lp:175lp][50lp:100lp:175lp][200lp:250lp,grow][][25lp:n][200lp:250lp,grow]",
-          "[][][100lp:15%:20%][][100lp:125lp:30%,grow][][][][][50lp:50lp:100lp,grow 50][50lp:50lp:100lp,grow 50]"));
+          "[][][100lp:15%:20%][][100lp:125lp:30%,grow][][][][][][50lp:50lp:100lp,grow 50][50lp:50lp:100lp,grow 50]"));
 
       {
         JLabel lblTitle = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
@@ -406,38 +408,48 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
             e -> setImageSizeAndCreateLink(lblThumbSize, lblThumb, btnDeleteThumb, MediaFileType.THUMB));
       }
       {
+        JLabel lblRuntime = new TmmLabel(TmmResourceBundle.getString("metatag.runtime"));
+        detailsPanel.add(lblRuntime, "cell 0 6,alignx right");
+
+        spRuntime = new JSpinner();
+        detailsPanel.add(spRuntime, "flowx,cell 1 6,growx");
+
+        JLabel lblMin = new TmmLabel(TmmResourceBundle.getString("metatag.minutes"));
+        detailsPanel.add(lblMin, "cell 1 6");
+      }
+      {
         JLabel lblRating = new TmmLabel(TmmResourceBundle.getString("metatag.userrating"));
-        detailsPanel.add(lblRating, "cell 0 7,alignx right");
+        detailsPanel.add(lblRating, "cell 0 8,alignx right");
 
         spRating = new JSpinner();
-        detailsPanel.add(spRating, "cell 1 7 2 1,flowx");
+        detailsPanel.add(spRating, "flowx,cell 1 8 2 1");
 
         JLabel lblUserRatingHint = new JLabel(IconManager.HINT);
         lblUserRatingHint.setToolTipText(TmmResourceBundle.getString("edit.userrating.hint"));
-        detailsPanel.add(lblUserRatingHint, "cell 1 7 2 1");
+        detailsPanel.add(lblUserRatingHint, "cell 1 8 2 1");
       }
       {
         JLabel lblRatingsT = new TmmLabel(TmmResourceBundle.getString("metatag.ratings"));
-        detailsPanel.add(lblRatingsT, "flowy,cell 0 8,alignx right,aligny top");
+        detailsPanel.add(lblRatingsT, "flowy,cell 0 9,alignx right,aligny top");
 
         JScrollPane scrollPaneRatings = new JScrollPane();
-        detailsPanel.add(scrollPaneRatings, "cell 1 8 3 2,grow");
+        detailsPanel.add(scrollPaneRatings, "cell 1 9 3 2,grow");
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
 
         JButton btnAddRating = new SquareIconButton(new AddRatingAction());
-        detailsPanel.add(btnAddRating, "cell 0 8,alignx right,aligny top");
+        detailsPanel.add(btnAddRating, "cell 0 9,alignx right,aligny top");
 
         JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
-        detailsPanel.add(btnRemoveRating, "cell 0 8,alignx right,aligny top");
+        detailsPanel.add(btnRemoveRating, "cell 0 9,alignx right,aligny top");
       }
       {
         JLabel lblNoteT = new TmmLabel(TmmResourceBundle.getString("metatag.note"));
-        detailsPanel.add(lblNoteT, "cell 0 10,alignx right,aligny top");
+        detailsPanel.add(lblNoteT, "cell 0 11,alignx right,aligny top");
 
         JScrollPane scrollPane = new JScrollPane();
-        detailsPanel.add(scrollPane, "cell 1 10 4 1,wmin 0,grow");
+        detailsPanel.add(scrollPane, "cell 1 11 4 1,wmin 0,grow");
 
         taNote = new JTextArea();
         taNote.setLineWrap(true);
@@ -746,6 +758,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         tfTitle.setText(metadata.getTitle());
         tfOriginalTitle.setText(metadata.getOriginalTitle());
         taPlot.setText(metadata.getPlot());
+        spRuntime.setValue(metadata.getRuntime());
 
         episodeNumbers.clear();
         for (MediaEpisodeGroup.EpisodeGroupType group : MediaEpisodeGroup.EpisodeGroupType.values()) {
@@ -813,6 +826,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
       episodeToEdit.setPlot(taPlot.getText());
       episodeToEdit.setNote(taNote.getText());
+      episodeToEdit.setRuntime((Integer) spRuntime.getValue());
 
       Object obj = cbMediaSource.getSelectedItem();
       if (obj instanceof MediaSource mediaSource) {

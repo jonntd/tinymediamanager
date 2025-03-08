@@ -325,7 +325,7 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     col.setHeaderIcon(IconManager.RUNTIME);
     col.setCellRenderer(new RuntimeTableCellRenderer(RuntimeTableCellRenderer.FORMAT.MINUTES));
     col.setColumnResizeable(false);
-    col.setMinWidth(fontMetrics.stringWidth("200") + getCellPadding());
+    col.setMinWidth(fontMetrics.stringWidth("9999") + getCellPadding());
     col.setDefaultHidden(true);
     addColumn(col);
 
@@ -337,7 +337,7 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     col.setHeaderIcon(IconManager.RUNTIME);
     col.setCellRenderer(new RuntimeTableCellRenderer(RuntimeTableCellRenderer.FORMAT.HOURS_MINUTES));
     col.setColumnResizeable(false);
-    col.setMinWidth(fontMetrics.stringWidth("4:00") + getCellPadding());
+    col.setMinWidth(fontMetrics.stringWidth("99:00") + getCellPadding());
     col.setDefaultHidden(true);
     addColumn(col);
 
@@ -880,11 +880,20 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private Integer getRuntime(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShowEpisode episode) {
-      return episode.getRuntimeFromMediaFilesInMinutes();
+      return episode.getRuntime();
+    }
+    else if (userObject instanceof TvShowSeason season) {
+      if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+        return season.getRuntimeOfEpisodes();
+      }
     }
     else if (userObject instanceof TvShow show) {
-      // show the scraped runtime here
-      return show.getRuntime();
+      if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+        return show.getRuntimeOfEpisodes();
+      }
+      else {
+        return show.getRuntime();
+      }
     }
     return null;
   }

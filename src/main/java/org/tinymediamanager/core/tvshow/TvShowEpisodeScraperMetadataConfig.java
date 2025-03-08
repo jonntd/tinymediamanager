@@ -41,6 +41,7 @@ public enum TvShowEpisodeScraperMetadataConfig implements ScraperMetadataConfig 
   AIRED(Type.METADATA, "metatag.aired"),
   RATING(Type.METADATA),
   TAGS(Type.METADATA),
+  RUNTIME(Type.METADATA),
 
   // cast
   ACTORS(Type.CAST),

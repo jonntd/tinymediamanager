@@ -225,6 +225,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        subtitleForceBestMatch                 = false;
 
   // misc
+  boolean                                        runtimeFromMediaInfo                   = true;
   boolean                                        buildImageCacheOnImport                = true;
   boolean                                        syncTrakt                              = false;
   boolean                                        syncTraktCollection                    = true;
@@ -731,6 +732,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.buildImageCacheOnImport;
     this.buildImageCacheOnImport = newValue;
     firePropertyChange("buildImageCacheOnImport", oldValue, newValue);
+  }
+
+  public boolean isRuntimeFromMediaInfo() {
+    return runtimeFromMediaInfo;
+  }
+
+  public void setRuntimeFromMediaInfo(boolean newValue) {
+    boolean oldValue = this.runtimeFromMediaInfo;
+    this.runtimeFromMediaInfo = newValue;
+    firePropertyChange("runtimeFromMediaInfo", oldValue, newValue);
   }
 
   public boolean isExtractArtworkFromVsmeta() {
