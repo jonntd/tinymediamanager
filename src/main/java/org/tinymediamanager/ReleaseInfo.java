@@ -36,10 +36,10 @@ import org.apache.commons.lang3.StringUtils;
  * @author Manuel Laggner
  */
 public class ReleaseInfo {
-  private static String version;
-  private static String humanVersion;
-  private static String build;
-  private static String buildDate;
+  private static String version      = "";
+  private static String humanVersion = "";
+  private static String build        = "";
+  private static String buildDate    = "";
 
   private ReleaseInfo() {
     // hide constructor for utility classes
@@ -86,7 +86,7 @@ public class ReleaseInfo {
    */
   public static String getVersion() {
     String v = version;
-    if (v.isEmpty()) {
+    if (StringUtils.isBlank(v)) {
       if (isNightly()) {
         v = "NIGHTLY";
       }
@@ -187,7 +187,7 @@ public class ReleaseInfo {
    */
   public static String getRealVersion() {
     String v = getManifestEntry(ReleaseInfo.class, "Implementation-Version");
-    if (v.isEmpty()) {
+    if (StringUtils.isBlank(v)) {
       // no manifest? only happens on git builds - get the version from special file
       v = getVersion() + " - GIT";
     }
@@ -213,7 +213,7 @@ public class ReleaseInfo {
    */
   public static String getRealBuildDate() {
     String b = getManifestEntry(ReleaseInfo.class, "Build-Date");
-    if (b.isEmpty()) {
+    if (StringUtils.isBlank(b)) {
       b = getBuildDate(); // GIT, actual date
     }
     return b;
