@@ -41,6 +41,7 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.LauncherExtraConfig;
 import org.tinymediamanager.core.AbstractFileVisitor;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
@@ -164,6 +165,20 @@ public class ExportLogAction extends TmmAction {
       }
       catch (Exception e) {
         LOGGER.warn("unable to attach env.txt - {}", e.getMessage());
+      }
+
+      // add launcher-extra to see user configs
+      Path extra = Paths.get(Globals.CONTENT_FOLDER, LauncherExtraConfig.LAUNCHER_EXTRA_YML);
+      if (Files.exists(extra)) {
+        try (InputStream in = Files.newInputStream(extra)) {
+          zipParameters.setFileNameInZip(LauncherExtraConfig.LAUNCHER_EXTRA_YML);
+          zos.putNextEntry(zipParameters);
+          IOUtils.copy(in, zos);
+          zos.closeEntry();
+        }
+        catch (Exception e) {
+          LOGGER.warn("unable to attach {} - {}", LauncherExtraConfig.LAUNCHER_EXTRA_YML, e.getMessage());
+        }
       }
 
       // write single entity DB dumps (if we have an DB id)
