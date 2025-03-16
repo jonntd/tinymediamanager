@@ -407,12 +407,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
    * @return the dimension of the artwork or a zero dimension if no artwork has been found
    */
   public Dimension getArtworkDimension(MediaFileType type) {
-    List<MediaFile> artworks = getMediaFiles(type);
-    if (!artworks.isEmpty()) {
-      MediaFile mediaFile = artworks.get(0);
-      return new Dimension(mediaFile.getVideoWidth(), mediaFile.getVideoHeight());
-    }
-    return new Dimension(0, 0);
+    return MediaFileHelper.getArtworkDimension(ListUtils.getFirst(getMediaFiles(type)));
   }
 
   /**

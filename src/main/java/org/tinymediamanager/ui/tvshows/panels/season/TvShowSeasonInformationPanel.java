@@ -31,11 +31,9 @@ import static org.tinymediamanager.core.Constants.TITLE;
 
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.beans.PropertyChangeListener;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -54,6 +52,7 @@ import org.jdesktop.beansbinding.Bindings;
 import org.jdesktop.beansbinding.Property;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
@@ -62,7 +61,6 @@ import org.tinymediamanager.ui.ColumnLayout;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUILayoutStore;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
-import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
@@ -138,19 +136,19 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
       }
 
       if ("selectedTvShowSeason".equals(property) || POSTER.equals(property) || SEASON_POSTER.equals(property)) {
-        setPoster(selectedSeason);
+        setArtwork(MediaFileType.SEASON_POSTER, MediaFileType.POSTER, selectedSeason);
       }
 
       if ("selectedTvShowSeason".equals(property) || FANART.equals(property) || SEASON_FANART.equals(property)) {
-        setFanart(selectedSeason);
+        setArtwork(MediaFileType.SEASON_FANART, MediaFileType.FANART, selectedSeason);
       }
 
       if ("selectedTvShowSeason".equals(property) || BANNER.equals(property) || SEASON_BANNER.equals(property)) {
-        setBanner(selectedSeason);
+        setArtwork(MediaFileType.SEASON_BANNER, MediaFileType.BANNER, selectedSeason);
       }
 
       if ("selectedTvShowSeason".equals(property) || THUMB.equals(property) || SEASON_THUMB.equals(property)) {
-        setThumb(selectedSeason);
+        setArtwork(MediaFileType.SEASON_THUMB, MediaFileType.THUMB, selectedSeason);
       }
 
       if ("selectedTvShowSeason".equals(property) || MEDIA_FILES.equals(property) || ADDED_EPISODE.equals(property)
@@ -246,84 +244,17 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
     }
   }
 
-  private void setPoster(TvShowSeason season) {
-    String posterPath = season.getArtworkFilename(MediaFileType.SEASON_POSTER);
-    Dimension posterSize = season.getArtworkDimension(MediaFileType.SEASON_POSTER);
+  private void setArtwork(MediaFileType type, MediaFileType fallbackType, TvShowSeason tvShowSeason) {
+    MediaFile mediaFile = ListUtils.getFirst(tvShowSeason.getMediaFiles(type));
 
-    if (StringUtils.isBlank(posterPath) && TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
+    if (mediaFile != null || !TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
+      // call if a season artwork has been found or no fallback configured
+      setArtwork(mediaFile, type);
+    }
+    else if (TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
       // fall back to the show
-      posterPath = season.getTvShow().getArtworkFilename(MediaFileType.POSTER);
-      posterSize = season.getTvShow().getArtworkDimension(MediaFileType.POSTER);
+      setArtwork(ListUtils.getFirst(tvShowSeason.getTvShow().getMediaFiles(MediaFileType.POSTER)), fallbackType);
     }
-
-    setArtwork(MediaFileType.SEASON_POSTER, posterPath, posterSize);
-  }
-
-  private void setFanart(TvShowSeason season) {
-    String fanartPath = season.getArtworkFilename(MediaFileType.SEASON_FANART);
-    Dimension fanartSize = season.getArtworkDimension(MediaFileType.SEASON_FANART);
-
-    if (StringUtils.isBlank(fanartPath) && TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
-      // fall back to the show
-      fanartPath = season.getTvShow().getArtworkFilename(MediaFileType.FANART);
-      fanartSize = season.getTvShow().getArtworkDimension(MediaFileType.FANART);
-    }
-
-    setArtwork(MediaFileType.SEASON_FANART, fanartPath, fanartSize);
-  }
-
-  private void setBanner(TvShowSeason season) {
-    String bannerPath = season.getArtworkFilename(MediaFileType.SEASON_BANNER);
-    Dimension bannerSize = season.getArtworkDimension(MediaFileType.SEASON_BANNER);
-
-    if (StringUtils.isBlank(bannerPath) && TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
-      // fall back to the show
-      bannerPath = season.getTvShow().getArtworkFilename(MediaFileType.BANNER);
-      bannerSize = season.getTvShow().getArtworkDimension(MediaFileType.BANNER);
-    }
-
-    setArtwork(MediaFileType.SEASON_BANNER, bannerPath, bannerSize);
-  }
-
-  private void setThumb(TvShowSeason season) {
-    String thumbPath = season.getArtworkFilename(MediaFileType.SEASON_THUMB);
-    Dimension thumbSize = season.getArtworkDimension(MediaFileType.SEASON_THUMB);
-
-    if (StringUtils.isBlank(thumbPath) && TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
-      thumbPath = season.getTvShow().getArtworkFilename(MediaFileType.FANART);
-      thumbSize = season.getTvShow().getArtworkDimension(MediaFileType.FANART);
-    }
-
-    setArtwork(MediaFileType.SEASON_THUMB, thumbPath, thumbSize);
-
-  }
-
-  private void setArtwork(MediaFileType type, String artworkPath, Dimension artworkDimension) {
-    List<Component> components = artworkComponents.get(type);
-    if (ListUtils.isEmpty(components)) {
-      return;
-    }
-
-    boolean visible = getShowArtworkFromSettings().contains(type);
-
-    for (Component component : components) {
-      component.setVisible(visible);
-
-      if (component instanceof ImageLabel imageLabel) {
-        imageLabel.setImagePath(artworkPath);
-      }
-      else if (component instanceof JLabel sizeLabel) {
-        if (artworkDimension.width > 0 && artworkDimension.height > 0) {
-          sizeLabel.setText(TmmResourceBundle.getString("mediafiletype." + type.name().toLowerCase(Locale.ROOT)) + " - " + artworkDimension.width
-              + "x" + artworkDimension.height);
-        }
-        else {
-          sizeLabel.setText(TmmResourceBundle.getString("mediafiletype." + type.name().toLowerCase(Locale.ROOT)));
-        }
-      }
-    }
-
-    updateArtwork();
   }
 
   @Override

@@ -47,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.imgscalr.Scalr;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.ImageUtils;
+import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.http.InMemoryCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
 import org.tinymediamanager.ui.IconManager;
@@ -83,6 +84,7 @@ public class ImageLabel extends JComponent {
 
   protected String                  imageUrl;
   protected String                  imagePath;
+  protected MediaFile               imageMediaFile;
 
   protected Position                position               = Position.TOP_LEFT;
   protected boolean                 drawBorder;
@@ -194,10 +196,38 @@ public class ImageLabel extends JComponent {
     }
   }
 
+  /**
+   * sets the {@link MediaFile} to be displayed in this label
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to be set
+   */
+  public void setImageMediaFile(MediaFile mediaFile) {
+    if (this.imageMediaFile != mediaFile) {
+      clearImage();
+
+      this.imageMediaFile = mediaFile;
+      if (mediaFile != null) {
+        setImagePath(mediaFile.getFile().toString());
+      }
+    }
+  }
+
+  /**
+   * get the path to this image as {@link String}
+   *
+   * @return the path
+   */
   public String getImagePath() {
     return imagePath;
   }
 
+  /**
+   * set the image path as {@link String}
+   *
+   * @param newValue
+   *          the image path as {@link String}
+   */
   public void setImagePath(String newValue) {
     String oldValue = this.imagePath;
 

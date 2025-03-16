@@ -30,9 +30,11 @@ import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 
@@ -95,6 +97,10 @@ public abstract class InformationPanel extends JPanel {
   }
 
   protected void setArtwork(MediaEntity mediaEntity, MediaFileType type) {
+    setArtwork(ListUtils.getFirst(mediaEntity.getMediaFiles(type)), type);
+  }
+
+  protected void setArtwork(MediaFile mediaFile, MediaFileType type) {
     List<Component> components = artworkComponents.get(type);
     if (ListUtils.isEmpty(components)) {
       return;
@@ -108,11 +114,11 @@ public abstract class InformationPanel extends JPanel {
       if (component instanceof ImageLabel) {
         ImageLabel imageLabel = (ImageLabel) component;
         imageLabel.clearImage();
-        imageLabel.setImagePath(mediaEntity.getArtworkFilename(type));
+        imageLabel.setImageMediaFile(mediaFile);
       }
       else if (component instanceof JLabel) {
         JLabel sizeLabel = (JLabel) component;
-        Dimension artworkDimension = mediaEntity.getArtworkDimension(type);
+        Dimension artworkDimension = MediaFileHelper.getArtworkDimension(mediaFile);
 
         if (artworkDimension.width > 0 && artworkDimension.height > 0) {
           sizeLabel.setText(TmmResourceBundle.getString("mediafiletype." + type.name().toLowerCase(Locale.ROOT)) + " - " + artworkDimension.width

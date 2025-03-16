@@ -18,6 +18,7 @@ package org.tinymediamanager.core;
 
 import static org.tinymediamanager.scraper.util.LanguageUtils.parseLanguageFromString;
 
+import java.awt.Dimension;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -3289,5 +3290,20 @@ public class MediaFileHelper {
     info.set(flags);
 
     return info;
+  }
+
+  /**
+   * Gets the artwork dimension of the given {@link MediaFile} if it is not null and an artwork
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to get the artwork dimension for
+   * @return the artwork {@link Dimension} (if it is an artwork) or an empty {@link Dimension} (if no artwork or null)
+   */
+  public static Dimension getArtworkDimension(MediaFile mediaFile) {
+    if (mediaFile == null || !mediaFile.isGraphic()) {
+      return new Dimension(0, 0);
+    }
+
+    return new Dimension(mediaFile.getVideoWidth(), mediaFile.getVideoHeight());
   }
 }
