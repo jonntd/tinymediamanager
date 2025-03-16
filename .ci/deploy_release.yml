@@ -118,7 +118,7 @@ build-mac:
 deploy-docker-amd64:
   stage: deploy
   image:
-    name: gcr.io/kaniko-project/executor:v1.9.1-debug
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
     entrypoint: [ "" ]
   variables:
     IMAGE_NAME: tinymediamanager/tinymediamanager
@@ -148,7 +148,7 @@ deploy-docker-amd64:
 deploy-docker-arm64:
   stage: deploy
   image:
-    name: gcr.io/kaniko-project/executor:v1.9.1-debug
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
     entrypoint: [ "" ]
   variables:
     IMAGE_NAME: tinymediamanager/tinymediamanager
