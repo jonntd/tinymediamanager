@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.util.Collection;
 
@@ -225,6 +226,10 @@ public class ImageCache {
       do {
         try {
           byte[] bytes = Files.readAllBytes(originalFile);
+          BasicFileAttributes view = Files.readAttributes(mediaFile.getFileAsPath(), BasicFileAttributes.class);
+          if (view.size() != bytes.length) {
+            throw new IOException("File '{}' is not completely written");
+          }
 
           // check if that file is an animated gif
           GifDecoder decoder = new GifDecoder();
@@ -240,8 +245,12 @@ public class ImageCache {
         catch (OutOfMemoryError e) {
           // memory limit hit; give it another 500ms time to recover
           LOGGER.debug("hit memory cap: {}", e.getMessage());
-          ThreadUtils.sleep(500);
         }
+        catch (IOException e) {
+          LOGGER.debug("{}", e.getMessage());
+        }
+
+        ThreadUtils.sleep(500);
         retries--;
       } while (retries > 0);
 
@@ -328,7 +337,7 @@ public class ImageCache {
       scaledImage.flush();
 
       // give it a few milliseconds for being written to the filesystem
-      ThreadUtils.sleep(150);
+      ThreadUtils.sleep(200);
 
       if (!Files.exists(cachedFile)) {
         throw new IOException("unable to cache file: " + originalFile);
