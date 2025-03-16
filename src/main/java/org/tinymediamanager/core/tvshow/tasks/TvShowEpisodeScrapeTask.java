@@ -247,22 +247,44 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
     options.setThumbSize(TvShowModuleManager.getInstance().getSettings().getImageThumbSize());
     options.setEpisodeGroup(episode.getEpisodeGroup());
 
-    // scrape providers till one artwork has been found
+    // get episode images from SAME scraper, as we scraped the metadata
     for (MediaScraper artworkScraper : scrapeOptions.getArtworkScrapers()) {
-      ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
-      try {
-        artwork.addAll(artworkProvider.getArtwork(options));
+      if (artworkScraper.getId().equals(scrapeOptions.getMetadataScraper().getId())) {
+        ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
+        try {
+          artwork.addAll(artworkProvider.getArtwork(options));
+        }
+        catch (MissingIdException ignored) {
+          LOGGER.debug("no id available for scraper {}", artworkScraper.getId());
+        }
+        catch (NothingFoundException e) {
+          LOGGER.debug("did not find artwork for '{}' - S{}/E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
+        }
+        catch (ScrapeException e) {
+          LOGGER.error("getArtwork", e);
+          MessageManager.instance.pushMessage(
+              new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
       }
-      catch (MissingIdException ignored) {
-        LOGGER.debug("no id available for scraper {}", artworkScraper.getId());
-      }
-      catch (NothingFoundException e) {
-        LOGGER.debug("did not find artwork for '{}' - S{}/E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
-      }
-      catch (ScrapeException e) {
-        LOGGER.error("getArtwork", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+    }
+    // only if we find nothing, scrape providers till one artwork has been found
+    for (MediaScraper artworkScraper : scrapeOptions.getArtworkScrapers()) {
+      if (artwork.isEmpty()) {
+        ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
+        try {
+          artwork.addAll(artworkProvider.getArtwork(options));
+        }
+        catch (MissingIdException ignored) {
+          LOGGER.debug("no id available for scraper {}", artworkScraper.getId());
+        }
+        catch (NothingFoundException e) {
+          LOGGER.debug("did not find artwork for '{}' - S{}/E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
+        }
+        catch (ScrapeException e) {
+          LOGGER.error("getArtwork", e);
+          MessageManager.instance.pushMessage(
+              new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
       }
     }
 
