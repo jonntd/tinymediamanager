@@ -2,7 +2,8 @@ Version 5.1.5
 =======================
 + [TV shows] added runtime for episodes too
 + [TV shows] enabled using runtime from mediainfo instead of scraped one #2838
-x [performance] do not get episode images from all scrapers
+x [Movies] do not overwrite extrafanarts when running downloading missing artwork
+x [TV shows] do not get episode images from all scrapers
 
 
 Version 5.1.4

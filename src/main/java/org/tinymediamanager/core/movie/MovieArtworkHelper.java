@@ -301,7 +301,8 @@ public class MovieArtworkHelper {
 
     // extrafanarts
     List<String> extrafanarts = new ArrayList<>();
-    if (metadataConfig.contains(MovieScraperMetadataConfig.EXTRAFANART) && MovieModuleManager.getInstance().getSettings().isImageExtraFanart()
+    if (metadataConfig.contains(MovieScraperMetadataConfig.EXTRAFANART) && movie.getMediaFiles(MediaFileType.EXTRAFANART).isEmpty()
+        && MovieModuleManager.getInstance().getSettings().isImageExtraFanart()
         && MovieModuleManager.getInstance().getSettings().getImageExtraFanartCount() > 0) {
       for (MediaArtwork art : artwork.stream().filter(mediaArtwork -> mediaArtwork.getType() == MediaArtworkType.BACKGROUND).toList()) {
         // only get artwork in desired resolution
