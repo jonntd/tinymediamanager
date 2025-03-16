@@ -28,6 +28,7 @@ import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowArtworkProvider;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
@@ -71,7 +72,7 @@ public class TmdbTvShowArtworkProvider extends TmdbMetadataProvider implements I
     }
     if (options.getMediaType() == MediaType.TV_EPISODE) {
       try {
-        // episode artwork has to be scraped via the meta data scraper
+        // episode artwork has to be scraped via the metadata scraper
         TvShowEpisodeSearchAndScrapeOptions episodeSearchAndScrapeOptions = new TvShowEpisodeSearchAndScrapeOptions();
         episodeSearchAndScrapeOptions.setDataFromOtherOptions(options);
         if (options.getIds().get(MediaMetadata.TVSHOW_IDS) instanceof Map) {
@@ -81,9 +82,12 @@ public class TmdbTvShowArtworkProvider extends TmdbMetadataProvider implements I
         MediaMetadata md = new TmdbTvShowMetadataProvider().getMetadata(episodeSearchAndScrapeOptions);
         return md.getMediaArt();
       }
-      catch (MissingIdException e) {
-        // no valid ID given - just do nothing
+      catch (MissingIdException | NothingFoundException e) {
+        // no valid ID given or nothing has been found - just do nothing
         return Collections.emptyList();
+      }
+      catch (ScrapeException e) {
+        throw e;
       }
       catch (Exception e) {
         throw new ScrapeException(e);

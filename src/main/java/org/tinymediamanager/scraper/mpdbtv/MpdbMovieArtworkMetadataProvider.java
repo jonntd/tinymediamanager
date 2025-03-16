@@ -28,7 +28,6 @@ import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.exceptions.HttpException;
-import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieArtworkProvider;
 import org.tinymediamanager.scraper.mpdbtv.entities.DiscArt;
@@ -73,8 +72,7 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
     List<MediaArtwork> ma = new ArrayList<>();
 
     if (StringUtils.isAnyBlank(getAboKey(), getUserName())) {
-      LOGGER.warn("no username/ABO Key found");
-      throw new ScrapeException(new HttpException(401, "Unauthorized"));
+      return Collections.emptyList();
     }
 
     // we need to force FR as language (no other language available here)
@@ -84,8 +82,7 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
     int id = options.getIdAsIntOrDefault(providerInfo.getId(), 0);
 
     if (id == 0) {
-      LOGGER.debug("Cannot get artwork - no mpdb id set");
-      throw new MissingIdException(getId());
+      return Collections.emptyList();
     }
 
     LOGGER.info("========= BEGIN MPDB.tv artwork scraping");

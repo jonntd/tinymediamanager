@@ -20,7 +20,6 @@ import java.util.List;
 
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
-import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 
 /**
@@ -39,8 +38,6 @@ public interface IMediaArtworkProvider extends IMediaProvider {
    * @return the artwork
    * @throws ScrapeException
    *           any exception which can be thrown while scraping
-   * @throws MissingIdException
-   *           indicates that there was no usable id to scrape
    */
-  List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException, MissingIdException;
+  List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException;
 }

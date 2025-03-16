@@ -16,6 +16,7 @@
 package org.tinymediamanager.scraper.kodi;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -319,7 +320,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
     // scrape again to get Kodi XML (thank god we have a mem cachedUrl)
     try {
       if (options.getSearchResult() == null || !scraper.getProviderInfo().getId().equals(options.getSearchResult().getProviderId())) {
-        throw new MissingIdException("scraping with Kodi scrapers only with a prior result possible");
+        return Collections.emptyList();
       }
 
       MediaMetadata md = _getMetadata(options);
@@ -327,7 +328,6 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
       LOGGER.trace("******* END ARTWORK XML FOR {} ***********", options.getArtworkType());
     }
     catch (Exception e) {
-      LOGGER.error("error getting artwork: {}", e.getMessage());
       throw new ScrapeException(e);
     }
     return mas;

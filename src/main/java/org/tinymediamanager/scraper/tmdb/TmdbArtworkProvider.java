@@ -31,7 +31,6 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaType;
-import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.tmdb.entities.AppendToResponse;
 import org.tinymediamanager.scraper.tmdb.entities.Image;
@@ -87,8 +86,7 @@ class TmdbArtworkProvider {
     }
 
     if (tmdbId == 0) {
-      LOGGER.warn("Cannot get artwork - neither imdb/tmdb set");
-      throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
+      return Collections.emptyList();
     }
 
     List<MediaArtwork> artwork = null;

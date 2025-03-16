@@ -18,6 +18,7 @@ package org.tinymediamanager.scraper.anidb;
 import static org.tinymediamanager.scraper.entities.MediaEpisodeGroup.EpisodeGroupType.AIRED;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -235,7 +236,7 @@ public class AniDbTvShowMetadataProvider extends AniDbMetadataProvider implement
     }
 
     if (StringUtils.isEmpty(id)) {
-      throw new MissingIdException(providerInfo.getId());
+      return Collections.emptyList();
     }
 
     switch (options.getArtworkType()) {

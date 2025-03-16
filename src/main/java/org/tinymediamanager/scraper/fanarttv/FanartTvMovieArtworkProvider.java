@@ -28,7 +28,6 @@ import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaType;
-import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.fanarttv.entities.Images;
 import org.tinymediamanager.scraper.interfaces.IMovieArtworkProvider;
@@ -69,11 +68,6 @@ public class FanartTvMovieArtworkProvider extends FanartTvMetadataProvider imple
     initAPI();
 
     MediaArtwork.MediaArtworkType artworkType = options.getArtworkType();
-    String language = null;
-    if (options.getLanguage() != null) {
-      language = options.getLanguage().getLanguage();
-    }
-
     List<MediaArtwork> returnArtwork = new ArrayList<>();
 
     Response<Images> images = null;
@@ -86,7 +80,7 @@ public class FanartTvMovieArtworkProvider extends FanartTvMetadataProvider imple
     }
 
     if (tmdbId == 0 && !MediaIdUtil.isValidImdbId(imdbId)) {
-      throw new MissingIdException(MediaMetadata.IMDB, MediaMetadata.TMDB);
+      return Collections.emptyList();
     }
 
     Exception savedException = null;

@@ -21,14 +21,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaType;
-import org.tinymediamanager.scraper.exceptions.MissingIdException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.fanarttv.entities.Images;
 import org.tinymediamanager.scraper.interfaces.ITvShowArtworkProvider;
@@ -68,14 +66,6 @@ public class FanartTvTvShowArtworkProvider extends FanartTvMetadataProvider impl
     initAPI();
 
     MediaArtwork.MediaArtworkType artworkType = options.getArtworkType();
-    String language = null; // FIXME: where used?
-    if (options.getLanguage() != null) {
-      language = options.getLanguage().getLanguage();
-      if (options.getLanguage().toLocale() != null && StringUtils.isNotBlank(options.getLanguage().toLocale().getCountry())) {
-        language += "-" + options.getLanguage().toLocale().getCountry();
-      }
-    }
-
     List<MediaArtwork> returnArtwork = new ArrayList<>();
 
     int tvdbId = options.getIdAsInt(MediaMetadata.TVDB);
@@ -86,7 +76,7 @@ public class FanartTvTvShowArtworkProvider extends FanartTvMetadataProvider impl
     }
 
     if (tvdbId == 0) {
-      throw new MissingIdException(MediaMetadata.TVDB);
+      return Collections.emptyList();
     }
 
     Response<Images> images = null;

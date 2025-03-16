@@ -695,23 +695,6 @@ public class ITImdbMetadataProviderTest extends BasicITest {
   }
 
   @Test
-  public void testMovieArtworkScrapeWithTmdbId() throws Exception {
-    // TODO: how should this work? IMDB scraper with TMDB?!???
-    IMovieArtworkProvider mp = new ImdbMovieArtworkProvider();
-
-    ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.MOVIE);
-    options.setArtworkType(MediaArtwork.MediaArtworkType.ALL);
-    options.setTmdbId(20352);
-
-    List<MediaArtwork> artworks = mp.getArtwork(options);
-
-    assertThat(artworks).isNotEmpty();
-    assertThat(artworks.get(0).getType()).isEqualTo(MediaArtwork.MediaArtworkType.POSTER);
-    assertThat(artworks.get(0).getImageSizes()).isNotEmpty();
-    assertThat(artworks.get(0).getPreviewUrl()).isNotEmpty();
-  }
-
-  @Test
   public void testTvShowArtworkScrapeWithImdbId() throws Exception {
     ITvShowArtworkProvider mp = new ImdbTvShowArtworkProvider();
 

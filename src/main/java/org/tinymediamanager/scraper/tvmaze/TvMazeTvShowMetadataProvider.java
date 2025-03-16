@@ -595,7 +595,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
   }
 
   @Override
-  public List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException, MissingIdException {
+  public List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException {
     LOGGER.debug("getArtwork(): {}", options);
 
     // lazy initialization of the api
@@ -606,7 +606,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
         return Collections.emptyList();
       }
       if (options.getMediaType() == MediaType.TV_EPISODE) {
-        // episode artwork has to be scraped via the meta data scraper
+        // episode artwork has to be scraped via the metadata scraper
         TvShowEpisodeSearchAndScrapeOptions episodeSearchAndScrapeOptions = new TvShowEpisodeSearchAndScrapeOptions();
         episodeSearchAndScrapeOptions.setDataFromOtherOptions(options);
         if (options.getIds().get(MediaMetadata.TVSHOW_IDS) instanceof Map) {
@@ -622,9 +622,12 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
         return getMetadata(op).getMediaArt(options.getArtworkType());
       }
     }
-    catch (MissingIdException e) {
-      // no valid ID given - just do nothing
+    catch (MissingIdException | NothingFoundException e) {
+      // no valid ID given or nothing has been found - just do nothing
       return Collections.emptyList();
+    }
+    catch (ScrapeException e) {
+      throw e;
     }
     catch (Exception e) {
       throw new ScrapeException(e);

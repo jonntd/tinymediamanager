@@ -20,6 +20,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -46,6 +47,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.http.OnDiskCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
@@ -56,7 +58,7 @@ import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 /**
- * the class {@link OfdbMovieMetadataProvider} is used to gather meta data from ofdb
+ * the class {@link OfdbMovieMetadataProvider} is used to gather metadata from ofdb
  * 
  * @author Manuel Laggner, Myron Boyle
  */
@@ -663,10 +665,22 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
   }
 
   @Override
-  public List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException, MissingIdException {
-    MovieSearchAndScrapeOptions movie = new MovieSearchAndScrapeOptions();
-    movie.setDataFromOtherOptions(options);
-    MediaMetadata md = getMetadata(movie);
-    return md.getMediaArt(options.getArtworkType());
+  public List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException {
+    try{
+      MovieSearchAndScrapeOptions movie = new MovieSearchAndScrapeOptions();
+      movie.setDataFromOtherOptions(options);
+      MediaMetadata md = getMetadata(movie);
+      return md.getMediaArt(options.getArtworkType());
+    }
+    catch (MissingIdException | NothingFoundException e) {
+      // no valid ID given or nothing has been found - just do nothing
+      return Collections.emptyList();
+    }
+    catch (ScrapeException e){
+      throw e;
+    }
+    catch (Exception e) {
+      throw new ScrapeException(e);
+    }
   }
 }

@@ -21,6 +21,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.scraper.exceptions.HttpException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieArtworkProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
@@ -53,6 +54,9 @@ public class TheTvDbMovieArtworkProvider extends TheTvDbArtworkProvider implemen
       // get all types of artwork we can get
       Response<MovieExtendedResponse> response = tvdb.getMoviesService().getMovieExtended(id).execute();
       if (!response.isSuccessful()) {
+        if (response.code() == 404) {
+          throw new NothingFoundException();
+        }
         throw new HttpException(response.code(), response.message());
       }
 

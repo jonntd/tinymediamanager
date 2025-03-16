@@ -877,8 +877,7 @@ public class ImdbTvShowParser extends ImdbParser {
     }
 
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("not possible to scrape from IMDB - no imdbId found");
-      throw new MissingIdException(MediaMetadata.IMDB);
+      return Collections.emptyList();
     }
 
     // just get the MediaMetadata via normal scrape and pick the poster from the result
@@ -904,10 +903,8 @@ public class ImdbTvShowParser extends ImdbParser {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("Error getting arworks: {}", e.getMessage());
+      throw new ScrapeException(e);
     }
-
-    return Collections.emptyList();
   }
 
   public Map<String, Integer> getTvShowTop250() {

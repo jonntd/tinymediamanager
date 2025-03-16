@@ -16,6 +16,7 @@
 package org.tinymediamanager.scraper.thetvdb;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -23,6 +24,7 @@ import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMediaArtworkProvider;
 import org.tinymediamanager.scraper.thetvdb.entities.ArtworkBaseRecord;
@@ -64,12 +66,24 @@ public abstract class TheTvDbArtworkProvider extends TheTvDbMetadataProvider imp
     }
 
     if (id == 0) {
-      getLogger().warn("no id available");
-      throw new MissingIdException(getProviderInfo().getId());
+      return Collections.emptyList();
     }
 
     // get artwork from thetvdb
-    List<ArtworkBaseRecord> images = fetchArtwork(id);
+    List<ArtworkBaseRecord> images = null;
+    try {
+      images = fetchArtwork(id);
+    }
+    catch (MissingIdException | NothingFoundException e) {
+      // no valid ID given or nothing has been found - just do nothing
+      return Collections.emptyList();
+    }
+    catch (ScrapeException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new ScrapeException(e);
+    }
 
     if (ListUtils.isEmpty(images)) {
       return artwork;

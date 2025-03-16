@@ -64,6 +64,9 @@ public class TheTvDbTvShowArtworkProvider extends TheTvDbArtworkProvider impleme
       // get all types of artwork we can get
       Response<SeriesExtendedResponse> response = tvdb.getSeriesService().getSeriesExtended(id).execute();
       if (!response.isSuccessful()) {
+        if (response.code() == 404) {
+          throw new NothingFoundException();
+        }
         throw new HttpException(response.code(), response.message());
       }
 
@@ -109,7 +112,7 @@ public class TheTvDbTvShowArtworkProvider extends TheTvDbArtworkProvider impleme
     if (options.getMediaType() == MediaType.TV_EPISODE) {
       LOGGER.debug("getting artwork: {}", options);
       try {
-        // episode artwork has to be scraped via the meta data scraper
+        // episode artwork has to be scraped via the metadata scraper
         TvShowEpisodeSearchAndScrapeOptions episodeSearchAndScrapeOptions = new TvShowEpisodeSearchAndScrapeOptions();
         episodeSearchAndScrapeOptions.setDataFromOtherOptions(options);
         if (options.getIds().get(MediaMetadata.TVSHOW_IDS) instanceof Map) {
@@ -119,11 +122,11 @@ public class TheTvDbTvShowArtworkProvider extends TheTvDbArtworkProvider impleme
         MediaMetadata md = new TheTvDbTvShowMetadataProvider().getMetadata(episodeSearchAndScrapeOptions);
         return md.getMediaArt();
       }
-      catch (MissingIdException e) {
-        // no valid ID given - just do nothing
+      catch (MissingIdException | NothingFoundException e) {
+        // no valid ID given or nothing has been found - just do nothing
         return Collections.emptyList();
       }
-      catch (NothingFoundException e) {
+      catch (ScrapeException e) {
         throw e;
       }
       catch (Exception e) {
