@@ -214,6 +214,10 @@ public class IdLinkPanel extends JPanel {
           url = "https://www.tvmaze.com/episodes/" + id;
           break;
 
+        case MediaMetadata.ANIDB:
+          url = "https://anidb.net/episode/" + id;
+          break;
+
         default:
           break;
       }
