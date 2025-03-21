@@ -6,7 +6,8 @@ Version 5.1.5
 x [Movies] do not overwrite extrafanarts when running downloading missing artwork
 x [Movies/TV shows] enhanced loading of changed artwork in the information panels #2750 #2836
 x [TV shows] do not get episode images from all scrapers
-x [UI] fix AniDB clickable episode links #2889 
+x [UI] fix AniDB clickable episode links #2889
+x [UI] store window locations for the new message dialog
 
 
 Version 5.1.4

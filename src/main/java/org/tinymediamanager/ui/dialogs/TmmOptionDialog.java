@@ -32,6 +32,7 @@ import javax.swing.JPanel;
 
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.TmmUILayoutStore;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -46,6 +47,7 @@ public class TmmOptionDialog extends JDialog {
 
   private TmmOptionDialog(Frame owner, Icon icon, String title, String message, JCheckBox chkbxOption) {
     super(owner, title, true);
+    setName("message");
     setLayout(new BorderLayout());
 
     JPanel panelContent = new JPanel(new MigLayout("hidemode 3", "10lp[50lp]10lp[500lp, grow]10lp", "10lp[10lp, center][10lp, center]"));
@@ -99,6 +101,21 @@ public class TmmOptionDialog extends JDialog {
     });
   }
 
+  @Override
+  public void setVisible(boolean visible) {
+    if (visible) {
+      pack();
+      TmmUILayoutStore.getInstance().loadSettings(this);
+      super.setVisible(true);
+      toFront();
+    }
+    else {
+      TmmUILayoutStore.getInstance().saveSettings(this);
+      super.setVisible(false);
+      dispose();
+    }
+  }
+
   /**
    * Display an option dialog with the given owner (for placement), icon, title, message and a checkbox for options
    * 
@@ -116,7 +133,6 @@ public class TmmOptionDialog extends JDialog {
    */
   public static int showOptionDialog(Frame owner, Icon icon, String title, String message, JCheckBox chkbxOption) {
     TmmOptionDialog dialog = new TmmOptionDialog(owner, icon, title, message, chkbxOption);
-    dialog.pack();
     dialog.setVisible(true);
     return dialog.result;
   }
