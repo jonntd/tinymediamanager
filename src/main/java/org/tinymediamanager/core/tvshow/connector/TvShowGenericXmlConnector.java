@@ -58,6 +58,7 @@ import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowNfoNaming;
@@ -81,6 +82,8 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   protected static final DecimalFormatSymbols DECIMAL_FORMAT_SYMBOLS = new DecimalFormatSymbols(Locale.US);
 
   protected final TvShow                      tvShow;
+  protected final TvShowSettings              settings;
+
   protected TvShowNfoParser                   parser                 = null;
 
   protected Document                          document;
@@ -88,6 +91,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
 
   protected TvShowGenericXmlConnector(TvShow tvShow) {
     this.tvShow = tvShow;
+    this.settings = TvShowModuleManager.getInstance().getSettings();
   }
 
   /**
@@ -99,7 +103,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   public void write(List<TvShowNfoNaming> nfoNames) {
     // first of all, get the data from a previous written NFO file,
     // if we do not want clean NFOs
-    if (!TvShowModuleManager.getInstance().getSettings().isWriteCleanNfo()) {
+    if (!settings.isWriteCleanNfo()) {
       for (MediaFile mf : tvShow.getMediaFiles(MediaFileType.NFO)) {
         try {
           parser = TvShowNfoParser.parseNfo(mf.getFileAsPath());
@@ -128,7 +132,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
         // tmm comment
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String dat = formatter.format(new Date());
-        TvShowConnectors conn = TvShowModuleManager.getInstance().getSettings().getTvShowConnector();
+        TvShowConnectors conn = settings.getTvShowConnector();
         document.appendChild(
             document.createComment("created on " + dat + " by tinyMediaManager " + Settings.getInstance().getVersion() + " for " + conn.name()));
 
@@ -302,7 +306,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     Map<String, MediaRating> ratings = tvShow.getRatings();
 
     MediaRating mainMediaRating = null;
-    for (String ratingSource : TvShowModuleManager.getInstance().getSettings().getRatingSources()) {
+    for (String ratingSource : settings.getRatingSources()) {
       mainMediaRating = ratings.get(ratingSource);
       if (mainMediaRating != null) {
         break;
@@ -545,8 +549,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     Element mpaa = document.createElement("mpaa");
 
     if (tvShow.getCertification() != null) {
-      mpaa.setTextContent(
-          CertificationStyle.formatCertification(tvShow.getCertification(), TvShowModuleManager.getInstance().getSettings().getCertificationStyle()));
+      mpaa.setTextContent(CertificationStyle.formatCertification(tvShow.getCertification(), settings.getCertificationStyle()));
     }
     root.appendChild(mpaa);
   }
@@ -557,8 +560,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   protected void addCertification() {
     Element certification = document.createElement("certification");
     if (tvShow.getCertification() != null) {
-      certification.setTextContent(
-          CertificationStyle.formatCertification(tvShow.getCertification(), TvShowModuleManager.getInstance().getSettings().getCertificationStyle()));
+      certification.setTextContent(CertificationStyle.formatCertification(tvShow.getCertification(), settings.getCertificationStyle()));
     }
     root.appendChild(certification);
   }
@@ -567,11 +569,11 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the episode guide in <episodeguide>xxx</episodeguide>
    */
   protected void addEpisodeguide() {
-    if (!TvShowModuleManager.getInstance().getSettings().isNfoWriteEpisodeguide()) {
+    if (!settings.isNfoWriteEpisodeguide()) {
       return;
     }
 
-    if (TvShowModuleManager.getInstance().getSettings().isNfoWriteNewEpisodeguideStyle()) {
+    if (settings.isNfoWriteNewEpisodeguideStyle()) {
       root.appendChild(createNewEpisodeGuide());
     }
     else {
@@ -649,7 +651,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     Element episodeguide = document.createElement("episodeguide");
     Element url = document.createElement("url");
     url.setTextContent("http://api.themoviedb.org/3/tv/" + tvShow.getIdAsString(MediaMetadata.TMDB)
-        + "?api_key=6a5be4999abf74eba1f9a8311294c267&language=" + TvShowModuleManager.getInstance().getSettings().getScraperLanguage().getLanguage());
+        + "?api_key=6a5be4999abf74eba1f9a8311294c267&language=" + settings.getScraperLanguage().getLanguage());
     episodeguide.appendChild(url);
 
     return episodeguide;
@@ -722,9 +724,13 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the dateAdded date in <dateadded>xxx</dateadded>
    */
   protected void addDateAdded() {
+    if (!settings.isNfoWriteDateAdded()) {
+      return;
+    }
+
     Element dateadded = document.createElement("dateadded");
 
-    DateField dateField = TvShowModuleManager.getInstance().getSettings().getNfoDateAddedField();
+    DateField dateField = settings.getNfoDateAddedField();
 
     switch (dateField) {
       case DATE_ADDED:
@@ -776,7 +782,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * This will protect the NFO from being modified by Emby
    */
   protected void addLockdata() {
-    if (TvShowModuleManager.getInstance().getSettings().isNfoWriteLockdata()) {
+    if (settings.isNfoWriteLockdata()) {
       Element lockdata = document.createElement("lockdata");
       lockdata.setTextContent("true");
 
@@ -822,7 +828,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   protected void addGenres() {
     for (MediaGenres mediaGenre : tvShow.getGenres()) {
       Element genre = document.createElement("genre");
-      genre.setTextContent(mediaGenre.getLocalizedName(TvShowModuleManager.getInstance().getSettings().getNfoLanguage()));
+      genre.setTextContent(mediaGenre.getLocalizedName(settings.getNfoLanguage()));
       root.appendChild(genre);
     }
   }
@@ -838,7 +844,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       root.appendChild(studio);
 
       // break here if we just want to write one studio
-      if (TvShowModuleManager.getInstance().getSettings().isNfoWriteSingleStudio()) {
+      if (settings.isNfoWriteSingleStudio()) {
         break;
       }
     }
@@ -924,7 +930,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the trailer url in <trailer>xxx</trailer>
    */
   protected void addTrailer() {
-    if (TvShowModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
         if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {

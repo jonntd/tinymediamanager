@@ -159,6 +159,7 @@ public final class TvShowSettings extends AbstractSettings {
   TvShowConnectors                               tvShowConnector                        = TvShowConnectors.KODI;
   CertificationStyle                             certificationStyle                     = CertificationStyle.LARGE;
   boolean                                        writeCleanNfo                          = false;
+  boolean                                        nfoWriteDateAdded                      = true;
   DateField                                      nfoDateAddedField                      = DateField.DATE_ADDED;
   Locale                                         nfoLanguage                            = Locale.ENGLISH;
   boolean                                        nfoWriteEpisodeguide                   = true;
@@ -1698,6 +1699,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.writeCleanNfo;
     this.writeCleanNfo = newValue;
     firePropertyChange("writeCleanNfo", oldValue, newValue);
+  }
+
+  public boolean isNfoWriteDateAdded() {
+    return nfoWriteDateAdded;
+  }
+
+  public void setNfoWriteDateAdded(boolean newValue) {
+    boolean oldValue = this.nfoWriteDateAdded;
+    this.nfoWriteDateAdded = newValue;
+    firePropertyChange("nfoWriteDateAdded", oldValue, newValue);
   }
 
   public DateField getNfoDateAddedField() {

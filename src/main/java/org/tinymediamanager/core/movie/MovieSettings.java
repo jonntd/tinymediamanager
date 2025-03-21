@@ -144,6 +144,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   nfoDiscFolderInside                    = true;
   boolean                                   trailerDiscFolderInside                = true;
   boolean                                   writeCleanNfo                          = false;
+  boolean                                   nfoWriteDateAdded                      = true;
   DateField                                 nfoDateAddedField                      = DateField.DATE_ADDED;
   Locale                                    nfoLanguage                            = Locale.ENGLISH;
   boolean                                   createOutline                          = true;
@@ -1670,6 +1671,16 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = writeCleanNfo;
     this.writeCleanNfo = newValue;
     firePropertyChange("writeCleanNfo", oldValue, newValue);
+  }
+
+  public boolean isNfoWriteDateAdded() {
+    return nfoWriteDateAdded;
+  }
+
+  public void setNfoWriteDateAdded(boolean newValue) {
+    boolean oldValue = this.nfoWriteDateAdded;
+    this.nfoWriteDateAdded = newValue;
+    firePropertyChange("nfoWriteDateAdded", oldValue, newValue);
   }
 
   public DateField getNfoDateAddedField() {

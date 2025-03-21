@@ -1,5 +1,6 @@
 Version 5.1.5
 =======================
++ [Movies/TV shows] added an option to suppress writing of <dateadded> to the NFO #2893
 + [TV shows] added runtime for episodes too
 + [TV shows] enabled using runtime from mediainfo instead of scraped one #2838
 x [Movies] do not overwrite extrafanarts when running downloading missing artwork

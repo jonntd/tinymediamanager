@@ -56,6 +56,7 @@ import org.tinymediamanager.core.entities.MediaGenres;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSetArtworkHelper;
+import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.movie.filenaming.IMovieSetFileNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieSetNfoNaming;
@@ -77,6 +78,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
   protected static final DecimalFormatSymbols DECIMAL_FORMAT_SYMBOLS = new DecimalFormatSymbols(Locale.US);
 
   protected final MovieSet                    movieSet;
+  protected final MovieSettings               settings;
   protected MovieNfoParser                    parser                 = null;
 
   protected Document                          document;
@@ -84,6 +86,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
 
   protected MovieSetGenericXmlConnector(MovieSet movieSet) {
     this.movieSet = movieSet;
+    this.settings = MovieModuleManager.getInstance().getSettings();
   }
 
   /**
@@ -96,7 +99,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
 
     // first of all, get the data from a previous written NFO file,
     // if we do not want clean NFOs
-    if (!MovieModuleManager.getInstance().getSettings().isWriteCleanNfo()) {
+    if (!settings.isWriteCleanNfo()) {
       for (MediaFile mf : movieSet.getMediaFiles(MediaFileType.NFO)) {
         try {
           parser = MovieNfoParser.parseNfo(mf.getFileAsPath());
@@ -228,7 +231,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
   }
 
   private Path createNfoPath(MovieSet movieSet, MovieSetNfoNaming nfoNaming) {
-    String dataFolder = MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder();
+    String dataFolder = settings.getMovieSetDataFolder();
     if (StringUtils.isBlank(dataFolder)) {
       return null;
     }
@@ -290,7 +293,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
     Map<String, MediaRating> ratings = movieSet.getRatings();
 
     MediaRating mainMediaRating = null;
-    for (String ratingSource : MovieModuleManager.getInstance().getSettings().getRatingSources()) {
+    for (String ratingSource : settings.getRatingSources()) {
       mainMediaRating = ratings.get(ratingSource);
       if (mainMediaRating != null) {
         break;
@@ -417,8 +420,12 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
    * add the dateAdded date in <dateadded>xxx</dateadded>
    */
   protected void addDateAdded() {
+    if (!settings.isNfoWriteDateAdded()) {
+      return;
+    }
+
     Element dateadded = document.createElement("dateadded");
-    switch (MovieModuleManager.getInstance().getSettings().getNfoDateAddedField()) {
+    switch (settings.getNfoDateAddedField()) {
       case DATE_ADDED:
         if (movieSet.getDateAdded() != null) {
           dateadded.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(movieSet.getDateAdded()));
@@ -448,7 +455,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
    * This will protect the NFO from being modified by Emby
    */
   protected void addLockdata() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteLockdata()) {
+    if (settings.isNfoWriteLockdata()) {
       Element lockdata = document.createElement("lockdata");
       lockdata.setTextContent("true");
 
@@ -462,7 +469,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
   protected void addGenres() {
     for (MediaGenres mediaGenre : movieSet.getGenres()) {
       Element genre = document.createElement("genre");
-      genre.setTextContent(mediaGenre.getLocalizedName(MovieModuleManager.getInstance().getSettings().getNfoLanguage()));
+      genre.setTextContent(mediaGenre.getLocalizedName(settings.getNfoLanguage()));
       root.appendChild(genre);
     }
   }
