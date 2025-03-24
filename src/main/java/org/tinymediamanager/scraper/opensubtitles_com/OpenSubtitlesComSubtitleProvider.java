@@ -66,7 +66,7 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
 
   private final MediaProviderInfo                                  providerInfo;
 
-  protected OpenSubtitlesComController                                             controller      = null;
+  protected OpenSubtitlesComController                             controller      = null;
 
   protected OpenSubtitlesComSubtitleProvider() {
     providerInfo = createMediaProviderInfo();
@@ -87,7 +87,7 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
         OpenSubtitlesComSubtitleProvider.class.getResource("/org/tinymediamanager/scraper/opensubtitles_com.svg"));
 
     // configure/load settings
-    info.getConfig().addText("username", "");
+    info.getConfig().addText("username", "scraper.opensubtitles.username.nomail", "");
     info.getConfig().addText("password", "", true);
     info.getConfig().addBoolean("trustedSources", false);
     info.getConfig().addBoolean("aiTranslated", false);

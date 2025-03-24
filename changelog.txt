@@ -8,6 +8,7 @@ x [Movies/TV shows] enhanced loading of changed artwork in the information panel
 x [TV shows] do not get episode images from all scrapers
 x [UI] fix AniDB clickable episode links #2889
 x [UI] store window locations for the new message dialog
+x [UI] Better express, what the username of OpenSubtitles should be (and what not)
 
 
 Version 5.1.4
