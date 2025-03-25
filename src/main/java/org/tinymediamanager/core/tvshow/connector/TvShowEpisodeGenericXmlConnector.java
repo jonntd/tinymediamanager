@@ -627,23 +627,28 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
           video.appendChild(durationinseconds);
         }
 
-        Element stereomode = document.createElement("stereomode");
-        // "Spec": https://github.com/xbmc/xbmc/blob/master/xbmc/guilib/StereoscopicsManager.cpp
-        switch (videoFile.getVideo3DFormat()) {
-          case MediaFileHelper.VIDEO_3D_SBS:
-          case MediaFileHelper.VIDEO_3D_HSBS:
-            stereomode.setTextContent("left_right");
-            break;
+        if (!videoFile.getVideo3DFormat().isEmpty()) {
+          Element stereomode = document.createElement("stereomode");
+          switch (videoFile.getVideo3DFormat()) {
+            // old style till TMM 5.1.4
+            case MediaFileHelper.VIDEO_3D_SBS:
+            case MediaFileHelper.VIDEO_3D_HSBS:
+              stereomode.setTextContent("left_right");
+              break;
 
-          case MediaFileHelper.VIDEO_3D_TAB:
-          case MediaFileHelper.VIDEO_3D_HTAB:
-            stereomode.setTextContent("top_bottom");
-            break;
+            case MediaFileHelper.VIDEO_3D_TAB:
+            case MediaFileHelper.VIDEO_3D_HTAB:
+              stereomode.setTextContent("top_bottom");
+              break;
 
-          default:
-            break;
+            default:
+              // new style as of TMM 5.1.5
+              stereomode.setTextContent(videoFile.getVideo3DFormat());
+              break;
+          }
+          video.appendChild(stereomode);
         }
-        video.appendChild(stereomode);
+
         streamdetails.appendChild(video);
 
         for (MediaFileAudioStream as : videoFile.getAudioStreams()) {

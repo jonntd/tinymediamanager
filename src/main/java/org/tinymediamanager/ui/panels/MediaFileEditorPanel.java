@@ -54,12 +54,12 @@ import org.jdesktop.observablecollections.ObservableCollections;
 import org.jdesktop.swingbinding.JTableBinding;
 import org.jdesktop.swingbinding.SwingBindings;
 import org.tinymediamanager.core.AspectRatio;
-import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
+import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.core.tasks.ARDetectorTask;
 import org.tinymediamanager.core.tasks.MediaFileARDetectorTask;
 import org.tinymediamanager.core.threading.TmmTask;
@@ -106,7 +106,7 @@ public class MediaFileEditorPanel extends JPanel {
   private final JButton                         btnRemoveAudioStream;
   private final JButton                         btnAddSubtitle;
   private final JButton                         btnRemoveSubtitle;
-  private final JComboBox<String>               cb3dFormat;
+  private final JComboBox<MediaInfo3D>          cb3dFormat;
   private final JComboBox                       cbAspectRatio;
   private final JComboBox                       cbAspectRatio2;
   private final JSpinner                        spFrameRate;
@@ -134,10 +134,6 @@ public class MediaFileEditorPanel extends JPanel {
     subtitles = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(MediaFileSubtitle.class));
 
     Set<MediaFileType> videoTypes = new HashSet<>(Arrays.asList(VIDEO, SAMPLE, TRAILER));
-
-    // predefined 3D Formats
-    String[] threeDFormats = { "", MediaFileHelper.VIDEO_3D, MediaFileHelper.VIDEO_3D_SBS, MediaFileHelper.VIDEO_3D_HSBS,
-        MediaFileHelper.VIDEO_3D_TAB, MediaFileHelper.VIDEO_3D_HTAB, MediaFileHelper.VIDEO_3D_MVC };
 
     setLayout(new MigLayout("", "[300lp:450lp,grow]", "[200lp:450lp,grow]"));
     {
@@ -267,7 +263,7 @@ public class MediaFileEditorPanel extends JPanel {
           JLabel lbl3d = new TmmLabel(TmmResourceBundle.getString("metatag.3dformat"));
           panelDetails.add(lbl3d, "cell 3 5,alignx right");
 
-          cb3dFormat = new JComboBox(threeDFormats);
+          cb3dFormat = new JComboBox<MediaInfo3D>(MediaInfo3D.values());
           panelDetails.add(cb3dFormat, "cell 4 5");
         }
         {
@@ -298,6 +294,7 @@ public class MediaFileEditorPanel extends JPanel {
           panelDetails.add(scrollPane, "cell 1 7 8 1,grow");
 
           tableSubtitles = new MediaFileSubtitleEditTable(subtitles) {
+
             @Override
             public void onEditSubtitle() {
               syncSubtitles();
@@ -332,6 +329,7 @@ public class MediaFileEditorPanel extends JPanel {
     // add selection listener to disable editing when needed
     tableMediaFiles.getSelectionModel().addListSelectionListener(listener -> {
       if (!listener.getValueIsAdjusting()) {
+
         int selectedRow = tableMediaFiles.convertRowIndexToModel(tableMediaFiles.getSelectedRow());
         if (selectedRow > -1) {
           MediaFileContainer container = MediaFileEditorPanel.this.mediaFiles.get(selectedRow);
@@ -567,7 +565,12 @@ public class MediaFileEditorPanel extends JPanel {
             mfOriginal.setFrameRate(mfEditor.getFrameRate());
           }
           if (!mfEditor.getVideo3DFormat().equals(mfOriginal.getVideo3DFormat())) {
-            mfOriginal.setVideo3DFormat(mfEditor.getVideo3DFormat());
+            if (mfEditor.getVideo3DFormat().equals("mono")) {
+              mfOriginal.setVideo3DFormat(""); // remove when our non-3d value is set
+            }
+            else {
+              mfOriginal.setVideo3DFormat(mfEditor.getVideo3DFormat());
+            }
           }
           if (!mfEditor.getHdrFormat().equals(mfOriginal.getHdrFormat())) {
             mfOriginal.setHdrFormat(mfEditor.getHdrFormat());
@@ -659,6 +662,7 @@ public class MediaFileEditorPanel extends JPanel {
     Property jComboBoxBeanProperty = BeanProperty.create("selectedItem");
     AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, tableMediaFiles, jTableBeanProperty_7, cb3dFormat,
         jComboBoxBeanProperty);
+    autoBinding_2.setConverter(new MediaInfo3DConverter());
     autoBinding_2.bind();
     //
     Property tmmTableBeanProperty = BeanProperty.create("selectedElement.mediaFile.aspectRatio");
@@ -760,6 +764,25 @@ public class MediaFileEditorPanel extends JPanel {
     @Override
     public Float convertReverse(AspectRatioContainer value) {
       return value.aspectRatio;
+    }
+  }
+
+  public static class MediaInfo3DConverter extends Converter<String, MediaInfo3D> {
+
+    @Override
+    public MediaInfo3D convertForward(String value) {
+      if (value == null || value.isBlank()) {
+        return MediaInfo3D.MONO; // our not-3D enum value
+      }
+      return MediaInfo3D.get3DFrom(value);
+    }
+
+    @Override
+    public String convertReverse(MediaInfo3D value) {
+      if (value == null) {
+        return "";
+      }
+      return value.getId();
     }
   }
 }

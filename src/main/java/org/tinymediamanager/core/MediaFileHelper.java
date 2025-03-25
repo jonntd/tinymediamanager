@@ -58,6 +58,7 @@ import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
 import org.tinymediamanager.core.entities.MediaStreamInfo;
 import org.tinymediamanager.core.entities.MediaStreamInfo.Flags;
+import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.core.mediainfo.MediaInfoFile;
 import org.tinymediamanager.core.mediainfo.MediaInfoUtils;
 import org.tinymediamanager.core.mediainfo.MediaInfoXMLParser;
@@ -2869,21 +2870,16 @@ public class MediaFileHelper {
     if (!StringUtils.isEmpty(mvc) && mvc.equals("2")) {
       video3DFormat = MediaFileHelper.VIDEO_3D;
       String mvl = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.Video, 0, "MultiView_Layout").toLowerCase(Locale.ROOT);
-      LOGGER.trace("3D detected :) - {}", mvl);
-      if (!StringUtils.isEmpty(mvl) && mvl.contains("top") && mvl.contains("bottom")) {
-        video3DFormat = MediaFileHelper.VIDEO_3D_HTAB; // assume HalfTAB as default
-        if (height > width) {
-          video3DFormat = MediaFileHelper.VIDEO_3D_TAB;// FullTAB eg 1920x2160
+      if (!mvl.isEmpty()) {
+        LOGGER.trace("3D detected :) - {}", mvl);
+        MediaInfo3D ddd = MediaInfo3D.get3DFrom(mvl);
+        if (ddd != MediaInfo3D.MONO) {
+          video3DFormat = ddd.getId();
         }
       }
-      if (!StringUtils.isEmpty(mvl) && mvl.contains("side")) {
-        video3DFormat = MediaFileHelper.VIDEO_3D_HSBS;// assume HalfSBS as default
-        if (mediaFile.getAspectRatio() > 3) {
-          video3DFormat = MediaFileHelper.VIDEO_3D_SBS;// FullSBS eg 3840x1080
-        }
-      }
-      if (!StringUtils.isEmpty(mvl) && mvl.contains("laced")) { // Both Eyes laced in one block
-        video3DFormat = MediaFileHelper.VIDEO_3D_MVC;
+      else {
+        LOGGER.warn("3D detected, but correct impl could not be detected!");
+        video3DFormat = VIDEO_3D;
       }
     }
     else {

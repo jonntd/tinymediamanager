@@ -658,23 +658,27 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
             video.appendChild(durationinseconds);
           }
 
-          Element stereomode = document.createElement("stereomode");
-          // "Spec": https://github.com/xbmc/xbmc/blob/master/xbmc/guilib/StereoscopicsManager.cpp
-          switch (vid.getVideo3DFormat()) {
-            case MediaFileHelper.VIDEO_3D_SBS:
-            case MediaFileHelper.VIDEO_3D_HSBS:
-              stereomode.setTextContent("left_right");
-              break;
+          if (!vid.getVideo3DFormat().isEmpty()) {
+            Element stereomode = document.createElement("stereomode");
+            switch (vid.getVideo3DFormat()) {
+              // old style till TMM 5.1.4
+              case MediaFileHelper.VIDEO_3D_SBS:
+              case MediaFileHelper.VIDEO_3D_HSBS:
+                stereomode.setTextContent("left_right");
+                break;
 
-            case MediaFileHelper.VIDEO_3D_TAB:
-            case MediaFileHelper.VIDEO_3D_HTAB:
-              stereomode.setTextContent("top_bottom");
-              break;
+              case MediaFileHelper.VIDEO_3D_TAB:
+              case MediaFileHelper.VIDEO_3D_HTAB:
+                stereomode.setTextContent("top_bottom");
+                break;
 
-            default:
-              break;
+              default:
+                // new style as of TMM 5.1.5
+                stereomode.setTextContent(vid.getVideo3DFormat());
+                break;
+            }
+            video.appendChild(stereomode);
           }
-          video.appendChild(stereomode);
 
           streamdetails.appendChild(video);
         }
