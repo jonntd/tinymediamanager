@@ -15,10 +15,15 @@
  */
 package org.tinymediamanager.ui.movies.filters;
 
-import javax.swing.JComponent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import javax.swing.JLabel;
 
+import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 
@@ -27,31 +32,41 @@ import org.tinymediamanager.ui.components.label.TmmLabel;
  * 
  * @author Manuel Laggner
  */
-public class MovieVideo3DFilter extends AbstractMovieUIFilter {
+public class MovieVideo3DFilter extends AbstractCheckComboBoxMovieUIFilter<MediaInfo3D> {
+
+  public MovieVideo3DFilter() {
+    super();
+    checkComboBox.enableFilter((s, s2) -> s.toString().toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    buildAndInstallEditionArray();
+  }
 
   @Override
   public String getId() {
     return "movieVideo3D";
   }
 
-  @Override
-  public String getFilterValueAsString() {
-    return null;
+  private void buildAndInstallEditionArray() {
+    List<MediaInfo3D> editions = new ArrayList<>();
+
+    for (MediaInfo3D ddd : MediaInfo3D.values()) {
+      if (StringUtils.isNotBlank(ddd.toString())) {
+        editions.add(ddd);
+      }
+    }
+
+    setValues(editions);
   }
 
   @Override
-  public void setFilterValue(Object value) {
-    // nothing to do
-  }
-
-  @Override
-  public void clearFilter() {
-    // nothing to do
+  protected String parseTypeToString(MediaInfo3D type) throws Exception {
+    return type.name();
   }
 
   @Override
   public boolean accept(Movie movie) {
-    return movie.isVideoIn3D();
+    List<MediaInfo3D> selectedItems = checkComboBox.getSelectedItems();
+    MediaInfo3D ddd = MediaInfo3D.get3DFrom(movie.getVideo3DFormat());
+    return selectedItems.contains(ddd);
   }
 
   @Override
@@ -60,7 +75,7 @@ public class MovieVideo3DFilter extends AbstractMovieUIFilter {
   }
 
   @Override
-  protected JComponent createFilterComponent() {
-    return null;
+  protected MediaInfo3D parseStringToType(String string) throws Exception {
+    return MediaInfo3D.get3DFrom(string);
   }
 }
