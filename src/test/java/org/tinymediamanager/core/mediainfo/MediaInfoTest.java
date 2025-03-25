@@ -17,7 +17,6 @@
 package org.tinymediamanager.core.mediainfo;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.tinymediamanager.core.MediaFileHelper.VIDEO_3D_HSBS;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -685,7 +684,7 @@ public class MediaInfoTest extends BasicTest {
     MediaFile mf = new MediaFile(mediainfoFolder.resolve("3d_sbs.avi"));
     MediaFileHelper.gatherMediaInformation(mf, false);
 
-    assertThat(mf.getVideo3DFormat()).isEqualTo(VIDEO_3D_HSBS);
+    assertThat(mf.getVideo3DFormat()).isEqualTo("left_right");
     assertThat(mf.getVideoWidth()).isEqualTo(1920);
     assertThat(mf.getVideoHeight()).isEqualTo(800);
   }
