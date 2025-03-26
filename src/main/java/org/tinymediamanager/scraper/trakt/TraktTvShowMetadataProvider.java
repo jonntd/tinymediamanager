@@ -745,7 +745,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
   }
 
   private Map<String, Object> getEpisodeIds(Map<String, Object> ids) throws ScrapeException {
-    LOGGER.debug("getRatings(): {}", ids);
+    LOGGER.debug("getEpisodeIds(): {}", ids);
 
     // lazy initialization of the api
     initAPI();
