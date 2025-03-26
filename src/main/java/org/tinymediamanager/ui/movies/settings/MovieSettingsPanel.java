@@ -17,16 +17,12 @@ package org.tinymediamanager.ui.movies.settings;
 
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 
-import java.awt.GridBagConstraints;
-import java.util.Map;
-
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BeanProperty;
@@ -34,7 +30,6 @@ import org.jdesktop.beansbinding.Bindings;
 import org.jdesktop.beansbinding.Property;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
-import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.MovieSettingsDefaults;
 import org.tinymediamanager.core.threading.TmmTask;
@@ -43,7 +38,6 @@ import org.tinymediamanager.thirdparty.trakttv.MovieClearTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.components.button.DocsButton;
-import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 import org.tinymediamanager.ui.dialogs.SettingsDialog;
@@ -82,6 +76,7 @@ public class MovieSettingsPanel extends JPanel {
   private JButton             btnPresetJellyfin;
   private JButton             btnPresetEmby;
   private JCheckBox           chckbxResetNewFlag;
+  private JCheckBox           chckbxReadNomedia;
 
   public MovieSettingsPanel() {
     // UI initializations
@@ -225,7 +220,7 @@ public class MovieSettingsPanel extends JPanel {
     }
     {
       JPanel panelMisc = new JPanel();
-      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][][]")); // 16lp ~ width of the
+      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][][][]")); // 16lp ~ width of the
 
       JLabel lblMiscT = new TmmLabel(TmmResourceBundle.getString("Settings.misc"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMisc, lblMiscT, true);
@@ -235,48 +230,29 @@ public class MovieSettingsPanel extends JPanel {
       chckbxResetNewFlag = new JCheckBox(TmmResourceBundle.getString("Settings.resetnewflag"));
       panelMisc.add(chckbxResetNewFlag, "cell 1 0 2 1");
 
+      chckbxReadNomedia = new JCheckBox(TmmResourceBundle.getString("Settings.nomedia"));
+      panelMisc.add(chckbxReadNomedia, "cell 1 1 2 1");
+
       chckbxUseMediainfoMetadata = new JCheckBox(TmmResourceBundle.getString("Settings.usemediainfometadata"));
-      panelMisc.add(chckbxUseMediainfoMetadata, "cell 1 1 2 1");
+      panelMisc.add(chckbxUseMediainfoMetadata, "cell 1 2 2 1");
       {
         chckbxExtractArtworkFromVsmeta = new JCheckBox(TmmResourceBundle.getString("Settings.extractartworkfromvsmeta"));
-        panelMisc.add(chckbxExtractArtworkFromVsmeta, "cell 1 2 2 1");
+        panelMisc.add(chckbxExtractArtworkFromVsmeta, "cell 1 3 2 1");
 
         chckbxBuildImageCache = new JCheckBox(TmmResourceBundle.getString("Settings.imagecacheimport"));
-        panelMisc.add(chckbxBuildImageCache, "cell 1 3 2 1");
+        panelMisc.add(chckbxBuildImageCache, "cell 1 4 2 1");
 
         JLabel lblBuildImageCacheHint = new JLabel(IconManager.HINT);
         lblBuildImageCacheHint.setToolTipText(TmmResourceBundle.getString("Settings.imagecacheimporthint"));
-        panelMisc.add(lblBuildImageCacheHint, "cell 1 3 2 1");
+        panelMisc.add(lblBuildImageCacheHint, "cell 1 4 2 1");
 
         chckbxRuntimeFromMi = new JCheckBox(TmmResourceBundle.getString("Settings.runtimefrommediafile"));
-        panelMisc.add(chckbxRuntimeFromMi, "cell 1 4 2 1");
+        panelMisc.add(chckbxRuntimeFromMi, "cell 1 5 2 1");
 
         chckbxIncludeExternalAudioStreams = new JCheckBox(TmmResourceBundle.getString("Settings.includeexternalstreamsinnfo"));
-        panelMisc.add(chckbxIncludeExternalAudioStreams, "cell 1 5 2 1");
+        panelMisc.add(chckbxIncludeExternalAudioStreams, "cell 1 6 2 1");
       }
     }
-  }
-
-  private void addMetadataCheckbox(JPanel panel, MovieScraperMetadataConfig config, Map<MovieScraperMetadataConfig, JCheckBox> map,
-      GridBagConstraints gbc) {
-    JCheckBox checkBox;
-    if (StringUtils.isNotBlank(config.getToolTip())) {
-      checkBox = new JHintCheckBox(config.getDescription());
-      checkBox.setToolTipText(config.getToolTip());
-      ((JHintCheckBox) checkBox).setHintIcon(IconManager.HINT);
-    }
-    else {
-      checkBox = new JCheckBox(config.getDescription());
-    }
-    map.put(config, checkBox);
-
-    if (gbc.gridx >= COL_COUNT) {
-      gbc.gridx = 0;
-      gbc.gridy++;
-    }
-    panel.add(checkBox, gbc);
-
-    gbc.gridx++;
   }
 
   protected void initDataBindings() {
@@ -353,5 +329,10 @@ public class MovieSettingsPanel extends JPanel {
     AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty, chckbxResetNewFlag,
         jCheckBoxBeanProperty);
     autoBinding.bind();
+    //
+    Property movieSettingsBeanProperty_5 = BeanProperty.create("skipFoldersWithNomedia");
+    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_5, chckbxReadNomedia,
+        jCheckBoxBeanProperty);
+    autoBinding_8.bind();
   }
 }

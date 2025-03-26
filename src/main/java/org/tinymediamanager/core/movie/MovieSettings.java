@@ -138,6 +138,7 @@ public final class MovieSettings extends AbstractSettings {
   final List<String>                        skipFolders                            = ObservableCollections.observableList(new ArrayList<>());
 
   // data sources / NFO settings
+  boolean                                   skipFoldersWithNomedia                 = true;
   boolean                                   buildImageCacheOnImport                = true;
   MovieConnectors                           movieConnector                         = MovieConnectors.KODI;
   CertificationStyle                        certificationStyle                     = CertificationStyle.LARGE;
@@ -1249,6 +1250,16 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.renamerNfoCleanup;
     this.renamerNfoCleanup = newValue;
     firePropertyChange("renamerNfoCleanup", oldValue, newValue);
+  }
+
+  public boolean isSkipFoldersWithNomedia() {
+    return skipFoldersWithNomedia;
+  }
+
+  public void setSkipFoldersWithNomedia(boolean newValue) {
+    boolean oldValue = this.skipFoldersWithNomedia;
+    this.skipFoldersWithNomedia = newValue;
+    firePropertyChange("skipFoldersWithNomedia", oldValue, newValue);
   }
 
   public boolean isBuildImageCacheOnImport() {

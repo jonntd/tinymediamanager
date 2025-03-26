@@ -156,6 +156,7 @@ public final class TvShowSettings extends AbstractSettings {
   final Map<String, List<UIFilters>>             uiFilterPresets                        = new HashMap<>();
 
   // data sources / NFO settings
+  boolean                                        skipFoldersWithNomedia                 = true;
   TvShowConnectors                               tvShowConnector                        = TvShowConnectors.KODI;
   CertificationStyle                             certificationStyle                     = CertificationStyle.LARGE;
   boolean                                        writeCleanNfo                          = false;
@@ -1679,6 +1680,16 @@ public final class TvShowSettings extends AbstractSettings {
     CertificationStyle oldValue = this.certificationStyle;
     this.certificationStyle = newValue;
     firePropertyChange("certificationStyle", oldValue, newValue);
+  }
+
+  public boolean isSkipFoldersWithNomedia() {
+    return skipFoldersWithNomedia;
+  }
+
+  public void setSkipFoldersWithNomedia(boolean newValue) {
+    boolean oldValue = this.skipFoldersWithNomedia;
+    this.skipFoldersWithNomedia = newValue;
+    firePropertyChange("skipFoldersWithNomedia", oldValue, newValue);
   }
 
   public TvShowConnectors getTvShowConnector() {

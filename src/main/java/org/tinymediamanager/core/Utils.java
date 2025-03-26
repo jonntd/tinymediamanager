@@ -2264,12 +2264,15 @@ public class Utils {
    * check if the given folder contains any of the well known skip files (tmmignore, .tmmignore, .nomedia)
    *
    * @param dir
-   *          the folder to check
+   *          the folder to check#
+   * @param readNomedia
+   *          read .nomedia files
    * @return true/false
    */
   @Deprecated
-  public static boolean containsSkipFile(Path dir) {
-    return Files.exists(dir.resolve(".tmmignore")) || Files.exists(dir.resolve("tmmignore")) || Files.exists(dir.resolve(".nomedia"));
+  public static boolean containsSkipFile(Path dir, boolean readNomedia) {
+    return Files.exists(dir.resolve(".tmmignore")) || Files.exists(dir.resolve("tmmignore"))
+        || (readNomedia && Files.exists(dir.resolve(".nomedia")));
   }
 
   /**

@@ -1642,7 +1642,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private class AllFilesRecursive extends AbstractFileVisitor {
+    private final List<String>  skipFiles;
+
     final Map<Path, List<Path>> filesPerDir = new HashMap<>();
+
+    public AllFilesRecursive() {
+      skipFiles = new ArrayList<>(SKIP_FILES);
+      if (!TvShowModuleManager.getInstance().getSettings().isSkipFoldersWithNomedia()) {
+        skipFiles.remove(".nomedia");
+      }
+    }
 
     @NotNull
     @Override
@@ -1666,7 +1675,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         List<Path> filesInCurrentDir = filesPerDir.get(parent);
 
         // abort if one of the skip files is found
-        if (SKIP_FILES.contains(filename)) {
+        if (skipFiles.contains(filename)) {
           filesInCurrentDir.add(file.toAbsolutePath());
           return SKIP_SIBLINGS;
         }
@@ -1756,7 +1765,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       // check if any skip file has been found
       for (Path file : ListUtils.nullSafe(filesInCurrentDir)) {
-        if (SKIP_FILES.contains(file.getFileName().toString())) {
+        if (skipFiles.contains(file.getFileName().toString())) {
           // skip file found -> do not add this folder or any children
           skipFound = true;
           break;

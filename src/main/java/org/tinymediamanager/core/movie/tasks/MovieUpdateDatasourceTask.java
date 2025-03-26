@@ -1854,8 +1854,15 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private class AllFilesRecursive extends AbstractFileVisitor {
-    private final Set<Path> fFound = new HashSet<>();
-    private int             deep   = 0;
+    private final Set<Path> fFound;
+    private final boolean   skipFoldersWithNomedia;
+
+    private int             deep = 0;
+
+    public AllFilesRecursive() {
+      fFound = new HashSet<>();
+      skipFoldersWithNomedia = MovieModuleManager.getInstance().getSettings().isSkipFoldersWithNomedia();
+    }
 
     public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
       if (cancel) {
@@ -1912,7 +1919,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       try {
         // getFilename returns null on DS root!
-        if (dir.getFileName() != null && (isInSkipFolder(dir) || containsSkipFile(dir))) {
+        if (dir.getFileName() != null && (isInSkipFolder(dir) || containsSkipFile(dir, skipFoldersWithNomedia))) {
           LOGGER.debug("Skipping dir: {}", dir);
           return SKIP_SUBTREE;
         }
@@ -1970,12 +1977,18 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
   private class SearchAndParseVisitor extends AbstractFileVisitor {
     private final Path         datasource;
-    private final List<String> unstackedRoot = new ArrayList<>(); // only for folderstacking
-    private final Set<Path>    videofolders  = new HashSet<>();   // all found video folders
-    private final Set<Path>    visited       = new HashSet<>();
+    private final List<String> unstackedRoot;         // only for folderstacking
+    private final Set<Path>    videofolders;          // all found video folders
+    private final Set<Path>    visited;
+    private final boolean      skipFoldersWithNomedia;
 
     SearchAndParseVisitor(Path datasource) {
       this.datasource = datasource;
+
+      unstackedRoot = new ArrayList<>();
+      videofolders = new HashSet<>();
+      visited = new HashSet<>();
+      skipFoldersWithNomedia = MovieModuleManager.getInstance().getSettings().isSkipFoldersWithNomedia();
     }
 
     @Override
@@ -2040,7 +2053,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       visited.add(dir);
 
       try {
-        if (dir.getFileName() != null && (isInSkipFolder(dir) || containsSkipFile(dir) || parent.matches(DISC_FOLDER_REGEX))) {
+        if (dir.getFileName() != null
+            && (isInSkipFolder(dir) || containsSkipFile(dir, skipFoldersWithNomedia) || parent.matches(DISC_FOLDER_REGEX))) {
           LOGGER.debug("Skipping dir: {}", dir);
           return SKIP_SUBTREE;
         }
