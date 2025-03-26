@@ -33,28 +33,28 @@
   },
   {
     "name" : "yt-dlp",
-    "version": "2025.03.25",
+    "version": "2025.03.26",
     "filename" : "yt-dlp",
     "urls": [
       {
         "arch" : "windows-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.25/yt-dlp.exe"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.26/yt-dlp.exe"
       },
       {
         "arch" : "macos-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.25/yt-dlp_macos"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.26/yt-dlp_macos"
       },
       {
         "arch" : "macos-arm64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.25/yt-dlp_macos"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.26/yt-dlp_macos"
       },
       {
         "arch" : "linux-amd64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.25/yt-dlp_linux"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.26/yt-dlp_linux"
       },
       {
         "arch" : "linux-arm64",
-        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.25/yt-dlp_linux_aarch64"
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2025.03.26/yt-dlp_linux_aarch64"
       }
     ]
   }
