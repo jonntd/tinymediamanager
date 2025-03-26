@@ -130,6 +130,7 @@ public class TvShowEpisodeMediaInformationPanel extends MediaInformationPanel {
     lblFrameRate.setText(String.format("%.2f fps", mediaFile.getFrameRate()));
     lblOriginalFilename.setText(tvShowEpisode.getOriginalFilename());
     lblHdrFormat.setText(mediaFile.getHdrFormat());
+    lblCrc32.setText(mediaFile.getCRC32());
   }
 
   @Override

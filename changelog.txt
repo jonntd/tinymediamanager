@@ -9,6 +9,7 @@ x [TV shows] do not get episode images from all scrapers
 x [UI] fix AniDB clickable episode links #2889
 x [UI] store window locations for the new message dialog
 x [UI] Better express, what the username of OpenSubtitles should be (and what not)
+x [UI] show generated CRC32 in GUI #913
 x [MediaInfo] better parse all known 3D variants #2896
 
 

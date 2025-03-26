@@ -137,6 +137,7 @@ public class MovieMediaInformationPanel extends MediaInformationPanel {
     lblFrameRate.setText(String.format("%.2f fps", mediaFile.getFrameRate()));
     lblOriginalFilename.setText(movie.getOriginalFilename());
     lblHdrFormat.setText(mediaFile.getHdrFormat());
+    lblCrc32.setText(movie.getCRC32());
   }
 
   @Override
