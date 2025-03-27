@@ -107,21 +107,23 @@ import com.floreysoft.jmte.token.Token;
  * @author Myron Boyle
  */
 public class TvShowRenamer {
-  private static final Logger              LOGGER         = LoggerFactory.getLogger(TvShowRenamer.class);
-  private static final Map<String, String> TOKEN_MAP      = createTokenMap();
+  private static final Logger              LOGGER              = LoggerFactory.getLogger(TvShowRenamer.class);
+  private static final Map<String, String> TOKEN_MAP           = createTokenMap();
 
-  private static final String[]            seasonNumbers  = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
+  private static final String[]            seasonNumbers       = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
       "episode.dvdSeason" };
-  private static final String[]            episodeNumbers = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2", "episode.episode",
+  private static final String[]            episodeNumbers      = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2", "episode.episode",
       "episode.dvdEpisode", "absoluteNr", "absoluteNr2", "episode.absoluteNumber" };
-  private static final String[]            episodeTitles  = { "title", "originalTitle", "titleSortable", "episode.title", "episode.originalTitle",
-      "episode.titleSortable" };
-  private static final String[]            episodeAired   = { "airedDate", "episode.firstAired" };
+  private static final String[]            episodeTitles       = { "title", "originalTitle", "titleSortable", "episode.title",
+      "episode.originalTitle", "episode.titleSortable" };
+  private static final String[]            episodeAired        = { "airedDate", "episode.firstAired" };
 
-  private static final Pattern             epDelimiter    = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}", Pattern.CASE_INSENSITIVE);
-  private static final Pattern             seDelimiter    = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}", Pattern.CASE_INSENSITIVE);
+  private static final Pattern             epDelimiter         = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern             seDelimiter         = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}", Pattern.CASE_INSENSITIVE);
 
-  private static final List<String>        DISC_FOLDERS   = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
+  private static final List<String>        DISC_FOLDERS        = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
+  private static final Pattern             MF_STACKING_PATTERN = Pattern.compile(".*?([\\s._-]\\d)$");
 
   private TvShowRenamer() {
     throw new IllegalAccessError();
@@ -581,9 +583,19 @@ public class TvShowRenamer {
 
     if (filenamings != null) {
       for (IFileNaming name : filenamings) {
-        String newFilename = name.getFilename(tvShow.getFoldername(), getMediaFileExtension(original));
+        String extension = getMediaFileExtension(original);
+        String newFilename = name.getFilename(tvShow.getFoldername(), extension);
 
         if (StringUtils.isNotBlank(newFilename)) {
+          // special case: file stacking (multiple trailers, posters, ...)
+          Matcher matcher = MF_STACKING_PATTERN.matcher(original.getBasename());
+          if (matcher.matches()) {
+            String stackingMarker = matcher.group(1);
+            if (StringUtils.isNotBlank(stackingMarker)) {
+              newFilename = FilenameUtils.getBaseName(newFilename) + stackingMarker + "." + extension;
+            }
+          }
+
           MediaFile newMediaFile = new MediaFile(original);
           newMediaFile.setFile(tvShow.getPathNIO().resolve(newFilename));
           neededMediaFiles.add(newMediaFile);

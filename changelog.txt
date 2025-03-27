@@ -7,6 +7,7 @@ Version 5.1.5
 x [Movies] do not overwrite extrafanarts when running downloading missing artwork
 x [Movies/TV shows] enhanced loading of changed artwork in the information panels #2750 #2836
 x [TV shows] do not get episode images from all scrapers
+x [TV shows] enabled handling of multiple trailers in the renamer #2287
 x [UI] fix AniDB clickable episode links #2889
 x [UI] store window locations for the new message dialog
 x [UI] Better express, what the username of OpenSubtitles should be (and what not)
