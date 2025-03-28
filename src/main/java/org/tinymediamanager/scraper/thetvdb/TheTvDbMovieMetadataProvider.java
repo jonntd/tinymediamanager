@@ -58,11 +58,11 @@ import org.tinymediamanager.scraper.thetvdb.entities.SearchType;
 import org.tinymediamanager.scraper.thetvdb.entities.Trailer;
 import org.tinymediamanager.scraper.thetvdb.entities.Translation;
 import org.tinymediamanager.scraper.thetvdb.entities.TranslationResponse;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.StrgUtils;
 
 import retrofit2.Response;
 
@@ -375,7 +375,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     Date firstReleaseDate = null;
     for (Release release : ListUtils.nullSafe(movie.releases)) {
       try {
-        Date date = StrgUtils.parseDate(release.date);
+        Date date = DateUtils.parseDate(release.date);
         if (firstReleaseDate == null || firstReleaseDate.after(date)) {
           firstReleaseDate = date;
         }

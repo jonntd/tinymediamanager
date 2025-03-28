@@ -31,19 +31,19 @@ public class StrgUtilsTest extends BasicTest {
 
   @Test
   public void parseDateTests() throws ParseException {
-    Assert.assertNotNull(StrgUtils.parseDate("11 Oct. 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("11 Okt. 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("11 Dic. 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("1 Okt. 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("01 Okt. 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("1. Oktober 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("11 Okt..... 2001"));
-    Assert.assertNotNull(StrgUtils.parseDate("2019-02-12"));
-    Assert.assertNotNull(StrgUtils.parseDate("12-02-2019"));
-    Assert.assertNotNull(StrgUtils.parseDate("2019-02-12 15:16"));
-    Assert.assertNotNull(StrgUtils.parseDate("2019-02-12 15:16:13"));
-    Assert.assertNotNull(StrgUtils.parseDate("2021-04-21T21:08:22.451Z"));
-    Assert.assertNotNull(StrgUtils.parseDate("2014-12-25T09:31:55Z"));
+    Assert.assertNotNull(DateUtils.parseDate("11 Oct. 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("11 Okt. 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("11 Dic. 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("1 Okt. 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("01 Okt. 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("1. Oktober 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("11 Okt..... 2001"));
+    Assert.assertNotNull(DateUtils.parseDate("2019-02-12"));
+    Assert.assertNotNull(DateUtils.parseDate("12-02-2019"));
+    Assert.assertNotNull(DateUtils.parseDate("2019-02-12 15:16"));
+    Assert.assertNotNull(DateUtils.parseDate("2019-02-12 15:16:13"));
+    Assert.assertNotNull(DateUtils.parseDate("2021-04-21T21:08:22.451Z"));
+    Assert.assertNotNull(DateUtils.parseDate("2014-12-25T09:31:55Z"));
   }
 
   @Test

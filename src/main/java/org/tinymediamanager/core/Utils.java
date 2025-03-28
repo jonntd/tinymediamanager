@@ -103,6 +103,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.scraper.http.Url;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.scraper.util.UrlUtil;
 
@@ -1909,7 +1910,7 @@ public class Utils {
         Matcher matcher = pattern.matcher(path.getFileName().toString());
         if (matcher.find()) {
           try {
-            Date date = StrgUtils.parseDate(matcher.group());
+            Date date = DateUtils.parseDate(matcher.group());
             if (dateBefore30Days.after(date)) {
               Utils.deleteFileSafely(path);
             }

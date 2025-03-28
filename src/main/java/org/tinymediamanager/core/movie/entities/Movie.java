@@ -118,6 +118,7 @@ import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
@@ -148,6 +149,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
   private boolean                               watched                    = false;
   @JsonProperty
   private int                                   playcount                  = 0;
+  @JsonProperty
+  private Date                                  lastWatched                = null;
   @JsonProperty
   private boolean                               isDisc                     = false;
   @JsonProperty
@@ -199,7 +202,6 @@ public class Movie extends MediaEntity implements IMediaInformation {
   private MovieSet                              movieSet;
   private String                                titleSortable              = "";
   private String                                originalTitleSortable      = "";
-  private Date                                  lastWatched                = null;
   private String                                localizedSpokenLanguages   = "";
 
   /**
@@ -245,6 +247,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     setCountry(StringUtils.isEmpty(country) || force ? other.country : country);
     setWatched(!watched || force ? other.watched : watched);
     setPlaycount(playcount == 0 || force ? other.playcount : playcount);
+    setLastWatched(lastWatched == null || force ? other.lastWatched : lastWatched);
     setRuntime(runtime == 0 || force ? other.runtime : runtime);
     setTop250(top250 == 0 || force ? other.top250 : top250);
     setReleaseDate(releaseDate == null || force ? other.releaseDate : releaseDate);
@@ -1986,7 +1989,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public void setReleaseDate(String dateAsString) {
     try {
-      setReleaseDate(StrgUtils.parseDate(dateAsString));
+      setReleaseDate(DateUtils.parseDate(dateAsString));
     }
     catch (ParseException ignored) {
       // ignored

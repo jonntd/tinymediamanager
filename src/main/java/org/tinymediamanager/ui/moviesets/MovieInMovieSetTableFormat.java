@@ -25,7 +25,7 @@ import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.renderer.DateTableCellRenderer;
@@ -62,7 +62,7 @@ public class MovieInMovieSetTableFormat extends TmmTableFormat<Movie> {
     col.setColumnResizeable(false);
     col.setCellRenderer(new DateTableCellRenderer());
     try {
-      Date date = StrgUtils.parseDate("2012-12-12");
+      Date date = DateUtils.parseDate("2012-12-12");
       col.setMinWidth(fontMetrics.stringWidth(TmmDateFormat.MEDIUM_DATE_FORMAT.format(date)) + getCellPadding());
     }
     catch (Exception ignored) {

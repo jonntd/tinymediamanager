@@ -70,6 +70,7 @@ import org.tinymediamanager.library.bluray.playlist.MPLSReader;
 import org.tinymediamanager.library.bluray.playlist.PlayItem;
 import org.tinymediamanager.library.dvd.DvdTitle;
 import org.tinymediamanager.library.dvd.IfoReader;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
@@ -2397,7 +2398,7 @@ public class MediaFileHelper {
     String dateAsString = getMediaInfoValue(miSnapshot, MediaInfo.StreamKind.General, 0, "Released_Date", "Recorded_Date", "Date");
     if (StringUtils.isNotBlank(dateAsString)) {
       try {
-        Date date = StrgUtils.parseDate(dateAsString);
+        Date date = DateUtils.parseDate(dateAsString);
         if (date != null) {
           Calendar calendar = Calendar.getInstance();
           calendar.setTime(date);

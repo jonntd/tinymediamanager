@@ -20,7 +20,7 @@ import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaProviderInfo;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
-import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.scraper.util.DateUtils;
 
 /**
  * 
@@ -124,7 +124,7 @@ class AniDbMetadataParser {
    */
   private static void fillDateMetadata(MediaMetadata md, Element startDate) {
     try {
-      Date date = StrgUtils.parseDate(startDate.text());
+      Date date = DateUtils.parseDate(startDate.text());
       if (date == null)
         return;
       md.setReleaseDate(date);
@@ -479,7 +479,7 @@ class AniDbMetadataParser {
 
       if ("airdate".equalsIgnoreCase(episodeInfo.tagName())) {
         try {
-          builder.airdate(StrgUtils.parseDate(episodeInfo.text()));
+          builder.airdate(DateUtils.parseDate(episodeInfo.text()));
         }
         catch (Exception ignored) {
           // ignored

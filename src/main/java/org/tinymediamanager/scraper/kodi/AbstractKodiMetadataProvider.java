@@ -46,7 +46,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IKodiMetadataProvider;
 import org.tinymediamanager.scraper.util.DOMUtils;
-import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -309,7 +309,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
     String aired = getInfoFromScraperFunctionOrBase("aired", details, subDetails);
     if (StringUtils.isNotBlank(aired)) {
       try {
-        md.setReleaseDate(StrgUtils.parseDate(aired));
+        md.setReleaseDate(DateUtils.parseDate(aired));
       }
       catch (ParseException ignored) {
       }
@@ -317,7 +317,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
     String premiered = getInfoFromScraperFunctionOrBase("premiered", details, subDetails);
     if (StringUtils.isNotBlank(premiered)) {
       try {
-        md.setReleaseDate(StrgUtils.parseDate(premiered));
+        md.setReleaseDate(DateUtils.parseDate(premiered));
       }
       catch (ParseException ignored) {
       }

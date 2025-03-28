@@ -67,7 +67,7 @@ import org.tinymediamanager.jsonrpc.io.ConnectionListener;
 import org.tinymediamanager.jsonrpc.io.JavaConnectionManager;
 import org.tinymediamanager.jsonrpc.io.JsonApiRequest;
 import org.tinymediamanager.jsonrpc.notification.AbstractEvent;
-import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.scraper.util.DateUtils;
 
 public class KodiRPC {
   private static final Logger         LOGGER            = LoggerFactory.getLogger(KodiRPC.class);
@@ -489,7 +489,7 @@ public class KodiRPC {
         if (call.getResult().playcount > 0) {
           movie.setWatched(true);
           try {
-            movie.setLastWatched(StrgUtils.parseDate(call.getResult().lastplayed));
+            movie.setLastWatched(DateUtils.parseDate(call.getResult().lastplayed));
           }
           catch (Exception e) {
             movie.setLastWatched(new Date());
@@ -523,7 +523,7 @@ public class KodiRPC {
         if (call.getResult().playcount > 0) {
           episode.setWatched(true);
           try {
-            episode.setLastWatched(StrgUtils.parseDate(call.getResult().lastplayed));
+            episode.setLastWatched(DateUtils.parseDate(call.getResult().lastplayed));
           }
           catch (Exception e) {
             episode.setLastWatched(new Date());

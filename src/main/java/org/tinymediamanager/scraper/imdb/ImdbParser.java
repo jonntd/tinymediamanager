@@ -90,12 +90,12 @@ import org.tinymediamanager.scraper.imdb.entities.ImdbTitleKeyword;
 import org.tinymediamanager.scraper.imdb.entities.ImdbTitleType;
 import org.tinymediamanager.scraper.imdb.entities.ImdbVideo;
 import org.tinymediamanager.scraper.interfaces.IMediaProvider;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.JsonUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.scraper.util.UrlUtil;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -1820,7 +1820,7 @@ public abstract class ImdbParser {
 
   protected Date parseDate(String dateAsSting) {
     try {
-      return StrgUtils.parseDate(dateAsSting);
+      return DateUtils.parseDate(dateAsSting);
     }
     catch (ParseException e) {
       getLogger().trace("could not parse date: {}", e.getMessage());

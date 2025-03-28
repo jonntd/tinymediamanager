@@ -47,10 +47,10 @@ import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
 import org.tinymediamanager.scraper.util.CacheMap;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.scraper.util.TvUtils;
 import org.tinymediamanager.scraper.util.UrlUtil;
 
@@ -374,7 +374,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
 
       md.setTitle(result.attr("Title"));
       try {
-        md.setReleaseDate(StrgUtils.parseDate(result.attr("released")));
+        md.setReleaseDate(DateUtils.parseDate(result.attr("released")));
       }
       catch (Exception ignored) {
         // just ignore

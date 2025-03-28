@@ -84,11 +84,11 @@ import org.tinymediamanager.scraper.thetvdb.entities.Trailer;
 import org.tinymediamanager.scraper.thetvdb.entities.Translation;
 import org.tinymediamanager.scraper.thetvdb.entities.TranslationResponse;
 import org.tinymediamanager.scraper.util.CacheMap;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.StrgUtils;
 
 import retrofit2.Response;
 
@@ -219,14 +219,14 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     }
 
     try {
-      md.setReleaseDate(StrgUtils.parseDate(show.firstAired));
+      md.setReleaseDate(DateUtils.parseDate(show.firstAired));
     }
     catch (ParseException e) {
       LOGGER.debug("could not parse date: {}", e.getMessage());
     }
 
     try {
-      Date date = StrgUtils.parseDate(show.firstAired);
+      Date date = DateUtils.parseDate(show.firstAired);
       Calendar calendar = Calendar.getInstance();
       calendar.setTime(date);
       int y = calendar.get(Calendar.YEAR);
@@ -556,7 +556,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     md.setRuntime(episode.runtime);
 
     try {
-      md.setReleaseDate(StrgUtils.parseDate(episode.aired));
+      md.setReleaseDate(DateUtils.parseDate(episode.aired));
     }
     catch (Exception e) {
       LOGGER.debug("could not parse date: {}", e.getMessage());
@@ -831,7 +831,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
             episode.setRuntime(ep.runtime);
 
             try {
-              episode.setReleaseDate(StrgUtils.parseDate(ep.aired));
+              episode.setReleaseDate(DateUtils.parseDate(ep.aired));
             }
             catch (Exception ignored) {
               LOGGER.trace("Could not parse date: {}", ep.aired);

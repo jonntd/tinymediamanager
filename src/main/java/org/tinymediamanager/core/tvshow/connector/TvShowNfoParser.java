@@ -51,9 +51,9 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.scraper.util.StrgUtils;
 
 /**
  * The class TvShowNfoParser is used to parse all types of NFO/XML files
@@ -1063,7 +1063,7 @@ public class TvShowNfoParser {
     if (element != null) {
       // parse a date object out of the string
       try {
-        Date date = StrgUtils.parseDate(element.ownText());
+        Date date = DateUtils.parseDate(element.ownText());
         if (date != null) {
           releaseDate = date;
         }
@@ -1078,7 +1078,7 @@ public class TvShowNfoParser {
       if (element != null) {
         // parse a date object out of the string
         try {
-          Date date = StrgUtils.parseDate(element.ownText());
+          Date date = DateUtils.parseDate(element.ownText());
           if (date != null) {
             releaseDate = date;
           }
@@ -1338,7 +1338,7 @@ public class TvShowNfoParser {
     if (element != null) {
       // parse a date object out of the string
       try {
-        Date date = StrgUtils.parseDate(element.ownText());
+        Date date = DateUtils.parseDate(element.ownText());
         if (date != null) {
           lastplayed = date;
         }
@@ -1375,7 +1375,7 @@ public class TvShowNfoParser {
     if (element != null) {
       // parse a date object out of the string
       try {
-        Date date = StrgUtils.parseDate(element.ownText());
+        Date date = DateUtils.parseDate(element.ownText());
         if (date != null) {
           dateadded = date;
         }

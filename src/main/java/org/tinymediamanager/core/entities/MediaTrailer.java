@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.TmmToStringStyle;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -135,7 +136,7 @@ public class MediaTrailer extends AbstractModelObject implements Comparable<Medi
    */
   public void setDate(String newValue) {
     try {
-      setDate(StrgUtils.parseDate(newValue));
+      setDate(DateUtils.parseDate(newValue));
     }
     catch (ParseException e) {
       LOGGER.trace("could not parse date: {}", e.getMessage());

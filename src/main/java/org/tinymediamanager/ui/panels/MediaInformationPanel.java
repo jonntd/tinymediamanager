@@ -31,8 +31,6 @@ import javax.swing.JSeparator;
 import javax.swing.JTable;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -57,15 +55,13 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public abstract class MediaInformationPanel extends JPanel {
-
-  private static final Logger               LOGGER = LoggerFactory.getLogger(MediaInformationPanel.class);
-
   protected EventList<MediaFile>            mediaFileEventList;
   protected EventList<AudioStreamContainer> audioStreamEventList;
   protected EventList<SubtitleContainer>    subtitleEventList;
 
   protected JLabel                          lblRuntime;
   protected JCheckBox                       chckbxWatched;
+  protected JLabel                          lblLastPlayed;
   protected JLabel                          lblVideoCodec;
   protected JLabel                          lblVideoResolution;
   protected JLabel                          lblVideoBitrate;
@@ -115,6 +111,9 @@ public abstract class MediaInformationPanel extends JPanel {
       chckbxWatched = new JCheckBox("");
       chckbxWatched.setEnabled(false);
       add(chckbxWatched, "cell 4 1 2 1");
+
+      lblLastPlayed = new JLabel();
+      add(lblLastPlayed, "cell 4 1 2 1");
     }
     {
       JLabel lblOriginalFilenameT = new TmmLabel(TmmResourceBundle.getString("metatag.originalfile"));

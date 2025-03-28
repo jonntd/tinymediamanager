@@ -41,6 +41,7 @@ import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
@@ -135,7 +136,7 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     col.setColumnResizeable(false);
     col.setDefaultHidden(true);
     try {
-      Date date = StrgUtils.parseDate("2012-12-12");
+      Date date = DateUtils.parseDate("2012-12-12");
       col.setMinWidth(fontMetrics.stringWidth(TmmDateFormat.MEDIUM_DATE_FORMAT.format(date)) + getCellPadding());
     }
     catch (Exception ignored) {
@@ -298,7 +299,7 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     col.setColumnResizeable(false);
     col.setDefaultHidden(true);
     try {
-      Date date = StrgUtils.parseDate("2012-12-12");
+      Date date = DateUtils.parseDate("2012-12-12");
       col.setMinWidth(fontMetrics.stringWidth(TmmDateFormat.MEDIUM_DATE_FORMAT.format(date)) + getCellPadding());
     }
     catch (Exception ignored) {
@@ -316,7 +317,7 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     col.setColumnResizeable(false);
     col.setDefaultHidden(true);
     try {
-      Date date = StrgUtils.parseDate("2012-12-12");
+      Date date = DateUtils.parseDate("2012-12-12");
       col.setMinWidth(fontMetrics.stringWidth(TmmDateFormat.MEDIUM_DATE_FORMAT.format(date)) + getCellPadding());
     }
     catch (Exception ignored) {
