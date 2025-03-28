@@ -99,6 +99,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
@@ -131,6 +132,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   @JsonProperty
   private int                                playcount             = 0;
   @JsonProperty
+  private Date                               lastWatched           = null;
+  @JsonProperty
   private UUID                               tvShowId              = null;
   @JsonProperty
   private MediaSource                        mediaSource           = MediaSource.UNKNOWN;
@@ -150,7 +153,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   private TvShow                             tvShow                = null;
   private String                             titleSortable         = "";
-  private Date                               lastWatched           = null;
   private boolean                            dummy                 = false;
   private MediaEpisodeNumber                 mainEpisodeNumber     = null;
 
@@ -268,6 +270,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     setFirstAired(firstAired == null || force ? other.firstAired : firstAired);
     setWatched(!watched || force ? other.watched : watched);
     setPlaycount(playcount == 0 || force ? other.playcount : playcount);
+    setLastWatched(lastWatched == null || force ? other.lastWatched : lastWatched);
     setMediaSource(mediaSource == MediaSource.UNKNOWN || force ? other.mediaSource : mediaSource);
     setEdition(edition == TvShowEpisodeEdition.NONE || force ? other.edition : edition);
     setRuntime(runtime == 0 || force ? other.runtime : runtime);
@@ -441,7 +444,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   public void setFirstAired(String aired) {
     try {
-      setFirstAired(StrgUtils.parseDate(aired));
+      setFirstAired(DateUtils.parseDate(aired));
     }
     catch (ParseException ignored) {
     }

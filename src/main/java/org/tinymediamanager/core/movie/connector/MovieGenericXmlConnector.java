@@ -60,6 +60,7 @@ import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieNfoNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.w3c.dom.Document;
@@ -159,6 +160,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         addPremiered();
         addWatched();
         addPlaycount();
+        addLastPlayed();
         addGenres();
         addStudios();
         addCredits();
@@ -785,6 +787,24 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
 
     playcount.setTextContent(Integer.toString(playCountFromNFO));
     root.appendChild(playcount);
+  }
+
+  /**
+   * add the last played date in <lastplayed>xxx</lastplayed> (yyyy-mm-dd) either from tmm itself or an existing NFO (the newer one wins)
+   */
+  protected void addLastPlayed() {
+    Element lastPlayed = document.createElement("lastplayed");
+
+    if (movie.isWatched()) {
+      Date lastPlayedFromNFO = parser != null ? parser.lastplayed : null;
+      Date lastPlayedFromMovie = movie.getLastWatched();
+
+      Date lastPlayedDate = DateUtils.getHigherDate(lastPlayedFromNFO, lastPlayedFromMovie);
+      if (lastPlayedDate != null) {
+        lastPlayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd").format(lastPlayedDate));
+        root.appendChild(lastPlayed);
+      }
+    }
   }
 
   /**

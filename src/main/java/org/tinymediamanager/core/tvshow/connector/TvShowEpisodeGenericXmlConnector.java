@@ -59,6 +59,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowEpisodeNfoNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -746,19 +747,17 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
    * add the <lastplayed>xxx</lastplayed> we do not have this in tmm, but we might get it from an existing nfo
    */
   private void addLastplayed(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
-    Element lastplayed = document.createElement("lastplayed");
+    Element lastPlayed = document.createElement("lastplayed");
 
     // IF we have a (temp) date, write it
     if (episode.isWatched()) {
-      if (episode.getLastWatched() != null) {
-        lastplayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(episode.getLastWatched()));
-        root.appendChild(lastplayed);
-      }
-      else {
-        if (parser != null && parser.lastplayed != null) {
-          lastplayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(parser.lastplayed));
-          root.appendChild(lastplayed);
-        }
+      Date lastPlayedFromNFO = parser != null ? parser.lastplayed : null;
+      Date lastPlayedFromMovie = episode.getLastWatched();
+
+      Date lastPlayedDate = DateUtils.getHigherDate(lastPlayedFromNFO, lastPlayedFromMovie);
+      if (lastPlayedDate != null) {
+        lastPlayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd").format(lastPlayedDate));
+        root.appendChild(lastPlayed);
       }
     }
   }
