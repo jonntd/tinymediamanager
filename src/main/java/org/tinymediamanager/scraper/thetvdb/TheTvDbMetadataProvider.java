@@ -22,6 +22,8 @@ import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.BACKGROUND;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.BANNER;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.CLEARART;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.CLEARLOGO;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.POSTER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_BANNER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_POSTER;
@@ -388,6 +390,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
     MediaArtwork ma = null;
 
     // set artwork type
+    // https://api4.thetvdb.com/v4/artwork/types
     switch (image.type) {
       case 1:
       case 16:
@@ -419,6 +422,16 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
       case 11:
       case 12:
         ma = new MediaArtwork(getProviderInfo().getId(), THUMB);
+        break;
+
+      case 22:
+      case 24:
+        ma = new MediaArtwork(getProviderInfo().getId(), CLEARART);
+        break;
+
+      case 23:
+      case 25:
+        ma = new MediaArtwork(getProviderInfo().getId(), CLEARLOGO);
         break;
 
       default:
