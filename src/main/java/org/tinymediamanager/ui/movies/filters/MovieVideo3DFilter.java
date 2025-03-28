@@ -65,7 +65,7 @@ public class MovieVideo3DFilter extends AbstractCheckComboBoxMovieUIFilter<Media
   @Override
   public boolean accept(Movie movie) {
     List<MediaInfo3D> selectedItems = checkComboBox.getSelectedItems();
-    MediaInfo3D ddd = MediaInfo3D.get3DFrom(movie.getVideo3DFormat());
+    MediaInfo3D ddd = MediaInfo3D.get3DFrom(movie.getVideo3DFormat2());
     return selectedItems.contains(ddd);
   }
 
