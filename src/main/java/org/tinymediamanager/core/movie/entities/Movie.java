@@ -2669,10 +2669,33 @@ public class Movie extends MediaEntity implements IMediaInformation {
     return filesize;
   }
 
+  /**
+   * gets the limited, old format
+   * 
+   * @return
+   */
   public String getVideo3DFormat() {
     MediaFile mediaFile = getMainVideoFile();
     if (StringUtils.isNotBlank(mediaFile.getVideo3DFormat())) {
-      return mediaFile.getVideo3DFormat();
+      return mediaFile.getVideo3DFormatOld(); // old format
+    }
+
+    if (isVideoIn3D()) { // no MI info, but flag set from user
+      return MediaFileHelper.VIDEO_3D;
+    }
+
+    return "";
+  }
+
+  /**
+   * gets the new MediaInfo values 1:1
+   * 
+   * @return
+   */
+  public String getVideo3DFormat2() {
+    MediaFile mediaFile = getMainVideoFile();
+    if (StringUtils.isNotBlank(mediaFile.getVideo3DFormat())) {
+      return mediaFile.getVideo3DFormat(); // new format
     }
 
     if (isVideoIn3D()) { // no MI info, but flag set from user

@@ -436,6 +436,7 @@ public class MovieJmteExplorerDialog extends TmmDialog {
     exampleEventList.add(new RenamerExample("${subtitleLanguagesAsString}"));
     exampleEventList.add(new RenamerExample("${mediaSource}"));
     exampleEventList.add(new RenamerExample("${3Dformat}"));
+    exampleEventList.add(new RenamerExample("${3Dformat2}"));
     exampleEventList.add(new RenamerExample("${hdr}"));
     exampleEventList.add(new RenamerExample("${hdrformat}"));
     exampleEventList.add(new RenamerExample("${filesize}"));

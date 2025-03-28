@@ -47,6 +47,7 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
 
@@ -1585,11 +1586,44 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
 
   /**
    * gets the 3D string from former mediainfo<br>
-   * can be 3D / 3D SBS / 3D TAB
+   * 
+   * see {@link MediaInfo3D}
    *
    */
   public String getVideo3DFormat() {
     return this.video3DFormat;
+  }
+
+  /**
+   * gets the 3D string from former mediainfo<br>
+   * This takes the NEW mediaInfo values and changes them back to<br>
+   * 3D / 3D SBS / 3D TAB / 3D MVC, as we had before.<br>
+   * mainly used for file renaming
+   *
+   */
+  public String getVideo3DFormatOld() {
+    String f = this.video3DFormat;
+    if ((f.contains("top") && f.contains("bottom")) || f.contains("TAB")) {
+      f = MediaFileHelper.VIDEO_3D_HTAB; // assume HalfTAB as default
+      if (this.videoHeight > this.videoWidth) {
+        f = MediaFileHelper.VIDEO_3D_TAB;// FullTAB eg 1920x2160
+      }
+      return f;
+    }
+    else if ((f.contains("left") && f.contains("right")) || f.contains("SBS")) {
+      f = MediaFileHelper.VIDEO_3D_HSBS; // assume HalfSBS as default
+      if (getAspectRatio() > 3) {
+        f = MediaFileHelper.VIDEO_3D_SBS;// FullSBS eg 3840x1080
+      }
+      return f;
+    }
+    else if (f.contains("block") || f.contains("MVC")) { // Both Eyes laced in one block
+      f = MediaFileHelper.VIDEO_3D_MVC;
+      return f;
+    }
+
+    // in old style, we ONLY had those 3 variants, so we're explicit excluding all others by returning empty String
+    return "";
   }
 
   /**
