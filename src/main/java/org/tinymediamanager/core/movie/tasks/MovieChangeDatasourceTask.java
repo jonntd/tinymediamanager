@@ -97,7 +97,7 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
       }
       else {
         // dest folder exists, we have to movie this as MMD (and set accordingly!)
-        if (Files.exists(destDir)) {
+        if (Files.exists(destDir) || destDir.equals(Paths.get(datasource))) {
           movie.setMultiMovieDir(true); // downgrade :(
           moveMovieFromMMD();
         }
