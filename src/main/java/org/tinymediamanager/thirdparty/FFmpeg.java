@@ -58,17 +58,37 @@ public class FFmpeg {
    *           being thrown if the thread has been interrupted
    */
   public static void createStill(Path videoFile, Path stillFile, int second, boolean useHdrFilter) throws IOException, InterruptedException {
-    executeCommand(createCommandforStill(videoFile, stillFile, second, useHdrFilter));
+    executeCommand(createCommandforStill(videoFile.toAbsolutePath().toString(), stillFile, second, useHdrFilter));
   }
 
-  private static List<String> createCommandforStill(Path videoFile, Path stillFile, int second, boolean useHdrFilter) throws IOException {
+  /**
+   * create a still of the given video URL to the given path. The still is being taken at the given second of the video file
+   * 
+   * @param url
+   *          the video URL to extract the still from
+   * @param stillFile
+   *          the destination file
+   * @param second
+   *          the second of the video file to get the still from
+   * @param useHdrFilter
+   *          should we create the still using the HDR filters
+   * @throws IOException
+   *           any {@link IOException} occurred
+   * @throws InterruptedException
+   *           being thrown if the thread has been interrupted
+   */
+  public static void createStill(String url, Path stillFile, int second, boolean useHdrFilter) throws IOException, InterruptedException {
+    executeCommand(createCommandforStill(url, stillFile, second, useHdrFilter));
+  }
+
+  private static List<String> createCommandforStill(String videoFile, Path stillFile, int second, boolean useHdrFilter) throws IOException {
     List<String> cmdList = new ArrayList<>();
     cmdList.add(getFfmpegExecutable());
     cmdList.add("-y");
     cmdList.add("-ss");
     cmdList.add(String.valueOf(second));
     cmdList.add("-i");
-    cmdList.add(videoFile.toAbsolutePath().toString());
+    cmdList.add(videoFile);
     cmdList.add("-vf");
 
     String filters = "scale=iw*sar:ih";
