@@ -43,6 +43,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SpinnerDateModel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -66,6 +67,8 @@ import org.tinymediamanager.core.tvshow.TvShowRenamer;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
@@ -534,6 +537,37 @@ public class TvShowBulkEditorDialog extends TmmDialog {
               episode.setWatched(false);
               episode.setPlaycount(0);
               episode.setLastWatched(null);
+            }
+          }
+          setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        });
+      }
+
+      {
+        JLabel lblSeason = new TmmLabel(TmmResourceBundle.getString("metatag.season"));
+        panelContent.add(lblSeason, "cell 0 2,alignx right");
+
+        JSpinner spSeason = new JSpinner();
+        spSeason.setModel(new SpinnerNumberModel(0, -1, 9999, 1));
+        panelContent.add(spSeason, "cell 1 2");
+
+        JButton btnSeason = new SquareIconButton(IconManager.APPLY_INV);
+        panelContent.add(btnSeason, "cell 2 2");
+        btnSeason.addActionListener(arg0 -> {
+          episodesChanged = true;
+          setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+          for (TvShowEpisode episode : tvShowEpisodesToEdit) {
+            Integer season = (Integer) spSeason.getValue();
+            MediaEpisodeGroup episodeGroup = episode.getTvShow().getEpisodeGroup();
+
+            if (episodeGroup != null) {
+              MediaEpisodeNumber existingEpisodeNumber = episode.getEpisodeNumber(episodeGroup);
+              if (existingEpisodeNumber != null) {
+                episode.setEpisode(new MediaEpisodeNumber(episodeGroup, season, existingEpisodeNumber.episode()));
+              }
+              else {
+                episode.setEpisode(new MediaEpisodeNumber(episodeGroup, season, -1));
+              }
             }
           }
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
