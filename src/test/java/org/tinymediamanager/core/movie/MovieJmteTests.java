@@ -146,7 +146,7 @@ public class MovieJmteTests extends BasicMovieTest {
       compare("${mediaSource.name}", "BLURAY");
       compare("${edition}", "Director's Cut");
       compare("${edition.name}", "DIRECTORS_CUT");
-      compare("${3Dformat}", "3D SBS");
+      compare("${3Dformat}", "3D HSBS");
 
       compare("${genres[0].name}", "Adventure");
       compare("${tags[0]}", "Disney");
@@ -284,7 +284,7 @@ public class MovieJmteTests extends BasicMovieTest {
     mf.setVideoWidth(1280);
     mf.setDuration(3600);
     mf.setOverallBitRate(3500);
-    mf.setVideo3DFormat(MediaFileHelper.VIDEO_3D_SBS);
+    mf.setVideo3DFormat(MediaFileHelper.VIDEO_3D_HSBS);
 
     ArrayList<MediaFileAudioStream> audl = new ArrayList<>();
     MediaFileAudioStream audio = new MediaFileAudioStream();
