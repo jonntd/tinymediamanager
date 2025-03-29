@@ -756,7 +756,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
 
       Date lastPlayedDate = DateUtils.getHigherDate(lastPlayedFromNFO, lastPlayedFromMovie);
       if (lastPlayedDate != null) {
-        lastPlayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd").format(lastPlayedDate));
+        lastPlayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(lastPlayedDate));
         root.appendChild(lastPlayed);
       }
     }
