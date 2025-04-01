@@ -76,7 +76,7 @@ public class TvShowEpisodeAndSeasonParser {
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][_.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4    = Pattern.compile(
-      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
 
   private static final Pattern ANIME_APPEND1     = Pattern.compile(
@@ -736,6 +736,10 @@ public class TvShowEpisodeAndSeasonParser {
           int ep = Integer.parseInt(m.group(2));
           result.episodes.add(ep);
           result.season = 1;
+
+          // _maybe_ a multi-episode, so there could be a group 3 (or an IOOB exception)
+          ep = Integer.parseInt(m.group(3));
+          result.episodes.add(ep);
         }
         catch (NumberFormatException nfe) {
         }

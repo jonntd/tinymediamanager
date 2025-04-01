@@ -122,6 +122,7 @@ public class TvShowTest extends BasicTvShowTest {
 
     // ************************************************************************
     // various real world examples
+    assertEqual("S:1 E:133 E:134", detectEpisode("InuYasha [tmdbid-35610]/S06E07-E08 [a-S] 133-134 [03A48078].mkv")); // Anime multi abs
     assertEqual("S:4 E:12", detectEpisode("Die Heiland – Wir sind Anwalt - Folge 37_ Kompromisslos (S04_E12) - 20241121 - 220000.mkv"));
     assertEqual("S:2024", detectEpisode("The.Daily.Show.2024.04.23.Stephanie.Kelton.1080p.HEVC.x265"));
     assertEqual("S:4 E:11", detectEpisode("TV French\\Unite 9\\Season 04\\S04E11 - Episode 84.mkv"));
@@ -212,11 +213,12 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:135", detectEpisode("[Taka]_Naruto_Shippuuden_135_[480p][9073B8C2]"));
     assertEqual("S:2 E:4", detectEpisode("Season 2/[Erai-raws] Shy 2nd Season - 04 [1080p][Multiple Subtitle][79770C75].mkv"));
     assertEqual("S:13 E:2", detectEpisode("Season 13/[Erai-raws] Yami Shibai 13 - 02 [1080p][Multiple Subtitle][D7E29CA3].mkv"));
+    assertEqual("S:1 E:1 E:2", detectEpisode("[Triad]_Dokuro-chan_-_01-02 [12345678].mkv")); // anime multi
+
     // APPEND (no hash!)
     assertEqual("S:2 E:14", detectEpisode("Saki/Season 2/[HorribleSubs] Saki Episode of Side A - 14 [720p]"));
     assertEqual("S:2 E:1", detectEpisode("[DeadFish] Toaru Kagaku no Railgun S - S2 - 01 [720p][AAC].mp4"));
     assertEqual("S:0 E:1", detectEpisode("[DeadFish] Jinrui wa Suitai Shimashita - Special 01 [BD][720p][AAC].mp4"));
-    // should be Season 1 as per Anime definition - unfortunately this clashes with our -1 approach
     assertEqual("S:1 E:1", detectEpisode("[a.f.k.] Lucky Star - 01.avi"));
     assertEqual("S:1 E:4", detectEpisode("Air Master - 04 [HQA&N!].avi"));
     assertEqual("S:1 E:1", detectEpisode("[ANE] Yosuga no Sora - Ep01v2 [BDRip 1080p x264 FLAC]"));

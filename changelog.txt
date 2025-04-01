@@ -17,6 +17,7 @@ x [UI] re-added changing seasons in the TV show bulk editor - but just for the m
 x [MediaInfo] better parse all known 3D variants #2896
 x [MediaInfo] upgraded to 25.03
 x [TVDB] also scrape clearart/clearlogo
+x [Anime] tweak some regex for multi-episode matching (u/mihawk90)
 
 
 Version 5.1.4
