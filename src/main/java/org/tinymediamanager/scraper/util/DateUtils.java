@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.annotation.Nonnull;
-
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -191,19 +189,55 @@ public class DateUtils {
     return date;
   }
 
-  public LocalDate toDate(@Nonnull Date date) {
+  /**
+   * Converts {@link Date} to {@link LocalDate} with default zone
+   * 
+   * @param date
+   * @return LocalDate or NULL
+   */
+  public static LocalDate toDate(Date date) {
+    if (date == null) {
+      return null;
+    }
     return LocalDate.ofInstant(date.toInstant(), ZoneId.systemDefault());
   }
 
-  public LocalDateTime toDateTime(@Nonnull Date date) {
+  /**
+   * Converts {@link Date} to {@link LocalDateTime} with default zone
+   * 
+   * @param date
+   * @return LocalDateTime or NULL
+   */
+  public static LocalDateTime toDateTime(Date date) {
+    if (date == null) {
+      return null;
+    }
     return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
   }
 
-  public Date from(@Nonnull LocalDate localDate) {
+  /**
+   * Converts {@link LocalDate} to {@link Date} with default zone
+   * 
+   * @param localDate
+   * @return Date or NULL
+   */
+  public static Date from(LocalDate localDate) {
+    if (localDate == null) {
+      return null;
+    }
     return Date.from(localDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
   }
 
-  public Date from(@Nonnull LocalDateTime dateTime) {
+  /**
+   * Converts {@link LocalDateTime} to {@link Date} with default zone
+   * 
+   * @param dateTime
+   * @return Date or NULL
+   */
+  public static Date from(LocalDateTime dateTime) {
+    if (dateTime == null) {
+      return null;
+    }
     return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
   }
 }
