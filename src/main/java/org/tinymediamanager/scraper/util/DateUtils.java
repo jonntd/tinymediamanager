@@ -18,10 +18,15 @@ package org.tinymediamanager.scraper.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+
+import javax.annotation.Nonnull;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -184,5 +189,21 @@ public class DateUtils {
     }
 
     return date;
+  }
+
+  public LocalDate toDate(@Nonnull Date date) {
+    return LocalDate.ofInstant(date.toInstant(), ZoneId.systemDefault());
+  }
+
+  public LocalDateTime toDateTime(@Nonnull Date date) {
+    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+  }
+
+  public Date from(@Nonnull LocalDate localDate) {
+    return Date.from(localDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant());
+  }
+
+  public Date from(@Nonnull LocalDateTime dateTime) {
+    return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
   }
 }
