@@ -292,7 +292,6 @@ class TraktTvMovie {
 
           if (dirty) {
             tmmMovie.writeNFO();
-            tmmMovie.setLastWatched(null); // write date to NFO, but do not save it!
             tmmMovie.saveToDb();
           }
         }

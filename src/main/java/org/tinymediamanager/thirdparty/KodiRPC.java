@@ -502,7 +502,6 @@ public class KodiRPC {
         }
 
         movie.writeNFO();
-        movie.setLastWatched(null); // write date to NFO, but do not save it, not even in session!
         movie.saveToDb();
       }
     }
@@ -536,7 +535,6 @@ public class KodiRPC {
         }
 
         episode.writeNFO();
-        episode.setLastWatched(null); // write date to NFO, but do not save it, not even in session!
         episode.saveToDb();
       }
     }

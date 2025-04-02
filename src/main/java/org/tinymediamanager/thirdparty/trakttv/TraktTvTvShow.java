@@ -285,7 +285,6 @@ class TraktTvTvShow {
 
                 if (epDirty) {
                   tmmEp.writeNFO();
-                  tmmEp.setLastWatched(null); // write date to NFO, but do not save it!
                   tmmEp.saveToDb();
                 }
               }
