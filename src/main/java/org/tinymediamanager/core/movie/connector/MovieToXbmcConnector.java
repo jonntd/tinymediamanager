@@ -17,7 +17,6 @@
 package org.tinymediamanager.core.movie.connector;
 
 import java.net.URLEncoder;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,7 +49,6 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   protected void addOwnTags() {
     addEpbookmark();
     addTop250();
-    addLastplayed();
     addStatusAndCode();
   }
 
@@ -116,28 +114,6 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
     Element set = getSingleElementByTag("set");
     if (set != null) {
       root.insertBefore(top250, set);
-    }
-  }
-
-  /**
-   * add the <lastplayed>xxx</lastplayed> just before the <genre>xxx</genre>
-   */
-  private void addLastplayed() {
-    Element lastplayed = document.createElement("lastplayed");
-    Element genre = getSingleElementByTag("genre");
-
-    // IF we have a (temp) date, write it
-    if (movie.isWatched()) {
-      if (movie.getLastWatched() != null) {
-        lastplayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(movie.getLastWatched()));
-        root.insertBefore(lastplayed, genre);
-      }
-      else {
-        if (parser != null && parser.lastplayed != null) {
-          lastplayed.setTextContent(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(parser.lastplayed));
-          root.insertBefore(lastplayed, genre);
-        }
-      }
     }
   }
 
