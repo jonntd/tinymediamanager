@@ -195,7 +195,7 @@ public class DateUtils {
    * @param date
    * @return LocalDate or NULL
    */
-  public static LocalDate toDate(Date date) {
+  public static LocalDate toLocalD(Date date) {
     if (date == null) {
       return null;
     }
@@ -208,7 +208,7 @@ public class DateUtils {
    * @param date
    * @return LocalDateTime or NULL
    */
-  public static LocalDateTime toDateTime(Date date) {
+  public static LocalDateTime toLocalDT(Date date) {
     if (date == null) {
       return null;
     }
@@ -221,7 +221,7 @@ public class DateUtils {
    * @param localDate
    * @return Date or NULL
    */
-  public static Date from(LocalDate localDate) {
+  public static Date toDate(LocalDate localDate) {
     if (localDate == null) {
       return null;
     }
@@ -234,7 +234,7 @@ public class DateUtils {
    * @param dateTime
    * @return Date or NULL
    */
-  public static Date from(LocalDateTime dateTime) {
+  public static Date toDate(LocalDateTime dateTime) {
     if (dateTime == null) {
       return null;
     }

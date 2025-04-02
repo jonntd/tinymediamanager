@@ -18,7 +18,6 @@ package org.tinymediamanager.ui.tvshows.dialogs;
 
 import java.awt.BorderLayout;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -38,6 +37,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.table.TmmTable;
@@ -130,7 +130,7 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
           if (!(episodeContainer.tvShowEpisode.getSeason() > 0 && episodeContainer.tvShowEpisode.getEpisode() > 0)
               && episodeContainer.tvShowEpisode.getFirstAired() != null && md.getReleaseDate() != null) {
             LocalDate epdate = episodeContainer.getFirstAired();
-            LocalDate mddate = LocalDate.ofInstant(md.getReleaseDate().toInstant(), ZoneId.systemDefault());
+            LocalDate mddate = DateUtils.toLocalD(md.getReleaseDate());
             if (epdate.equals(mddate)) {
               episodeContainer.setTitle(md.getTitle());
               break;
@@ -172,7 +172,7 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
     }
 
     public LocalDate getFirstAired() {
-      return tvShowEpisode.getFirstAired() == null ? null : LocalDate.ofInstant(tvShowEpisode.getFirstAired().toInstant(), ZoneId.systemDefault());
+      return tvShowEpisode.getFirstAired() == null ? null : DateUtils.toLocalD(tvShowEpisode.getFirstAired());
     }
 
     public String getTitle() {

@@ -17,8 +17,6 @@ package org.tinymediamanager.scraper.kodi;
 
 import java.io.ByteArrayInputStream;
 import java.text.ParseException;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -324,8 +322,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
     }
     if (md.getYear() == 0 && md.getReleaseDate() != null) {
       // fallback - if we have no year set (like UniversalScraper)
-      LocalDate localDate = md.getReleaseDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-      md.setYear(localDate.getYear());
+      md.setYear(DateUtils.toLocalD(md.getReleaseDate()).getYear());
     }
 
     String tagline = getInfoFromScraperFunctionOrBase("tagline", details, subDetails);

@@ -20,7 +20,6 @@ import static org.tinymediamanager.scraper.entities.MediaEpisodeGroup.EpisodeGro
 
 import java.text.ParseException;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -449,7 +448,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
 
     LocalDate releaseDate = null;
     if (options.getMetadata() != null && options.getMetadata().getReleaseDate() != null) {
-      releaseDate = LocalDate.ofInstant(options.getMetadata().getReleaseDate().toInstant(), ZoneId.systemDefault());
+      releaseDate = DateUtils.toLocalD(options.getMetadata().getReleaseDate());
     }
     if (releaseDate == null && (seasonNr == -1 || episodeNr == -1) && episodeTvdbId == 0) {
       LOGGER.warn("no aired date/season number/episode number found");
@@ -491,7 +490,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       // we did not find the episode via season/episode number - search via release date
       for (MediaMetadata episode : episodes) {
         if (episode.getReleaseDate() != null) {
-          LocalDate epdate = LocalDate.ofInstant(episode.getReleaseDate().toInstant(), ZoneId.systemDefault());
+          LocalDate epdate = DateUtils.toLocalD(episode.getReleaseDate());
           if (epdate.equals(releaseDate)) {
             foundEpisode = episode;
             break;
