@@ -105,7 +105,8 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
 
       MediaMetadata md = new MediaMetadata(mediaScraper.getMediaProvider().getProviderInfo().getId());
       md.setScrapeOptions(options);
-      md.setReleaseDate(episode.getFirstAired());
+      md.setReleaseDate(episode.getFirstAired()); // airedDate matching
+      md.setTitle(episode.getTitle()); // for title matching
       options.setMetadata(md);
       options.setIds(episode.getIds());
       options.setEpisodeGroup(episode.getEpisodeGroup());

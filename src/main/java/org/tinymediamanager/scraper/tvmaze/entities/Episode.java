@@ -23,6 +23,11 @@ public class Episode extends BaseJsonEntity {
   public String    name;
   public int       season;
   public int       number;
+  /**
+   * regular, insignificant_special, significant_special<br>
+   * 
+   * @see <a href="https://www.tvmaze.com/blogs/53/introducing-support-for-significant-episode-specials">Specials</a>
+   */
   public String    type;
   public String    airdate;
   public String    airtime;

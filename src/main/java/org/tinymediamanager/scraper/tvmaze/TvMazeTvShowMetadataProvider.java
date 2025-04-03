@@ -5,6 +5,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -330,6 +331,12 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // lazy initialization of the api
     initAPI();
 
+    int episodeId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
+    Date aired = null;
+    if (options.getMetadata() != null && options.getMetadata().getReleaseDate() != null) {
+      aired = options.getMetadata().getReleaseDate();
+    }
+
     MediaEpisodeGroup episodeGroup = options.getEpisodeGroup();
     // get episode number and season number
     int seasonNr = -1;
@@ -349,20 +356,53 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       seasonNr = options.getIdAsIntOrDefault(MediaMetadata.SEASON_NR, -1);
       episodeNr = options.getIdAsIntOrDefault(MediaMetadata.EPISODE_NR, -1);
     }
-    if (seasonNr == -1 && episodeNr == -1) {
-      LOGGER.warn("cannot scrape -1/-1 episode");
+    if (seasonNr == -1 && episodeNr == -1 && episodeId == 0 && aired == null) {
+      LOGGER.warn("cannot scrape episode; no valid id/date/numbers found!");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
     List<MediaMetadata> eps = getEpisodeList(options.createTvShowSearchAndScrapeOptions());
-    for (MediaMetadata ep : eps) {
-      MediaEpisodeNumber num = ep.getEpisodeNumber(episodeGroup);
-      if (num.episode() == episodeNr && num.season() == seasonNr) {
-        // found it :)
-        return ep;
+    // match here in 4 distinct loops, to not accidentally match by S/EE when we have the correct id/date later on
+    if (!eps.isEmpty()) {
+      if (episodeId > 0) {
+        for (MediaMetadata ep : eps) {
+          if (ep.getIdAsIntOrDefault(MediaMetadata.TVMAZE, -1) == episodeId) {
+            LOGGER.trace("found match via ID");
+            return ep;
+          }
+        }
       }
+      if (aired != null) {
+        for (MediaMetadata ep : eps) {
+          if (aired.equals(ep.getReleaseDate())) {
+            LOGGER.trace("found match via releaseDate");
+            return ep;
+          }
+        }
+      }
+      if (options.getMetadata() != null && options.getMetadata().getTitle().length() > 15) { // 15 because of not having something like "Episode 123"
+        for (MediaMetadata ep : eps) {
+          if (options.getMetadata().getTitle().equals(ep.getTitle())) {
+            LOGGER.trace("found match via title");
+            return ep;
+          }
+        }
+      }
+      for (MediaMetadata ep : eps) {
+        MediaEpisodeNumber num = ep.getEpisodeNumber(episodeGroup);
+        if (num.episode() == episodeNr && num.season() == seasonNr) {
+          LOGGER.trace("found match via S/EE numbers");
+          return ep;
+        }
+      }
+      LOGGER.trace("could not match anything from episodeList.");
+    }
+    else {
+      // scrape direct?!
+      LOGGER.trace("getEpisodeList() returned nothing...?");
     }
 
+    // not found? Maybe we couldn't scrape episodeList (b/c of missing showId) - get direct
     throw new NothingFoundException();
   }
 
@@ -491,6 +531,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
 
   @Override
   public List<MediaMetadata> getEpisodeList(TvShowSearchAndScrapeOptions options) throws ScrapeException {
+    LOGGER.debug("getEpisodeList: {}", options);
     initAPI();
 
     // do we have an id from the options?
@@ -501,8 +542,9 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     }
 
     List<Episode> episodeList = new ArrayList<>();
-    // Get all Episode and Season Information for the given TvShow
-    // does get all episodes with ONE call, but cannot mixin guest cast
+    // Get all Episode (+Specials!) and Season Information for the given TvShow
+    // does get all episodes with ONE call, but cannot mixin guest cast :/
+    //
     // try {
     // episodeList.addAll(controller.getEpisodes(showId));
     // }
@@ -511,7 +553,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // }
 
     // proven approach
-    // create same list, but for each season
+    // create same list, but for each season (with cast et all)
     try {
       MediaMetadata show = getMetadata(options);
       // seasonNumber / seasonId
@@ -536,7 +578,18 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       if (StringUtils.isNotBlank(episode.summary)) {
         md.setPlot(Jsoup.parse(episode.summary).text());
       }
-      md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, episode.season, episode.number);
+
+      // specials go into S0, but have a correct display season number
+      if (episode.type.equals("regular")) {
+        md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, episode.season, episode.number);
+        // md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_DISPLAY, episode.season, episode.number); // no need? but if specials have it, we cannot
+        // switch?
+      }
+      else {
+        md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 0, episode.number);
+        md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_DISPLAY, episode.season, episode.number);
+      }
+
       md.setRuntime(episode.runtime);
       try {
         md.setReleaseDate(premieredFormat.parse(episode.airdate));
