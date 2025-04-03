@@ -70,6 +70,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BindingGroup;
 import org.jdesktop.observablecollections.ObservableCollections;
@@ -1159,6 +1160,10 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           JComponent.WHEN_IN_FOCUSED_WINDOW);
       getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK),
           JComponent.WHEN_IN_FOCUSED_WINDOW);
+      if (SystemUtils.IS_OS_MAC) {
+        getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.META_DOWN_MASK),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+      }
       addButton(okButton);
     }
 

@@ -14,6 +14,7 @@ x [UI] store window locations for the new message dialog
 x [UI] Better express, what the username of OpenSubtitles should be (and what not)
 x [UI] show generated CRC32 in GUI #913
 x [UI] re-added changing seasons in the TV show bulk editor - but just for the main episode group of the TV show itself #2856
+x [UI] added META + ENTER as an alternative on macOS to close editor dialogs
 x [MediaInfo] better parse all known 3D variants #2896
 x [MediaInfo] upgraded to 25.03
 x [TVDB] also scrape clearart/clearlogo

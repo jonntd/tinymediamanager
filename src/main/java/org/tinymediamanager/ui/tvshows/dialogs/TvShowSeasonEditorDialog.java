@@ -50,6 +50,7 @@ import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
@@ -392,6 +393,10 @@ public class TvShowSeasonEditorDialog extends AbstractEditorDialog {
           JComponent.WHEN_IN_FOCUSED_WINDOW);
       getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK),
           JComponent.WHEN_IN_FOCUSED_WINDOW);
+      if (SystemUtils.IS_OS_MAC) {
+        getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.META_DOWN_MASK),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+      }
       addDefaultButton(okButton);
     }
   }
