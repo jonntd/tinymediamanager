@@ -373,11 +373,24 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
         }
       }
       if (aired != null) {
+        MediaMetadata found = null;
         for (MediaMetadata ep : eps) {
           if (aired.equals(ep.getReleaseDate())) {
-            LOGGER.trace("found match via releaseDate");
-            return ep;
+            if (found == null) {
+              found = ep;
+            }
+            else {
+              // uh-oh. We found a match by date, but already have another with SAME date!
+              // step out, as we cannot identify 100% the right one
+              found = null; // to not take the former
+              LOGGER.trace("found duplicates by releaseDate - no matching");
+              break;
+            }
           }
+        }
+        if (found != null) {
+          LOGGER.trace("found match via releaseDate");
+          return found;
         }
       }
       if (options.getMetadata() != null && options.getMetadata().getTitle().length() > 15) { // 15 because of not having something like "Episode 123"
