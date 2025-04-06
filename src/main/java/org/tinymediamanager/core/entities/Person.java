@@ -178,7 +178,7 @@ public class Person extends AbstractModelObject implements IPrintable {
 
     // remove ID, if empty/0/null
     // if we only skipped it, the existing entry will stay although someone changed it to empty.
-    String v = String.valueOf(value);
+    String v = StringUtils.strip(String.valueOf(value));
     if ("".equals(v) || "0".equals(v) || "null".equals(v)) {
       ids.remove(key);
     }

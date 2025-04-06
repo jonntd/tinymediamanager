@@ -93,7 +93,7 @@ public class IdEditorPanel extends AbstractModalInputPanel {
     }
 
     idToEdit.key = (String) cbProviderId.getSelectedItem();
-    idToEdit.value = tfId.getText();
+    idToEdit.value = StringUtils.strip(tfId.getText());
     setVisible(false);
   }
 
