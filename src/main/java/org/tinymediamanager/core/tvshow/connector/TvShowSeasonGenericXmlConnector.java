@@ -244,12 +244,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    */
   protected void addSortTitle() {
     Element sorttitle = document.createElement("sorttitle");
-    if (StringUtils.isNotBlank(tvShowSeason.getTitle())) {
-      sorttitle.setTextContent(tvShowSeason.getTitle());
-    }
-    else {
-      sorttitle.setTextContent(String.format("%s %02d", TmmResourceBundle.getString("metatag.season"), tvShowSeason.getSeason()));
-    }
+    sorttitle.setTextContent(String.format("%s %02d", TmmResourceBundle.getString("metatag.season"), tvShowSeason.getSeason()));
     root.appendChild(sorttitle);
   }
 

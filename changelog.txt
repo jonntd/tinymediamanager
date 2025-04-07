@@ -9,6 +9,7 @@ x [Movies/TV shows] enhanced loading of changed artwork in the information panel
 x [Movies/TV shows] store lastplayed date from NFO/Trakt.tv in the database and use it at NFO writing #2873
 x [TV shows] do not get episode images from all scrapers
 x [TV shows] enabled handling of multiple trailers in the renamer #2287
+x [TV shows] do not write the season title into <sorttitle> of the NFO #2911
 x [UI] fix AniDB clickable episode links #2889
 x [UI] store window locations for the new message dialog
 x [UI] Better express, what the username of OpenSubtitles should be (and what not)
