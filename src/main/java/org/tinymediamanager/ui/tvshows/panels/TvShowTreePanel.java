@@ -585,6 +585,9 @@ public class TvShowTreePanel extends TmmListPanel {
             i++; // just increase counter, no expansion of seasons
           }
         }
+        else {
+          i++; // just in case; not that it can happen...?
+        }
       } while (i < tree.getRowCount());
     }
   }
