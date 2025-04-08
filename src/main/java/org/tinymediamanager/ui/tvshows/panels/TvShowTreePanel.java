@@ -128,9 +128,8 @@ public class TvShowTreePanel extends TmmListPanel {
     });
     TvShowModuleManager.getInstance().getSettings().addPropertyChangeListener(e -> {
       switch (e.getPropertyName()) {
-        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork",
-            "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" ->
-          tree.invalidate();
+        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork", "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" -> tree
+            .invalidate();
       }
     });
   }
@@ -532,6 +531,7 @@ public class TvShowTreePanel extends TmmListPanel {
     // add the tree menu entries on the bottom
     popupMenu.addSeparator();
     popupMenu.add(new ExpandAllAction());
+    popupMenu.add(new ExpandShowsOnlyAction());
     popupMenu.add(new CollapseAllAction());
 
     tree.addMouseListener(new TablePopupListener(popupMenu, tree));
@@ -566,4 +566,27 @@ public class TvShowTreePanel extends TmmListPanel {
       } while (i < tree.getRowCount());
     }
   }
+
+  public class ExpandShowsOnlyAction extends AbstractAction {
+    public ExpandShowsOnlyAction() {
+      putValue(NAME, TmmResourceBundle.getString("tree.expandshows"));
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      int i = 0;
+      do {
+        DefaultMutableTreeNode node = tree.getTreeNode(i);
+        if (node != null) {
+          if (node.getUserObject() instanceof TvShow) {
+            tree.expandRow(i++);
+          }
+          else {
+            i++; // just increase counter, no expansion of seasons
+          }
+        }
+      } while (i < tree.getRowCount());
+    }
+  }
+
 }
