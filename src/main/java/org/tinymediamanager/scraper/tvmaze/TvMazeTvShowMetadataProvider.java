@@ -77,7 +77,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // do we have an id from the options?
     int tvMazeId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
     if (tvMazeId == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.warn("no show id available");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
@@ -550,7 +550,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // do we have an id from the options?
     int showId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
     if (showId == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.warn("no show id available");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
