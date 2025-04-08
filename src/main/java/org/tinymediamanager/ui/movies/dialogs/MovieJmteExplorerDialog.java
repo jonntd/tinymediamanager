@@ -409,6 +409,7 @@ public class MovieJmteExplorerDialog extends TmmDialog {
     exampleEventList.add(new RenamerExample("${genres[0].name}"));
     exampleEventList.add(new RenamerExample("${genresAsString}"));
     exampleEventList.add(new RenamerExample("${tags[0]}"));
+    exampleEventList.add(new RenamerExample("${tagsAsString}"));
     exampleEventList.add(new RenamerExample("${productionCompany}"));
     exampleEventList.add(new RenamerExample("${productionCompanyAsArray[0]}"));
     exampleEventList.add(new RenamerExample("${language}"));

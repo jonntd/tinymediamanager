@@ -155,6 +155,9 @@ public class MovieJmteTests extends BasicMovieTest {
       compare("${directors[0].name}", "Ron Clements");
       compare("${writers[0].name}", "Ted Elliott");
 
+      compare("${tags}", "[Disney, Oriental]");
+      compare("${tagsAsString}", "Disney, Oriental");
+
       // test raw movie access
       compare("${movie.top250}", "199");
       compare("${movie.videoFiles[0].overallBitRate}", "3500");
