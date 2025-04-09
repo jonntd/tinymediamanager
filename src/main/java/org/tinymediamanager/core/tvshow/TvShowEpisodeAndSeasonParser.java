@@ -178,6 +178,14 @@ public class TvShowEpisodeAndSeasonParser {
     result = parseAnimeExclusive(result, nameNoExt);
     if (!result.episodes.isEmpty()) {
       LOGGER.debug("parsed as Anime '{}'", name);
+      // ALWAYS parse date if we have none (but do not use year as season in this case)
+      if (result.date == null) {
+        EpisodeMatchingResult add = new EpisodeMatchingResult();
+        parseDatePattern(add, name);
+        if (add.date != null) {
+          result.date = add.date;
+        }
+      }
       return result;
     }
 
@@ -203,6 +211,15 @@ public class TvShowEpisodeAndSeasonParser {
     else if (result.episodes.isEmpty() && result.date == null) {
       // nothing found - check whole string as such
       result = detect(name, showname);
+    }
+
+    // ALWAYS parse date if we have none (but do not use year as season in this case)
+    if (result.date == null) {
+      EpisodeMatchingResult add = new EpisodeMatchingResult();
+      parseDatePattern(add, name);
+      if (add.date != null) {
+        result.date = add.date;
+      }
     }
 
     // we have found some valid episodes, but w/o season -> upgrade them for season 1
