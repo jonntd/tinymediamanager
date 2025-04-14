@@ -17,14 +17,12 @@ package org.tinymediamanager.core.tvshow;
 
 import static org.tinymediamanager.core.Constants.ADDED_TV_SHOW;
 import static org.tinymediamanager.core.Constants.EPISODE_COUNT;
-import static org.tinymediamanager.core.Constants.MEDIA_FILES;
-import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
 import static org.tinymediamanager.core.Constants.REMOVED_TV_SHOW;
 import static org.tinymediamanager.core.Constants.TAGS;
 import static org.tinymediamanager.core.Constants.TV_SHOWS;
 import static org.tinymediamanager.core.Constants.TV_SHOW_COUNT;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_TV_SHOWS;
 
-import java.beans.PropertyChangeListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -61,14 +59,16 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
-import org.tinymediamanager.license.License;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.MediaSearchResult;
@@ -114,7 +114,6 @@ public final class TvShowList extends AbstractModelObject {
   private final CopyOnWriteArrayList<String>             hdrFormatInEpisodes;
   private final CopyOnWriteArrayList<String>             audioTitlesInEpisodes;
 
-  private final PropertyChangeListener                   propertyChangeListener;
   private final ReadWriteLock                            readWriteLock = new ReentrantReadWriteLock();
 
   /**
@@ -138,29 +137,6 @@ public final class TvShowList extends AbstractModelObject {
     hdrFormatInEpisodes = new CopyOnWriteArrayList<>();
     audioTitlesInEpisodes = new CopyOnWriteArrayList<>();
     subtitleFormatsInEpisodes = new CopyOnWriteArrayList<>();
-
-    // the tag listener: it's used to always have a full list of all tags used in tmm
-    propertyChangeListener = evt -> {
-      // listen to changes of tags
-      if (Constants.TAGS.equals(evt.getPropertyName()) && evt.getSource() instanceof TvShow tvShow) {
-        updateTvShowTags(Collections.singleton(tvShow));
-      }
-      if (Constants.TAGS.equals(evt.getPropertyName()) && evt.getSource() instanceof TvShowEpisode episode) {
-        updateEpisodeTags(Collections.singleton(episode));
-      }
-      if ((MEDIA_FILES.equals(evt.getPropertyName()) || MEDIA_INFORMATION.equals(evt.getPropertyName()))
-          && evt.getSource() instanceof TvShowEpisode episode) {
-        updateMediaInformationLists(Collections.singleton(episode));
-      }
-      if (EPISODE_COUNT.equals(evt.getPropertyName())) {
-        firePropertyChange(EPISODE_COUNT, evt.getOldValue(), evt.getNewValue());
-      }
-    };
-
-    License.getInstance().addEventListener(() -> {
-      firePropertyChange(TV_SHOW_COUNT, 0, tvShows.size());
-      firePropertyChange(EPISODE_COUNT, 0, 1);
-    });
   }
 
   /**
@@ -299,7 +275,6 @@ public final class TvShowList extends AbstractModelObject {
     tvShows.add(newValue);
     readWriteLock.writeLock().unlock();
 
-    newValue.addPropertyChangeListener(propertyChangeListener);
     firePropertyChange(TV_SHOWS, null, tvShows);
     firePropertyChange(ADDED_TV_SHOW, null, newValue);
     firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
@@ -411,6 +386,8 @@ public final class TvShowList extends AbstractModelObject {
 
     try {
       TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
+      // only need to trigger a remove of the whole TV show
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(tvShow));
     }
     catch (Exception e) {
       LOGGER.error("problem removing TV show from DB: {}", e.getMessage());
@@ -461,6 +438,8 @@ public final class TvShowList extends AbstractModelObject {
 
     try {
       TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
+      // only need to trigger a remove of the whole TV show
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(tvShow));
     }
     catch (Exception e) {
       LOGGER.error("problem removing TV show from DB: {}", e.getMessage());
@@ -733,15 +712,10 @@ public final class TvShowList extends AbstractModelObject {
         episode.initializeAfterLoading();
         episodes.add(episode);
       }
-
-      tvShow.addPropertyChangeListener(propertyChangeListener);
     }
 
-    updateTvShowTags(tvShows);
-    updateCertification(tvShows);
-
-    updateEpisodeTags(episodes);
-    updateMediaInformationLists(episodes);
+    updateTvShowLists(tvShows);
+    updateEpisodeLists(episodes);
   }
 
   private boolean isCorrupt(TvShow show) {
@@ -791,6 +765,8 @@ public final class TvShowList extends AbstractModelObject {
     // update/insert this TV show to the database
     try {
       TvShowModuleManager.getInstance().persistTvShow(tvShow);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(tvShow));
+      updateTvShowLists(Collections.singletonList(tvShow));
     }
     catch (Exception e) {
       LOGGER.error("failed to persist episode: {} - {}", tvShow.getTitle(), e.getMessage());
@@ -801,6 +777,7 @@ public final class TvShowList extends AbstractModelObject {
     // update/insert this episode to the database
     try {
       TvShowModuleManager.getInstance().persistSeason(season);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(season));
     }
     catch (Exception e) {
       LOGGER.error("failed to persist season: {} - S{} : {}", season.getTvShow().getTitle(), season.getSeason(), e.getMessage());
@@ -818,6 +795,8 @@ public final class TvShowList extends AbstractModelObject {
       // update/insert this episode to the database
       try {
         TvShowModuleManager.getInstance().persistEpisode(episode);
+        EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(episode));
+        updateEpisodeLists(Collections.singleton(episode));
       }
       catch (Exception e) {
         LOGGER.error("failed to persist episode: {} - S{}E{} - {} : {}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode(),
@@ -830,6 +809,7 @@ public final class TvShowList extends AbstractModelObject {
     // delete this episode from the database
     try {
       TvShowModuleManager.getInstance().removeEpisodeFromDb(episode);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(episode));
     }
     catch (Exception e) {
       LOGGER.error("failed to remove episode: {} - S{}E{} - {} : {}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode(),
@@ -1036,6 +1016,14 @@ public final class TvShowList extends AbstractModelObject {
     return new ArrayList<>(results);
   }
 
+  private void updateTvShowLists(Collection<TvShow> tvShows) {
+    TmmTaskManager.getInstance().addUiTask(() -> {
+      updateTvShowTags(tvShows);
+      updateCertification(tvShows);
+      firePropertyChange(EPISODE_COUNT, 0, 1);
+    });
+  }
+
   private void updateTvShowTags(Collection<TvShow> tvShows) {
     Set<String> tags = new HashSet<>();
     tvShows.forEach(tvShow -> tags.addAll(tvShow.getTags()));
@@ -1057,6 +1045,13 @@ public final class TvShowList extends AbstractModelObject {
 
   public List<String> getTagsInTvShows() {
     return tagsInTvShows;
+  }
+
+  private void updateEpisodeLists(Collection<TvShowEpisode> episodes) {
+    TmmTaskManager.getInstance().addUiTask(() -> {
+      updateEpisodeTags(episodes);
+      updateMediaInformationLists(episodes);
+    });
   }
 
   private void updateEpisodeTags(Collection<TvShowEpisode> episodes) {

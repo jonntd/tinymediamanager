@@ -27,23 +27,18 @@ import static org.tinymediamanager.core.Constants.FIRST_AIRED_AS_STRING;
 import static org.tinymediamanager.core.Constants.GENRE;
 import static org.tinymediamanager.core.Constants.GENRES_AS_STRING;
 import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
-import static org.tinymediamanager.core.Constants.MEDIA_FILES;
-import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
 import static org.tinymediamanager.core.Constants.REMOVED_EPISODE;
 import static org.tinymediamanager.core.Constants.REMOVED_SEASON;
 import static org.tinymediamanager.core.Constants.RUNTIME;
-import static org.tinymediamanager.core.Constants.SEASON;
 import static org.tinymediamanager.core.Constants.SEASON_COUNT;
 import static org.tinymediamanager.core.Constants.SORT_TITLE;
 import static org.tinymediamanager.core.Constants.STATUS;
-import static org.tinymediamanager.core.Constants.SUBTITLES;
-import static org.tinymediamanager.core.Constants.TAGS;
 import static org.tinymediamanager.core.Constants.TITLE_SORTABLE;
 import static org.tinymediamanager.core.Constants.TOP250;
 import static org.tinymediamanager.core.Constants.TRAILER;
 import static org.tinymediamanager.core.Utils.returnOneWhenFilled;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_TV_SHOWS;
 
-import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -79,6 +74,8 @@ import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaGenres;
@@ -170,8 +167,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   private String                                  titleSortable              = "";
   private Date                                    lastWatched                = null;
 
-  private final PropertyChangeListener            propertyChangeListener;
-
   private static final Comparator<MediaTrailer>   TRAILER_QUALITY_COMPARATOR = new MediaTrailer.QualityComparator();
 
   /**
@@ -180,27 +175,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   public TvShow() {
     // register for dirty flag listener
     super();
-
-    propertyChangeListener = evt -> {
-      if (evt.getSource() instanceof TvShowEpisode episode) {
-
-        switch (evt.getPropertyName()) {
-          case TAGS, MEDIA_INFORMATION, MEDIA_FILES, SUBTITLES, "hasSubtitles":
-            firePropertyChange(evt);
-            break;
-
-          case SEASON:
-            // remove from any season which is not the desired season
-            for (TvShowSeason season : seasons) {
-              if (season.getEpisodes().contains(episode) && season.getSeason() != episode.getSeason()) {
-                season.removeEpisode(episode);
-              }
-            }
-            addToSeason(episode);
-            break;
-        }
-      }
-    };
   }
 
   @Override
@@ -219,10 +193,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     for (TvShowEpisode episode : dummyEpisodes) {
       episode.setTvShow(this);
       addToSeason(episode);
-    }
-
-    for (TvShowEpisode episode : episodes) {
-      episode.addPropertyChangeListener(propertyChangeListener);
     }
   }
 
@@ -595,7 +565,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   public synchronized void addEpisode(TvShowEpisode episode) {
     int oldValue = episodes.size();
     episodes.add(episode);
-    episode.addPropertyChangeListener(propertyChangeListener);
     addToSeason(episode);
 
     episodes.sort(TvShowEpisode::compareTo);
@@ -616,10 +585,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   public void setDummyEpisodes(List<TvShowEpisode> dummyEpisodes) {
-    // remove all previous existing dummy movies from the UI
-    for (TvShowEpisode episode : this.dummyEpisodes) {
-      firePropertyChange(REMOVED_EPISODE, null, episode);
-    }
     this.dummyEpisodes.clear();
     this.dummyEpisodes.addAll(dummyEpisodes);
 
@@ -827,7 +792,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   public void removeEpisode(TvShowEpisode episode) {
     if (episodes.contains(episode)) {
       int oldValue = episodes.size();
-      episode.removePropertyChangeListener(propertyChangeListener);
       removeFromSeason(episode);
       episodes.remove(episode);
       TvShowModuleManager.getInstance().getTvShowList().removeEpisodeFromDb(episode);
@@ -863,7 +827,10 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     }
     else if (dummyEpisodes.contains(episode)) {
       // just fire the event for updating the UI
-      removeFromSeason(episode);
+      TvShowSeason season = getSeasonForEpisode(episode);
+      season.removeEpisode(episode);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(season));
+
       firePropertyChange(REMOVED_EPISODE, null, episode);
       firePropertyChange(EPISODE_COUNT, 0, episodes.size());
     }
@@ -878,7 +845,6 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   public void deleteEpisode(TvShowEpisode episode) {
     if (episodes.contains(episode)) {
       int oldValue = episodes.size();
-      episode.removePropertyChangeListener(propertyChangeListener);
       episode.deleteFilesSafely();
       removeFromSeason(episode);
       episodes.remove(episode);
@@ -2040,6 +2006,23 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     // also save seasons (because most of the seasons metadata is set from within the TV show itself)
     seasons.forEach(TvShowSeason::saveToDb);
+  }
+
+  /**
+   * Update the containing {@link TvShowSeason} for the given {@link TvShowEpisode}
+   *
+   * @param episode
+   *          the {@link TvShowEpisode} to update the {@link TvShowSeason} for
+   */
+  void updateSeasonForEpisode(TvShowEpisode episode) {
+    // and check if there has been a change to the structure
+    for (TvShowSeason season : seasons) {
+      if (season.getEpisodes().contains(episode) && season.getSeason() != episode.getSeason()) {
+        season.removeEpisode(episode);
+      }
+    }
+
+    addToSeason(episode);
   }
 
   /**

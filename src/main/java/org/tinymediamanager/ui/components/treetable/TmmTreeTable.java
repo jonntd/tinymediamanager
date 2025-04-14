@@ -758,7 +758,7 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
-  private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel {
+  private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel<E> {
 
     /**
      * Create a new instance of the TmmTreeModel for the given TmmTree and data provider

@@ -47,12 +47,13 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
 import javax.swing.table.TableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.AbstractSettings;
-import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.tvshow.TvShowList;
@@ -116,20 +117,11 @@ public class TvShowTreePanel extends TmmListPanel {
     // initialize totals
     updateTotals();
 
-    tvShowList.addPropertyChangeListener(evt -> {
-      switch (evt.getPropertyName()) {
-        case Constants.TV_SHOW_COUNT, Constants.EPISODE_COUNT:
-          updateTotals();
-          break;
-
-        default:
-          break;
-      }
-    });
     TvShowModuleManager.getInstance().getSettings().addPropertyChangeListener(e -> {
       switch (e.getPropertyName()) {
-        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork", "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" -> tree
-            .invalidate();
+        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork",
+            "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" ->
+          tree.invalidate();
       }
     });
   }
@@ -231,8 +223,6 @@ public class TvShowTreePanel extends TmmListPanel {
     tree.setRootVisible(false);
 
     tree.getModel().addTableModelListener(arg0 -> {
-      updateTotals();
-
       if (tree.getTreeTableModel().getTreeModel() instanceof TmmTreeModel) {
         if (((TmmTreeModel<?>) tree.getTreeTableModel().getTreeModel()).isAdjusting()) {
           return;
@@ -246,6 +236,28 @@ public class TvShowTreePanel extends TmmListPanel {
       }
       else if (tree.getModel().getRowCount() == 0) {
         TvShowUIModule.getInstance().setSelectedTvShow(null);
+      }
+    });
+
+    tree.getTreeTableModel().addTreeModelListener(new TreeModelListener() {
+      @Override
+      public void treeNodesChanged(TreeModelEvent e) {
+        // do nothing
+      }
+
+      @Override
+      public void treeNodesInserted(TreeModelEvent e) {
+        updateTotals();
+      }
+
+      @Override
+      public void treeNodesRemoved(TreeModelEvent e) {
+        updateTotals();
+      }
+
+      @Override
+      public void treeStructureChanged(TreeModelEvent e) {
+        updateTotals();
       }
     });
 

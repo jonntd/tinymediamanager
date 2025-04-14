@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.EmptyHashMap;
 import org.tinymediamanager.core.IPrintable;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
@@ -35,6 +36,7 @@ import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * The Class Actor. This class represents actors/cast
@@ -65,6 +67,7 @@ public class Person extends AbstractModelObject implements IPrintable {
   @JsonProperty
   private String              profileUrl = "";
   @JsonProperty
+  @JsonDeserialize(as = EmptyHashMap.class)
   private Map<String, Object> ids        = null;
 
   /**

@@ -146,8 +146,7 @@ public abstract class TmmThreadPool extends TmmTask {
     final String        namePrefix;
 
     TmmThreadFactory(String poolname) {
-      SecurityManager s = System.getSecurityManager();
-      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+      group = Thread.currentThread().getThreadGroup();
       namePrefix = "tmmpool-" + poolname + "-T";
     }
 

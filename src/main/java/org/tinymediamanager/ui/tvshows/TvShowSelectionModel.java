@@ -31,6 +31,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
@@ -57,6 +59,20 @@ public class TvShowSelectionModel extends AbstractModelObject {
    */
   public TvShowSelectionModel() {
     selectedTvShow = initalTvShow;
+
+    // eventbus listener
+    EventBus.registerListener(EventBus.TOPIC_TV_SHOWS, event -> {
+      if (event.sender() instanceof TvShow tvShow && tvShow == selectedTvShow) {
+        if (event.eventType().equals(Event.TYPE_REMOVE)) {
+          setSelectedTvShow(initalTvShow);
+        }
+        else {
+          // delegate this to UI listeners
+          firePropertyChange(SELECTED_TV_SHOW, null, tvShow);
+        }
+      }
+    });
+
     propertyChangeListener = evt -> {
       if (evt.getSource() == selectedTvShow) {
         // wrap this event in a new event for listeners of the selection model
@@ -75,7 +91,7 @@ public class TvShowSelectionModel extends AbstractModelObject {
    * @param tvShow
    *          the new selected tv show
    */
-  public void setSelectedTvShow(TvShow tvShow) {
+  public synchronized void setSelectedTvShow(TvShow tvShow) {
     // no need to fire events if nothing has been changed
     if (tvShow == selectedTvShow) {
       return;

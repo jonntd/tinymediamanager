@@ -15,13 +15,12 @@
  */
 package org.tinymediamanager.core.movie;
 
-import static org.tinymediamanager.core.Constants.CERTIFICATION;
 import static org.tinymediamanager.core.Constants.DECADE;
 import static org.tinymediamanager.core.Constants.GENRE;
-import static org.tinymediamanager.core.Constants.MEDIA_FILES;
-import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
 import static org.tinymediamanager.core.Constants.TAGS;
 import static org.tinymediamanager.core.Constants.YEAR;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_MOVIES;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_MOVIE_SETS;
 
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -62,6 +61,9 @@ import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.ObservableCopyOnWriteArrayList;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.bus.EventBusConnector;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
@@ -71,6 +73,7 @@ import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -119,7 +122,6 @@ public final class MovieList extends AbstractModelObject {
   private final CopyOnWriteArrayList<String>             audioTitlesInMovies;
   private final CopyOnWriteArrayList<String>             subtitleFormatsInMovies;
 
-  private final PropertyChangeListener                   movieListener;
   private final PropertyChangeListener                   movieSetListener;
   private final Comparator<MovieSet>                     movieSetComparator = new MovieSetComparator();
   private final ReadWriteLock                            readWriteLock      = new ReentrantReadWriteLock();
@@ -129,7 +131,7 @@ public final class MovieList extends AbstractModelObject {
    */
   private MovieList() {
     // create all lists
-    movieList = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Movie.class));
+    movieList = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), new EventBusConnector<>(TOPIC_MOVIES));
     movieSetList = new ObservableCopyOnWriteArrayList<>();
 
     yearsInMovies = new CopyOnWriteArrayList<>();
@@ -149,38 +151,6 @@ public final class MovieList extends AbstractModelObject {
     hdrFormatInMovies = new CopyOnWriteArrayList<>();
     audioTitlesInMovies = new CopyOnWriteArrayList<>();
     subtitleFormatsInMovies = new CopyOnWriteArrayList<>();
-
-    // movie listener: it's used to always have a full list of all tags, codecs, years, ... used in tmm
-    movieListener = evt -> {
-      if (evt.getSource() instanceof Movie movie) {
-        // do not update all list at the same time - could be a performance issue
-        switch (evt.getPropertyName()) {
-          case YEAR:
-            updateYear(Collections.singletonList(movie));
-            break;
-
-          case CERTIFICATION:
-            updateCertifications(Collections.singletonList(movie));
-            break;
-
-          case GENRE:
-            updateGenres(Collections.singletonList(movie));
-            break;
-
-          case TAGS:
-            updateTags(Collections.singletonList(movie));
-            break;
-
-          case MEDIA_FILES:
-          case MEDIA_INFORMATION:
-            updateMediaInformationLists(Collections.singletonList(movie));
-            break;
-
-          default:
-            break;
-        }
-      }
-    };
 
     movieSetListener = evt -> {
       switch (evt.getPropertyName()) {
@@ -235,7 +205,6 @@ public final class MovieList extends AbstractModelObject {
       movieList.add(movie);
 
       updateLists(Collections.singletonList(movie));
-      movie.addPropertyChangeListener(movieListener);
       firePropertyChange("movies", null, movieList);
       firePropertyChange("movieCount", oldValue, movieList.size());
     }
@@ -355,6 +324,7 @@ public final class MovieList extends AbstractModelObject {
 
       try {
         MovieModuleManager.getInstance().removeMovieFromDb(movie);
+        EventBus.publishEvent(TOPIC_MOVIES, Event.createRemoveEvent(movie));
       }
       catch (Exception e) {
         LOGGER.error("Error removing movie from DB: {}", e.getMessage());
@@ -398,6 +368,7 @@ public final class MovieList extends AbstractModelObject {
       }
       try {
         MovieModuleManager.getInstance().removeMovieFromDb(movie);
+        EventBus.publishEvent(TOPIC_MOVIES, Event.createRemoveEvent(movie));
       }
       catch (Exception e) {
         LOGGER.error("Error removing movie from DB: {}", e.getMessage());
@@ -523,7 +494,6 @@ public final class MovieList extends AbstractModelObject {
     // updateLists is slow here calling for a bunch of movies, so we do the work directly
     for (Movie movie : movieList) {
       movie.initializeAfterLoading();
-      movie.addPropertyChangeListener(movieListener);
     }
 
     updateLists(movieList);
@@ -572,6 +542,8 @@ public final class MovieList extends AbstractModelObject {
       // save
       try {
         MovieModuleManager.getInstance().persistMovie(movie);
+        EventBus.publishEvent(TOPIC_MOVIES, Event.createSaveEvent(movie));
+        updateLists(Collections.singletonList(movie));
       }
       catch (Exception e) {
         LOGGER.error("failed to persist movie: {} - {}", movie.getTitle(), e.getMessage());
@@ -583,6 +555,7 @@ public final class MovieList extends AbstractModelObject {
     // remove this movie set from the database
     try {
       MovieModuleManager.getInstance().persistMovieSet(movieSet);
+      EventBus.publishEvent(TOPIC_MOVIE_SETS, Event.createSaveEvent(movieSet));
     }
     catch (Exception e) {
       LOGGER.error("failed to persist movie set: {}", movieSet.getTitle());
@@ -1056,12 +1029,14 @@ public final class MovieList extends AbstractModelObject {
   }
 
   private void updateLists(Collection<Movie> movies) {
-    updateYear(movies);
-    updateDecades(movies);
-    updateTags(movies);
-    updateGenres(movies);
-    updateCertifications(movies);
-    updateMediaInformationLists(movies);
+    TmmTaskManager.getInstance().addUiTask(() -> {
+      updateYear(movies);
+      updateDecades(movies);
+      updateTags(movies);
+      updateGenres(movies);
+      updateCertifications(movies);
+      updateMediaInformationLists(movies);
+    });
   }
 
   /**
@@ -1501,6 +1476,7 @@ public final class MovieList extends AbstractModelObject {
       movieSetList.remove(movieSet);
       readWriteLock.writeLock().unlock();
       MovieModuleManager.getInstance().removeMovieSetFromDb(movieSet);
+      EventBus.publishEvent(TOPIC_MOVIE_SETS, Event.createRemoveEvent(movieSet));
     }
     catch (Exception e) {
       LOGGER.error("Error removing movie set from DB: {}", e.getMessage());

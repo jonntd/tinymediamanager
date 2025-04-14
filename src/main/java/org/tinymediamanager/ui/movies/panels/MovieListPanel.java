@@ -124,7 +124,7 @@ public class MovieListPanel extends TmmListPanel {
     MovieMatcherEditor movieMatcherEditor = new MovieMatcherEditor();
     FilterList<Movie> extendedFilteredMovies = new FilterList<>(sortedMovies, movieMatcherEditor);
     FilterList<Movie> textFilteredMovies = new FilterList<>(extendedFilteredMovies, textMatcherEditor);
-    selectionModel = new MovieSelectionModel(sortedMovies, textFilteredMovies, movieMatcherEditor);
+    selectionModel = new MovieSelectionModel(textFilteredMovies, movieMatcherEditor);
     final TmmTableModel<Movie> movieTableModel = new TmmTableModel<>(textFilteredMovies, new MovieTableFormat());
     // movieTableModel.setManyToOneTableModelEventAdapter();
 

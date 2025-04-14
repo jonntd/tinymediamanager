@@ -28,9 +28,6 @@ import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
 import static org.tinymediamanager.core.Constants.MEDIA_SOURCE;
 import static org.tinymediamanager.core.Constants.RUNTIME;
 import static org.tinymediamanager.core.Constants.SEASON;
-import static org.tinymediamanager.core.Constants.SEASON_BANNER;
-import static org.tinymediamanager.core.Constants.SEASON_POSTER;
-import static org.tinymediamanager.core.Constants.SEASON_THUMB;
 import static org.tinymediamanager.core.Constants.TITLE_FOR_UI;
 import static org.tinymediamanager.core.Constants.TITLE_SORTABLE;
 import static org.tinymediamanager.core.Constants.TV_SHOW;
@@ -646,6 +643,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
         firePropertyChange(EPISODE, 0, -1);
         firePropertyChange(SEASON, 0, -1);
         firePropertyChange(TITLE_FOR_UI, -1, episode.episode());
+
+        // inform the TV show about the change
+        if (tvShow != null) {
+          tvShow.updateSeasonForEpisode(this);
+        }
+
         return;
       }
     }
@@ -688,6 +691,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       firePropertyChange(EPISODE, Integer.MIN_VALUE, episode.episode());
       firePropertyChange(SEASON, Integer.MIN_VALUE, episode.season());
       firePropertyChange(TITLE_FOR_UI, Integer.MIN_VALUE, episode.episode());
+    }
+
+    // inform the TV show about the change
+    if (tvShow != null) {
+      tvShow.updateSeasonForEpisode(this);
     }
   }
 
@@ -1591,28 +1599,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   public void saveToDb() {
     // update/insert this episode to the database
     TvShowModuleManager.getInstance().getTvShowList().persistEpisode(this);
-  }
-
-  /**
-   * Event to trigger a season artwork changed for the UI
-   */
-  void setSeasonArtworkChanged(MediaArtworkType type) {
-    switch (type) {
-      case SEASON_POSTER:
-        firePropertyChange(SEASON_POSTER, null, "");
-        break;
-
-      case SEASON_BANNER:
-        firePropertyChange(SEASON_BANNER, null, "");
-        break;
-
-      case SEASON_THUMB:
-        firePropertyChange(SEASON_THUMB, null, "");
-        break;
-
-      default:
-        break;
-    }
   }
 
   @Override

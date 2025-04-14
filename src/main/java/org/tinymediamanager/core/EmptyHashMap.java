@@ -14,30 +14,12 @@
  * limitations under the License.
  */
 
-package org.tinymediamanager.ui.converter;
+package org.tinymediamanager.core;
 
-import javax.swing.ImageIcon;
+import java.util.HashMap;
 
-import org.jdesktop.beansbinding.Converter;
-import org.tinymediamanager.ui.IconManager;
-
-/**
- * The Class LockedConverter is used to convert a boolean in the locked icon
- * 
- * @author Manuel Laggner
- */
-public class LockedConverter extends Converter<Boolean, ImageIcon> {
-
-  @Override
-  public ImageIcon convertForward(Boolean arg0) {
-    if (Boolean.TRUE.equals(arg0)) {
-      return IconManager.LOCK_BLUE;
-    }
-    return null;
-  }
-
-  @Override
-  public Boolean convertReverse(ImageIcon arg0) {
-    return null;
+public class EmptyHashMap extends HashMap {
+  public EmptyHashMap() {
+    super(0);
   }
 }
