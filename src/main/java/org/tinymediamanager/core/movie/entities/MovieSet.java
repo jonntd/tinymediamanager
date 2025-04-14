@@ -187,7 +187,7 @@ public class MovieSet extends MediaEntity {
    */
   public void setSortTitle(String newValue) {
     String oldValue = this.sortTitle;
-    this.sortTitle = newValue;
+    this.sortTitle = StrgUtils.strip(newValue);
     firePropertyChange(SORT_TITLE, oldValue, newValue);
   }
 
@@ -197,14 +197,7 @@ public class MovieSet extends MediaEntity {
    * @return the TMDB Id or 0
    */
   public int getTmdbId() {
-    int id;
-    try {
-      id = (Integer) ids.get(MediaMetadata.TMDB_SET);
-    }
-    catch (Exception e) {
-      return 0;
-    }
-    return id;
+    return getIdAsInt(MediaMetadata.TMDB_SET);
   }
 
   /**

@@ -328,7 +328,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
   public void setSortTitle(String newValue) {
     String oldValue = this.sortTitle;
-    this.sortTitle = newValue;
+    this.sortTitle = StrgUtils.strip(newValue);
     firePropertyChange(SORT_TITLE, oldValue, newValue);
   }
 
@@ -1704,7 +1704,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    */
   public void setCountry(String newValue) {
     String oldValue = this.country;
-    this.country = newValue;
+    this.country = StrgUtils.strip(newValue);
     firePropertyChange(COUNTRY, oldValue, newValue);
   }
 

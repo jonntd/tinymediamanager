@@ -88,6 +88,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -742,7 +743,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setProductionCompany(String newValue) {
     String oldValue = this.productionCompany;
-    this.productionCompany = newValue;
+    this.productionCompany = StrgUtils.strip(newValue);
 
     firePropertyChange(PRODUCTION_COMPANY, oldValue, newValue);
   }
@@ -786,7 +787,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setNote(String newValue) {
     String oldValue = this.note;
-    this.note = newValue;
+    this.note = StrgUtils.strip(newValue);
     firePropertyChange("note", oldValue, newValue);
   }
 
@@ -800,7 +801,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setLastScraperId(String newValue) {
     String oldValue = lastScraperId;
-    lastScraperId = newValue;
+    lastScraperId = StrgUtils.strip(newValue);
     firePropertyChange("lastScraperId", oldValue, newValue);
   }
 
@@ -810,7 +811,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setLastScrapeLanguage(String newValue) {
     String oldValue = lastScrapeLanguage;
-    lastScrapeLanguage = newValue;
+    lastScrapeLanguage = StrgUtils.strip(newValue);
     firePropertyChange("lastScrapeLanguage", oldValue, newValue);
   }
 
@@ -837,7 +838,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   public void setId(String key, Object value) {
     // remove ID, if empty/0/null
     // if we only skipped it, the existing entry will stay although someone changed it to empty.
-    String v = StringUtils.strip(String.valueOf(value));
+    String v = String.valueOf(value).strip();
     if ("".equals(v) || "0".equals(v) || "null".equals(v)) {
       ids.remove(key);
     }
@@ -847,7 +848,20 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
         return;
       }
 
-      ids.put(key, value);
+      if (value instanceof String) {
+        try {
+          Integer parsedInt = Integer.parseInt(v); // our stripped string
+          // cool, it is an Integer
+          ids.put(key, parsedInt);
+        }
+        catch (NumberFormatException ex) {
+          // must be still string, add stripped one
+          ids.put(key, v);
+        }
+      }
+      else {
+        ids.put(key, value);
+      }
     }
     firePropertyChange(key, null, value);
     firePropertyChange(ID, null, value);
@@ -1438,7 +1452,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
       if (StringUtils.isBlank(tag) || tags.stream().anyMatch(tag::equalsIgnoreCase)) {
         continue;
       }
-      newItems.add(tag);
+      newItems.add(StrgUtils.strip(tag));
     }
 
     if (newItems.isEmpty()) {
@@ -1486,14 +1500,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
    * @return the tag as string
    */
   public String getTagsAsString() {
-    StringBuilder sb = new StringBuilder();
-    for (String tag : tags) {
-      if (!StringUtils.isBlank(sb)) {
-        sb.append(", ");
-      }
-      sb.append(tag);
-    }
-    return sb.toString();
+    return String.join(", ", tags);
   }
 
   /**

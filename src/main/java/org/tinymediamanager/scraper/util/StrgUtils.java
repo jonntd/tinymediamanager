@@ -524,4 +524,15 @@ public class StrgUtils {
     }
     return ret;
   }
+
+  /**
+   * Calls strip() on the given {@link String} - returning an empty {@link String} if the given String is null
+   * 
+   * @param source
+   *          the source {@link String} to strip()
+   * @return the stripped {@link String} or an empty {@link String}
+   */
+  public static String strip(String source) {
+    return source == null ? "" : source.strip();
+  }
 }
