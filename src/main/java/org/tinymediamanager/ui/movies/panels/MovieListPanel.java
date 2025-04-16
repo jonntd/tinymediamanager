@@ -15,9 +15,8 @@
  */
 package org.tinymediamanager.ui.movies.panels;
 
-import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
-
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -117,7 +116,7 @@ public class MovieListPanel extends TmmListPanel {
     add(searchField, "cell 0 0,growx");
 
     // register global short cut for the search field
-    getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, CTRL_DOWN_MASK), "search");
+    getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "search");
     getActionMap().put("search", new RequestFocusAction(searchField));
 
     MatcherEditor<Movie> textMatcherEditor = new MovieTextMatcherEditor(searchField);

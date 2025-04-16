@@ -1,3 +1,4 @@
 Version 5.2.0
 =======================
 ⚡️ [Movies, Movie sets, TV shows] completely reworked internal eventing to improve performance
+✨ [macOS] changed hotkey modifier to comply with macOS standards

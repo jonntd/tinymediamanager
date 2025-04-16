@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -37,7 +38,8 @@ public class MovieCreateOfflineAction extends TmmAction {
     putValue(LARGE_ICON_KEY, IconManager.ADD);
     putValue(SMALL_ICON, IconManager.ADD);
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.createoffline"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override

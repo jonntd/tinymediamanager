@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.ui.moviesets.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -39,7 +40,8 @@ import org.tinymediamanager.ui.moviesets.MovieSetUIModule;
 public class MovieSetRewriteNfoAction extends TmmAction {
   public MovieSetRewriteNfoAction() {
     putValue(NAME, TmmResourceBundle.getString("movieset.rewritenfo"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override

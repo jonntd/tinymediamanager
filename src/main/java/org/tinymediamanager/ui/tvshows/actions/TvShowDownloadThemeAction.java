@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.ui.tvshows.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -42,7 +43,8 @@ public class TvShowDownloadThemeAction extends TmmAction {
     putValue(NAME, TmmResourceBundle.getString("tvshow.downloadtheme"));
     putValue(SMALL_ICON, IconManager.MUSIC);
     putValue(LARGE_ICON_KEY, IconManager.MUSIC);
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK + InputEvent.ALT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_H, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.ALT_DOWN_MASK));
   }
 
   @Override

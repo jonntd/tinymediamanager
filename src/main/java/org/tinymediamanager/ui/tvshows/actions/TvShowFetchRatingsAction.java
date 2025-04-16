@@ -15,10 +15,10 @@
  */
 package org.tinymediamanager.ui.tvshows.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -49,7 +49,8 @@ public class TvShowFetchRatingsAction extends TmmAction {
     putValue(LARGE_ICON_KEY, IconManager.RATING_BLUE);
     putValue(SMALL_ICON, IconManager.RATING_BLUE);
     putValue(NAME, TmmResourceBundle.getString("tvshow.fetchratings"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_I, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override

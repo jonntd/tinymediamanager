@@ -15,8 +15,8 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.KeyStroke;
@@ -46,7 +46,7 @@ public class MoviePlayAction extends TmmAction {
     putValue(NAME, TmmResourceBundle.getString("movie.play"));
     putValue(SMALL_ICON, IconManager.PLAY);
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.play.desc"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK));
+    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_P, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
   }
 
   @Override

@@ -29,10 +29,10 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
+import java.awt.Toolkit;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -67,7 +67,6 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BindingGroup;
 import org.jdesktop.observablecollections.ObservableCollections;
@@ -1252,14 +1251,10 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
       JButton okButton = new JButton(new ChangeMovieAction());
       okButton.addActionListener(e -> mediaFilesPanel.cancelTask());
-      getRootPane().registerKeyboardAction(new ChangeMovieAction(), KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
-          JComponent.WHEN_IN_FOCUSED_WINDOW);
-      getRootPane().registerKeyboardAction(new ChangeMovieAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK),
-          JComponent.WHEN_IN_FOCUSED_WINDOW);
-      if (SystemUtils.IS_OS_MAC) {
-        getRootPane().registerKeyboardAction(new ChangeMovieAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.META_DOWN_MASK),
-            JComponent.WHEN_IN_FOCUSED_WINDOW);
-      }
+      getRootPane().registerKeyboardAction(new ChangeMovieAction(),
+          KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
+      getRootPane().registerKeyboardAction(new ChangeMovieAction(),
+          KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
       addButton(okButton);
     }
   }

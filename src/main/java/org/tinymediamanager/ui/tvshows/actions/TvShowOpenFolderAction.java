@@ -15,8 +15,8 @@
  */
 package org.tinymediamanager.ui.tvshows.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.KeyStroke;
@@ -42,7 +42,7 @@ public class TvShowOpenFolderAction extends TmmAction {
     putValue(NAME, TmmResourceBundle.getString("tvshow.openfolder"));
     putValue(SMALL_ICON, IconManager.FOLDER_OPEN);
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("tvshow.openfolder.desc"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.CTRL_DOWN_MASK));
+    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
   }
 
   @Override
