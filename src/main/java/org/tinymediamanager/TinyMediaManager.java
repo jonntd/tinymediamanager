@@ -34,6 +34,7 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.logging.LogManager;
 
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -44,6 +45,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.ELProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.tinymediamanager.cli.TinyMediaManagerCLI;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
@@ -583,6 +585,12 @@ public final class TinyMediaManager {
    *          the arguments
    */
   public static void main(String[] args) {
+    // Remove existing handlers attached to j.u.l root logger
+    LogManager.getLogManager().reset();
+
+    // Install the SLF4J bridge
+    SLF4JBridgeHandler.install();
+
     Thread.setDefaultUncaughtExceptionHandler(new Log4jBackstop());
 
     try {
