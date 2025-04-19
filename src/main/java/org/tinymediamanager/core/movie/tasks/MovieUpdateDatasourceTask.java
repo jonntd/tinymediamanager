@@ -93,6 +93,7 @@ import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.tasks.MediaFileInformationFetcherTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
@@ -967,6 +968,17 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     movie.setPath(movieDir.toAbsolutePath().toString());
     movie.setDataSource(dataSource.toString());
+
+    // detect some IDs from movie folder
+    if (!MediaIdUtil.isValidImdbId(movie.getImdbId())) {
+      movie.setId(MediaMetadata.IMDB, ParserUtils.detectImdbId(movieDir.getFileName().toString()));
+    }
+    if (movie.getTmdbId() == 0) {
+      movie.setId(MediaMetadata.TMDB, ParserUtils.detectTmdbId(movieDir.getFileName().toString()));
+    }
+    if (movie.getIdAsInt(MediaMetadata.TVDB) == 0) {
+      movie.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(movieDir.getFileName().toString()));
+    }
 
     // ***************************************************************
     // third round - check for UNKNOWN, if they match a video file name - we might keep them

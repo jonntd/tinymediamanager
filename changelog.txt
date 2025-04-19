@@ -1,6 +1,7 @@
 Version 5.1.6
 =======================
 + [FlatLaf] upgraded to version 3.6
+x [Import] improve detection of well known scraper IDs from file/foldernames #2926
 
 
 Version 5.1.5
