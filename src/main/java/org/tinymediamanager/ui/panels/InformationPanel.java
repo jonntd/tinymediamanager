@@ -111,13 +111,10 @@ public abstract class InformationPanel extends JPanel {
     for (Component component : components) {
       component.setVisible(visible);
 
-      if (component instanceof ImageLabel) {
-        ImageLabel imageLabel = (ImageLabel) component;
-        imageLabel.clearImage();
+      if (component instanceof ImageLabel imageLabel) {
         imageLabel.setImageMediaFile(mediaFile);
       }
-      else if (component instanceof JLabel) {
-        JLabel sizeLabel = (JLabel) component;
+      else if (component instanceof JLabel sizeLabel) {
         Dimension artworkDimension = MediaFileHelper.getArtworkDimension(mediaFile);
 
         if (artworkDimension.width > 0 && artworkDimension.height > 0) {
