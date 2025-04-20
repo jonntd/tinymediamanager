@@ -76,8 +76,8 @@ public final class MovieSettings extends AbstractSettings {
   private static final Logger               LOGGER                                 = LoggerFactory.getLogger(MovieSettings.class);
   private static final String               CONFIG_FILE                            = "movies.json";
 
-  public static final String                DEFAULT_RENAMER_FOLDER_PATTERN         = "${title} ${- ,edition,} (${year})";
-  public static final String                DEFAULT_RENAMER_FILE_PATTERN           = "${title} ${- ,edition,} (${year}) ${videoFormat} ${audioCodec}";
+  public static final String                DEFAULT_RENAMER_FOLDER_PATTERN         = "${title}${ - ,edition,} (${year})";
+  public static final String                DEFAULT_RENAMER_FILE_PATTERN           = "${title}${ - ,edition,} (${year}) ${videoFormat} ${audioCodec}";
 
   private static MovieSettings              instance;
 
