@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -117,12 +116,10 @@ public abstract class YTDownloadTask extends TmmTask {
     }
 
     try {
-      String id = "";
+      YTDownloader downloader = new YTDownloader();
+
       // get the youtube id
-      Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(mediaTrailer.getUrl());
-      if (matcher.matches()) {
-        id = matcher.group(5);
-      }
+      String id = downloader.extractYoutubeId(mediaTrailer.getUrl());
 
       if (StringUtils.isBlank(id)) {
         LOGGER.debug("Could not download trailer: no id {}", mediaTrailer);
@@ -134,7 +131,6 @@ public abstract class YTDownloadTask extends TmmTask {
         return;
       }
 
-      YTDownloader downloader = new YTDownloader();
       Response<VideoInfo> videoInfo = downloader.getVideoInfo(new RequestVideoInfo(id));
       if (!videoInfo.ok()) {
         if (videoInfo.error() != null) {

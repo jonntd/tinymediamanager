@@ -18,7 +18,10 @@ package org.tinymediamanager.thirdparty.yt;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.regex.Matcher;
 
+import org.apache.commons.lang3.StringUtils;
+import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.license.TmmFeature;
 import org.tinymediamanager.scraper.exceptions.HttpException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
@@ -48,6 +51,20 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
   public YTDownloader() throws ScrapeException {
     super(new Config.Builder().build());
     setDownloader(new DownloaderImpl());
+  }
+
+  public String extractYoutubeId(String url) {
+    if (StringUtils.isBlank(url)) {
+      return "";
+    }
+
+    Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(url);
+
+    if (matcher.matches()) {
+      return matcher.group(5);
+    }
+
+    return "";
   }
 
   class DownloaderImpl implements Downloader {
