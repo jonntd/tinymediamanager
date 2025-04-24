@@ -15,7 +15,6 @@
  */
 package org.tinymediamanager.thirdparty.yt;
 
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -28,11 +27,8 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 import org.tinymediamanager.scraper.http.Url;
 
-import com.github.kiulian.downloader.Config;
 import com.github.kiulian.downloader.YoutubeDownloader;
-import com.github.kiulian.downloader.downloader.Downloader;
-import com.github.kiulian.downloader.downloader.request.RequestVideoFileDownload;
-import com.github.kiulian.downloader.downloader.request.RequestVideoStreamDownload;
+import com.github.kiulian.downloader.downloader.AbstractDownloader;
 import com.github.kiulian.downloader.downloader.request.RequestWebpage;
 import com.github.kiulian.downloader.downloader.response.Response;
 import com.github.kiulian.downloader.downloader.response.ResponseImpl;
@@ -49,7 +45,7 @@ import okhttp3.RequestBody;
  */
 public class YTDownloader extends YoutubeDownloader implements TmmFeature {
   public YTDownloader() throws ScrapeException {
-    super(new Config.Builder().build());
+    super();
     setDownloader(new DownloaderImpl());
   }
 
@@ -67,7 +63,7 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
     return "";
   }
 
-  class DownloaderImpl implements Downloader {
+  class DownloaderImpl extends AbstractDownloader {
     @Override
     public Response<String> downloadWebpage(RequestWebpage requestWebpage) {
       if ("POST".equals(requestWebpage.getMethod())) {
@@ -140,18 +136,6 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
 
         return ResponseImpl.error(e);
       }
-    }
-
-    @Override
-    public Response<File> downloadVideoAsFile(RequestVideoFileDownload requestVideoFileDownload) {
-      // we handle that internally
-      return null;
-    }
-
-    @Override
-    public Response<Void> downloadVideoAsStream(RequestVideoStreamDownload requestVideoStreamDownload) {
-      // we handle that internally
-      return null;
     }
   }
 }
