@@ -121,8 +121,12 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
       LOGGER.trace("could not parse releasedate: {}", e.getMessage());
     }
 
-    if (StringUtils.isNotBlank(league.strDescriptionEN)) {
-      md.setPlot(league.strDescriptionEN); // FIXME: other languages, damn flat structure
+    String plot = league.getDescriptionForLanguage(language);
+    if (StringUtils.isBlank(plot)) {
+      plot = league.getDescriptionForLanguage("EN"); // at least that one should be filled...
+    }
+    if (StringUtils.isNotBlank(plot)) {
+      md.setPlot(plot);
     }
 
     // we won't add null ones ;)

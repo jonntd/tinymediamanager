@@ -1,5 +1,7 @@
 package org.tinymediamanager.scraper.thesportsdb.entities;
 
+import java.util.Locale;
+
 public class LeagueDetail extends League {
   public String idSoccerXML;
   public String idAPIfootball;
@@ -44,4 +46,34 @@ public class LeagueDetail extends League {
   public String strNaming;
   public String strComplete;
   public String strLocked;
+
+  /**
+   * gets the description for language code - might be NULL<br>
+   * In that case, try with EN, as it should be always filled....
+   * 
+   * @param languageCode
+   *          in uppercase, like EN, DE, FR, ...
+   * @return translated description or NULL
+   */
+  public String getDescriptionForLanguage(String languageCode) {
+    // damn API design
+    String desc = switch (languageCode.toUpperCase(Locale.ROOT)) {
+      case "EN" -> strDescriptionEN;
+      case "DE" -> strDescriptionDE;
+      case "FR" -> strDescriptionFR;
+      case "IT" -> strDescriptionIT;
+      case "CN" -> strDescriptionCN;
+      case "JP" -> strDescriptionJP;
+      case "RU" -> strDescriptionRU;
+      case "ES" -> strDescriptionES;
+      case "NL" -> strDescriptionNL;
+      case "HU" -> strDescriptionHU;
+      case "NO" -> strDescriptionNO;
+      case "PL" -> strDescriptionPL;
+      case "IL" -> strDescriptionIL;
+      default -> strDescriptionEN;
+    };
+
+    return desc;
+  }
 }
