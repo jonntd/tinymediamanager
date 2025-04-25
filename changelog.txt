@@ -3,6 +3,7 @@ Version 5.1.6
 + [FlatLaf] upgraded to version 3.6
 x [TV shows] fixed season artwork display #2912
 x [Movies] fixed deleting TV show links #2931
+x [Movies/TV shows] improved downloading missing artwork
 x [Import] improve detection of well known scraper IDs from file/foldernames #2926
 
 

@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
+import java.util.UUID;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -123,7 +124,7 @@ public abstract class DownloadTask extends TmmTask {
         u.setUserAgent(userAgent);
       }
 
-      long timestamp = System.currentTimeMillis();
+      String uuid = UUID.randomUUID().toString();
 
       try {
         // create a temp file/folder inside the temp folder or tmm folder
@@ -131,13 +132,13 @@ public abstract class DownloadTask extends TmmTask {
         if (!Files.exists(tempFolder)) {
           Files.createDirectory(tempFolder);
         }
-        tempFile = tempFolder.resolve(getDestinationWoExtension().getFileName() + "." + timestamp + ".part"); // multi episode same file
+        tempFile = tempFolder.resolve(getDestinationWoExtension().getFileName() + "." + uuid + ".part"); // multi episode same file
       }
       catch (Exception e) {
         LOGGER.warn("could not write to temp folder - {}", e.getMessage());
 
         // could not create the temp folder somehow - put the files into the tmm/tmp dir
-        tempFile = destination.resolveSibling(destination.getFileName() + "." + timestamp + ".part"); // multi episode same file
+        tempFile = destination.resolveSibling(destination.getFileName() + "." + uuid + ".part"); // multi episode same file
       }
 
       // try to resume if the temp file exists

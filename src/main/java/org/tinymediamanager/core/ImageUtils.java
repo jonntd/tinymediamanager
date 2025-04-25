@@ -31,6 +31,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -299,7 +300,7 @@ public class ImageUtils {
 
     Path tempFile = null;
     try {
-      long timestamp = System.currentTimeMillis();
+      String uuid = UUID.randomUUID().toString();
 
       try {
         // create a temp file/folder inside the temp folder or tmm folder
@@ -307,13 +308,13 @@ public class ImageUtils {
         if (!Files.exists(tempFolder)) {
           Files.createDirectory(tempFolder);
         }
-        tempFile = tempFolder.resolve(filename + "." + timestamp + ".part"); // multi episode same file
+        tempFile = tempFolder.resolve(filename + "." + uuid + ".part"); // multi episode same file
       }
       catch (Exception e) {
         LOGGER.debug("could not write to temp folder: {}", e.getMessage());
 
         // could not create the temp folder somehow - put the files into the entity dir
-        tempFile = destFile.resolveSibling(filename + "." + timestamp + ".part"); // multi episode same file
+        tempFile = destFile.resolveSibling(filename + "." + uuid + ".part"); // multi episode same file
       }
 
       // fetch and store images

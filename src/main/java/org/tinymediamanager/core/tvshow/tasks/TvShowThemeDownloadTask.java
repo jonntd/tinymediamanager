@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -105,7 +106,7 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
           Path destFile = tvShow.getPathNIO().resolve(filename);
           Path tempFile = null;
           try {
-            long timestamp = System.currentTimeMillis();
+            String uuid = UUID.randomUUID().toString();
 
             try {
               // create a temp file/folder inside the temp folder or tmm folder
@@ -113,13 +114,13 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
               if (!Files.exists(tempFolder)) {
                 Files.createDirectory(tempFolder);
               }
-              tempFile = tempFolder.resolve("theme." + tvdbId + "." + timestamp + ".part"); // multi episode same file
+              tempFile = tempFolder.resolve("theme." + tvdbId + "." + uuid + ".part"); // multi episode same file
             }
             catch (Exception e) {
               LOGGER.debug("could not write to temp folder: {}", e.getMessage());
 
               // could not create the temp folder somehow - put the files into the entity dir
-              tempFile = destFile.resolveSibling("theme." + tvdbId + "." + timestamp + ".part"); // multi episode same file
+              tempFile = destFile.resolveSibling("theme." + tvdbId + "." + uuid + ".part"); // multi episode same file
             }
 
             // fetch and store images
