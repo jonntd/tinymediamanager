@@ -32,6 +32,8 @@ import org.tinymediamanager.scraper.anidb.AniDbMovieMetadataProvider;
 import org.tinymediamanager.scraper.anidb.AniDbTvShowMetadataProvider;
 import org.tinymediamanager.scraper.fanarttv.FanartTvMovieArtworkProvider;
 import org.tinymediamanager.scraper.fanarttv.FanartTvTvShowArtworkProvider;
+import org.tinymediamanager.scraper.fernsehserien.FernsehserienMovieMetadataProvider;
+import org.tinymediamanager.scraper.fernsehserien.FernsehserienTvShowMetadataProvider;
 import org.tinymediamanager.scraper.ffmpeg.FFmpegMovieArtworkProvider;
 import org.tinymediamanager.scraper.ffmpeg.FFmpegTvShowArtworkProvider;
 import org.tinymediamanager.scraper.hdtrailersnet.HdTrailersNetMovieTrailerProvider;
@@ -124,6 +126,7 @@ public class MediaProviders {
     loadProvider(AniDbMovieMetadataProvider.class);
     loadProvider(OfdbMovieMetadataProvider.class);
     loadProvider(MpdbMovieMetadataProvider.class);
+    loadProvider(FernsehserienMovieMetadataProvider.class);
     loadProvider(KodiMetadataProvider.class);
 
     // addons
@@ -183,6 +186,7 @@ public class MediaProviders {
     loadProvider(AniDbTvShowMetadataProvider.class);
     loadProvider(TvMazeTvShowMetadataProvider.class);
     loadProvider(OmdbTvShowMetadataProvider.class);
+    loadProvider(FernsehserienTvShowMetadataProvider.class);
     // loadProvider(TvdbV3TvShowMetadataProvider.class);
 
     // addons

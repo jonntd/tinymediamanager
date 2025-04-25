@@ -3,3 +3,4 @@ Version 5.2.0
 + [Movies, Movie sets, TV shows] completely reworked internal eventing to improve performance
 + [Movies, TV shows] refactored crew management - merged directors, producers, writers, and others into a unified list
 + [macOS] changed hotkey modifier to comply with macOS standards
++ [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
