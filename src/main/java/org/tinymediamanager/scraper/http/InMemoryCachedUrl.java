@@ -90,6 +90,7 @@ public class InMemoryCachedUrl extends Url {
     else {
       String redacted = this.url.replaceAll("api_key=\\w+", "api_key=<API_KEY>")
           .replaceAll("api/\\d+\\w+", "api/<API_KEY>")
+          .replaceAll("json\\/([124567890]|\\d\\d+)\\/", "json/<API_KEY>") // TSDB; ignore 3 as free key
           .replaceAll("apikey=\\w+", "apikey=<API_KEY>");
       LOGGER.trace("Got cached response for {}", redacted);
     }

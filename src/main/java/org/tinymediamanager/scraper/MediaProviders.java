@@ -63,6 +63,7 @@ import org.tinymediamanager.scraper.omdb.OmdbTvShowMetadataProvider;
 import org.tinymediamanager.scraper.opensubtitles_com.OpenSubtitlesComMovieSubtitleProvider;
 import org.tinymediamanager.scraper.opensubtitles_com.OpenSubtitlesComTvShowSubtitleProvider;
 import org.tinymediamanager.scraper.spi.IAddonProvider;
+import org.tinymediamanager.scraper.thesportsdb.TheSportsDbTvShowMetadataProvider;
 import org.tinymediamanager.scraper.thetvdb.TheTvDbMovieArtworkProvider;
 import org.tinymediamanager.scraper.thetvdb.TheTvDbMovieMetadataProvider;
 import org.tinymediamanager.scraper.thetvdb.TheTvDbTvShowArtworkProvider;
@@ -187,6 +188,7 @@ public class MediaProviders {
     loadProvider(TvMazeTvShowMetadataProvider.class);
     loadProvider(OmdbTvShowMetadataProvider.class);
     loadProvider(FernsehserienTvShowMetadataProvider.class);
+    loadProvider(TheSportsDbTvShowMetadataProvider.class);
     // loadProvider(TvdbV3TvShowMetadataProvider.class);
 
     // addons

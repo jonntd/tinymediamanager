@@ -111,8 +111,12 @@ public class TvShowEpisodeAndSeasonParser {
     // remove show name
     if (tvShowName != null && !tvShowName.isEmpty()) {
       // remove string like tvshow name (440, 24, ...)
-      basename = basename.replaceAll("(?i)^" + Pattern.quote(tvShowName) + "", "");
+      basename = basename.replaceAll("(?i)^[^ES]" + Pattern.quote(tvShowName), ""); // with our added space, but not prefixed with S/E
+      // "some fine show" would match with "some.fine-show"
+      String delimited = tvShowName.replaceAll("[ _.-]", "[ _.-]"); // replace all delimiters, with delimiters pattern ;)
+      basename = basename.replaceAll("(?i)^" + delimited, "");
     }
+
     basename = basename.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
     basename = basename.replaceFirst("[\\(\\[]\\d{4}[\\)\\]]", ""); // remove (xxxx) or [xxxx] as year
     basename = basename.replaceFirst("[\\(\\[][A-Fa-f0-9]{8}[\\)\\]]", ""); // remove (xxxxxxxx) or [xxxxxxxx] as 8 byte crc

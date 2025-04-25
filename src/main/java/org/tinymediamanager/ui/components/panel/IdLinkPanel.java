@@ -178,6 +178,10 @@ public class IdLinkPanel extends JPanel {
           url = "https://www.tvmaze.com/shows/" + id;
           break;
 
+        case MediaMetadata.TSDB:
+          url = "https://www.thesportsdb.com/league/" + id;
+          break;
+
         // do not use zap2it for now, because most IDs are broken
         // case "zap2it":
         // url = "https://tvschedule.zap2it.com/overview.html?programSeriesId=" + id;
@@ -212,6 +216,10 @@ public class IdLinkPanel extends JPanel {
 
         case MediaMetadata.TVMAZE:
           url = "https://www.tvmaze.com/episodes/" + id;
+          break;
+
+        case MediaMetadata.TSDB:
+          url = "https://www.thesportsdb.com/event/" + id;
           break;
 
         case MediaMetadata.ANIDB:

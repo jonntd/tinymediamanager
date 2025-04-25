@@ -63,6 +63,7 @@ public class MediaMetadata {
   public static final String                               TMDB                = "tmdb";
   public static final String                               TMDB_SET            = "tmdbSet";
   public static final String                               TRAKT_TV            = "trakt";
+  public static final String                               TSDB                = "tsdb";
   public static final String                               TVDB                = "tvdb";
   public static final String                               TVMAZE              = "tvmaze";
   public static final String                               TVRAGE              = "tvrage";

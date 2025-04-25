@@ -90,6 +90,8 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.thesportsdb.TheSportsDbHelper;
+import org.tinymediamanager.scraper.thesportsdb.entities.League;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
@@ -900,6 +902,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
       if (tvShow.getTvdbId().isEmpty()) {
         tvShow.setId(MediaMetadata.TVDB, ParserUtils.detectTvdbId(showDir.getFileName().toString()));
+      }
+      // Try to detect some sports/leagues from TheSportsDB
+      // You cannot have a complete /sport/league/video.mkv structure as show;
+      // the "league" must be the TvShow root, and if the datasource matches a "sport", we can add this too
+      if (TheSportsDbHelper.SPORT_LEAGUES.keySet().contains(tvShow.getPathNIO().getFileName().toString())) {
+        League l = TheSportsDbHelper.SPORT_LEAGUES.get(tvShow.getPathNIO().getFileName().toString());
+        tvShow.setId(MediaMetadata.TSDB, l.idLeague);
       }
 
       // ******************************
