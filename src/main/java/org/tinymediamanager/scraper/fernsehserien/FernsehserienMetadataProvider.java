@@ -38,7 +38,7 @@ abstract class FernsehserienMetadataProvider implements IMediaProvider {
 
   @Override
   public boolean isActive() {
-    return true;
+    return isFeatureEnabled() && isApiKeyAvailable(null);
   }
 
 }
