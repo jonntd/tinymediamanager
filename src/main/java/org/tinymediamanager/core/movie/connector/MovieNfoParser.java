@@ -1885,7 +1885,7 @@ public class MovieNfoParser {
     for (Person producer : producers) {
       newProducers.add(morphPerson(PRODUCER, producer));
     }
-    movie.addToProducers(newProducers);
+    movie.addToCrew(newProducers);
 
     List<org.tinymediamanager.core.entities.Person> newDirectors = new ArrayList<>();
     for (Person director : directors) {
@@ -1894,7 +1894,7 @@ public class MovieNfoParser {
       }
       newDirectors.add(morphPerson(DIRECTOR, director));
     }
-    movie.addToDirectors(newDirectors);
+    movie.addToCrew(newDirectors);
 
     List<org.tinymediamanager.core.entities.Person> newWriters = new ArrayList<>();
     for (Person writer : credits) {
@@ -1903,7 +1903,7 @@ public class MovieNfoParser {
       }
       newWriters.add(morphPerson(WRITER, writer));
     }
-    movie.addToWriters(newWriters);
+    movie.addToCrew(newWriters);
 
     movie.addToGenres(genres);
 

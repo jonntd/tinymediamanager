@@ -30,6 +30,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.tinymediamanager.core.AbstractModelObject;
 import org.tinymediamanager.core.EmptyHashMap;
 import org.tinymediamanager.core.IPrintable;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
@@ -44,8 +45,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
  * @author Manuel Laggner
  */
 public class Person extends AbstractModelObject implements IPrintable {
-  public static final String ACTOR_DIR    = ".actors";
-  public static final String PRODUCER_DIR = ".producers";
+  public static final String ACTOR_DIR = ".actors";
 
   public enum Type {
     ACTOR,
@@ -53,7 +53,18 @@ public class Person extends AbstractModelObject implements IPrintable {
     WRITER,
     PRODUCER,
     GUEST, // guest actor on episode level
-    OTHER
+    OTHER;
+
+    @Override
+    public String toString() {
+      try {
+        return TmmResourceBundle.getString("Person." + name());
+      }
+      catch (Exception ignored) {
+        // fallback
+        return this.name();
+      }
+    }
   }
 
   @JsonProperty

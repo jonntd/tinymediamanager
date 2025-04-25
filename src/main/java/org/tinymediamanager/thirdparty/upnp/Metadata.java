@@ -103,9 +103,9 @@ class Metadata {
         }
 
         persons = new ArrayList<>();
-        for (Person a : tmmMovie.getProducers()) {
-          persons.add(new PersonWithRole(a.getName(), a.getRole()));
-        }
+        // for (Person a : tmmMovie.getProducers()) {
+        // persons.add(new PersonWithRole(a.getName(), a.getRole()));
+        // }
         if (!persons.isEmpty()) {
           PersonWithRole[] arr = persons.toArray(new PersonWithRole[persons.size()]);
           m.setProducers(arr);

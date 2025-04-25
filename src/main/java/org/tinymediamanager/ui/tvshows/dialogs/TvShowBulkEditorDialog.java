@@ -724,7 +724,7 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             }
           });
 
-          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, new Person.Type[] { Person.Type.ACTOR });
           popupPanel.setContent(personEditorPanel);
           showModalPopupPanel(popupPanel);
         });
@@ -753,13 +753,13 @@ public class TvShowBulkEditorDialog extends TmmDialog {
 
                 List<Person> directors = new ArrayList<>();
                 directors.add(new Person(person)); // force copy constructor
-                episode.addToDirectors(directors);
+                episode.addToCrew(directors);
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
             }
           });
 
-          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, new Person.Type[] { Person.Type.DIRECTOR });
           popupPanel.setContent(personEditorPanel);
           showModalPopupPanel(popupPanel);
         });

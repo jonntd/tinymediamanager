@@ -111,12 +111,12 @@ import org.tinymediamanager.ui.components.datepicker.YearSpinner;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
-import org.tinymediamanager.ui.components.panel.PersonTable;
 import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
 import org.tinymediamanager.ui.components.table.MediaIdTable;
 import org.tinymediamanager.ui.components.table.MediaIdTable.MediaId;
 import org.tinymediamanager.ui.components.table.MediaRatingTable;
 import org.tinymediamanager.ui.components.table.MediaTrailerTable;
+import org.tinymediamanager.ui.components.table.PersonTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.textfield.TmmObligatoryTextArea;
 import org.tinymediamanager.ui.components.textfield.TmmRoundTextArea;
@@ -155,9 +155,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
   private final List<MediaFile>                    mediaFiles          = new ArrayList<>();
 
   private final EventList<Person>                  cast;
-  private final EventList<Person>                  producers;
-  private final EventList<Person>                  directors;
-  private final EventList<Person>                  writers;
+  private final EventList<Person>                  crew;
 
   private List<String>                             extrathumbs         = null;
   private List<String>                             extrafanarts        = null;
@@ -215,9 +213,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
   private TmmTable                                 tableRatings;
   private MediaTrailerTable                        tableTrailer;
   private PersonTable                              tableActors;
-  private PersonTable                              tableProducers;
-  private PersonTable                              tableDirectors;
-  private PersonTable                              tableWriters;
+  private PersonTable                              tableCrew;
 
   /**
    * Create the dialog.
@@ -236,9 +232,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
     // creation of lists
     cast = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
-    producers = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
-    directors = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
-    writers = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
+    crew = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
     trailers = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(MediaTrailer.class));
 
     this.movieToEdit = movie;
@@ -256,16 +250,8 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       cast.add(new Person(origCast));
     }
 
-    for (Person origProducer : movieToEdit.getProducers()) {
-      producers.add(new Person(origProducer));
-    }
-
-    for (Person origDirector : movieToEdit.getDirectors()) {
-      directors.add(new Person(origDirector));
-    }
-
-    for (Person origWriter : movieToEdit.getWriters()) {
-      writers.add(new Person(origWriter));
+    for (Person origCrew : movieToEdit.getCrew()) {
+      crew.add(new Person(origCrew));
     }
 
     genres.addAll(movieToEdit.getGenres());
@@ -805,8 +791,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
     {
       JPanel crewPanel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("movie.edit.castandcrew"), null, crewPanel, null);
-      crewPanel
-          .setLayout(new MigLayout("", "[][150lp:300lp,grow][20lp:n][][150lp:300lp,grow]", "[100lp:200lp,grow][20lp:n][100lp:200lp,grow][grow]"));
+      crewPanel.setLayout(new MigLayout("", "[][150lp:300lp,grow][20lp:n][][150lp:300lp,grow]", "[200lp:400lp,grow]"));
       {
         JLabel lblActors = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
         crewPanel.add(lblActors, "flowy,cell 0 0,alignx right,aligny top");
@@ -814,46 +799,24 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         tableActors = new PersonTable(cast);
         tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
         tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
+        tableActors.setAllowedEditorTypes(new Person.Type[] { Person.Type.ACTOR });
 
         JScrollPane scrollPane = new JScrollPane();
         tableActors.configureScrollPane(scrollPane);
         crewPanel.add(scrollPane, "cell 1 0,grow");
       }
       {
-        JLabel lblProducers = new TmmLabel(TmmResourceBundle.getString("metatag.producers"));
+        JLabel lblProducers = new TmmLabel(TmmResourceBundle.getString("metatag.crew"));
         crewPanel.add(lblProducers, "flowy,cell 3 0,alignx right,aligny top");
 
-        tableProducers = new PersonTable(producers);
-        tableProducers.setAddTitle(TmmResourceBundle.getString("cast.producer.add"));
-        tableProducers.setEditTitle(TmmResourceBundle.getString("cast.producer.edit"));
+        tableCrew = new PersonTable(crew);
+        tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
+        tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.OTHER });
 
         JScrollPane scrollPane = new JScrollPane();
-        tableProducers.configureScrollPane(scrollPane);
+        tableCrew.configureScrollPane(scrollPane);
         crewPanel.add(scrollPane, "cell 4 0,grow");
-      }
-      {
-        JLabel lblDirectorsT = new TmmLabel(TmmResourceBundle.getString("metatag.directors"));
-        crewPanel.add(lblDirectorsT, "flowy,cell 0 2,alignx right,aligny top");
-
-        tableDirectors = new PersonTable(directors);
-        tableDirectors.setAddTitle(TmmResourceBundle.getString("cast.director.add"));
-        tableDirectors.setEditTitle(TmmResourceBundle.getString("cast.director.edit"));
-
-        JScrollPane scrollPane = new JScrollPane(tableDirectors);
-        tableDirectors.configureScrollPane(scrollPane);
-        crewPanel.add(scrollPane, "cell 1 2,grow");
-      }
-      {
-        JLabel lblWritersT = new TmmLabel(TmmResourceBundle.getString("metatag.writers"));
-        crewPanel.add(lblWritersT, "flowy,cell 3 2,alignx right,aligny top");
-
-        tableWriters = new PersonTable(writers);
-        tableWriters.setAddTitle(TmmResourceBundle.getString("cast.writer.add"));
-        tableWriters.setEditTitle(TmmResourceBundle.getString("cast.writer.edit"));
-
-        JScrollPane scrollPane = new JScrollPane(tableWriters);
-        tableWriters.configureScrollPane(scrollPane);
-        crewPanel.add(scrollPane, "cell 4 2,grow");
       }
       {
         JButton btnAddActor = new SquareIconButton(new AddActorAction());
@@ -869,43 +832,17 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         crewPanel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
       }
       {
-        JButton btnAddProducer = new SquareIconButton(new AddProducerAction());
+        JButton btnAddProducer = new SquareIconButton(new AddCrewAction());
         crewPanel.add(btnAddProducer, "cell 3 0,alignx right");
 
-        JButton btnRemoveProducer = new SquareIconButton(new RemoveProducerAction());
+        JButton btnRemoveProducer = new SquareIconButton(new RemoveCrewAction());
         crewPanel.add(btnRemoveProducer, "cell 3 0,alignx right");
 
-        JButton btnMoveProducerUp = new SquareIconButton(new MoveProducerUpAction());
+        JButton btnMoveProducerUp = new SquareIconButton(new MoveCrewUpAction());
         crewPanel.add(btnMoveProducerUp, "cell 3 0,alignx right");
 
-        JButton btnMoveProducerDown = new SquareIconButton(new MoveProducerDownAction());
+        JButton btnMoveProducerDown = new SquareIconButton(new MoveCrewDownAction());
         crewPanel.add(btnMoveProducerDown, "cell 3 0,alignx right,aligny top");
-      }
-      {
-        JButton btnAddDirector = new SquareIconButton(new AddDirectorAction());
-        crewPanel.add(btnAddDirector, "cell 0 2,alignx right");
-
-        JButton btnRemoveDirector = new SquareIconButton(new RemoveDirectorAction());
-        crewPanel.add(btnRemoveDirector, "cell 0 2,alignx right");
-
-        JButton btnMoveDirectorUp = new SquareIconButton(new MoveDirectorUpAction());
-        crewPanel.add(btnMoveDirectorUp, "cell 0 2,alignx right");
-
-        JButton btnMoveDirectorDown = new SquareIconButton(new MoveDirectorDownAction());
-        crewPanel.add(btnMoveDirectorDown, "cell 0 2,alignx right,aligny top");
-      }
-      {
-        JButton btnAddWriter = new SquareIconButton(new AddWriterAction());
-        crewPanel.add(btnAddWriter, "cell 3 2,alignx right");
-
-        JButton btnRemoveWriter = new SquareIconButton(new RemoveWriterAction());
-        crewPanel.add(btnRemoveWriter, "cell 3 2,alignx right");
-
-        JButton btnMoveWriterUp = new SquareIconButton(new MoveWriterUpAction());
-        crewPanel.add(btnMoveWriterUp, "cell 3 2,alignx right");
-
-        JButton btnMoveWriterDown = new SquareIconButton(new MoveWriterDownAction());
-        crewPanel.add(btnMoveWriterDown, "cell 3 2,alignx right,aligny top");
       }
     }
 
@@ -1414,12 +1351,8 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       // remove all lists to avoid merging
       movieToEdit.removeActors();
       movieToEdit.setActors(cast);
-      movieToEdit.removeProducers();
-      movieToEdit.setProducers(producers);
-      movieToEdit.removeDirectors();
-      movieToEdit.setDirectors(directors);
-      movieToEdit.removeWriters();
-      movieToEdit.setWriters(writers);
+      movieToEdit.removeCrew();
+      movieToEdit.setCrew(crew);
 
       movieToEdit.removeAllGenres();
       movieToEdit.setGenres(genres);
@@ -1608,7 +1541,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      tableActors.addPerson(Person.Type.ACTOR);
+      tableActors.addPerson();
     }
   }
 
@@ -1624,27 +1557,27 @@ public class MovieEditorDialog extends AbstractEditorDialog {
     }
   }
 
-  private class AddProducerAction extends AbstractAction {
-    public AddProducerAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.producer.add"));
+  private class AddCrewAction extends AbstractAction {
+    public AddCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.add"));
       putValue(SMALL_ICON, IconManager.ADD_INV);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      tableProducers.addPerson(Person.Type.PRODUCER);
+      tableCrew.addPerson();
     }
   }
 
-  private class RemoveProducerAction extends AbstractAction {
-    public RemoveProducerAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.producer.remove"));
+  private class RemoveCrewAction extends AbstractAction {
+    public RemoveCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.remove"));
       putValue(SMALL_ICON, IconManager.REMOVE_INV);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      producers.removeAll(tableProducers.getSelectedPersons());
+      crew.removeAll(tableCrew.getSelectedPersons());
     }
   }
 
@@ -1902,34 +1835,34 @@ public class MovieEditorDialog extends AbstractEditorDialog {
     }
   }
 
-  private class MoveProducerUpAction extends AbstractAction {
-    public MoveProducerUpAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.moveproducerup"));
+  private class MoveCrewUpAction extends AbstractAction {
+    public MoveCrewUpAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewup"));
       putValue(SMALL_ICON, IconManager.ARROW_UP_INV);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableProducers.getSelectedRow();
+      int row = tableCrew.getSelectedRow();
       if (row > 0) {
-        Collections.rotate(producers.subList(row - 1, row + 1), 1);
-        tableProducers.getSelectionModel().setSelectionInterval(row - 1, row - 1);
+        Collections.rotate(crew.subList(row - 1, row + 1), 1);
+        tableCrew.getSelectionModel().setSelectionInterval(row - 1, row - 1);
       }
     }
   }
 
-  private class MoveProducerDownAction extends AbstractAction {
-    public MoveProducerDownAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.moveproducerdown"));
+  private class MoveCrewDownAction extends AbstractAction {
+    public MoveCrewDownAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewdown"));
       putValue(SMALL_ICON, IconManager.ARROW_DOWN_INV);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      int row = tableProducers.getSelectedRow();
-      if (row < producers.size() - 1) {
-        Collections.rotate(producers.subList(row, row + 2), -1);
-        tableProducers.getSelectionModel().setSelectionInterval(row + 1, row + 1);
+      int row = tableCrew.getSelectedRow();
+      if (row < crew.size() - 1) {
+        Collections.rotate(crew.subList(row, row + 2), -1);
+        tableCrew.getSelectionModel().setSelectionInterval(row + 1, row + 1);
       }
     }
   }
@@ -1994,118 +1927,6 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       if (row < tags.size() - 1) {
         Collections.rotate(tags.subList(row, row + 2), -1);
         listTags.getSelectionModel().setSelectionInterval(row + 1, row + 1);
-      }
-    }
-  }
-
-  private class AddDirectorAction extends AbstractAction {
-    public AddDirectorAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.director.add"));
-      putValue(SMALL_ICON, IconManager.ADD_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      tableDirectors.addPerson(Person.Type.DIRECTOR);
-    }
-  }
-
-  private class RemoveDirectorAction extends AbstractAction {
-    public RemoveDirectorAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.director.remove"));
-      putValue(SMALL_ICON, IconManager.REMOVE_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      producers.removeAll(tableProducers.getSelectedPersons());
-    }
-  }
-
-  private class MoveDirectorUpAction extends AbstractAction {
-    public MoveDirectorUpAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movedirectorup"));
-      putValue(SMALL_ICON, IconManager.ARROW_UP_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableDirectors.getSelectedRow();
-      if (row > 0) {
-        Collections.rotate(directors.subList(row - 1, row + 1), 1);
-        tableDirectors.getSelectionModel().setSelectionInterval(row - 1, row - 1);
-      }
-    }
-  }
-
-  private class MoveDirectorDownAction extends AbstractAction {
-    public MoveDirectorDownAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movedirectordown"));
-      putValue(SMALL_ICON, IconManager.ARROW_DOWN_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableDirectors.getSelectedRow();
-      if (row < directors.size() - 1) {
-        Collections.rotate(directors.subList(row, row + 2), -1);
-        tableDirectors.getSelectionModel().setSelectionInterval(row + 1, row + 1);
-      }
-    }
-  }
-
-  private class AddWriterAction extends AbstractAction {
-    public AddWriterAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.writer.add"));
-      putValue(SMALL_ICON, IconManager.ADD_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      tableWriters.addPerson(Person.Type.WRITER);
-    }
-  }
-
-  private class RemoveWriterAction extends AbstractAction {
-    public RemoveWriterAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.writer.remove"));
-      putValue(SMALL_ICON, IconManager.REMOVE_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      writers.removeAll(tableWriters.getSelectedPersons());
-    }
-  }
-
-  private class MoveWriterUpAction extends AbstractAction {
-    public MoveWriterUpAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movewriterup"));
-      putValue(SMALL_ICON, IconManager.ARROW_UP_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableWriters.getSelectedRow();
-      if (row > 0) {
-        Collections.rotate(writers.subList(row - 1, row + 1), 1);
-        tableWriters.getSelectionModel().setSelectionInterval(row - 1, row - 1);
-      }
-    }
-  }
-
-  private class MoveWriterDownAction extends AbstractAction {
-    public MoveWriterDownAction() {
-      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movewriterdown"));
-      putValue(SMALL_ICON, IconManager.ARROW_DOWN_INV);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      int row = tableWriters.getSelectedRow();
-      if (row < writers.size() - 1) {
-        Collections.rotate(writers.subList(row, row + 2), -1);
-        tableWriters.getSelectionModel().setSelectionInterval(row + 1, row + 1);
       }
     }
   }

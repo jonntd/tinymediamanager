@@ -229,10 +229,9 @@ public class MovieToNfoConnectorTest extends BasicMovieTest {
 
     movie.setWatched(true);
     movie.addToGenres(Arrays.asList(MediaGenres.ADVENTURE, MediaGenres.FAMILY));
-    movie
-        .addToWriters(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
-            new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer"),
-            new Person(Person.Type.DIRECTOR, "Ron Clements", "Director"), new Person(Person.Type.DIRECTOR, "John Jusker", "Director")));
+    movie.addToCrew(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
+        new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer"),
+        new Person(Person.Type.DIRECTOR, "Ron Clements", "Director"), new Person(Person.Type.DIRECTOR, "John Jusker", "Director")));
     movie.addToTags(Arrays.asList("Disney", "Oriental"));
 
     movie
@@ -242,7 +241,7 @@ public class MovieToNfoConnectorTest extends BasicMovieTest {
                     "https://image.tmdb.org/t/p/w640/rlZpPoORiJzStzIuAyrPOlLhnaL.jpg", "https://www.themoviedb.org/person/15827"),
                 new Person(Person.Type.ACTOR, "Robin Williams", "Genie (voice)")));
 
-    movie.addToProducers(
+    movie.addToCrew(
         Arrays.asList(new Person(Person.Type.PRODUCER, "Ron Clements", "Producer"), new Person(Person.Type.PRODUCER, "Donald W. Ernst", "Producer")));
 
     movie.setSpokenLanguages("de, fr, Englirsch");

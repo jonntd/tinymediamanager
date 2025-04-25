@@ -177,8 +177,8 @@ public class TvShowEpisodeToNfoConnectorTest extends BasicTvShowTest {
         assertThat(newEpisode.getTvShow().getActors()).doesNotContain(person);
       }
 
-      assertThat(newEpisode.getDirectors().size()).isEqualTo(episode.getDirectors().size());
-      assertThat(newEpisode.getDirectors().get(0)).isEqualTo(episode.getDirectors().get(0));
+      assertThat(newEpisode.getCrew().size()).isEqualTo(episode.getCrew().size());
+      assertThat(newEpisode.getCrew().get(0)).isEqualTo(episode.getCrew().get(0));
       assertThat(newEpisode.getWriters().size()).isEqualTo(episode.getWriters().size());
       assertThat(newEpisode.getWriters().get(0)).isEqualTo(episode.getWriters().get(0));
     }
@@ -208,8 +208,8 @@ public class TvShowEpisodeToNfoConnectorTest extends BasicTvShowTest {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
     episode1.setFirstAired(sdf.parse("1987-04-12"));
 
-    episode1.addToDirectors(Collections.singletonList(new Person(Person.Type.DIRECTOR, "Kim Manners", "Director")));
-    episode1.addToWriters(Collections.singletonList(new Person(Person.Type.WRITER, "Patrick Hasburgh", "Writer")));
+    episode1.addToCrew(Collections.singletonList(new Person(Person.Type.DIRECTOR, "Kim Manners", "Director")));
+    episode1.addToCrew(Collections.singletonList(new Person(Person.Type.WRITER, "Patrick Hasburgh", "Writer")));
 
     episode1.addToActors(Arrays.asList(new Person(Person.Type.ACTOR, "Charles Payne", "Unknown", "http://thumb1"),
         new Person(Person.Type.ACTOR, "Reginald T. Dorsey", "", "http://thumb2")));
@@ -254,8 +254,8 @@ public class TvShowEpisodeToNfoConnectorTest extends BasicTvShowTest {
       sdf = new SimpleDateFormat("yyyy-MM-dd");
       episode2.setFirstAired(sdf.parse("1987-04-19"));
 
-      episode2.addToDirectors(Arrays.asList(new Person(Person.Type.DIRECTOR, "Kim Manners", "Director")));
-      episode2.addToWriters(Arrays.asList(new Person(Person.Type.WRITER, "Patrick Hasburgh", "Writer")));
+      episode2.addToCrew(Arrays.asList(new Person(Person.Type.DIRECTOR, "Kim Manners", "Director")));
+      episode2.addToCrew(Arrays.asList(new Person(Person.Type.WRITER, "Patrick Hasburgh", "Writer")));
 
       episode2.addToActors(Arrays.asList(new Person(Person.Type.ACTOR, "Charles Payne", "Unknown", "http://thumb1"),
           new Person(Person.Type.ACTOR, "Reginald T. Dorsey", "", "http://thumb2")));

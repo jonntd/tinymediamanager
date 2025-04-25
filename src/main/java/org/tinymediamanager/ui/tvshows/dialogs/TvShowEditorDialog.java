@@ -115,13 +115,13 @@ import org.tinymediamanager.ui.components.datepicker.YearSpinner;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
-import org.tinymediamanager.ui.components.panel.PersonTable;
 import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
 import org.tinymediamanager.ui.components.table.MediaIdTable;
 import org.tinymediamanager.ui.components.table.MediaIdTable.MediaId;
 import org.tinymediamanager.ui.components.table.MediaRatingTable;
 import org.tinymediamanager.ui.components.table.MediaTrailerTable;
 import org.tinymediamanager.ui.components.table.MouseKeyboardSortingStrategy;
+import org.tinymediamanager.ui.components.table.PersonTable;
 import org.tinymediamanager.ui.components.table.TmmEditorTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
@@ -155,8 +155,11 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
   private final TvShow                             tvShowToEdit;
   private final TvShowList                         tvShowList          = TvShowModuleManager.getInstance().getTvShowList();
+
   private final JTabbedPane                        tabbedPane          = new TmmTabbedPane();
   private final EventList<Person>                  actors;
+  private final EventList<Person>                  crew;
+
   private final List<MediaGenres>                  genres              = ObservableCollections.observableList(new ArrayList<>());
   private final EventList<MediaId>                 ids;
   private final EventList<MediaRatingTable.Rating> ratings;
@@ -173,6 +176,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
   private YearSpinner                              spYear;
   private JTextArea                                taPlot;
   private PersonTable                              tableActors;
+  private PersonTable                              tableCrew;
   private ImageLabel                               lblPoster;
   private ImageLabel                               lblFanart;
   private ImageLabel                               lblBanner;
@@ -241,6 +245,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     // creation of lists
     actors = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
+    crew = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
     episodes = new SortedList<>(
         new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(EpisodeEditorContainer.class)));
     trailers = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(MediaTrailer.class));
@@ -658,51 +663,27 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       details2Panel
           .setLayout(new MigLayout("", "[][150lp:400lp,grow][20lp:n][][150lp:300lp,grow]", "[][100lp:150lp,grow][20lp:n][100lp:150lp,grow][][grow]"));
       {
-        JLabel lblActors = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
-        details2Panel.add(lblActors, "flowy,cell 0 0 1 2,alignx right,aligny top");
-
-        tableActors = new PersonTable(actors);
-        tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
-        tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
-
-        JScrollPane scrollPaneActors = new JScrollPane();
-        tableActors.configureScrollPane(scrollPaneActors);
-        details2Panel.add(scrollPaneActors, "cell 1 0 1 2,grow");
-
-        JButton btnAddActor = new SquareIconButton(new AddActorAction());
-        details2Panel.add(btnAddActor, "cell 0 0,alignx right");
-
-        JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction()); // $NON-NLS-1$
-        details2Panel.add(btnRemoveActor, "cell 0 0,alignx right,aligny top");
-
-        JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
-        details2Panel.add(btnMoveActorUp, "cell 0 0,alignx right");
-
-        JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
-        details2Panel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
-      }
-      {
         JLabel lblDateAdded = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
-        details2Panel.add(lblDateAdded, "cell 3 0,alignx right");
+        details2Panel.add(lblDateAdded, "cell 0 0,alignx right");
 
         spDateAdded = new JSpinner(new SpinnerDateModel());
-        details2Panel.add(spDateAdded, "cell 4 0");
+        details2Panel.add(spDateAdded, "cell 1 0");
       }
       {
         JLabel lblIds = new TmmLabel("Ids");
-        details2Panel.add(lblIds, "flowy,cell 3 1,alignx right,aligny top");
+        details2Panel.add(lblIds, "flowy,cell 3 0 1 2,alignx right,aligny top");
 
         tableIds = new MediaIdTable(ids);
 
         JScrollPane scrollPaneIds = new JScrollPane();
         tableIds.configureScrollPane(scrollPaneIds);
-        details2Panel.add(scrollPaneIds, "cell 4 1,grow");
+        details2Panel.add(scrollPaneIds, "cell 3 0 1 2,grow");
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
-        details2Panel.add(btnAddId, "cell 3 1,alignx right");
+        details2Panel.add(btnAddId, "cell 3 0 1 2,alignx right");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
-        details2Panel.add(btnRemoveId, "cell 3 1,alignx right,aligny top");
+        details2Panel.add(btnRemoveId, "cell 3 0 1 2,alignx right,aligny top");
       }
       {
         JLabel lblGenres = new TmmLabel(TmmResourceBundle.getString("metatag.genre"));
@@ -760,6 +741,67 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbTags.getActionMap().put(enterAction, new AddTagAction());
         details2Panel.add(cbTags, "cell 4 4,growx");
+      }
+    }
+
+    /**********************************************************************************
+     * CrewPanel
+     **********************************************************************************/
+    {
+      JPanel crewPanel = new JPanel();
+      tabbedPane.addTab(TmmResourceBundle.getString("movie.edit.castandcrew"), null, crewPanel, null);
+      crewPanel.setLayout(new MigLayout("", "[][150lp:300lp,grow][20lp:n][][150lp:300lp,grow]", "[200lp:400lp,grow]"));
+      {
+        JLabel lblActorsT = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
+        crewPanel.add(lblActorsT, "flowy,cell 0 0,alignx right,aligny top");
+
+        tableActors = new PersonTable(actors);
+        tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
+        tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
+        tableActors.setAllowedEditorTypes(new Person.Type[] { Person.Type.ACTOR });
+
+        JScrollPane scrollPane = new JScrollPane();
+        tableActors.configureScrollPane(scrollPane);
+        crewPanel.add(scrollPane, "cell 1 0,grow");
+      }
+      {
+        JButton btnAddActor = new SquareIconButton(new AddActorAction());
+        crewPanel.add(btnAddActor, "cell 0 0,alignx right");
+
+        JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction());
+        crewPanel.add(btnRemoveActor, "cell 0 0,alignx right");
+
+        JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
+        crewPanel.add(btnMoveActorUp, "cell 0 0,alignx right");
+
+        JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
+        crewPanel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
+      }
+      {
+        JLabel lblCrewT = new TmmLabel(TmmResourceBundle.getString("metatag.crew"));
+        crewPanel.add(lblCrewT, "flowy,cell 3 0,alignx right,aligny top");
+
+        tableCrew = new PersonTable(crew);
+        tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
+        tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.OTHER });
+
+        JScrollPane scrollPane = new JScrollPane();
+        tableCrew.configureScrollPane(scrollPane);
+        crewPanel.add(scrollPane, "cell 4 0,grow");
+      }
+      {
+        JButton btnAddCrew = new SquareIconButton(new AddCrewAction());
+        crewPanel.add(btnAddCrew, "cell 3 0,alignx right");
+
+        JButton btnRemoveCrew = new SquareIconButton(new RemoveCrewAction());
+        crewPanel.add(btnRemoveCrew, "cell 3 0,alignx right");
+
+        JButton btnMoveCrewUp = new SquareIconButton(new MoveCrewUpAction());
+        crewPanel.add(btnMoveCrewUp, "cell 3 0,alignx right");
+
+        JButton btnMoveCrewDown = new SquareIconButton(new MoveCrewDownAction());
+        crewPanel.add(btnMoveCrewDown, "cell 3 0,alignx right,aligny top");
       }
     }
 
@@ -1272,6 +1314,9 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       tvShowToEdit.removeActors();
       tvShowToEdit.setActors(actors);
 
+      tvShowToEdit.removeCrew();
+      tvShowToEdit.setCrew(crew);
+
       tvShowToEdit.removeAllTags();
       tvShowToEdit.setTags(tags);
 
@@ -1463,7 +1508,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      tableActors.addPerson(Person.Type.ACTOR);
+      tableActors.addPerson();
     }
   }
 
@@ -1507,6 +1552,62 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       if (row < actors.size() - 1) {
         Collections.rotate(actors.subList(row, row + 2), -1);
         tableActors.getSelectionModel().setSelectionInterval(row + 1, row + 1);
+      }
+    }
+  }
+
+  private class AddCrewAction extends AbstractAction {
+    public AddCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.add"));
+      putValue(SMALL_ICON, IconManager.ADD_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      tableCrew.addPerson();
+    }
+  }
+
+  private class RemoveCrewAction extends AbstractAction {
+    public RemoveCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.remove"));
+      putValue(SMALL_ICON, IconManager.REMOVE_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      crew.removeAll(tableCrew.getSelectedPersons());
+    }
+  }
+
+  private class MoveCrewUpAction extends AbstractAction {
+    public MoveCrewUpAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewup"));
+      putValue(SMALL_ICON, IconManager.ARROW_UP_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      int row = tableCrew.getSelectedRow();
+      if (row > 0) {
+        Collections.rotate(crew.subList(row - 1, row + 1), 1);
+        tableCrew.getSelectionModel().setSelectionInterval(row - 1, row - 1);
+      }
+    }
+  }
+
+  private class MoveCrewDownAction extends AbstractAction {
+    public MoveCrewDownAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewdown"));
+      putValue(SMALL_ICON, IconManager.ARROW_DOWN_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      int row = tableCrew.getSelectedRow();
+      if (row < crew.size() - 1) {
+        Collections.rotate(crew.subList(row, row + 2), -1);
+        tableCrew.getSelectionModel().setSelectionInterval(row + 1, row + 1);
       }
     }
   }

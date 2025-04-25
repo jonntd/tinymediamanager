@@ -15,24 +15,19 @@
  */
 package org.tinymediamanager.ui.tvshows.panels.episode;
 
-import static org.tinymediamanager.core.Constants.ACTORS;
-
 import java.beans.PropertyChangeListener;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 
-import org.jdesktop.beansbinding.AutoBinding;
-import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
-import org.jdesktop.beansbinding.BeanProperty;
-import org.jdesktop.beansbinding.Bindings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.ui.TmmUILayoutStore;
-import org.tinymediamanager.ui.components.label.ActorImageLabel;
+import org.tinymediamanager.ui.components.label.PersonImageLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
-import org.tinymediamanager.ui.components.panel.PersonTable;
+import org.tinymediamanager.ui.components.table.PersonTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.tvshows.TvShowEpisodeSelectionModel;
 
@@ -49,15 +44,16 @@ import net.miginfocom.swing.MigLayout;
  */
 public class TvShowEpisodeCastPanel extends JPanel {
   private final TvShowEpisodeSelectionModel selectionModel;
-  private EventList<Person>                 actorEventList = null;
+  private final EventList<Person>           crewEventList;
+  private final EventList<Person>           actorEventList;
 
   /**
    * UI elements
    */
-  private TmmTable                          tableActors;
-  private ActorImageLabel                   lblActorImage;
-  private JLabel                            lblDirector;
-  private JLabel                            lblWriter;
+  private PersonImageLabel                  lblCrewThumb;
+  private PersonImageLabel                  lblActorThumb;
+  private TmmTable                          tableCrew;
+  private TmmTable                          tableActor;
 
   /**
    * Instantiates a new tv show episode cast panel.
@@ -67,13 +63,19 @@ public class TvShowEpisodeCastPanel extends JPanel {
    */
   public TvShowEpisodeCastPanel(TvShowEpisodeSelectionModel model) {
     this.selectionModel = model;
+    crewEventList = GlazedLists.threadSafeList(new ObservableElementList<>(new BasicEventList<>(), GlazedLists.beanConnector(Person.class)));
     actorEventList = GlazedLists.threadSafeList(new ObservableElementList<>(new BasicEventList<>(), GlazedLists.beanConnector(Person.class)));
 
     initComponents();
-    initDataBindings();
 
-    lblActorImage.enableLightbox();
-    lblActorImage.setCacheUrl(true);
+    lblActorThumb.setDesiredAspectRatio(2 / 3f);
+    lblCrewThumb.setDesiredAspectRatio(2 / 3f);
+
+    lblActorThumb.enableLightbox();
+    lblCrewThumb.enableLightbox();
+
+    lblActorThumb.setCacheUrl(true);
+    lblCrewThumb.setCacheUrl(true);
 
     // install the propertychangelistener
     PropertyChangeListener propertyChangeListener = propertyChangeEvent -> {
@@ -85,11 +87,18 @@ public class TvShowEpisodeCastPanel extends JPanel {
         return;
       }
 
-      if ("selectedTvShowEpisode".equals(property) || ACTORS.equals(property)) {
+      if ("selectedTvShowEpisode".equals(property)) {
         actorEventList.clear();
         actorEventList.addAll(selectionModel.getSelectedTvShowEpisode().getActors());
         if (!actorEventList.isEmpty()) {
-          tableActors.getSelectionModel().setSelectionInterval(0, 0);
+          tableActor.getSelectionModel().setSelectionInterval(0, 0);
+        }
+
+        crewEventList.clear();
+        crewEventList.addAll(selectionModel.getSelectedTvShowEpisode().getCrew());
+
+        if (!crewEventList.isEmpty()) {
+          tableCrew.getSelectionModel().setSelectionInterval(0, 0);
         }
       }
     };
@@ -97,41 +106,41 @@ public class TvShowEpisodeCastPanel extends JPanel {
     selectionModel.addPropertyChangeListener(propertyChangeListener);
 
     // selectionlistener for the selected actor
-    tableActors.getSelectionModel().addListSelectionListener(arg0 -> {
+    tableActor.getSelectionModel().addListSelectionListener(arg0 -> {
       if (!arg0.getValueIsAdjusting()) {
-        int selectedRow = tableActors.convertRowIndexToModel(tableActors.getSelectedRow());
+        int selectedRow = tableActor.convertRowIndexToModel(tableActor.getSelectedRow());
         if (selectedRow >= 0 && selectedRow < actorEventList.size()) {
           Person actor = actorEventList.get(selectedRow);
-          lblActorImage.setActor(selectionModel.getSelectedTvShowEpisode().getTvShow(), actor);
+          lblActorThumb.setPerson(selectionModel.getSelectedTvShowEpisode(), actor);
         }
         else {
-          lblActorImage.clearImage();
+          lblActorThumb.clearImage();
+        }
+      }
+    });
+
+    // selectionlistener for the selected crew member
+    tableCrew.getSelectionModel().addListSelectionListener(arg0 -> {
+      if (!arg0.getValueIsAdjusting()) {
+        int selectedRow = tableCrew.convertRowIndexToModel(tableCrew.getSelectedRow());
+        if (selectedRow >= 0 && selectedRow < crewEventList.size()) {
+          Person crewMember = crewEventList.get(selectedRow);
+          lblCrewThumb.setPerson(selectionModel.getSelectedTvShowEpisode(), crewMember);
+        }
+        else {
+          lblCrewThumb.clearImage();
         }
       }
     });
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[][400lp,grow][150lp,grow]", "[][][200lp,grow][grow]"));
+    setLayout(new MigLayout("", "[][400lp,grow][150lp,grow]", "[150lp:200lp,grow][][150lp:200lp,grow]"));
     {
-      JLabel lblDirectorT = new TmmLabel(TmmResourceBundle.getString("metatag.director"));
-      add(lblDirectorT, "cell 0 0");
+      JLabel lblProducersT = new TmmLabel(TmmResourceBundle.getString("metatag.crew"));
+      add(lblProducersT, "cell 0 0,aligny top");
 
-      lblDirector = new JLabel("");
-      add(lblDirector, "cell 1 0 2 1,growx,wmin 0");
-    }
-    {
-      JLabel lblWriterT = new TmmLabel(TmmResourceBundle.getString("metatag.writer"));
-      add(lblWriterT, "cell 0 1");
-
-      lblWriter = new JLabel("");
-      add(lblWriter, "cell 1 1 2 1,growx,wmin 0");
-    }
-    {
-      JLabel lblActorsT = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
-      add(lblActorsT, "cell 0 2,aligny top");
-
-      tableActors = new PersonTable(actorEventList) {
+      tableCrew = new PersonTable(crewEventList) {
         @Override
         public void onPersonChanged(Person person) {
           super.onPersonChanged(person);
@@ -139,31 +148,41 @@ public class TvShowEpisodeCastPanel extends JPanel {
           TvShowEpisodeCastPanel.this.selectionModel.getSelectedTvShowEpisode().writeNFO();
         }
       };
-      tableActors.setName("tvshows.episode.actorTable");
-      TmmUILayoutStore.getInstance().install(tableActors);
-
-      JScrollPane scrollPaneActors = new JScrollPane();
-      tableActors.configureScrollPane(scrollPaneActors);
-      add(scrollPaneActors, "cell 1 2 1 2,grow");
+      tableCrew.setName(getName() + ".producerTable");
+      TmmUILayoutStore.getInstance().install(tableCrew);
+      JScrollPane scrollPanePerson = new JScrollPane();
+      tableCrew.configureScrollPane(scrollPanePerson);
+      add(scrollPanePerson, "cell 1 0,grow");
     }
     {
-      lblActorImage = new ActorImageLabel();
-      add(lblActorImage, "cell 2 2,grow");
+      lblCrewThumb = new PersonImageLabel();
+      add(lblCrewThumb, "cell 2 0,growx");
     }
-  }
+    {
+      JSeparator separator = new JSeparator();
+      add(separator, "cell 0 1 3 1,growx");
+    }
+    {
+      JLabel lblActorsT = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
+      add(lblActorsT, "cell 0 2,aligny top");
 
-  protected void initDataBindings() {
-    BeanProperty<TvShowEpisodeSelectionModel, String> tvShowEpisodeSelectionModelBeanProperty = BeanProperty
-        .create("selectedTvShowEpisode.directorsAsString");
-    BeanProperty<JLabel, String> jLabelBeanProperty = BeanProperty.create("text");
-    AutoBinding<TvShowEpisodeSelectionModel, String, JLabel, String> autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, selectionModel,
-        tvShowEpisodeSelectionModelBeanProperty, lblDirector, jLabelBeanProperty);
-    autoBinding.bind();
-    //
-    BeanProperty<TvShowEpisodeSelectionModel, String> tvShowEpisodeSelectionModelBeanProperty_1 = BeanProperty
-        .create("selectedTvShowEpisode.writersAsString");
-    AutoBinding<TvShowEpisodeSelectionModel, String, JLabel, String> autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, selectionModel,
-        tvShowEpisodeSelectionModelBeanProperty_1, lblWriter, jLabelBeanProperty);
-    autoBinding_1.bind();
+      tableActor = new PersonTable(actorEventList) {
+        @Override
+        public void onPersonChanged(Person person) {
+          super.onPersonChanged(person);
+          TvShowEpisodeCastPanel.this.selectionModel.getSelectedTvShowEpisode().saveToDb();
+          TvShowEpisodeCastPanel.this.selectionModel.getSelectedTvShowEpisode().writeNFO();
+        }
+      };
+      tableActor.setName(getName() + ".actorTable");
+      TmmUILayoutStore.getInstance().install(tableActor);
+      JScrollPane scrollPanePersons = new JScrollPane();
+      tableActor.configureScrollPane(scrollPanePersons);
+      add(scrollPanePersons, "cell 1 2,grow");
+    }
+    {
+      lblActorThumb = new PersonImageLabel();
+      add(lblActorThumb, "cell 2 2,growx");
+    }
   }
 }

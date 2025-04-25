@@ -19,7 +19,7 @@ import static org.tinymediamanager.core.Constants.ACTORS;
 import static org.tinymediamanager.core.Constants.ACTORS_AS_STRING;
 import static org.tinymediamanager.core.Constants.CERTIFICATION;
 import static org.tinymediamanager.core.Constants.COUNTRY;
-import static org.tinymediamanager.core.Constants.DIRECTORS;
+import static org.tinymediamanager.core.Constants.CREW;
 import static org.tinymediamanager.core.Constants.DIRECTORS_AS_STRING;
 import static org.tinymediamanager.core.Constants.EDITION;
 import static org.tinymediamanager.core.Constants.EDITION_AS_STRING;
@@ -29,7 +29,6 @@ import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
 import static org.tinymediamanager.core.Constants.MEDIA_SOURCE;
 import static org.tinymediamanager.core.Constants.MOVIESET;
 import static org.tinymediamanager.core.Constants.MOVIESET_TITLE;
-import static org.tinymediamanager.core.Constants.PRODUCERS;
 import static org.tinymediamanager.core.Constants.PRODUCERS_AS_STRING;
 import static org.tinymediamanager.core.Constants.RELEASE_DATE;
 import static org.tinymediamanager.core.Constants.RELEASE_DATE_AS_STRING;
@@ -42,7 +41,6 @@ import static org.tinymediamanager.core.Constants.TOP250;
 import static org.tinymediamanager.core.Constants.TRAILER;
 import static org.tinymediamanager.core.Constants.VIDEO_IN_3D;
 import static org.tinymediamanager.core.Constants.WATCHED;
-import static org.tinymediamanager.core.Constants.WRITERS;
 import static org.tinymediamanager.core.Constants.WRITERS_AS_STRING;
 import static org.tinymediamanager.core.Utils.returnOneWhenFilled;
 
@@ -75,6 +73,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.UpgradeTasks;
 import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
@@ -124,6 +123,7 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -189,11 +189,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
   @JsonProperty
   private final List<Person>                    actors                     = new CopyOnWriteArrayList<>();
   @JsonProperty
-  private final List<Person>                    producers                  = new CopyOnWriteArrayList<>();
-  @JsonProperty
-  private final List<Person>                    directors                  = new CopyOnWriteArrayList<>();
-  @JsonProperty
-  private final List<Person>                    writers                    = new CopyOnWriteArrayList<>();
+  private final List<Person>                    crew                       = new CopyOnWriteArrayList<>();
   @JsonProperty
   private final List<MediaTrailer>              trailer                    = new CopyOnWriteArrayList<>();
   @JsonProperty
@@ -260,9 +256,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     if (force) {
       genres.clear();
       actors.clear();
-      producers.clear();
-      directors.clear();
-      writers.clear();
+      crew.clear();
       trailer.clear();
       extraFanarts.clear();
       extraThumbs.clear();
@@ -270,9 +264,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
     setGenres(other.genres);
     setActors(other.actors);
-    setProducers(other.producers);
-    setDirectors(other.directors);
-    setWriters(other.writers);
+    setCrew(other.crew);
     setShowlinks(other.showlinks);
     setExtraFanarts(other.extraFanarts);
     setExtraThumbs(other.extraThumbs);
@@ -312,9 +304,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     score = score + returnOneWhenFilled(actors);
-    score = score + returnOneWhenFilled(directors);
-    score = score + returnOneWhenFilled(writers);
-    score = score + returnOneWhenFilled(producers);
+    score = score + returnOneWhenFilled(crew);
     score = score + returnOneWhenFilled(trailer);
 
     return score;
@@ -905,23 +895,14 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
       setActors(metadata.getCastMembers(Person.Type.ACTOR));
     }
-    if (config.contains(MovieScraperMetadataConfig.DIRECTORS)) {
+    if (config.contains(MovieScraperMetadataConfig.CREW)) {
       if (!matchFound || overwriteExistingItems) {
-        directors.clear();
+        crew.clear();
       }
-      setDirectors(metadata.getCastMembers(Person.Type.DIRECTOR));
-    }
-    if (config.contains(MovieScraperMetadataConfig.WRITERS)) {
-      if (!matchFound || overwriteExistingItems) {
-        writers.clear();
-      }
-      setWriters(metadata.getCastMembers(Person.Type.WRITER));
-    }
-    if (config.contains(MovieScraperMetadataConfig.PRODUCERS)) {
-      if (!matchFound || overwriteExistingItems) {
-        producers.clear();
-      }
-      setProducers(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.DIRECTOR));
+      setCrew(metadata.getCastMembers(Person.Type.WRITER));
+      setCrew(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.OTHER));
     }
 
     // genres
@@ -2096,14 +2077,14 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * set the actors. This will do a two way sync of the list to be added and the given list, to do not re-add existing actors (better for binding)
+   * set the actors. This will do a two-way sync of the list to be added and the given list, to do not re-add existing actors (better for binding)
    *
    * @param newActors
    *          the new actors to be set
    */
   @JsonSetter
   public void setActors(List<Person> newActors) {
-    // two way sync of actors
+    // two-way sync of actors
     mergePersons(actors, newActors);
     firePropertyChange(ACTORS, null, getActors());
     firePropertyChange(ACTORS_AS_STRING, null, getActorsAsString());
@@ -2115,7 +2096,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the actors
    */
   public List<Person> getActors() {
-    return this.actors;
+    return actors;
   }
 
   /**
@@ -2132,20 +2113,22 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * adds the given producers
+   * adds the given crew members
    *
-   * @param newProducers
-   *          a {@link Collection} of all producers to be added
+   * @param newCrew
+   *          a {@link Collection} of all crew members to be added
    */
-  public void addToProducers(Collection<Person> newProducers) {
+  public void addToCrew(Collection<Person> newCrew) {
     Set<Person> newItems = new LinkedHashSet<>();
 
     // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newProducers)) {
-      if (person == null || producers.contains(person)) {
+    for (Person person : ListUtils.nullSafe(newCrew)) {
+      if (person == null || crew.contains(person)) {
         continue;
       }
-      if (person.getType() != Person.Type.PRODUCER) {
+
+      // add all but not actors
+      if (person.getType() == Person.Type.ACTOR) {
         return;
       }
 
@@ -2156,33 +2139,48 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return;
     }
 
-    producers.addAll(newItems);
-    firePropertyChange(PRODUCERS, null, getProducers());
+    crew.addAll(newItems);
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * remove all producers
+   * remove all crew members
    */
-  public void removeProducers() {
-    producers.clear();
-    firePropertyChange(PRODUCERS, null, getProducers());
+  public void removeCrew() {
+    crew.clear();
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * set the producers. This will do a two-way sync of the list to be added and the given list, to do not re-add existing producers (better for
+   * set the crew members. This will do a two-way sync of the list to be added and the given list, to do not re-add existing actors (better for
    * binding)
    *
-   * @param newProducers
-   *          the new producers to be set
+   * @param newCrew
+   *          the new crew to be set
    */
   @JsonSetter
-  public void setProducers(List<Person> newProducers) {
-    // two way sync of producers
-    mergePersons(producers, newProducers);
-    firePropertyChange(PRODUCERS, null, getProducers());
+  public void setCrew(List<Person> newCrew) {
+    // two-way sync of crew members
+    mergePersons(crew, newCrew);
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
+  }
+
+  /**
+   * get the crew members
+   *
+   * @return the crew members
+   */
+  public List<Person> getCrew() {
+    return crew;
   }
 
   /**
@@ -2191,7 +2189,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the producers
    */
   public List<Person> getProducers() {
-    return this.producers;
+    return crew.stream().filter(person -> person.getType() == Person.Type.PRODUCER).toList();
   }
 
   /**
@@ -2201,64 +2199,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getProducersAsString() {
     List<String> producerNames = new ArrayList<>();
-    for (Person producer : producers) {
+    for (Person producer : getProducers()) {
       producerNames.add(producer.getName());
     }
     return StringUtils.join(producerNames, ", ");
-  }
-
-  /**
-   * add the given list of directors
-   *
-   * @param newDirectors
-   *          a {@link Collection} of directors to be added
-   */
-  public void addToDirectors(Collection<Person> newDirectors) {
-    Set<Person> newItems = new LinkedHashSet<>();
-
-    // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newDirectors)) {
-      if (person == null || directors.contains(person)) {
-        continue;
-      }
-      if (person.getType() != Person.Type.DIRECTOR) {
-        return;
-      }
-
-      newItems.add(person);
-    }
-
-    if (newItems.isEmpty()) {
-      return;
-    }
-
-    directors.addAll(newItems);
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
-  }
-
-  /**
-   * remove all directors.
-   */
-  public void removeDirectors() {
-    directors.clear();
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
-  }
-
-  /**
-   * Sets the directors.
-   *
-   * @param newDirectors
-   *          the new directors
-   */
-  @JsonSetter
-  public void setDirectors(List<Person> newDirectors) {
-    // two way sync of directors
-    mergePersons(directors, newDirectors);
-
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
   }
 
   /**
@@ -2267,7 +2211,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the directors
    */
   public List<Person> getDirectors() {
-    return directors;
+    return crew.stream().filter(person -> person.getType() == Person.Type.DIRECTOR).toList();
   }
 
   /**
@@ -2277,64 +2221,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getDirectorsAsString() {
     List<String> directorNames = new ArrayList<>();
-    for (Person director : directors) {
+    for (Person director : getDirectors()) {
       directorNames.add(director.getName());
     }
     return StringUtils.join(directorNames, ", ");
-  }
-
-  /**
-   * add the given writers
-   *
-   * @param newWriters
-   *          a {@link Collection} of the writers to be added
-   */
-  public void addToWriters(Collection<Person> newWriters) {
-    Set<Person> newItems = new LinkedHashSet<>();
-
-    // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newWriters)) {
-      if (person == null || writers.contains(person)) {
-        continue;
-      }
-      if (person.getType() != Person.Type.WRITER) {
-        return;
-      }
-
-      newItems.add(person);
-    }
-
-    if (newItems.isEmpty()) {
-      return;
-    }
-
-    writers.addAll(newItems);
-    firePropertyChange(WRITERS, null, getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
-  }
-
-  /**
-   * remove all writers.
-   */
-  public void removeWriters() {
-    writers.clear();
-    firePropertyChange(WRITERS, null, getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
-  }
-
-  /**
-   * Sets the writers.
-   *
-   * @param newWriters
-   *          the new writers
-   */
-  @JsonSetter
-  public void setWriters(List<Person> newWriters) {
-    // two way sync of writers
-    mergePersons(writers, newWriters);
-
-    firePropertyChange(WRITERS, null, this.getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
@@ -2343,7 +2233,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the writers
    */
   public List<Person> getWriters() {
-    return writers;
+    return crew.stream().filter(person -> person.getType() == Person.Type.WRITER).toList();
   }
 
   /**
@@ -2353,7 +2243,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getWritersAsString() {
     List<String> writerNames = new ArrayList<>();
-    for (Person writer : writers) {
+    for (Person writer : getWriters()) {
       writerNames.add(writer.getName());
     }
     return StringUtils.join(writerNames, ", ");
@@ -2907,105 +2797,39 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
   public Object getValueForMetadata(MovieScraperMetadataConfig metadataConfig) {
 
-    switch (metadataConfig) {
-      case ID:
-        return getIds();
+    return switch (metadataConfig) {
+      case ID -> getIds();
+      case TITLE -> getTitle();
+      case ORIGINAL_TITLE -> getOriginalTitle();
+      case TAGLINE -> getTagline();
+      case PLOT -> getPlot();
+      case YEAR -> getYear();
+      case RELEASE_DATE -> getReleaseDate();
+      case RATING -> getRatings();
+      case TOP250 -> getTop250();
+      case RUNTIME -> getRuntime();
+      case CERTIFICATION -> getCertification();
+      case GENRES -> getGenres();
+      case SPOKEN_LANGUAGES -> getSpokenLanguages();
+      case COUNTRY -> getCountry();
+      case PRODUCTION_COMPANY -> getProductionCompany();
+      case TAGS -> getTags();
+      case COLLECTION -> getMovieSet();
+      case TRAILER -> getTrailer();
+      case ACTORS -> getActors();
+      case CREW -> getCrew();
+      case POSTER -> getMediaFiles(MediaFileType.POSTER);
+      case FANART -> getMediaFiles(MediaFileType.FANART);
+      case BANNER -> getMediaFiles(MediaFileType.BANNER);
+      case CLEARART -> getMediaFiles(MediaFileType.CLEARART);
+      case THUMB -> getMediaFiles(MediaFileType.THUMB);
+      case CLEARLOGO -> getMediaFiles(MediaFileType.CLEARLOGO);
+      case DISCART -> getMediaFiles(MediaFileType.DISC);
+      case KEYART -> getMediaFiles(MediaFileType.KEYART);
+      case EXTRAFANART -> getMediaFiles(MediaFileType.EXTRAFANART);
+      case EXTRATHUMB -> getMediaFiles(MediaFileType.EXTRATHUMB);
+    };
 
-      case TITLE:
-        return getTitle();
-
-      case ORIGINAL_TITLE:
-        return getOriginalTitle();
-
-      case TAGLINE:
-        return getTagline();
-
-      case PLOT:
-        return getPlot();
-
-      case YEAR:
-        return getYear();
-
-      case RELEASE_DATE:
-        return getReleaseDate();
-
-      case RATING:
-        return getRatings();
-
-      case TOP250:
-        return getTop250();
-
-      case RUNTIME:
-        return getRuntime();
-
-      case CERTIFICATION:
-        return getCertification();
-
-      case GENRES:
-        return getGenres();
-
-      case SPOKEN_LANGUAGES:
-        return getSpokenLanguages();
-
-      case COUNTRY:
-        return getCountry();
-
-      case PRODUCTION_COMPANY:
-        return getProductionCompany();
-
-      case TAGS:
-        return getTags();
-
-      case COLLECTION:
-        return getMovieSet();
-
-      case TRAILER:
-        return getTrailer();
-
-      case ACTORS:
-        return getActors();
-
-      case PRODUCERS:
-        return getProducers();
-
-      case DIRECTORS:
-        return getDirectors();
-
-      case WRITERS:
-        return getWriters();
-
-      case POSTER:
-        return getMediaFiles(MediaFileType.POSTER);
-
-      case FANART:
-        return getMediaFiles(MediaFileType.FANART);
-
-      case BANNER:
-        return getMediaFiles(MediaFileType.BANNER);
-
-      case CLEARART:
-        return getMediaFiles(MediaFileType.CLEARART);
-
-      case THUMB:
-        return getMediaFiles(MediaFileType.THUMB);
-
-      case LOGO, CLEARLOGO: // LOGO = legacy
-        return getMediaFiles(MediaFileType.CLEARLOGO);
-
-      case DISCART:
-        return getMediaFiles(MediaFileType.DISC);
-
-      case KEYART:
-        return getMediaFiles(MediaFileType.KEYART);
-
-      case EXTRAFANART:
-        return getMediaFiles(MediaFileType.EXTRAFANART);
-
-      case EXTRATHUMB:
-        return getMediaFiles(MediaFileType.EXTRATHUMB);
-    }
-
-    return null;
   }
 
   @Override
@@ -3024,5 +2848,36 @@ public class Movie extends MediaEntity implements IMediaInformation {
   @Override
   public int hashCode() {
     return Objects.hash(path, getMainFile().getFile());
+  }
+
+  /**
+   * used to migrate values to their new location
+   *
+   * @param property
+   *          the property/value name
+   * @param value
+   *          the value itself
+   */
+  @JsonAnySetter
+  public void setUnknownFields(String property, Object value) {
+    if (value == null) {
+      return;
+    }
+
+    // migrate old properties
+    switch (property) {
+      // producers, writers and directors get merged into a unified crew list
+      case "producers", "writers", "directors" -> {
+        if (value instanceof List<?> crewList) {
+          for (Person person : UpgradeTasks.upgradeCrew(crewList)) {
+            if (!crew.contains(person)) {
+              crew.add(person);
+            }
+          }
+          // sort once
+          crew.sort(Comparator.comparingInt(o -> o.getType().ordinal()));
+        }
+      }
+    }
   }
 }

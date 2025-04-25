@@ -24,6 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * The enum TvShowScraperMetadataConfig is used to control which TV show fields should be set after scraping.
  * 
@@ -52,6 +54,7 @@ public enum TvShowScraperMetadataConfig implements ScraperMetadataConfig {
 
   // cast
   ACTORS(Type.CAST),
+  CREW(Type.CAST),
 
   // artwork
   POSTER(Type.ARTWORK),
@@ -59,7 +62,6 @@ public enum TvShowScraperMetadataConfig implements ScraperMetadataConfig {
   BANNER(Type.ARTWORK),
   CLEARART(Type.ARTWORK),
   THUMB(Type.ARTWORK),
-  LOGO(Type.DEPRECATED),
   CLEARLOGO(Type.ARTWORK),
   DISCART(Type.ARTWORK, "mediafiletype.disc"),
   KEYART(Type.ARTWORK),
@@ -192,5 +194,15 @@ public enum TvShowScraperMetadataConfig implements ScraperMetadataConfig {
     }
 
     return values;
+  }
+
+  @JsonCreator
+  public static TvShowScraperMetadataConfig forValue(String value) {
+    return switch (value) {
+      // map deprecated ones
+      case "PRODUCERS", "DIRECTORS", "WRITERS" -> TvShowScraperMetadataConfig.CREW;
+      case "LOGO" -> TvShowScraperMetadataConfig.CLEARLOGO;
+      default -> TvShowScraperMetadataConfig.valueOf(value.toUpperCase());
+    };
   }
 }

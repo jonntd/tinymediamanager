@@ -687,7 +687,7 @@ public class VSMeta {
       mcm.setName(dir);
       directors.add(new Person(mcm));
     }
-    m.addToDirectors(directors);
+    m.addToCrew(directors);
 
     List<Person> writers = new ArrayList<>();
     for (String writ : info.list.writer) {
@@ -695,7 +695,7 @@ public class VSMeta {
       mcm.setName(writ);
       writers.add(new Person(mcm));
     }
-    m.addToWriters(writers);
+    m.addToCrew(writers);
 
     return m;
   }
@@ -739,7 +739,7 @@ public class VSMeta {
       mcm.setName(dir);
       directors.add(new Person(mcm));
     }
-    ep.addToDirectors(directors);
+    ep.addToCrew(directors);
 
     List<Person> writers = new ArrayList<>();
     for (String writ : info.list.writer) {
@@ -747,7 +747,7 @@ public class VSMeta {
       mcm.setName(writ);
       writers.add(new Person(mcm));
     }
-    ep.addToWriters(writers);
+    ep.addToCrew(writers);
 
     return ep;
   }

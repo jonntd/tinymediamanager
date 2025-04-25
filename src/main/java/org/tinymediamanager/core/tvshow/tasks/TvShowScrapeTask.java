@@ -266,8 +266,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
                 ep.setOriginalTitle(me.getOriginalTitle());
                 ep.setPlot(me.getPlot());
                 ep.setActors(me.getCastMembers(Person.Type.ACTOR));
-                ep.setDirectors(me.getCastMembers(Person.Type.DIRECTOR));
-                ep.setWriters(me.getCastMembers(Person.Type.WRITER));
+                ep.setCrew(me.getCastMembers(Person.Type.DIRECTOR));
+                ep.setCrew(me.getCastMembers(Person.Type.WRITER));
+                ep.setCrew(me.getCastMembers(Person.Type.PRODUCER));
+                ep.setCrew(me.getCastMembers(Person.Type.OTHER));
 
                 Map<String, MediaRating> newRatings = new HashMap<>();
 

@@ -334,8 +334,8 @@ public class TvShowChooserModel extends AbstractModelObject {
         ep.setOriginalTitle(me.getOriginalTitle());
         ep.setPlot(me.getPlot());
         ep.setActors(me.getCastMembers(Person.Type.ACTOR));
-        ep.setDirectors(me.getCastMembers(Person.Type.DIRECTOR));
-        ep.setWriters(me.getCastMembers(Person.Type.WRITER));
+        ep.setCrew(me.getCastMembers(Person.Type.DIRECTOR));
+        ep.setCrew(me.getCastMembers(Person.Type.WRITER));
 
         episodes.add(ep);
       }

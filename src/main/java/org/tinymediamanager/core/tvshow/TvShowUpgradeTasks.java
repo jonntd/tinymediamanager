@@ -46,7 +46,8 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
 
   /**
    * Each DB version can only be executed once!<br>
-   * Do not make changes to existing versions, use a new number!
+   * Do not make changes to existing versions, use a new number!<br>
+   * The number is created off the version which is introduced with a counter intra version. E.g. 5201 (v5.2.0 change 1)
    */
   @Override
   public void performDbUpgrades() {
@@ -290,6 +291,16 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
       }
 
       module.setDbVersion(5009);
+    }
+
+    if (module.getDbVersion() < 5201) {
+      // crew migration - just re-write the DB
+      for (TvShow tvShow : tvShowList.getTvShows()) {
+        registerForSaving(tvShow);
+        tvShow.getEpisodes().forEach(this::registerForSaving);
+      }
+
+      module.setDbVersion(5201);
     }
 
     saveAll();

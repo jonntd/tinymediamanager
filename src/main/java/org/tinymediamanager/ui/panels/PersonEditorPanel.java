@@ -24,6 +24,7 @@ import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -47,42 +48,50 @@ public class PersonEditorPanel extends AbstractModalInputPanel {
   private final EventList<MediaIdTable.MediaId> ids;
   private final Person                          person;
 
+  private final JComboBox<Person.Type>          cbType;
   private final JTextField                      tfName;
   private final JTextField                      tfRole;
   private final JTextField                      tfImageUrl;
   private final JTextField                      tfProfileUrl;
   private final TmmTable                        tableIds;
 
-  public PersonEditorPanel(Person person) {
+  public PersonEditorPanel(Person person, Person.Type[] allowedTyes) {
     super();
 
     this.person = person;
     this.ids = MediaIdTable.convertIdMapToEventList(person.getIds());
 
     {
-      setLayout(new MigLayout("", "[][500lp:n,grow][]", "[][][][][50lp:150lp][20lp]"));
+      setLayout(new MigLayout("", "[][500lp:n,grow][]", "[][][][][][50lp:150lp][20lp]"));
+      {
+        JLabel lblTypeT = new TmmLabel(TmmResourceBundle.getString("metatag.persontype"));
+        add(lblTypeT, "cell 0 0,alignx trailing");
+
+        cbType = new JComboBox<>(allowedTyes);
+        add(cbType, "cell 1 0");
+      }
       {
         JLabel lblNameT = new TmmLabel(TmmResourceBundle.getString("metatag.name"));
-        add(lblNameT, "cell 0 0,alignx trailing");
+        add(lblNameT, "cell 0 1,alignx trailing");
 
         tfName = new JTextField();
-        add(tfName, "cell 1 0,growx");
+        add(tfName, "cell 1 1,growx");
         tfName.setColumns(10);
       }
       {
         JLabel lblRoleT = new TmmLabel(TmmResourceBundle.getString("metatag.role"));
-        add(lblRoleT, "cell 0 1,alignx trailing");
+        add(lblRoleT, "cell 0 2,alignx trailing");
 
         tfRole = new JTextField();
-        add(tfRole, "cell 1 1,growx");
+        add(tfRole, "cell 1 2,growx");
         tfRole.setColumns(10);
       }
       {
         JLabel lblImageUrlT = new TmmLabel(TmmResourceBundle.getString("image.url"));
-        add(lblImageUrlT, "cell 0 2,alignx trailing");
+        add(lblImageUrlT, "cell 0 3,alignx trailing");
 
         tfImageUrl = new JTextField();
-        add(tfImageUrl, "cell 1 2,growx");
+        add(tfImageUrl, "cell 1 3,growx");
         tfImageUrl.setColumns(10);
       }
       {
@@ -101,34 +110,35 @@ public class PersonEditorPanel extends AbstractModalInputPanel {
             }
           }
         });
-        add(btnShowImage, "cell 2 2");
+        add(btnShowImage, "cell 2 3");
       }
       {
         JLabel lblProfileUrlT = new TmmLabel(TmmResourceBundle.getString("profile.url"));
-        add(lblProfileUrlT, "cell 0 3,alignx trailing");
+        add(lblProfileUrlT, "cell 0 4,alignx trailing");
 
         tfProfileUrl = new JTextField();
-        add(tfProfileUrl, "cell 1 3,growx");
+        add(tfProfileUrl, "cell 1 4,growx");
         tfProfileUrl.setColumns(10);
       }
       {
         JLabel lblIds = new TmmLabel(TmmResourceBundle.getString("metatag.ids"));
-        add(lblIds, "cell 0 4,flowy, alignx right,aligny top");
+        add(lblIds, "flowy,cell 0 5,alignx right,aligny top");
 
         JScrollPane scrollPaneIds = new JScrollPane();
-        add(scrollPaneIds, "cell 1 4,grow");
+        add(scrollPaneIds, "cell 1 5,grow");
 
         tableIds = new MediaIdTable(ids);
         tableIds.configureScrollPane(scrollPaneIds);
       }
 
       JButton btnAddId = new SquareIconButton(new AddIdAction());
-      add(btnAddId, "cell 0 4,alignx right,aligny top");
+      add(btnAddId, "cell 0 5,alignx right,aligny top");
 
       JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
-      add(btnRemoveId, "cell 0 4,alignx right,aligny top");
+      add(btnRemoveId, "cell 0 5,alignx right,aligny top");
     }
 
+    cbType.setSelectedItem(person.getType());
     tfName.setText(person.getName());
     tfRole.setText(person.getRole());
     tfImageUrl.setText(person.getThumbUrl());
@@ -140,6 +150,7 @@ public class PersonEditorPanel extends AbstractModalInputPanel {
 
   @Override
   protected void onClose() {
+    person.setType((Person.Type) cbType.getSelectedItem());
     person.setName(tfName.getText());
     person.setRole(tfRole.getText());
     person.setThumbUrl(tfImageUrl.getText());

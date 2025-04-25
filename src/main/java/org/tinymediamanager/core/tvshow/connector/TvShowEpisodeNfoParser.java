@@ -1680,7 +1680,7 @@ public class TvShowEpisodeNfoParser {
         }
         newDirectors.add(morphPerson(DIRECTOR, director));
       }
-      episode.addToDirectors(newDirectors);
+      episode.addToCrew(newDirectors);
 
       List<org.tinymediamanager.core.entities.Person> newWriters = new ArrayList<>();
       for (Person writer : credits) {
@@ -1689,7 +1689,7 @@ public class TvShowEpisodeNfoParser {
         }
         newWriters.add(morphPerson(WRITER, writer));
       }
-      episode.addToWriters(newWriters);
+      episode.addToCrew(newWriters);
 
       episode.addToTags(tags);
 

@@ -34,12 +34,12 @@ public final class Constants {
   public static final String AUDIO_CHANNEL          = "audioChannel";
   public static final String AUDIOSTREAMS_COUNT     = "audioStreams";
   public static final String BANNER                 = "banner";
-  public static final String BANNER_URL             = "bannerUrl";
   public static final String CHARACTERART           = "characterart";
   public static final String CERTIFICATION          = "certification";
   public static final String CLEARART               = "clearart";
   public static final String CLEARLOGO              = "clearlogo";
   public static final String COUNTRY                = "country";
+  public static final String CREW                   = "crew";
   public static final String DATA_SOURCE            = "dataSource";
   public static final String DATE_ADDED             = "dateAdded";
   public static final String DATE_ADDED_AS_STRING   = "dateAddedAsString";

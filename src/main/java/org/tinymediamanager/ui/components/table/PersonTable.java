@@ -1,12 +1,12 @@
 /*
  * Copyright 2012 - 2025 Manuel Laggner
- *
+ *  
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ *  
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ *  
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.tinymediamanager.ui.components.panel;
+package org.tinymediamanager.ui.components.table;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +30,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
-import org.tinymediamanager.ui.components.table.TmmEditorTable;
-import org.tinymediamanager.ui.components.table.TmmTableFormat;
-import org.tinymediamanager.ui.components.table.TmmTableModel;
 import org.tinymediamanager.ui.dialogs.ImagePreviewDialog;
 import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
 import org.tinymediamanager.ui.panels.ModalPopupPanel;
@@ -47,12 +44,13 @@ import ca.odell.glazedlists.swing.GlazedListsSwing;
  * @author Manuel Laggner
  */
 public class PersonTable extends TmmEditorTable {
-  private static final Logger     LOGGER    = LoggerFactory.getLogger(PersonTable.class);
+  private static final Logger     LOGGER             = LoggerFactory.getLogger(PersonTable.class);
 
   private final EventList<Person> personEventList;
 
-  private String                  addTitle  = "";
-  private String                  editTitle = "";
+  private String                  addTitle           = "";
+  private String                  editTitle          = "";
+  private Person.Type[]           allowedEditorTypes = Person.Type.values();
 
   /**
    * create a PersonTable for display only
@@ -95,7 +93,7 @@ public class PersonTable extends TmmEditorTable {
     popupPanel.setTitle(getEditTitle());
     popupPanel.setOnCloseHandler(() -> onPersonChanged(person));
 
-    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, allowedEditorTypes);
     popupPanel.setContent(personEditorPanel);
     iModalPopupPanelProvider.showModalPopupPanel(popupPanel);
   }
@@ -209,6 +207,10 @@ public class PersonTable extends TmmEditorTable {
     this.editTitle = editTitle;
   }
 
+  public void setAllowedEditorTypes(Person.Type[] newValues) {
+    allowedEditorTypes = newValues;
+  }
+
   /**
    * get all selected {@link Person}s
    * 
@@ -226,7 +228,7 @@ public class PersonTable extends TmmEditorTable {
     return selectedPersons;
   }
 
-  public void addPerson(Person.Type personType) {
+  public void addPerson() {
     IModalPopupPanelProvider iModalPopupPanelProvider = IModalPopupPanelProvider.findModalProvider(this);
     if (iModalPopupPanelProvider == null) {
       return;
@@ -235,34 +237,38 @@ public class PersonTable extends TmmEditorTable {
     String defaultName;
     String defaultRole;
 
-    switch (personType) {
-      case ACTOR -> {
-        defaultName = TmmResourceBundle.getString("cast.actor.unknown");
-        defaultRole = TmmResourceBundle.getString("cast.role.unknown");
-      }
-      case GUEST -> {
-        defaultName = TmmResourceBundle.getString("cast.actor.unknown");
-        defaultRole = TmmResourceBundle.getString("cast.role.unknown");
-      }
-      case DIRECTOR -> {
-        defaultName = TmmResourceBundle.getString("director.name.unknown");
-        defaultRole = "Director";
-      }
-      case WRITER -> {
-        defaultName = TmmResourceBundle.getString("writer.name.unknown");
-        defaultRole = "Writer";
-      }
-      case PRODUCER -> {
-        defaultName = TmmResourceBundle.getString("producer.name.unknown");
-        defaultRole = TmmResourceBundle.getString("producer.role.unknown");
-      }
-      default -> {
-        defaultName = "";
-        defaultRole = "";
+    if (allowedEditorTypes != null && allowedEditorTypes.length == 1) {
+      Person.Type personType = allowedEditorTypes[0];
+
+      switch (personType) {
+        case ACTOR, GUEST -> {
+          defaultName = TmmResourceBundle.getString("cast.actor.unknown");
+          defaultRole = TmmResourceBundle.getString("cast.role.unknown");
+        }
+        case DIRECTOR -> {
+          defaultName = TmmResourceBundle.getString("director.name.unknown");
+          defaultRole = "Director";
+        }
+        case WRITER -> {
+          defaultName = TmmResourceBundle.getString("writer.name.unknown");
+          defaultRole = "Writer";
+        }
+        case PRODUCER -> {
+          defaultName = TmmResourceBundle.getString("producer.name.unknown");
+          defaultRole = TmmResourceBundle.getString("producer.role.unknown");
+        }
+        default -> {
+          defaultName = "";
+          defaultRole = "";
+        }
       }
     }
+    else {
+      defaultName = "";
+      defaultRole = "";
+    }
 
-    Person person = new Person(personType, defaultName, defaultRole);
+    Person person = new Person(Person.Type.OTHER, defaultName, defaultRole);
 
     ModalPopupPanel popupPanel = iModalPopupPanelProvider.createModalPopupPanel();
     popupPanel.setTitle(getAddTitle());
@@ -276,7 +282,7 @@ public class PersonTable extends TmmEditorTable {
       }
     });
 
-    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, allowedEditorTypes);
     popupPanel.setContent(personEditorPanel);
     iModalPopupPanelProvider.showModalPopupPanel(popupPanel);
   }
