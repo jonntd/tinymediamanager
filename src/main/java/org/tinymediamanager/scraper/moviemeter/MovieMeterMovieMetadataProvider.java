@@ -70,7 +70,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
         MovieMeterMovieMetadataProvider.class.getResource("/org/tinymediamanager/scraper/moviemeter_nl.png"));
 
     // configure/load settings
-    info.getConfig().addText("apiKey", "", true);
+    info.getConfig().addText(MediaProviderInfo.API_KEY, "", true);
     info.getConfig().addBoolean("scrapeLanguageNames", true);
     info.getConfig().load();
 
