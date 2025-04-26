@@ -328,6 +328,14 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1", detectEpisode("name.1x01.1x01.2.ext")); // do not detect that one
   }
 
+  @Test
+  public void translatedSeasons() {
+    for (String trans : TvShowEpisodeAndSeasonParser.SEASON_TRANSLATIONS) {
+      String name = "Homeland - " + trans + " 8 [HDTV][Cap.804][Castellano][www.descargas2020.org].avi";
+      assertEqual("S:8 E:4", detectEpisode(name));
+    }
+  }
+
   /**
    * Detect episode.
    * 
