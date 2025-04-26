@@ -1014,6 +1014,18 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       setEpisodeNumbers(newEpisodeNumbers);
     }
 
+    // do we have an AIRED ep num?
+    // on plain EP scrape, above IF is not entered... but if we scraped one, we can use it here...
+    int currentAiredNum = getEpisode(AIRED);
+    if (currentAiredNum == -1) {
+      // did we scrape an AIRED ep num?
+      MediaEpisodeNumber scrapedAiredNum = metadata.getEpisodeNumber(AIRED);
+      if (scrapedAiredNum != null && scrapedAiredNum.episode() >= 0) {
+        // ok, then take the scraped AIRED numbers and use it!
+        setEpisode(scrapedAiredNum);
+      }
+    }
+
     if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
