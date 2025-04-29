@@ -1306,7 +1306,7 @@ public abstract class ImdbParser {
       }
     }
 
-    // md.addCastMembers(parseReferencePeople(doc, "cast", Person.Type.ACTOR));
+    md.addCastMembers(parseReferencePeople(doc, "cast", Person.Type.ACTOR));
     md.addCastMembers(parseReferencePeople(doc, "directors", Person.Type.DIRECTOR));
     md.addCastMembers(parseReferencePeople(doc, "writers", Person.Type.WRITER));
     md.addCastMembers(parseReferencePeople(doc, "producers", Person.Type.PRODUCER));
