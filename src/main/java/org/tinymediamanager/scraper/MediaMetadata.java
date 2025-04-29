@@ -41,6 +41,7 @@ import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaType;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 /**
@@ -334,6 +335,20 @@ public class MediaMetadata {
       return;
     }
     castMembers.add(castMember);
+  }
+
+  /**
+   * Adds all the cast member.
+   * 
+   * @param castMember
+   *          the cast member
+   */
+  public void addCastMembers(List<Person> castMembers) {
+    for (Person person : ListUtils.nullSafe(castMembers)) {
+      if (!containsCastMember(person)) {
+        this.castMembers.add(person);
+      }
+    }
   }
 
   /**

@@ -16,8 +16,6 @@
 package org.tinymediamanager.scraper.imdb;
 
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
-import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
-import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.THUMB;
 
 import java.io.InputStream;
@@ -49,6 +47,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaGenres;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
@@ -901,7 +900,7 @@ public abstract class ImdbParser {
         }
       }
 
-      JsonNode countriesNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/countriesOfOrigin/countries");
+      JsonNode countriesNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/countriesDetails/countries");
       for (ImdbCountry country : JsonUtils.parseList(mapper, countriesNode, ImdbCountry.class)) {
         if (isScrapeLanguageNames()) {
           md.addCountry(country.text);
@@ -1307,120 +1306,12 @@ public abstract class ImdbParser {
       }
     }
 
-    // director
-    Element directorsElement = doc.getElementById("directors");
-    while (directorsElement != null && !"header".equals(directorsElement.tag().getName())) {
-      directorsElement = directorsElement.parent();
-    }
-    if (directorsElement != null) {
-      directorsElement = directorsElement.nextElementSibling();
-    }
-    if (directorsElement != null) {
-      for (Element directorElement : directorsElement.getElementsByClass("name")) {
-        String director = directorElement.text().strip();
-
-        Person cm = new Person(Person.Type.DIRECTOR, director);
-        cm.setRole("Director");
-        // profile path
-        Element anchor = directorElement.getElementsByAttributeValueStarting("href", "/name/").first();
-        if (anchor != null) {
-          Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
-          if (matcher.find()) {
-            if (matcher.group(0) != null) {
-              cm.setProfileUrl("http://www.imdb.com" + matcher.group(0));
-            }
-            if (matcher.group(1) != null) {
-              cm.setId(ImdbMetadataProvider.ID, matcher.group(1));
-            }
-          }
-        }
-        md.addCastMember(cm);
-      }
-    }
-
-    // actors
-    Element castTableElement = doc.getElementsByClass("cast_list").first();
-    if (castTableElement != null) {
-      Elements castListLabel = castTableElement.getElementsByClass("castlist_label");
-      Elements tr = castTableElement.getElementsByTag("tr");
-      for (Element row : tr) {
-        // check if we're at the uncredited cast members
-        if (!isScrapeUncreditedActors() && castListLabel.size() > 1 && row.children().contains(castListLabel.get(1))) {
-          break;
-        }
-
-        Person cm = parseCastMember(row);
-        if (cm != null && StringUtils.isNotEmpty(cm.getName())) {
-          cm.setType(ACTOR);
-          md.addCastMember(cm);
-        }
-      }
-    }
-
-    // writers
-    Element writersElement = doc.getElementById("writers");
-    while (writersElement != null && !"header".equals(writersElement.tag().getName())) {
-      writersElement = writersElement.parent();
-    }
-    if (writersElement != null) {
-      writersElement = writersElement.nextElementSibling();
-    }
-    if (writersElement != null) {
-      Elements writersElements = writersElement.getElementsByAttributeValueStarting("href", "/name/");
-
-      for (Element writerElement : writersElements) {
-        String writer = cleanString(writerElement.ownText());
-        Person cm = new Person(WRITER, writer);
-        cm.setRole("Writer");
-        // profile path
-        Element anchor = writerElement.getElementsByAttributeValueStarting("href", "/name/").first();
-        if (anchor != null) {
-          Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
-          if (matcher.find()) {
-            if (matcher.group(0) != null) {
-              cm.setProfileUrl("http://www.imdb.com" + matcher.group(0));
-            }
-            if (matcher.group(1) != null) {
-              cm.setId(ImdbMetadataProvider.ID, matcher.group(1));
-            }
-          }
-        }
-        md.addCastMember(cm);
-      }
-    }
-
-    // producers
-    Element producersElement = doc.getElementById("producers");
-    while (producersElement != null && !"header".equals(producersElement.tag().getName())) {
-      producersElement = producersElement.parent();
-    }
-    if (producersElement != null) {
-      producersElement = producersElement.nextElementSibling();
-    }
-    if (producersElement != null) {
-      // <tr>
-      // <td class="name">
-      // <a href="/name/nm0164613/?ref_=tt_rv">William Paul Clark</a>
-      // </td>
-      // <td>...</td>
-      // <td>associate producer</td>
-      // </tr>
-      Elements rows = producersElement.getElementsByTag("tr");
-      for (Element row : rows) {
-        Elements tds = row.getElementsByTag("td");
-        Person cm = new Person(PRODUCER);
-        for (Element td : tds) {
-          String val = td.text();
-          if (cm.getName().isBlank()) {
-            cm.setName(val);
-          }
-          else {
-            cm.setRole(val);
-          }
-        }
-        md.addCastMember(cm);
-      }
-    }
+    // md.addCastMembers(parseReferencePeople(doc, "cast", Person.Type.ACTOR));
+    md.addCastMembers(parseReferencePeople(doc, "directors", Person.Type.DIRECTOR));
+    md.addCastMembers(parseReferencePeople(doc, "writers", Person.Type.WRITER));
+    md.addCastMembers(parseReferencePeople(doc, "producers", Person.Type.PRODUCER));
+    md.addCastMembers(parseReferencePeople(doc, "editors", Person.Type.OTHER));
+    md.addCastMembers(parseReferencePeople(doc, "composers", Person.Type.OTHER));
 
     // production companies
     Elements prodCompHeaderElements = doc.getElementsByClass("ipl-list-title");
@@ -1447,6 +1338,120 @@ public abstract class ImdbParser {
         md.addProductionCompany(prodComp);
       }
     }
+  }
+
+  private List<Person> parseReferencePeople(Document doc, String id, Person.Type personType) {
+    List<Person> ret = new ArrayList<>();
+    Element element = doc.getElementById(id);
+    while (element != null && !"header".equals(element.tag().getName())) {
+      element = element.parent(); // go up till <header>
+    }
+    if (element != null) {
+      element = element.nextElementSibling(); // get next <table>
+    }
+    if (element != null) {
+      for (Element personRow : element.getElementsByTag("tr")) {
+        try {
+          String name = "";
+          String role = "";
+          String url = "";
+          String imdbid = "";
+          String photo = "";
+
+          // loop through em; actors & crew quite different...
+          Elements tds = personRow.children(); // 1-3 TDs
+          for (Element td : tds) {
+            switch (td.attr("class")) {
+              // crew
+              case "name": {
+                name = td.text().strip();
+                Element anchor = td.child(0);
+                if (anchor != null) {
+                  Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
+                  if (matcher.find()) {
+                    if (matcher.group(0) != null) {
+                      url = "https://www.imdb.com" + matcher.group(0);
+                    }
+                    if (matcher.group(1) != null) {
+                      imdbid = matcher.group(1);
+                    }
+                  }
+                }
+                break;
+              }
+
+              // cast
+              case "itemprop": {
+                break; // we get the name from photo
+              }
+
+              case "character": {
+                role = td.text().strip(); // hmm... we overwrite this
+                break;
+              }
+
+              case "primary_photo": {
+                Element anchor = td.child(0);
+                if (anchor != null) {
+                  Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
+                  if (matcher.find()) {
+                    if (matcher.group(0) != null) {
+                      url = "https://www.imdb.com" + matcher.group(0);
+                    }
+                    if (matcher.group(1) != null) {
+                      imdbid = matcher.group(1);
+                    }
+                  }
+                  Element img = anchor.child(0);
+                  name = img.attr("title");
+                  if (name.isEmpty()) {
+                    name = img.attr("alt");
+                  }
+                  photo = img.attr("loadlate");
+                }
+                break;
+              }
+
+              case "ellipsis":
+              default:
+                break;
+            }
+
+            // role is always last TD
+            role = td.text().strip();
+          }
+
+          if (name.isEmpty()) {
+            continue;
+          }
+          // no role found / last TD was empty? - use personType as role
+          if (role.isEmpty()) {
+            String bundleRole = TmmResourceBundle.getString("Person." + personType.name());
+            if (!"???".equals(bundleRole)) {
+              role = bundleRole;
+            }
+          }
+
+          // check if we're at the uncredited cast members
+          if (personType == ACTOR && !isScrapeUncreditedActors() && role.contains("uncredited")) {
+            continue;
+          }
+
+          // finally add person
+          Person person = new Person(personType, name);
+          person.setRole(role);
+          person.setId(MediaMetadata.IMDB, imdbid);
+          person.setProfileUrl(url);
+          person.setThumbUrl(photo);
+          ret.add(person);
+        }
+        catch (Exception e) {
+          getLogger().warn("Could not parse person: {}", e.getMessage());
+        }
+      }
+    }
+    return ret;
+
   }
 
   protected void parseKeywordsPage(Document doc, MediaSearchAndScrapeOptions options, MediaMetadata md) {
@@ -1745,7 +1750,7 @@ public abstract class ImdbParser {
       Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
       if (matcher.find()) {
         if (matcher.group(0) != null) {
-          profilePath = "http://www.imdb.com" + matcher.group(0);
+          profilePath = "https://www.imdb.com" + matcher.group(0);
         }
         if (matcher.group(1) != null) {
           id = matcher.group(1);
