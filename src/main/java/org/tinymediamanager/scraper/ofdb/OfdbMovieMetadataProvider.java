@@ -159,7 +159,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
     // parse main page
     // **********************************************
 
-    // IMDB ID "http://www.imdb.com/title/tt1194173"
+    // IMDB ID "https://www.imdb.com/title/tt1194173"
     Elements els = doc.getElementsByAttributeValueContaining("href", "imdb.com");
     if (!els.isEmpty()) {
       md.setId(MediaMetadata.IMDB, "tt" + StrgUtils.substr(els.first().attr("href"), "title/tt(\\d+)"));

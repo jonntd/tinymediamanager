@@ -438,7 +438,7 @@ public class ImdbTvShowParser extends ImdbParser {
     LOGGER.debug("getEpisodeList(): {}", options);
 
     // parse the episodes from the ratings overview page (e.g.
-    // http://www.imdb.com/title/tt0491738/episodes )
+    // https://www.imdb.com/title/tt0491738/episodes )
     String imdbId = options.getImdbId();
     if (StringUtils.isBlank(imdbId)) {
       throw new MissingIdException(MediaMetadata.IMDB);
@@ -806,7 +806,7 @@ public class ImdbTvShowParser extends ImdbParser {
           Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
           if (matcher.find()) {
             if (matcher.group(0) != null) {
-              cm.setProfileUrl("http://www.imdb.com" + matcher.group(0));
+              cm.setProfileUrl("https://www.imdb.com" + matcher.group(0));
             }
             if (matcher.group(1) != null) {
               cm.setId(ImdbMetadataProvider.ID, matcher.group(1));
@@ -856,7 +856,7 @@ public class ImdbTvShowParser extends ImdbParser {
           Matcher matcher = PERSON_ID_PATTERN.matcher(anchor.attr("href"));
           if (matcher.find()) {
             if (matcher.group(0) != null) {
-              cm.setProfileUrl("http://www.imdb.com" + matcher.group(0));
+              cm.setProfileUrl("https://www.imdb.com" + matcher.group(0));
             }
             if (matcher.group(1) != null) {
               cm.setId(ImdbMetadataProvider.ID, matcher.group(1));

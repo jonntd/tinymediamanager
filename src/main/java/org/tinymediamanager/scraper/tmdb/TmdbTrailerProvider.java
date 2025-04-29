@@ -136,7 +136,7 @@ class TmdbTrailerProvider {
       if ("youtube".equalsIgnoreCase(video.site)) {
         // build url for youtube trailer
         StringBuilder sb = new StringBuilder();
-        sb.append("http://www.youtube.com/watch?v=");
+        sb.append("https://www.youtube.com/watch?v=");
         sb.append(video.key);
         if (MetadataUtil.unboxInteger(video.size) >= 720) {
           sb.append("&hd=1");

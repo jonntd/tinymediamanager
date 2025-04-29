@@ -60,7 +60,7 @@ public class SearchTitleWithGoogle {
     try {
       if (StringUtils.isNotEmpty(options.getSearchQuery())) {
         if (!site.startsWith("http")) {
-          site = "http://" + site;
+          site = "https://" + site;
         }
         site = new URL(site).getHost();
         searchTerm = options.getSearchQuery();
@@ -95,7 +95,7 @@ public class SearchTitleWithGoogle {
         String gurl = a.attr("href");
         if (gurl.contains("url?q=")) {
           // google manipulated tracking url
-          URL tmp = new URL("http://google.com/" + gurl);
+          URL tmp = new URL("https://google.com/" + gurl);
           String[] params = tmp.getQuery().split("[\\?&]");
           for (String param : params) {
             String name = param.split("=")[0];

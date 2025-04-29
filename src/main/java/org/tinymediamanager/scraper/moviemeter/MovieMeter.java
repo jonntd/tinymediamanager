@@ -37,7 +37,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 class MovieMeter {
   // the base API url
-  public static final String API_URL       = "http://www.moviemeter.nl/api/";
+  public static final String API_URL       = "https://www.moviemeter.nl/api/";
   // the api key query parameter; hast to be supplied at all calls
   public static final String PARAM_API_KEY = "api_key";
 
