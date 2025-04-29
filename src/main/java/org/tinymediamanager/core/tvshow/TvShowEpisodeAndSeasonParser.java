@@ -43,6 +43,7 @@ import org.tinymediamanager.scraper.util.ParserUtils;
  * @author Manuel Laggner
  */
 public class TvShowEpisodeAndSeasonParser {
+
   private static final Logger  LOGGER            = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
 
   // foo.yyyy.mm.dd.*
@@ -78,6 +79,7 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern ANIME_PREPEND4    = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
+  private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3}))+)");
 
   private static final Pattern ANIME_APPEND1     = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
@@ -113,6 +115,7 @@ public class TvShowEpisodeAndSeasonParser {
       // remove string like tvshow name (440, 24, ...)
       basename = basename.replaceAll("(?i)^" + Pattern.quote(tvShowName) + "", "");
     }
+
     basename = basename.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
     basename = basename.replaceFirst("[\\(\\[]\\d{4}[\\)\\]]", ""); // remove (xxxx) or [xxxx] as year
     basename = basename.replaceFirst("[\\(\\[][A-Fa-f0-9]{8}[\\)\\]]", ""); // remove (xxxxxxxx) or [xxxxxxxx] as 8 byte crc
@@ -754,9 +757,22 @@ public class TvShowEpisodeAndSeasonParser {
           result.episodes.add(ep);
           result.season = 1;
 
-          // _maybe_ a multi-episode, so there could be a group 3 (or an IOOB exception)
-          ep = Integer.parseInt(m.group(3));
-          result.episodes.add(ep);
+          // ok, we matched the nice long pattern...
+          // But, in case of multiple episodes, regex cannot repeat unlimited, so we get only first and last number
+          // do a second regex here, to split it manually
+          m = ANIME_PREPEND4_2.matcher(name);
+          if (m.find()) {
+            String[] nums = m.group(1).split("-");
+            for (String num : nums) {
+              ep = Integer.parseInt(num);
+              if (!result.episodes.contains(ep)) {
+                result.episodes.add(ep);
+              }
+            }
+            // yes, we added already the "last" number above
+            // since we ONLY enter that part on 2+ numbers, we should sort it here...
+            Collections.sort(result.episodes);
+          }
         }
         catch (NumberFormatException nfe) {
         }
