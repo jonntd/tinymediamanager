@@ -65,6 +65,7 @@ public class TvShowMergeTest extends BasicTvShowTest {
     ep3.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 2));
     ep3.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_DVD, 1, 2)); // <-- should be merged
     ep3.setTvShow(show2);
+    ep3.addToMediaFiles(mf2); // <-- same file
     show2.addEpisode(ep3);
 
     TvShowEpisode ep4 = new TvShowEpisode();

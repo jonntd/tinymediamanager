@@ -280,7 +280,12 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       // we cannot merge solely by EP numbers,
       // so we use our mainVideo to find a matching episode...
       MediaFile our = ep.getMainVideoFile();
-      TvShowEpisode otherEP = other.getEpisodes().stream().filter(otherep -> otherep.getMainVideoFile().equals(our)).findFirst().orElse(null);
+      TvShowEpisode otherEP = other.getEpisodes()
+          .stream()
+          .filter(
+              otherep -> otherep.getMainVideoFile().equals(our) && ep.getSeason() == otherep.getSeason() && ep.getEpisode() == otherep.getEpisode())
+          .findFirst()
+          .orElse(null);
       if (otherEP != null) {
         ep.merge(otherEP, force);
       }
@@ -291,7 +296,11 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       // we cannot merge solely by EP numbers,
       // so we use our mainVideo to find a matching episode...
       MediaFile theirs = otherEp.getMainVideoFile();
-      TvShowEpisode ourEP = getEpisodes().stream().filter(ourEp -> ourEp.getMainVideoFile().equals(theirs)).findFirst().orElse(null);
+      TvShowEpisode ourEP = getEpisodes().stream()
+          .filter(ourEp -> ourEp.getMainVideoFile().equals(theirs) && ourEp.getSeason() == otherEp.getSeason()
+              && ourEp.getEpisode() == otherEp.getEpisode())
+          .findFirst()
+          .orElse(null);
       if (ourEP == null) {
         TvShowEpisode clone = new TvShowEpisode(otherEp);
         clone.setTvShow(this); // yes!
