@@ -277,13 +277,21 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     // get ours, and merge other values
     for (TvShowEpisode ep : episodes) {
-      TvShowEpisode otherEP = other.getEpisode(ep.getSeason(), ep.getEpisode()).stream().findFirst().orElse(null);
-      ep.merge(otherEP, force);
+      // we cannot merge solely by EP numbers,
+      // so we use our mainVideo to find a matching episode...
+      MediaFile our = ep.getMainVideoFile();
+      TvShowEpisode otherEP = other.getEpisodes().stream().filter(otherep -> otherep.getMainVideoFile().equals(our)).findFirst().orElse(null);
+      if (otherEP != null) {
+        ep.merge(otherEP, force);
+      }
     }
 
     // get others, and simply add
     for (TvShowEpisode otherEp : other.getEpisodes()) {
-      TvShowEpisode ourEP = getEpisode(otherEp.getSeason(), otherEp.getEpisode()).stream().findFirst().orElse(null); // do not do a contains check!
+      // we cannot merge solely by EP numbers,
+      // so we use our mainVideo to find a matching episode...
+      MediaFile theirs = otherEp.getMainVideoFile();
+      TvShowEpisode ourEP = getEpisodes().stream().filter(ourEp -> ourEp.getMainVideoFile().equals(theirs)).findFirst().orElse(null);
       if (ourEP == null) {
         TvShowEpisode clone = new TvShowEpisode(otherEp);
         clone.setTvShow(this); // yes!
