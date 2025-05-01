@@ -1,12 +1,13 @@
 Version 5.1.6
 =======================
 + [FlatLaf] upgraded to version 3.6
-+ [template] add new export templates (thx u/Renato-66)
++ [Template] add new export templates (thx u/Renato-66)
 x [TV shows] fixed season artwork display #2912
 x [Movies] fixed deleting TV show links #2931
 x [Movies/TV shows] improved downloading missing artwork
 x [Import] improve detection of well known scraper IDs from file/foldernames #2926
 x [Anime] again tweak some regex for multi-episode matching #2936
+x [MediaInfo] upgraded to 25.04
 
 
 Version 5.1.5
