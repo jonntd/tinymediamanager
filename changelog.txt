@@ -1,5 +1,6 @@
 Version 5.1.6
 =======================
++ [TV shows] also support downloading of season fanarts #2920
 + [FlatLaf] upgraded to version 3.6
 + [Template] add new export templates (thx u/Renato-66)
 x [TV shows] fixed season artwork display #2912
