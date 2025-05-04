@@ -163,12 +163,14 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
     }
     panelScraperConfig.add(cbEpisodeScraperConfig, "cell 1 2,grow, wmin 0");
 
-    {
-      chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
-      chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
-      panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 3 2 1");
+    chckbxDoNotOverwrite = new JHintCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
+    chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
 
+    // only show "do not overwrite" when scraping metadata
+    if (!artworkOnly) {
+      panelScraperConfig.add(chckbxDoNotOverwrite, "cell 0 3 2 1");
     }
+
     {
       JButton btnCancel = new JButton(TmmResourceBundle.getString("Button.cancel"));
       btnCancel.setIcon(IconManager.CANCEL_INV);
