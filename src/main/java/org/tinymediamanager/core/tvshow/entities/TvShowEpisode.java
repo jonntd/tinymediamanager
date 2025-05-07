@@ -1955,9 +1955,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    * @return the runtime in minutes
    */
   public int getRuntime() {
-    int runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
-    if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo() && runtimeFromMi > 0) {
-      return runtimeFromMi;
+    int runtimeFromMi = 0;
+    if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+      runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
+      if (runtimeFromMi > 0) {
+        return runtimeFromMi;
+      }
     }
     return runtime == 0 ? runtimeFromMi : runtime;
   }

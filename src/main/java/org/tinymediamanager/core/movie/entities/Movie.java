@@ -621,9 +621,12 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the runtime
    */
   public int getRuntime() {
-    int runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
-    if (MovieModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo() && runtimeFromMi > 0) {
-      return runtimeFromMi;
+    int runtimeFromMi = 0;
+    if (MovieModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+      runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
+      if (runtimeFromMi > 0) {
+        return runtimeFromMi;
+      }
     }
     return runtime == 0 ? runtimeFromMi : runtime;
   }
