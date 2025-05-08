@@ -458,6 +458,18 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     return tvShow.getDataSource();
   }
 
+  /**
+   * Just the jackson constructor to keep the {@link CopyOnWriteArrayList} - DO NOT USE OTHERWISE
+   * 
+   * @param newValues
+   *          the episode numbers to set
+   */
+  @JsonSetter
+  public void setEpisodeNumbers(List<MediaEpisodeNumber> newValues) {
+    episodeNumbers.clear();
+    episodeNumbers.addAll(newValues);
+  }
+
   public List<MediaEpisodeNumber> getEpisodeNumbers() {
     return Collections.unmodifiableList(episodeNumbers);
   }

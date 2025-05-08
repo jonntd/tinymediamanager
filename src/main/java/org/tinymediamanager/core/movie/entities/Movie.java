@@ -549,6 +549,15 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
   }
 
+  /**
+   * Remove all showlinks
+   */
+  public void removeAllShowlinks() {
+    showlinks.clear();
+    firePropertyChange("showlinks", null, showlinks);
+    firePropertyChange("showlinksAsString", null, showlinks);
+  }
+
   public String getShowlinksAsString() {
     return String.join(", ", showlinks);
   }

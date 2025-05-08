@@ -1363,7 +1363,9 @@ public class MovieEditorDialog extends AbstractEditorDialog {
       movieToEdit.removeAllTags();
       movieToEdit.setTags(tags);
 
+      movieToEdit.removeAllShowlinks();
       movieToEdit.setShowlinks(showlinks);
+
       movieToEdit.setDateAdded((Date) spDateAdded.getValue());
       movieToEdit.setSortTitle(tfSorttitle.getText());
 

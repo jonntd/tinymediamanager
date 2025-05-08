@@ -247,14 +247,12 @@ public class TvShowSeasonInformationPanel extends InformationPanel {
   private void setArtwork(MediaFileType type, MediaFileType fallbackType, TvShowSeason tvShowSeason) {
     MediaFile mediaFile = ListUtils.getFirst(tvShowSeason.getMediaFiles(type));
 
-    if (mediaFile != null || !TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
-      // call if a season artwork has been found or no fallback configured
-      setArtwork(mediaFile, type);
+    if (mediaFile == null && TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
+      // fall back to TV show
+      mediaFile = ListUtils.getFirst(tvShowSeason.getTvShow().getMediaFiles(fallbackType));
     }
-    else if (TvShowModuleManager.getInstance().getSettings().isSeasonArtworkFallback()) {
-      // fall back to the show
-      setArtwork(ListUtils.getFirst(tvShowSeason.getTvShow().getMediaFiles(MediaFileType.POSTER)), fallbackType);
-    }
+
+    setArtwork(mediaFile, type);
   }
 
   @Override

@@ -365,6 +365,12 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       MediaArtwork mediaArtwork = parseArtwork(artworkBaseRecord);
       if (mediaArtwork != null) {
         md.addMediaArt(mediaArtwork);
+
+        // since there is no _real_ season thumb type at TVDB, we clone this into the thumb type
+        if (mediaArtwork.getType() == MediaArtwork.MediaArtworkType.SEASON_FANART) {
+          MediaArtwork seasonThumb = new MediaArtwork(mediaArtwork, MediaArtwork.MediaArtworkType.SEASON_THUMB);
+          md.addMediaArt(seasonThumb);
+        }
       }
     }
 

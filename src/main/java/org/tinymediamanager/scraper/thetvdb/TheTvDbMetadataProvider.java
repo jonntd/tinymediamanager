@@ -26,6 +26,7 @@ import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkTyp
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.CLEARLOGO;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.POSTER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_BANNER;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_FANART;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_POSTER;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.SEASON_THUMB;
 import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.THUMB;
@@ -416,7 +417,7 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         break;
 
       case 8:
-        ma = new MediaArtwork(getProviderInfo().getId(), SEASON_THUMB);
+        ma = new MediaArtwork(getProviderInfo().getId(), SEASON_FANART);
         break;
 
       case 11:
@@ -473,7 +474,8 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
     }
 
     // get the season number
-    if ((ma.getType() == SEASON_BANNER || ma.getType() == SEASON_POSTER || ma.getType() == SEASON_THUMB) && image.season != null) {
+    if ((ma.getType() == SEASON_BANNER || ma.getType() == SEASON_POSTER || ma.getType() == SEASON_THUMB || ma.getType() == SEASON_FANART)
+        && image.season != null) {
       ma.setSeason(image.season);
     }
 

@@ -58,8 +58,8 @@ public class ParserUtils {
   protected static final String[] CLEANWORDS      = { "24\\.000", "23\\.976", "23\\.98", "24\\.00", "web\\-dl", "web\\-rip", "blue\\-ray",
       "blu\\-ray", "dvd\\-rip" };
 
-  protected static final Pattern  TMDB_ID_PATTERN = Pattern.compile("(tmdbid|tmdb)[ ._-]?(\\d+)", Pattern.CASE_INSENSITIVE);
-  protected static final Pattern  TVDB_ID_PATTERN = Pattern.compile("(tvdbid|tvdb)[ ._-]?(\\d+)", Pattern.CASE_INSENSITIVE);
+  protected static final Pattern  TMDB_ID_PATTERN = Pattern.compile("(tmdbid|tmdb)[ ._=-]?(\\d+)", Pattern.CASE_INSENSITIVE);
+  protected static final Pattern  TVDB_ID_PATTERN = Pattern.compile("(tvdbid|tvdb)[ ._=-]?(\\d+)", Pattern.CASE_INSENSITIVE);
 
   private ParserUtils() {
     throw new IllegalAccessError();

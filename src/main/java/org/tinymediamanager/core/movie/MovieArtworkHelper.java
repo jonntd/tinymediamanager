@@ -945,7 +945,7 @@ public class MovieArtworkHelper {
     boolean fanartFound = false;
 
     // use existing data if available
-    if (!overwrite && StringUtils.isNotBlank(movie.getArtworkUrl(MediaFileType.POSTER))) {
+    if (!overwrite && StringUtils.isNotBlank(movie.getArtworkUrl(MediaFileType.FANART))) {
       fanartFound = true;
     }
     else {
