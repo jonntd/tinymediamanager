@@ -1,15 +1,16 @@
 Version 5.1.6
 =======================
 + [TV shows] also support downloading of season fanarts #2920
-+ [FlatLaf] upgraded to version 3.6
 + [Template] add new export templates (thx u/Renato-66)
-x [TV shows] fixed season artwork display #2912
-x [TV shows] do not show "do not overwrite" when downloading missing artwork
 x [Movies] fixed deleting TV show links #2931
 x [Movies/TV shows] improved downloading missing artwork
+x [TV shows] fixed season artwork display #2912
+x [TV shows] do not show "do not overwrite" when downloading missing artwork
 x [Import] improve detection of well known scraper IDs from file/foldernames #2926
 x [Anime] again tweak some regex for multi-episode matching #2936
+x [FlatLaf] upgraded to version 3.6
 x [MediaInfo] upgraded to 25.04
+x [Logs] reduced maximum file size for startup.log
 
 
 Version 5.1.5
