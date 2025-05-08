@@ -1,3 +1,7 @@
+Version 5.1.7
+=======================
+
+
 Version 5.1.6
 =======================
 + [TV shows] also support downloading of season fanarts #2920
