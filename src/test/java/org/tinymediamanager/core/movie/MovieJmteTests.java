@@ -64,6 +64,7 @@ import org.tinymediamanager.core.movie.jmte.MovieNamedFirstCharacterRenderer;
 import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetRenderer;
 import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetWithDummyRenderer;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.floreysoft.jmte.Engine;
 import com.floreysoft.jmte.extended.ChainedNamedRenderer;
@@ -101,7 +102,17 @@ public class MovieJmteTests extends BasicMovieTest {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            return StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return MovieRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return MovieModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 

@@ -28,13 +28,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
 
 /**
- * The class StrgUtils. This can be used for several String related tasks
+ * The class StrgUtils. This can be used for several {@link String} related tasks
  * 
  * @author Manuel Laggner, Myron Boyle
  * @since 1.0
  */
 public class StrgUtils {
   private static final Map<Integer, Replacement> REPLACEMENTS          = new HashMap<>(20);
+  private static final Map<Integer, String>      INVALID_CHARACTERS    = new HashMap<>(7);
+  private static final Map<Integer, String>      SEPARATOR_CHARACTERS  = new HashMap<>(2);
   private static final String[]                  COMMON_TITLE_PREFIXES = buildCommonTitlePrefixes();
   private static final char[]                    HEX_ARRAY             = "0123456789ABCDEF".toCharArray();
   private static final byte[]                    DIGITS_LOWER          = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e',
@@ -71,6 +73,17 @@ public class StrgUtils {
     REPLACEMENTS.put(0x05F4, new Replacement("\""));
     REPLACEMENTS.put(0x2033, new Replacement("\"")); // interestingly, this results in 2x 0x2032?!?
     REPLACEMENTS.put(0x3003, new Replacement("\""));
+
+    // invalid characters - the first one will be taken as replacement
+    INVALID_CHARACTERS.put(0x0022, "＂“”″״ʺ˝ˮ〃"); // "
+    INVALID_CHARACTERS.put(0x0027, "’‘‛′＇ʹʼˈ׳ꞌ"); // '
+    INVALID_CHARACTERS.put(0x002A, "⁎✲✱＊﹡٭※⁂⁑∗⚹꙳\uD83D\uDFB6"); // *
+    INVALID_CHARACTERS.put(0x003A, "∶：﹕ː˸։፡፥⁚⁝꞉︰"); // :
+    INVALID_CHARACTERS.put(0x003C, "‹＜﹤〈⟨〈˂"); // <
+    INVALID_CHARACTERS.put(0x003E, "›＞﹥〉⟩〉˃"); // >
+    INVALID_CHARACTERS.put(0x003F, "？︖﹖¿؟‽❓⯑⸮�"); // ?
+    SEPARATOR_CHARACTERS.put(0x002F, "⁄∕⟋⧸"); // /
+    SEPARATOR_CHARACTERS.put(0x005C, "∖⟍⧹"); // \
   }
 
   private static String[] buildCommonTitlePrefixes() {
@@ -275,6 +288,115 @@ public class StrgUtils {
       }
       isPreviousWhiteSpace = thisCharWhiteSpace;
     }
+    return result.toString();
+  }
+
+  /**
+   * Replaces characters which are prohibited on some file systems with their Unicode counterparts
+   * 
+   * @param input
+   *          the {@link String} to replace characters in
+   * @return a _cleaned_ version of the {@link String}
+   */
+  public static String replaceForbiddenFilesystemCharacters(String input) {
+    if (input == null) {
+      return null;
+    }
+
+    StringBuilder result = new StringBuilder();
+
+    for (char c : input.toCharArray()) {
+      // is this char in our map?
+      String replacement = INVALID_CHARACTERS.get(Integer.valueOf(c));
+
+      // yes -> append the replacement
+      if (replacement != null) {
+        result.append(replacement.charAt(0));
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Replaces separator characters from the systems with their Unicode counterparts
+   *
+   * @param input
+   *          the {@link String} to replace characters in
+   * @return a _cleaned_ version of the {@link String}
+   */
+  public static String replaceFilesystemSeparatorCharacters(String input) {
+    if (input == null) {
+      return null;
+    }
+
+    StringBuilder result = new StringBuilder();
+
+    for (char c : input.toCharArray()) {
+      // is this char in our map?
+      String replacement = SEPARATOR_CHARACTERS.get(Integer.valueOf(c));
+
+      // yes -> append the replacement
+      if (replacement != null) {
+        result.append(replacement.charAt(0));
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Replaces a Unicode counterpart of a common character with the common character itself.
+   *
+   * @param input
+   *          the {@link String} to replace characters in
+   * @return a _cleaned_ version of the {@link String}
+   */
+  public static String replaceUnicodeCharactersInverse(String input) {
+    if (input == null) {
+      return null;
+    }
+
+    StringBuilder result = new StringBuilder();
+
+    for (char c : input.toCharArray()) {
+      // System.out.println(c + " - " + encodeHex(c));
+
+      String replacement = null;
+
+      // is this char in our map?
+      for (Entry<Integer, String> entry : INVALID_CHARACTERS.entrySet()) {
+        if (entry.getValue().indexOf(c) >= 0) {
+          replacement = String.valueOf((char) entry.getKey().intValue());
+          break;
+        }
+      }
+
+      if (replacement == null) {
+        for (Entry<Integer, String> entry : SEPARATOR_CHARACTERS.entrySet()) {
+          if (entry.getValue().indexOf(c) >= 0) {
+            replacement = String.valueOf((char) entry.getKey().intValue());
+            break;
+          }
+        }
+      }
+
+      // yes -> append the original one
+      if (replacement != null) {
+        result.append(replacement.charAt(0));
+      }
+      else {
+        result.append(c);
+      }
+
+    }
+
     return result.toString();
   }
 

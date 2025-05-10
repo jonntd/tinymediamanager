@@ -15,6 +15,8 @@
  */
 package org.tinymediamanager.core.jmte;
 
+import org.tinymediamanager.scraper.util.StrgUtils;
+
 import com.floreysoft.jmte.template.DefaultOutputAppender;
 import com.floreysoft.jmte.token.PlainTextToken;
 import com.floreysoft.jmte.token.Token;
@@ -25,8 +27,15 @@ public abstract class TmmOutputAppender extends DefaultOutputAppender {
   public void append(StringBuilder builder, String text, Token token) {
     // do not replace path separators on the .parent token
     if (!(token instanceof PlainTextToken) && !token.getText().contains("parent")) {
-      text = text.replace("/", " ");
-      text = text.replace("\\", " ");
+      if (isUnicodeReplacementEnabled()) {
+        // replace separator characters with their Unicode counterpart
+        text = StrgUtils.replaceFilesystemSeparatorCharacters(text);
+      }
+      else {
+        // replace invalid characters with a space
+        text = text.replace("/", " ");
+        text = text.replace("\\", " ");
+      }
     }
 
     text = replaceInvalidCharacters(text);
@@ -35,4 +44,6 @@ public abstract class TmmOutputAppender extends DefaultOutputAppender {
   }
 
   protected abstract String replaceInvalidCharacters(String text);
+
+  protected abstract boolean isUnicodeReplacementEnabled();
 }

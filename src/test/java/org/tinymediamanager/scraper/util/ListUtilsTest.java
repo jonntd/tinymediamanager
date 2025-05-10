@@ -127,4 +127,12 @@ public class ListUtilsTest {
     assertThat(ListUtils.getMiddle(new ArrayList<Integer>())).isNull();
     assertThat(ListUtils.getMiddle((List<Integer>) null)).isNull();
   }
+
+  @Test
+  public void testGetLast() {
+    List<Integer> list = List.of(1, 2, 3);
+    assertThat(ListUtils.getLast(list)).isEqualTo(3);
+    assertThat(ListUtils.getLast(new ArrayList<Integer>())).isNull();
+    assertThat(ListUtils.getLast((List<Integer>) null)).isNull();
+  }
 }

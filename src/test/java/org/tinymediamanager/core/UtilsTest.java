@@ -364,4 +364,22 @@ public class UtilsTest extends BasicTest {
     Utils.removeDuplicateStringFromCollectionIgnoreCase(list);
     assertThat(list.size()).isEqualTo(2);
   }
+
+  @Test
+  public void testInvalidReplacement() {
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("*")).isEqualTo("⁎");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("'")).isEqualTo("’");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("\"")).isEqualTo("＂");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters(":")).isEqualTo("∶");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("<")).isEqualTo("‹");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters(">")).isEqualTo("›");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("?")).isEqualTo("？");
+
+    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters("\\")).isEqualTo("∖");
+    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters("/")).isEqualTo("⁄");
+
+    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters(StrgUtils.replaceForbiddenFilesystemCharacters("*\\\"'/:<>?"))).isEqualTo("⁎∖＂’⁄∶‹›？");
+    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters(StrgUtils.replaceForbiddenFilesystemCharacters("\"This\" is a test: \\<'>/")))
+        .isEqualTo("＂This＂ is a test∶ ∖‹’›⁄");
+  }
 }

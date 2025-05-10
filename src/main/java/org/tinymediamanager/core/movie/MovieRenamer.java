@@ -1401,14 +1401,24 @@ public class MovieRenamer {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            return StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return MovieRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return MovieModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 
       Map<String, Object> root = new HashMap<>();
       root.put("movie", movie);
 
-      // only offer movie set for movies with more than 1 movies or if setting is set
+      // only offer movie set for movies with more than 1 movie or if setting is set
       if (movie.getMovieSet() != null
           && (movie.getMovieSet().getMovies().size() > 1 || MovieModuleManager.getInstance().getSettings().isRenamerCreateMoviesetForSingleMovie())) {
         root.put("movieSet", movie.getMovieSet());
@@ -1551,6 +1561,11 @@ public class MovieRenamer {
     if (SystemUtils.IS_OS_WINDOWS) {
       // remove illegal characters on Windows
       newDestination = newDestination.replace("\"", " ");
+    }
+
+    // replace three subsequent dots with the Unicode ellipsis character
+    if (MovieModuleManager.getInstance().getSettings().isUnicodeReplacement()) {
+      newDestination = newDestination.replace("...", "…");
     }
 
     return newDestination.strip();

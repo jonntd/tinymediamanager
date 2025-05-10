@@ -52,6 +52,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.floreysoft.jmte.Engine;
 
@@ -76,7 +77,17 @@ public class TvShowJmteTests extends BasicTvShowTest {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            text = StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return TvShowRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return TvShowModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 
@@ -125,7 +136,17 @@ public class TvShowJmteTests extends BasicTvShowTest {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            text = StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return TvShowRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return TvShowModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 

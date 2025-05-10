@@ -220,4 +220,21 @@ public class ListUtils {
     int middleIndex = list.size() / 2;
     return list.get(middleIndex);
   }
+
+  /**
+   * Gets the last entry of the given {@link List} or null otherwise
+   *
+   * @param list
+   *          the {@link List} to get the first entry from
+   * @return the first entry or null
+   * @param <E>
+   *          the type of the value
+   */
+  public static <E> E getLast(List<E> list) {
+    if (isEmpty(list)) {
+      return null;
+    }
+
+    return list.get(list.size() - 1);
+  }
 }

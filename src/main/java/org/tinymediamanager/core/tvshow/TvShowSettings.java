@@ -188,6 +188,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        renamerCleanupUnwanted                 = false;
   String                                         renamerFirstCharacterNumberReplacement = "#";
   boolean                                        asciiReplacement                       = false;
+  boolean                                        unicodeReplacement                     = false;
   boolean                                        specialSeason                          = true;
   boolean                                        createMissingSeasonItems               = false;
 
@@ -774,6 +775,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.asciiReplacement;
     this.asciiReplacement = newValue;
     firePropertyChange("asciiReplacement", oldValue, newValue);
+  }
+
+  public boolean isUnicodeReplacement() {
+    return unicodeReplacement;
+  }
+
+  public void setUnicodeReplacement(boolean newValue) {
+    boolean oldValue = this.unicodeReplacement;
+    this.unicodeReplacement = newValue;
+    firePropertyChange("unicodeReplacement", oldValue, newValue);
   }
 
   public boolean isRenamerCleanupUnwanted() {

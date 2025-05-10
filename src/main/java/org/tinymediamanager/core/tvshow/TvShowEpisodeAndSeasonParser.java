@@ -37,6 +37,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -132,6 +133,8 @@ public class TvShowEpisodeAndSeasonParser {
       String delimited = tvShowName.replaceAll("[ _.-]", "[ _.-]"); // replace all delimiters, with delimiters pattern ;)
       basename = basename.replaceAll("(?i)^" + delimited, "");
     }
+
+    basename = StrgUtils.replaceUnicodeCharactersInverse(basename);
 
     basename = basename.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
     basename = basename.replaceFirst("[\\(\\[]\\d{4}[\\)\\]]", ""); // remove (xxxx) or [xxxx] as year

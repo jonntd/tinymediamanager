@@ -2021,7 +2021,17 @@ public class TvShowRenamer {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            text = StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return TvShowRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return TvShowModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 
@@ -2339,6 +2349,11 @@ public class TvShowRenamer {
 
     // trim out unnecessary whitespaces
     destination = destination.replaceAll(" +", " ");
+
+    // replace three subsequent dots with the Unicode ellipsis character
+    if (TvShowModuleManager.getInstance().getSettings().isUnicodeReplacement()) {
+      destination = destination.replace("...", "…");
+    }
 
     return destination.strip();
   }
