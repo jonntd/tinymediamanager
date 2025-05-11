@@ -48,6 +48,7 @@ import org.jdesktop.beansbinding.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Constants;
+import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
@@ -56,6 +57,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.ColumnLayout;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.TmmUIHelper;
@@ -288,13 +290,16 @@ public class MovieSetInformationPanel extends JPanel {
   }
 
   private void setPoster(MovieSet movieSet) {
-    lblPoster.clearImage();
-    lblPoster.setImagePath(movieSet.getArtworkFilename(MediaFileType.POSTER));
-    Dimension posterSize = movieSet.getArtworkDimension(MediaFileType.POSTER);
-    if (posterSize.width > 0 && posterSize.height > 0) {
+    MediaFile poster = ListUtils.getFirst(movieSet.getMediaFiles(MediaFileType.POSTER));
+    if (poster != null) {
+      lblPoster.setImageMediaFile(poster);
+      Dimension posterSize = MediaFileHelper.getArtworkDimension(poster);
       lblPosterSize.setText(TmmResourceBundle.getString("mediafiletype.poster") + " - " + posterSize.width + "x" + posterSize.height);
     }
     else {
+      lblPoster.setImageMediaFile(null);
+      lblPoster.setImagePath(movieSet.getArtworkFilename(MediaFileType.POSTER));
+
       if (StringUtils.isNotBlank(lblPoster.getImagePath())) {
         // do this async to prevent lockups of the UI
         ImageSizeLoader loader = new ImageSizeLoader(lblPoster.getImagePath(), "poster", lblPosterSize);
@@ -307,13 +312,16 @@ public class MovieSetInformationPanel extends JPanel {
   }
 
   private void setFanart(MovieSet movieSet) {
-    lblFanart.clearImage();
-    lblFanart.setImagePath(movieSet.getArtworkFilename(MediaFileType.FANART));
-    Dimension fanartSize = movieSet.getArtworkDimension(MediaFileType.FANART);
-    if (fanartSize.width > 0 && fanartSize.height > 0) {
-      lblFanartSize.setText(TmmResourceBundle.getString("mediafiletype.fanart") + " - " + fanartSize.width + "x" + fanartSize.height);
+    MediaFile fanart = ListUtils.getFirst(movieSet.getMediaFiles(MediaFileType.FANART));
+    if (fanart != null) {
+      lblFanart.setImageMediaFile(fanart);
+      Dimension posterSize = MediaFileHelper.getArtworkDimension(fanart);
+      lblFanartSize.setText(TmmResourceBundle.getString("mediafiletype.fanart") + " - " + posterSize.width + "x" + posterSize.height);
     }
     else {
+      lblFanart.setImageMediaFile(null);
+      lblFanart.setImagePath(movieSet.getArtworkFilename(MediaFileType.FANART));
+
       if (StringUtils.isNotBlank(lblFanart.getImagePath())) {
         // do this async to prevent lockups of the UI
         ImageSizeLoader loader = new ImageSizeLoader(lblFanart.getImagePath(), "fanart", lblFanartSize);
