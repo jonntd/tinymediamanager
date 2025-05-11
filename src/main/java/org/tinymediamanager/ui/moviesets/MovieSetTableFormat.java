@@ -69,12 +69,24 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     /*
      * movie count
      */
-    Column col = new Column(TmmResourceBundle.getString("movieset.moviecount"), "seasons", this::getMovieCount, Integer.class);
+    Column col = new Column(TmmResourceBundle.getString("movieset.moviecount"), "moviecount", this::getMovieCount, Integer.class);
     col.setHeaderIcon(IconManager.COUNT);
     col.setCellRenderer(new IntegerTableCellRenderer());
     col.setColumnResizeable(false);
     col.setMinWidth(fontMetrics.stringWidth("99") + getCellPadding());
     col.setColumnComparator(integerComparator);
+    addColumn(col);
+
+    /*
+     * missing movie count
+     */
+    col = new Column(TmmResourceBundle.getString("movieset.missingmoviecount"), "missingmoviecount", this::getMissingMovieCount, Integer.class);
+    col.setHeaderIcon(IconManager.MISSING);
+    col.setCellRenderer(new IntegerTableCellRenderer());
+    col.setColumnResizeable(false);
+    col.setMinWidth(fontMetrics.stringWidth("999") + getCellPadding());
+    col.setColumnComparator(integerComparator);
+    col.setDefaultHidden(true);
     addColumn(col);
 
     /*
@@ -280,6 +292,21 @@ public class MovieSetTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     Object userObject = node.getUserObject();
     if (userObject instanceof MovieSet movieSet) {
       int size = movieSet.getMovies().size();
+      if (size > 0) {
+        return size;
+      }
+    }
+    return null;
+  }
+
+  private Integer getMissingMovieCount(TmmTreeNode node) {
+    Object userObject = node.getUserObject();
+    if (userObject instanceof MovieSet movieSet) {
+      int size = 0;
+      for (Movie movie : movieSet.getMoviesForDisplay()) {
+        if (movie instanceof MovieSet.MovieSetMovie)
+          size++;
+      }
       if (size > 0) {
         return size;
       }
