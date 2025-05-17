@@ -968,6 +968,42 @@ public abstract class ImdbParser {
 
   private List<MediaArtwork> parseImagesPageJson(Document doc, MediaArtworkType type) {
     List<MediaArtwork> images = new ArrayList<>();
+
+    // get the MAIN/CINEMA image from page directly;
+    // it is not necessarily in that list (for all countries)
+    if (type == MediaArtworkType.POSTER) {
+      Element img = doc.getElementsByAttributeValue("property", "og:image").first();
+      if (img != null) {
+        MediaArtwork mediaArtwork = new MediaArtwork(ImdbMetadataProvider.ID, type);
+        mediaArtwork.setOriginalUrl(img.attr("content"));
+        mediaArtwork.setPreviewUrl(img.attr("content")); // well, yes
+        mediaArtwork.setLikes(10); // this is the main one used - sort it first...
+
+        int heigth = 0;
+        int width = 0;
+        Element h = doc.getElementsByAttributeValue("property", "og:image:height").first();
+        if (h != null) {
+          String val = h.attr("content");
+          // can have comma
+          if (val.contains(".")) {
+            val = val.substring(0, val.indexOf('.'));
+          }
+          heigth = MetadataUtil.parseInt(val, 0);
+        }
+        Element w = doc.getElementsByAttributeValue("property", "og:image:width").first();
+        if (w != null) {
+          width = MetadataUtil.parseInt(w.attr("content"), 0);
+        }
+
+        // add original size
+        mediaArtwork.addImageSize(width, heigth, img.attr("content"), MediaArtwork.getSizeOrder(type, width));
+        // add variants
+        adoptArtworkSizes(mediaArtwork, width);
+
+        images.add(mediaArtwork);
+      }
+    }
+
     try {
       String json = doc.getElementById("__NEXT_DATA__").data();
       // System.out.println(json);
@@ -976,13 +1012,18 @@ public abstract class ImdbParser {
       for (JsonNode fanart : ListUtils.nullSafe(imgs)) {
         ImdbImage i = JsonUtils.parseObject(mapper, fanart.get("node"), ImdbImage.class);
         if (i != null) {
+          if (type == MediaArtworkType.POSTER && i.getWidth() > i.getHeight()) {
+            // only portrait ones - do not use landscape "posters"
+            continue;
+          }
+
           MediaArtwork mediaArtwork = new MediaArtwork(ImdbMetadataProvider.ID, type);
           mediaArtwork.setOriginalUrl(i.url);
           mediaArtwork.setPreviewUrl(i.url); // well, yes
           mediaArtwork.setImdbId(i.id);
 
           // add original size
-          mediaArtwork.addImageSize(i.getWidth(), i.getHeight(), i.url, MediaArtwork.FanartSizes.getSizeOrder(i.getWidth()));
+          mediaArtwork.addImageSize(i.getWidth(), i.getHeight(), i.url, MediaArtwork.getSizeOrder(type, i.getWidth()));
           // add variants
           adoptArtworkSizes(mediaArtwork, i.getWidth());
 
