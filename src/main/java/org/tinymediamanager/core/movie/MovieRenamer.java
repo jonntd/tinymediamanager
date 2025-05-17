@@ -1548,9 +1548,8 @@ public class MovieRenamer {
       newDestination = StrgUtils.convertToAscii(newDestination, false);
     }
 
-    // the colon is handled by JMTE, but it looks like some users are stupid enough to add this to the pattern itself
-    newDestination = newDestination.replace(": ", " - "); // nicer
-    newDestination = newDestination.replace(":", "-"); // nicer
+    // the illegal filesystem characters are handled by JMTE, but it looks like some users are stupid enough to add this to the pattern itself...
+    newDestination = replaceInvalidCharacters(newDestination);
 
     // replace new lines
     newDestination = newDestination.replaceAll("\r?\n", " ");

@@ -2340,9 +2340,8 @@ public class TvShowRenamer {
     destination = destination.replaceAll("^[ \\.\\-_]+", "");
     destination = destination.replaceAll("[ \\.\\-_]+$", "");
 
-    // the colon is handled by JMTE but it looks like some users are stupid enough to add this to the pattern itself
-    destination = destination.replace(": ", " - "); // nicer
-    destination = destination.replace(":", "-"); // nicer
+    // the illegal filesystem characters are handled by JMTE, but it looks like some users are stupid enough to add this to the pattern itself...
+    destination = replaceInvalidCharacters(destination);
 
     // replace new lines
     destination = destination.replaceAll("\r?\n", " ");
