@@ -1,6 +1,7 @@
 Version 5.1.7
 =======================
 x [IMDB] rule out some weird posters on scrape #2949
+x [UI] fixed an issue with maximized dialogs on Linux
 
 
 Version 5.1.6
