@@ -109,12 +109,23 @@ public class TmmViewportUI extends FlatViewportUI {
     // create a counter variable to hold the current row. if there are no
     // rows in the table, start the counter at 0.
     int currentRow = Math.max(rowAtPoint, 0);
+    int viewPortWidth = viewport.getWidth();
+    int defaultRowHeight = fTable.getRowHeight();
+
     while (topY < g.getClipBounds().y + g.getClipBounds().height) {
-      int bottomY = topY + fTable.getRowHeight(currentRow);
+      int rowHeight = fTable.getRowHeight(currentRow);
+
+      if (rowHeight <= 0) {
+        rowHeight = defaultRowHeight;
+      }
+
+      int bottomY = topY + rowHeight;
+
+      // System.out.println("topY: " + topY + " bottomY: " + bottomY + " currentRow: " + currentRow + " viewPortWidth: " + viewPortWidth);
       g.setColor(gridColor);
-      g.drawLine(5, bottomY - 1, viewport.getWidth(), bottomY - 1);
+      g.drawLine(5, bottomY - 1, viewPortWidth, bottomY - 1);
       g.setColor(gridColor2);
-      g.drawLine(5, bottomY, viewport.getWidth(), bottomY);
+      g.drawLine(5, bottomY, viewPortWidth, bottomY);
       topY = bottomY;
       currentRow++;
     }

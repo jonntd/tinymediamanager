@@ -341,20 +341,8 @@ public class MovieRenamer {
     cleanup.removeAll(Collections.singleton(null)); // remove all NULL ones!
 
     // BASENAME
-    String newVideoBasename = "";
     String oldVideoBasename = Utils.cleanStackingMarkers(movie.getMainVideoFile().getBasename());
-    if (!isFilePatternValid()) {
-      // Template empty or not even title set, so we are NOT renaming any files
-      // we keep the same name on renaming ;)
-      newVideoBasename = movie.getVideoBasenameWithoutStacking();
-      LOGGER.warn("Filepattern is not valid - NOT renaming files!");
-    }
-    else {
-      // since we rename, generate the new basename
-      MediaFile ftr = generateFilename(movie, movie.getMediaFiles(MediaFileType.VIDEO).get(0), newVideoBasename, oldVideoBasename).get(0);
-      newVideoBasename = FilenameUtils.getBaseName(ftr.getFilenameWithoutStacking());
-    }
-    LOGGER.debug("Our new basename for renaming: {}", newVideoBasename);
+    String newVideoBasename = generateNewVideoBasename(movie);
 
     // ######################################################################
     // ## rename VIDEO (move 1:1)
@@ -869,6 +857,24 @@ public class MovieRenamer {
     } // src == dest
 
     return true;
+  }
+
+  public static String generateNewVideoBasename(Movie movie) {
+    String newVideoBasename = "";
+    if (!isFilePatternValid()) {
+      // Template empty or not even title set, so we are NOT renaming any files
+      // we keep the same name on renaming ;)
+      newVideoBasename = movie.getVideoBasenameWithoutStacking();
+      LOGGER.warn("Filepattern is not valid - NOT renaming files!");
+    }
+    else {
+      // since we rename, generate the new basename
+      String oldVideoBasename = Utils.cleanStackingMarkers(movie.getMainVideoFile().getBasename());
+      MediaFile ftr = generateFilename(movie, movie.getMediaFiles(MediaFileType.VIDEO).get(0), newVideoBasename, oldVideoBasename).get(0);
+      newVideoBasename = FilenameUtils.getBaseName(ftr.getFilenameWithoutStacking());
+    }
+    LOGGER.debug("Our new basename for renaming: {}", newVideoBasename);
+    return newVideoBasename;
   }
 
   /**

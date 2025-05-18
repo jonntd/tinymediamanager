@@ -1894,6 +1894,90 @@ public class TvShowRenamer {
   }
 
   /**
+   * 1:N mapping
+   * 
+   * @param show
+   *          the TvShow (clone) to use (mainly for new/old path)
+   * @param season
+   * @param mf
+   * @return
+   */
+  public static List<MediaFile> generateSeasonFilenames(TvShow show, TvShowSeason season, MediaFile mf) {
+    List<MediaFile> newFiles = new ArrayList<>();
+
+    switch (mf.getType()) {
+      case NFO:
+        if (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems()) {
+          for (TvShowSeasonNfoNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonNfoFilenames()) {
+            String filename = naming.getFilename(season, mf.getExtension());
+            if (StringUtils.isNotBlank(filename)) {
+              MediaFile newMf = new MediaFile(mf);
+              newMf.setFile(show.getPathNIO().resolve(filename));
+              newFiles.add(newMf);
+            }
+          }
+        }
+        break;
+
+      case SEASON_POSTER:
+        if (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems()) {
+          for (TvShowSeasonPosterNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonPosterFilenames()) {
+            String filename = naming.getFilename(season, mf.getExtension());
+            if (StringUtils.isNotBlank(filename)) {
+              MediaFile newMF = new MediaFile(mf);
+              newMF.setFile(show.getPathNIO().resolve(filename));
+              newFiles.add(newMF);
+            }
+          }
+        }
+        break;
+
+      case SEASON_FANART:
+        if (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems()) {
+          for (TvShowSeasonFanartNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonFanartFilenames()) {
+            String filename = naming.getFilename(season, mf.getExtension());
+            if (StringUtils.isNotBlank(filename)) {
+              MediaFile newMF = new MediaFile(mf);
+              newMF.setFile(show.getPathNIO().resolve(filename));
+              newFiles.add(newMF);
+            }
+          }
+        }
+        break;
+
+      case SEASON_BANNER:
+        if (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems()) {
+          for (TvShowSeasonBannerNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonBannerFilenames()) {
+            String filename = naming.getFilename(season, mf.getExtension());
+            if (StringUtils.isNotBlank(filename)) {
+              MediaFile newMF = new MediaFile(mf);
+              newMF.setFile(show.getPathNIO().resolve(filename));
+              newFiles.add(newMF);
+            }
+          }
+        }
+        break;
+
+      case SEASON_THUMB:
+        if (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems()) {
+          for (TvShowSeasonThumbNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonThumbFilenames()) {
+            String filename = naming.getFilename(season, mf.getExtension());
+            if (StringUtils.isNotBlank(filename)) {
+              MediaFile newMF = new MediaFile(mf);
+              newMF.setFile(show.getPathNIO().resolve(filename));
+              newFiles.add(newMF);
+            }
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+    return newFiles;
+  }
+
+  /**
    * generate the season folder name according to the settings
    *
    * @param show

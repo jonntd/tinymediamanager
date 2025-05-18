@@ -146,6 +146,7 @@ public class IconManager {
   public static final ImageIcon              TABLE_OK                     = createSVGIcon("check.svg", new Color(31, 187, 0));
   public static final ImageIcon              TABLE_PROBLEM                = createSVGIcon("triangle-exclamation.svg", new Color(204, 120, 50));
   public static final ImageIcon              TABLE_NOT_OK                 = createSVGIcon("xmark.svg", RED);
+  public static final ImageIcon              TABLE_ALERT                  = createSVGIcon("icn_alert_active.svg", Color.RED);
 
   // font awesome icons normal
   public static final ImageIcon              CANCEL                       = createSVGIcon("circle-xmark.svg");

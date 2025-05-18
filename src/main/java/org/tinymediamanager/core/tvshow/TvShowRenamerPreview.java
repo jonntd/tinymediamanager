@@ -15,37 +15,21 @@
  */
 package org.tinymediamanager.core.tvshow;
 
-import static org.tinymediamanager.core.MediaFileType.SEASON_BANNER;
-import static org.tinymediamanager.core.MediaFileType.SEASON_FANART;
-import static org.tinymediamanager.core.MediaFileType.SEASON_POSTER;
-import static org.tinymediamanager.core.MediaFileType.SEASON_THUMB;
-import static org.tinymediamanager.core.tvshow.TvShowRenamer.generateFoldername;
-import static org.tinymediamanager.core.tvshow.TvShowRenamer.getSeasonFoldername;
-import static org.tinymediamanager.core.tvshow.TvShowRenamer.getTvShowFoldername;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.RenamerPreviewContainer;
+import org.tinymediamanager.core.RenamerPreviewContainer.MediaFileTypeContainer;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
-import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonBannerNaming;
-import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonFanartNaming;
-import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
-import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonPosterNaming;
-import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonThumbNaming;
 
 /**
  * the class {@link TvShowRenamerPreview} is used to create a renamer preview for TV shows
@@ -54,169 +38,84 @@ import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonThumbNaming;
  */
 public class TvShowRenamerPreview {
 
-  private final TvShow                        tvShow;
-  private final TvShow                        clone;
-  private final TvShowRenamerPreviewContainer container;
-  private final Map<String, MediaFile>        oldFiles;
-  private final Set<MediaFile>                newFiles;
+  private final TvShow                  tvShow;
+  private final TvShow                  clone;
+  private final RenamerPreviewContainer container;
 
   public TvShowRenamerPreview(TvShow tvShow) {
     this.tvShow = tvShow;
     this.clone = new TvShow();
     this.clone.merge(tvShow);
     this.clone.setDataSource(tvShow.getDataSource());
-    this.container = new TvShowRenamerPreviewContainer(tvShow);
-    this.oldFiles = new LinkedHashMap<>();
-    this.newFiles = new LinkedHashSet<>();
+    this.container = new RenamerPreviewContainer(tvShow);
   }
 
-  public TvShowRenamerPreviewContainer generatePreview() {
+  public RenamerPreviewContainer generatePreview() {
     // generate the new path
-    container.newPath = Paths.get(getTvShowFoldername(TvShowModuleManager.getInstance().getSettings().getRenamerTvShowFoldername(), tvShow));
+    container.newPath = Paths
+        .get(TvShowRenamer.getTvShowFoldername(TvShowModuleManager.getInstance().getSettings().getRenamerTvShowFoldername(), tvShow));
     this.clone.setPath(container.newPath.toString());
 
     // process TV show media files
     processTvShow();
 
     // process season media files
-    processSeasons(); // TODO: reverted for now, until we have a dedicated method to generate correct filenames according to settings
+    processSeasons();
 
     // generate all episode filenames
     processEpisodes();
 
-    Path oldShowFolder = tvShow.getPathNIO();
-    if (!oldShowFolder.equals(container.newPath)) {
-      container.needsRename = true;
-      // update already the "old" files with new path, so we can simply do a contains check ;)
-      for (MediaFile omf : oldFiles.values()) {
-        omf.replacePathForRenamedFolder(oldShowFolder, container.newPath);
-      }
-
-      // do the same for (some) new files too, since EXTRAS in dedicated folder can not determine their new folder
-      newFiles.forEach(mf -> mf.replacePathForRenamedFolder(oldShowFolder, container.newPath));
-    }
-
-    // change status of MFs, if they have been added or not
-    for (MediaFile mf : newFiles) {
-      if (!oldFiles.containsKey(mf.getFileAsPath().toString())) {
-        container.needsRename = true;
-        break;
+    // check for dupes on all new MFs
+    Map<String, MediaFileTypeContainer> duplicates = new HashMap<>();
+    for (MediaFileTypeContainer files : container.getFiles()) {
+      for (String rel : files.newFiles) {
+        if (duplicates.containsKey(rel)) {
+          // we have a dupe
+          files.duped = true;
+          MediaFileTypeContainer other = duplicates.get(rel);
+          other.duped = true;
+          // also set on container/show level
+          container.renamerProblems = true;
+        }
+        else {
+          duplicates.put(rel, files);
+        }
       }
     }
+    duplicates.clear();
 
-    for (MediaFile mf : oldFiles.values()) {
-      if (!newFiles.contains(mf)) {
-        container.needsRename = true;
-        break;
-      }
-    }
-
-    container.oldMediaFiles.addAll(oldFiles.values());
-    container.newMediaFiles.addAll(newFiles);
     return container;
   }
 
   private void processTvShow() {
-    for (MediaFile mf : tvShow.getMediaFiles()) {
-      MediaFile oldMf = new MediaFile(mf);
-      oldFiles.put(oldMf.getFileAsPath().toString(), oldMf);
-      newFiles.addAll(TvShowRenamer.generateFilename(clone, new MediaFile(mf)));
+    for (MediaFileType type : MediaFileType.values()) {
+      MediaFileTypeContainer c = new MediaFileTypeContainer();
+      for (MediaFile typeMf : tvShow.getMediaFiles(type)) {
+        c.oldFiles.add(container.getOldPath().relativize(typeMf.getFileAsPath()).toString());
+        List<MediaFile> mfs = TvShowRenamer.generateFilename(clone, new MediaFile(typeMf));
+        for (MediaFile mf : mfs) {
+          c.newFiles.add(container.getNewPath().relativize(mf.getFileAsPath()).toString());
+        }
+      }
+      if (!c.oldFiles.isEmpty()) {
+        container.addFile(c);
+      }
     }
   }
 
   private void processSeasons() {
-    List<TvShowSeason> seasons = new ArrayList<>(tvShow.getSeasons());
-    Collections.sort(seasons);
-
-    for (TvShowSeason season : seasons) {
-      // NFO
-      MediaFile nfo = MediaFile.EMPTY_MEDIAFILE;
-
-      for (MediaFile oldMf : season.getMediaFiles(MediaFileType.NFO)) {
-        oldFiles.put(oldMf.getFileAsPath().toString(), oldMf);
-        if (oldMf.getFiledate() >= nfo.getFiledate()) {
-          nfo = new MediaFile(oldMf);
-        }
-      }
-
-      if (nfo != MediaFile.EMPTY_MEDIAFILE
-          && (!season.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems())) {
-
-        for (TvShowSeasonNfoNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonNfoFilenames()) {
-          String filename = naming.getFilename(season, "nfo");
-          if (StringUtils.isNotBlank(filename)) {
-            MediaFile newMf = new MediaFile(nfo);
-            newMf.setFile(Paths.get(tvShow.getPath(), filename));
-            newFiles.add(newMf);
+    for (TvShowSeason season : tvShow.getSeasons()) {
+      for (MediaFileType type : MediaFileType.values()) {
+        MediaFileTypeContainer c = new MediaFileTypeContainer();
+        for (MediaFile typeMf : season.getMediaFiles(type)) {
+          c.oldFiles.add(container.getOldPath().relativize(typeMf.getFileAsPath()).toString());
+          List<MediaFile> mfs = TvShowRenamer.generateSeasonFilenames(clone, season, new MediaFile(typeMf));
+          for (MediaFile mf : mfs) {
+            c.newFiles.add(container.getNewPath().relativize(mf.getFileAsPath()).toString());
           }
         }
-      }
-
-      // artwork
-      List<MediaFileType> types = Arrays.asList(SEASON_POSTER, SEASON_FANART, SEASON_BANNER, SEASON_THUMB);
-
-      for (var type : types) {
-        for (var tvShowSeason : tvShow.getSeasons()) {
-          MediaFile artworkFile = null;
-
-          for (var mf : tvShowSeason.getMediaFiles(type)) {
-            oldFiles.put(mf.getFileAsPath().toString(), mf);
-
-            if (artworkFile == null) {
-              artworkFile = mf;
-            }
-          }
-
-          // do we ant to write the artwork file at all?
-          if (artworkFile != null
-              && (!tvShowSeason.getEpisodes().isEmpty() || TvShowModuleManager.getInstance().getSettings().isCreateMissingSeasonItems())) {
-            String filename;
-            switch (type) {
-              case SEASON_POSTER -> {
-                for (TvShowSeasonPosterNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonPosterFilenames()) {
-                  filename = naming.getFilename(tvShowSeason, artworkFile.getExtension(), true);
-                  if (StringUtils.isNotBlank(filename)) {
-                    MediaFile newMf = new MediaFile(artworkFile);
-                    newMf.setFile(Paths.get(tvShow.getPath(), filename));
-                    newFiles.add(newMf);
-                  }
-                }
-              }
-              case SEASON_FANART -> {
-                for (TvShowSeasonFanartNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonFanartFilenames()) {
-                  filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
-                  if (StringUtils.isNotBlank(filename)) {
-                    MediaFile newMf = new MediaFile(artworkFile);
-                    newMf.setFile(Paths.get(tvShow.getPath(), filename));
-                    newFiles.add(newMf);
-                  }
-                }
-              }
-              case SEASON_BANNER -> {
-                for (TvShowSeasonBannerNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonBannerFilenames()) {
-                  filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
-                  if (StringUtils.isNotBlank(filename)) {
-                    MediaFile newMf = new MediaFile(artworkFile);
-                    newMf.setFile(Paths.get(tvShow.getPath(), filename));
-                    newFiles.add(newMf);
-                  }
-                }
-              }
-              case SEASON_THUMB -> {
-                for (TvShowSeasonThumbNaming naming : TvShowModuleManager.getInstance().getSettings().getSeasonThumbFilenames()) {
-                  filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
-                  if (StringUtils.isNotBlank(filename)) {
-                    MediaFile newMf = new MediaFile(artworkFile);
-                    newMf.setFile(Paths.get(tvShow.getPath(), filename));
-                    newFiles.add(newMf);
-                  }
-                }
-              }
-              default -> {
-                // do nothing
-              }
-            }
-          }
+        if (!c.oldFiles.isEmpty()) {
+          container.addFile(c);
         }
       }
     }
@@ -226,51 +125,37 @@ public class TvShowRenamerPreview {
     List<TvShowEpisode> episodes = new ArrayList<>(tvShow.getEpisodes());
     Collections.sort(episodes);
 
+    // cache here all processed video MFs, to find those from a multi-episode
+    // different episode, same file
+    List<Path> multiCache = new ArrayList<>();
+
     for (TvShowEpisode episode : episodes) {
-      MediaFile mainVideoFile = episode.getMainVideoFile();
+      Path main = episode.getMainFile().getFileAsPath();
+      if (multiCache.contains(main)) {
+        // System.out.println("ignoring multi episode " + main);
+        continue;
+      }
+      else {
+        multiCache.add(main);
+      }
 
       // BASENAME
       String oldVideoBasename = episode.getVideoBasenameWithoutStacking();
 
-      // test for valid season/episode number
-      if (episode.getSeason() < 0 || episode.getEpisode() < 0) {
-        // nothing to rename if S/E < 0
-        for (MediaFile mf : episode.getMediaFiles()) {
-          MediaFile oldMf = new MediaFile(mf);
-          oldFiles.put(oldMf.getFileAsPath().toString(), oldMf);
-
-          MediaFile newMf = new MediaFile(mf);
-          newFiles.add(newMf);
-        }
-
-      }
-      else if (episode.isDisc()) {
-        String seasonFoldername = getSeasonFoldername(episode.getTvShow(), episode);
-        Path seasonFolder = container.newPath;
-        if (StringUtils.isNotBlank(seasonFoldername)) {
-          seasonFolder = container.newPath.resolve(seasonFoldername);
-        }
-
-        String newFoldername = FilenameUtils.getBaseName(generateFoldername(episode.getTvShow(), mainVideoFile)); // w/o extension
-        Path newEpFolder = seasonFolder.resolve(newFoldername);
-
-        for (MediaFile mf : episode.getMediaFiles()) {
-          MediaFile oldMf = new MediaFile(mf);
-          oldFiles.put(oldMf.getFileAsPath().toString(), oldMf);
-
-          MediaFile newMf = new MediaFile(mf);
-          String newMfFolder = newMf.getPath().replace(mainVideoFile.getPath(), newEpFolder.toString());
-          newMf.replacePathForRenamedFolder(mf.getFileAsPath().getParent(), Paths.get(newMfFolder));
-          newFiles.add(newMf);
+      // let all episode MF be in ONE container - looks nicer, and we usually only have a few...
+      // for (MediaFileType type : MediaFileType.values()) {
+      MediaFileTypeContainer c = new MediaFileTypeContainer();
+      for (MediaFile typeMf : episode.getMediaFiles()) {
+        c.oldFiles.add(container.getOldPath().relativize(typeMf.getFileAsPath()).toString());
+        List<MediaFile> mfs = TvShowRenamer.generateEpisodeFilenames(clone, new MediaFile(typeMf), oldVideoBasename);
+        for (MediaFile mf : mfs) {
+          c.newFiles.add(container.getNewPath().relativize(mf.getFileAsPath()).toString());
         }
       }
-      else {
-        for (MediaFile mf : episode.getMediaFiles()) {
-          MediaFile oldMf = new MediaFile(mf);
-          oldFiles.put(oldMf.getFileAsPath().toString(), oldMf);
-          newFiles.addAll(TvShowRenamer.generateEpisodeFilenames(clone, new MediaFile(mf), oldVideoBasename));
-        }
+      if (!c.oldFiles.isEmpty()) {
+        container.addFile(c);
       }
+      // }
     }
   }
 }

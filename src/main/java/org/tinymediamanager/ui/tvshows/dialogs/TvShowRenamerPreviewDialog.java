@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.tvshows.dialogs;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,20 +29,22 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.TableCellRenderer;
 
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.RenamerPreviewContainer;
+import org.tinymediamanager.core.RenamerPreviewContainer.MediaFileTypeContainer;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowComparator;
 import org.tinymediamanager.core.tvshow.TvShowRenamerPreview;
-import org.tinymediamanager.core.tvshow.TvShowRenamerPreviewContainer;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.tasks.TvShowRenameTask;
@@ -53,6 +56,7 @@ import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.components.table.TmmTableModel;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
+import org.tinymediamanager.ui.renderer.MultilineTextareaCellRenderer;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
@@ -67,26 +71,25 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class TvShowRenamerPreviewDialog extends TmmDialog {
-  private final EventList<TvShowRenamerPreviewContainer> results;
-  private final ResultSelectionModel                     resultSelectionModel;
-  private final EventList<MediaFileContainer>            oldMediaFileEventList;
-  private final EventList<MediaFileContainer>            newMediaFileEventList;
+  private final EventList<RenamerPreviewContainer> results;
+  private final ResultSelectionModel               resultSelectionModel;
+  private final EventList<MediaFileTypeContainer>  mediaFileEventList;
 
   /** UI components */
-  private final TmmTable                                 tableMovies;
-  private final JLabel                                   lblTitle;
-  private final JLabel                                   lblDatasource;
-  private final JLabel                                   lblFolderOld;
-  private final JLabel                                   lblFolderNew;
-  private final JCheckBox                                cbFilter;
+  private final TmmTable                           tableTvShows;
+  private final TmmTable                           tableMediaFiles;
+  private final JLabel                             lblTitle;
+  private final JLabel                             lblDatasource;
+  private final JLabel                             lblFolderOld;
+  private final JLabel                             lblFolderNew;
+  private final JCheckBox                          cbFilter;
 
-  private final TvShowPreviewWorker                      worker;
+  private final TvShowPreviewWorker                worker;
 
   public TvShowRenamerPreviewDialog(final List<TvShow> selectedTvShows) {
-    super(TmmResourceBundle.getString("movie.renamerpreview"), "tvShowRenamerPreview");
+    super(TmmResourceBundle.getString("movie.renamerpreview"), "tvShowRenamerPreview"); // movie, yes. no separate translation used/needed
 
-    oldMediaFileEventList = GlazedLists.eventList(new ArrayList<>());
-    newMediaFileEventList = GlazedLists.eventList(new ArrayList<>());
+    mediaFileEventList = GlazedLists.eventList(new ArrayList<>());
 
     results = GlazedListsSwing.swingThreadProxyList(GlazedLists.threadSafeList(new BasicEventList<>()));
     {
@@ -100,29 +103,29 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
         splitPane.setResizeWeight(0.3);
         panelContent.add(splitPane, "cell 0 0,grow");
         {
-          TmmTableModel<TvShowRenamerPreviewContainer> movieTableModel = new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(results),
+          TmmTableModel<RenamerPreviewContainer> tableModel = new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(results),
               new ResultTableFormat());
-          tableMovies = new TmmTable(movieTableModel);
+          tableTvShows = new TmmTable(tableModel);
 
-          DefaultEventSelectionModel<TvShowRenamerPreviewContainer> tableSelectionModel = new DefaultEventSelectionModel<>(results);
+          DefaultEventSelectionModel<RenamerPreviewContainer> tableSelectionModel = new DefaultEventSelectionModel<>(results);
           resultSelectionModel = new ResultSelectionModel();
           tableSelectionModel.addListSelectionListener(resultSelectionModel);
           resultSelectionModel.selectedResults = tableSelectionModel.getSelected();
-          tableMovies.setSelectionModel(tableSelectionModel);
+          tableTvShows.setSelectionModel(tableSelectionModel);
 
-          movieTableModel.addTableModelListener(arg0 -> {
+          tableModel.addTableModelListener(arg0 -> {
             // select first movie if nothing is selected
-            ListSelectionModel selectionModel = tableMovies.getSelectionModel();
-            if (selectionModel.isSelectionEmpty() && movieTableModel.getRowCount() > 0) {
+            ListSelectionModel selectionModel = tableTvShows.getSelectionModel();
+            if (selectionModel.isSelectionEmpty() && tableModel.getRowCount() > 0) {
               selectionModel.setSelectionInterval(0, 0);
             }
-            if (selectionModel.isSelectionEmpty() && movieTableModel.getRowCount() == 0) {
+            if (selectionModel.isSelectionEmpty() && tableModel.getRowCount() == 0) {
               resultSelectionModel.setSelectedResult(null);
             }
           });
 
           JScrollPane scrollPaneMovies = new JScrollPane();
-          tableMovies.configureScrollPane(scrollPaneMovies);
+          tableTvShows.configureScrollPane(scrollPaneMovies);
           splitPane.setLeftComponent(scrollPaneMovies);
         }
         {
@@ -160,27 +163,11 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
             panelDetails.add(panelMediaFiles, "cell 0 7 3 1,grow");
             panelMediaFiles.setLayout(new MigLayout("", "[grow][grow]", "[15px][grow]"));
             {
-              JLabel lblOldfilesT = new TmmLabel(TmmResourceBundle.getString("renamer.oldfiles"));
-              panelMediaFiles.add(lblOldfilesT, "cell 0 0,alignx center");
-
-              JLabel lblNewfilesT = new TmmLabel(TmmResourceBundle.getString("renamer.newfiles"));
-              panelMediaFiles.add(lblNewfilesT, "cell 1 0,alignx center");
-            }
-            {
-              TmmTable tableMediaFilesOld = new TmmTable(
-                  new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(oldMediaFileEventList), new MediaFileTableFormat()));
-              JScrollPane scrollPaneMediaFilesOld = new JScrollPane();
-              tableMediaFilesOld.configureScrollPane(scrollPaneMediaFilesOld);
-              panelMediaFiles.add(scrollPaneMediaFilesOld, "cell 0 1,grow");
-              tableMediaFilesOld.getColumnModel().getColumn(0).setMaxWidth(40);
-            }
-            {
-              TmmTable tableMediaFilesNew = new TmmTable(
-                  new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(newMediaFileEventList), new MediaFileTableFormat()));
-              JScrollPane scrollPaneMediaFilesNew = new JScrollPane(tableMediaFilesNew);
-              tableMediaFilesNew.configureScrollPane(scrollPaneMediaFilesNew);
-              panelMediaFiles.add(scrollPaneMediaFilesNew, "cell 1 1,grow");
-              tableMediaFilesNew.getColumnModel().getColumn(0).setMaxWidth(40);
+              tableMediaFiles = new TmmTable(
+                  new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(mediaFileEventList), new RenamerTableFormat()));
+              JScrollPane scrollPaneMediaFiles = new JScrollPane();
+              tableMediaFiles.configureScrollPane(scrollPaneMediaFiles);
+              panelMediaFiles.add(scrollPaneMediaFiles, "cell 0 1 2 1,grow");
             }
           }
         }
@@ -203,10 +190,10 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
       btnRename.addActionListener(arg0 -> {
         List<TvShow> selectedTvShows1 = new ArrayList<>();
         List<TvShowEpisode> selectedEpisodes = new ArrayList<>();
-        List<TvShowRenamerPreviewContainer> selectedResults = new ArrayList<>(resultSelectionModel.selectedResults);
-        for (TvShowRenamerPreviewContainer result : selectedResults) {
-          selectedTvShows1.add(result.getTvShow());
-          selectedEpisodes.addAll(result.getTvShow().getEpisodes());
+        List<RenamerPreviewContainer> selectedResults = new ArrayList<>(resultSelectionModel.selectedResults);
+        for (RenamerPreviewContainer result : selectedResults) {
+          selectedTvShows1.add((TvShow) result.get());
+          selectedEpisodes.addAll(((TvShow) result.get()).getEpisodes());
         }
 
         // rename
@@ -241,32 +228,55 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
   /**********************************************************************
    * helper classes
    *********************************************************************/
-  private static class ResultTableFormat extends TmmTableFormat<TvShowRenamerPreviewContainer> {
+  private static class ResultTableFormat extends TmmTableFormat<RenamerPreviewContainer> {
 
     public ResultTableFormat() {
       /*
-       * movie title
+       * duped status
        */
-      Column col = new Column(TmmResourceBundle.getString("metatag.tvshow"), "title", container -> container.getTvShow().getTitleSortable(),
+      Column col = new Column("", "indicator", container -> container.renamerProblems ? IconManager.TABLE_ALERT : null, ImageIcon.class);
+      col.setMinWidth(24);
+      col.setMaxWidth(24);
+      col.setColumnResizeable(false);
+      col.setCellTooltip(container -> container.renamerProblems ? TmmResourceBundle.getString("renamer.problemfound") : null);
+      addColumn(col);
+
+      /*
+       * show title
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.tvshow"), "title", container -> ((TvShow) container.get()).getTitleSortable(),
           String.class);
-      col.setCellTooltip(container -> container.getTvShow().getTitleSortable());
+      col.setCellTooltip(container -> ((TvShow) container.get()).getTitleSortable());
       addColumn(col);
     }
   }
 
-  private static class MediaFileTableFormat extends TmmTableFormat<MediaFileContainer> {
-    public MediaFileTableFormat() {
+  private static class RenamerTableFormat extends TmmTableFormat<MediaFileTypeContainer> {
+    public RenamerTableFormat() {
       /*
-       * indicator
+       * duped status
        */
-      Column col = new Column("", "indicator", container -> container.icon, ImageIcon.class);
+      Column col = new Column("", "indicator", container -> container.duped ? IconManager.TABLE_ALERT : null, ImageIcon.class);
+      col.setMinWidth(24);
+      col.setMaxWidth(24);
+      col.setColumnResizeable(false);
+      col.setCellTooltip(container -> container.duped ? TmmResourceBundle.getString("renamer.duplicate") : null);
       addColumn(col);
 
       /*
-       * filename
+       * old filename
        */
-      col = new Column(TmmResourceBundle.getString("metatag.filename"), "filename", container -> container.filename, String.class);
-      col.setCellTooltip(container -> container.filename);
+      col = new Column(TmmResourceBundle.getString("renamer.oldfiles"), "oldFilename", container -> String.join("\n", container.oldFiles),
+          String.class);
+      col.setCellRenderer(new MultilineTextareaCellRenderer());
+      addColumn(col);
+
+      /*
+       * new filename
+       */
+      col = new Column(TmmResourceBundle.getString("renamer.newfiles"), "newFilename", container -> String.join("\n", container.newFiles),
+          String.class);
+      col.setCellRenderer(new MultilineTextareaCellRenderer());
       addColumn(col);
     }
   }
@@ -280,7 +290,7 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
 
     @Override
     protected Void doInBackground() {
-      // sort movies
+      // sort shows
       tvShowsToProcess.sort(new TvShowComparator());
       // rename them
       for (TvShow tvShow : tvShowsToProcess) {
@@ -288,7 +298,7 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
           return null;
         }
 
-        TvShowRenamerPreviewContainer container = new TvShowRenamerPreview(tvShow).generatePreview();
+        RenamerPreviewContainer container = new TvShowRenamerPreview(tvShow).generatePreview();
         if (container.isNeedsRename()) {
           results.add(container);
         }
@@ -306,18 +316,18 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
   }
 
   private class ResultSelectionModel extends AbstractModelObject implements ListSelectionListener {
-    private final TvShowRenamerPreviewContainer emptyResult;
+    private final RenamerPreviewContainer emptyResult;
 
-    private TvShowRenamerPreviewContainer       selectedResult;
-    private List<TvShowRenamerPreviewContainer> selectedResults;
+    private RenamerPreviewContainer       selectedResult;
+    private List<RenamerPreviewContainer> selectedResults;
 
     ResultSelectionModel() {
-      emptyResult = new TvShowRenamerPreviewContainer(new TvShow());
+      emptyResult = new RenamerPreviewContainer(new TvShow());
     }
 
     void updateSelectedResult() {
-      lblTitle.setText(selectedResult.getTvShow().getTitleSortable());
-      lblDatasource.setText(selectedResult.getTvShow().getDataSource());
+      lblTitle.setText(((TvShow) selectedResult.get()).getTitleSortable());
+      lblDatasource.setText(selectedResult.get().getDataSource());
 
       // the empty result does not have any valid Path
       if (selectedResult != emptyResult) {
@@ -329,72 +339,30 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
         lblFolderNew.setText("");
       }
 
-      // set Mfs
       try {
-        oldMediaFileEventList.getReadWriteLock().writeLock().lock();
-        oldMediaFileEventList.clear();
-        for (MediaFile mf : selectedResult.getOldMediaFiles()) {
-          boolean found = false;
-          MediaFileContainer container = new MediaFileContainer();
-          // newPath here, since we already faked the files in the renamer
-          container.filename = selectedResult.getNewPath().relativize(mf.getFileAsPath()).toString();
+        mediaFileEventList.getReadWriteLock().writeLock().lock();
+        mediaFileEventList.clear();
 
-          if (selectedResult.getNewMediaFiles().contains(mf)) {
-            found = true;
+        // add em with duped status
+        for (MediaFileTypeContainer container : selectedResult.getFiles()) {
+          if (!container.duped && cbFilter.isSelected() && container.isUnchanged()) {
+            continue;
           }
-
-          if (!found) {
-            container.icon = IconManager.REMOVE;
-          }
-
-          if (found && cbFilter.isSelected()) {
-            // same - do not add
-          }
-          else {
-            oldMediaFileEventList.add(container);
-          }
+          mediaFileEventList.add(container);
         }
       }
       catch (Exception ignored) {
-        // ignored
+        // ignored.printStackTrace();
       }
       finally {
-        oldMediaFileEventList.getReadWriteLock().writeLock().unlock();
+        mediaFileEventList.getReadWriteLock().writeLock().unlock();
       }
 
-      try {
-        newMediaFileEventList.getReadWriteLock().writeLock().lock();
-        newMediaFileEventList.clear();
-        for (MediaFile mf : selectedResult.getNewMediaFiles()) {
-          boolean found = false;
-          MediaFileContainer container = new MediaFileContainer();
-          container.filename = selectedResult.getNewPath().relativize(mf.getFileAsPath()).toString();
-
-          if (selectedResult.getOldMediaFiles().contains(mf)) {
-            found = true;
-          }
-
-          if (!found) {
-            container.icon = IconManager.ADD;
-
-          }
-          if (found && cbFilter.isSelected()) {
-            // same - do not add
-          }
-          else {
-            newMediaFileEventList.add(container);
-          }
-        }
-      }
-      catch (Exception ignored) {
-        // ignored
-      }
-      finally {
-        newMediaFileEventList.getReadWriteLock().writeLock().unlock();
-      }
+      // update row heights in GUI thread
+      SwingUtilities.invokeLater(() -> adjustRowHeights(tableMediaFiles));
     }
 
-    synchronized void setSelectedResult(TvShowRenamerPreviewContainer newValue) {
+    synchronized void setSelectedResult(RenamerPreviewContainer newValue) {
       if (newValue == null) {
         selectedResult = emptyResult;
       }
@@ -423,8 +391,15 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
     }
   }
 
-  private static class MediaFileContainer {
-    ImageIcon icon = null;
-    String    filename;
+  private void adjustRowHeights(JTable table) {
+    for (int row = 0; row < table.getRowCount(); row++) {
+      int maxHeight = table.getRowHeight();
+      for (int column = 0; column < table.getColumnCount(); column++) {
+        TableCellRenderer renderer = table.getCellRenderer(row, column);
+        Component comp = table.prepareRenderer(renderer, row, column);
+        maxHeight = Math.max(maxHeight, comp.getPreferredSize().height);
+      }
+      table.setRowHeight(row, maxHeight);
+    }
   }
 }
