@@ -293,6 +293,12 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1", detectEpisode("EP01.avi"));
     assertEqual("S:3 E:1", detectEpisode("season 3/EP01.avi"));
     assertEqual("S:3 E:3", detectEpisode("season 3 EP01 EP02 EP03/EP03.avi"));
+    assertEqual("S:1 E:100", detectEpisode("One Piece - EP100.mkv"));
+    assertEqual("S:1 E:300", detectEpisode("One Piece - EP300.mkv"));
+    assertEqual("S:1 E:1000", detectEpisode("One Piece - EP1000.mkv"));
+    assertEqual("S:1 E:100", detectEpisode("One Piece - episode 100.mkv"));
+    assertEqual("S:1 E:300", detectEpisode("One Piece - EPISODE_300.mkv"));
+    assertEqual("S:1 E:1000", detectEpisode("One Piece - ePiSoDe 1000.mkv"));
 
     // multi episode
     assertEqual("S:1 E:1", detectEpisode("name.s01e01.s01e01.ext")); // double EP

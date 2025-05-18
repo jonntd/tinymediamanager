@@ -839,7 +839,7 @@ public class TvShowEpisodeAndSeasonParser {
       if (m.find()) {
         try {
           int ep = Integer.parseInt(m.group(2));
-          if (!result.episodes.contains(ep)) {
+          if (ep > 0 && !result.episodes.contains(ep)) {
             result.episodes.add(ep);
           }
           result.season = 1;
