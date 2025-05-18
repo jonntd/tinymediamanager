@@ -196,6 +196,7 @@ public class TvShowTest extends BasicTvShowTest {
 
     // ANIME - https://kodi.wiki/view/Anime
     // PREPEND
+    assertEqual("S:3 E:7", detectEpisode("[SubsPlease] Enen no Shouboutai S3 - 07 (1080p) [FC649DBB].mkv"));
     assertEqual("S:0 E:1", detectEpisode("[SHiN-gx] Fight Ippatsu! Juuden-chan!! - Special 1 [720x480 AR h.264 FLAC][v2][FF09021F].mkv"));
     assertEqual("S:0 E:1", detectEpisode("[gleam] Kurenai OVA - 01 [OAD][0e73f000].mkv"));
     assertEqual("S:0 E:1", detectEpisode("[Jarzka] Saki Picture Drama 1 [480p 10bit DVD FLAC] [BA3CE364]"));
