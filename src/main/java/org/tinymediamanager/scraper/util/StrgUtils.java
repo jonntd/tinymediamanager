@@ -75,13 +75,13 @@ public class StrgUtils {
     REPLACEMENTS.put(0x3003, new Replacement("\""));
 
     // invalid characters - the first one will be taken as replacement
-    INVALID_CHARACTERS.put(0x0022, "＂“”″״ʺ˝ˮ〃"); // "
-    INVALID_CHARACTERS.put(0x0027, "’‘‛′＇ʹʼˈ׳ꞌ"); // '
-    INVALID_CHARACTERS.put(0x002A, "⁎✲✱＊﹡٭※⁂⁑∗⚹꙳\uD83D\uDFB6"); // *
+    INVALID_CHARACTERS.put(0x0022, "″＂“”״ʺ˝ˮ〃"); // "
+    INVALID_CHARACTERS.put(0x0027, "ˈ′’‘‛＇ʹʼ׳ꞌ"); // '
+    INVALID_CHARACTERS.put(0x002A, "⚹⁎✲✱＊﹡٭※⁂⁑∗꙳\uD83D\uDFB6"); // *
     INVALID_CHARACTERS.put(0x003A, "∶：﹕ː˸։፡፥⁚⁝꞉︰"); // :
     INVALID_CHARACTERS.put(0x003C, "‹＜﹤〈⟨〈˂"); // <
     INVALID_CHARACTERS.put(0x003E, "›＞﹥〉⟩〉˃"); // >
-    INVALID_CHARACTERS.put(0x003F, "？︖﹖¿؟‽❓⯑⸮�"); // ?
+    INVALID_CHARACTERS.put(0x003F, "❓？﹖︖¿؟‽⯑⸮�"); // ?
     SEPARATOR_CHARACTERS.put(0x002F, "⁄∕⟋⧸"); // /
     SEPARATOR_CHARACTERS.put(0x005C, "∖⟍⧹"); // \
   }
