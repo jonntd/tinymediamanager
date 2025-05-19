@@ -367,19 +367,19 @@ public class UtilsTest extends BasicTest {
 
   @Test
   public void testInvalidReplacement() {
-    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("*")).isEqualTo("⁎");
-    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("'")).isEqualTo("’");
-    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("\"")).isEqualTo("＂");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("*")).isEqualTo("⚹");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("'")).isEqualTo("ˈ");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("\"")).isEqualTo("″");
     assertThat(StrgUtils.replaceForbiddenFilesystemCharacters(":")).isEqualTo("∶");
     assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("<")).isEqualTo("‹");
     assertThat(StrgUtils.replaceForbiddenFilesystemCharacters(">")).isEqualTo("›");
-    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("?")).isEqualTo("？");
+    assertThat(StrgUtils.replaceForbiddenFilesystemCharacters("?")).isEqualTo("❓");
 
     assertThat(StrgUtils.replaceFilesystemSeparatorCharacters("\\")).isEqualTo("∖");
     assertThat(StrgUtils.replaceFilesystemSeparatorCharacters("/")).isEqualTo("⁄");
 
-    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters(StrgUtils.replaceForbiddenFilesystemCharacters("*\\\"'/:<>?"))).isEqualTo("⁎∖＂’⁄∶‹›？");
+    assertThat(StrgUtils.replaceFilesystemSeparatorCharacters(StrgUtils.replaceForbiddenFilesystemCharacters("*\\\"'/:<>?"))).isEqualTo("⚹∖″ˈ⁄∶‹›❓");
     assertThat(StrgUtils.replaceFilesystemSeparatorCharacters(StrgUtils.replaceForbiddenFilesystemCharacters("\"This\" is a test: \\<'>/")))
-        .isEqualTo("＂This＂ is a test∶ ∖‹’›⁄");
+        .isEqualTo("″This″ is a test∶ ∖‹ˈ›⁄");
   }
 }
