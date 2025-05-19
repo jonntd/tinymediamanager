@@ -28,8 +28,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
 
 /**
- * The class StrgUtils. This can be used for several {@link String} related tasks
- * 
+ * Utility class providing various string manipulation and conversion methods. Includes functionality for hex conversion, character replacement,
+ * Unicode handling, string normalization, and various string formatting operations.
+ *
  * @author Manuel Laggner, Myron Boyle
  * @since 1.0
  */
@@ -96,14 +97,19 @@ public class StrgUtils {
     // @formatter:on
   }
 
+  /**
+   * Private constructor to prevent instantiation of this utility class.
+   */
   private StrgUtils() {
+    throw new IllegalAccessError();
   }
 
   /**
-   * ByteArray to HEX String
-   * 
+   * Converts a byte array to a hexadecimal string representation. Each byte is converted to two hexadecimal digits.
+   *
    * @param bytes
-   * @return
+   *          the byte array to convert
+   * @return the hexadecimal string representation
    */
   public static String bytesToHex(byte[] bytes) {
     char[] hexChars = new char[bytes.length * 2];
@@ -115,6 +121,13 @@ public class StrgUtils {
     return new String(hexChars);
   }
 
+  /**
+   * Converts a byte array to a lowercase hexadecimal string.
+   *
+   * @param data
+   *          the byte array to encode
+   * @return the hexadecimal string in lowercase
+   */
   public static String encodeHex(byte[] data) {
     final int dataLength = data.length;
     final int outLength = dataLength << 1;
@@ -127,6 +140,13 @@ public class StrgUtils {
     return new String(out, 0, outLength, StandardCharsets.ISO_8859_1);
   }
 
+  /**
+   * Converts an integer to an 8-character lowercase hexadecimal string.
+   *
+   * @param data
+   *          the integer to encode
+   * @return the 8-character hexadecimal string
+   */
   public static String encodeHex(int data) {
     byte[] out = new byte[8];
 
@@ -142,6 +162,13 @@ public class StrgUtils {
     return new String(out, 0, 8, StandardCharsets.ISO_8859_1);
   }
 
+  /**
+   * Converts a long value to a 16-character lowercase hexadecimal string.
+   *
+   * @param data
+   *          the long value to encode
+   * @return the 16-character hexadecimal string
+   */
   public static String encodeHex(long data) {
     byte[] out = new byte[16];
 
@@ -166,11 +193,11 @@ public class StrgUtils {
   }
 
   /**
-   * Removes the html.
-   * 
+   * Removes HTML tags from a string.
+   *
    * @param html
-   *          the html
-   * @return the string
+   *          the string containing HTML
+   * @return the string with all HTML tags removed, or null if input was null
    */
   public static String removeHtml(String html) {
     if (html == null) {
@@ -180,11 +207,11 @@ public class StrgUtils {
   }
 
   /**
-   * Unquote.
-   * 
+   * Removes surrounding double quotes from a string.
+   *
    * @param str
-   *          the str
-   * @return the string
+   *          the string to process
+   * @return the string without surrounding quotes, or null if input was null
    */
   public static String unquote(String str) {
     if (str == null) {
@@ -194,14 +221,13 @@ public class StrgUtils {
   }
 
   /**
-   * Map to string.
-   * 
+   * Creates a string representation of a Map in "key: value" format.
+   *
    * @param map
-   *          the map
-   * @return the string
+   *          the map to convert to string
+   * @return "null" if map is null, "empty" if map is empty, or key-value pairs as string
    */
-  @SuppressWarnings("rawtypes")
-  public static String mapToString(Map map) {
+  public static String mapToString(Map<?, ?> map) {
     if (map == null) {
       return "null";
     }
@@ -210,21 +236,20 @@ public class StrgUtils {
     }
 
     StringBuilder sb = new StringBuilder();
-    for (Object o : map.entrySet()) {
-      Map.Entry me = (Entry) o;
+    for (Map.Entry<?, ?> me : map.entrySet()) {
       sb.append(me.getKey()).append(": ").append(me.getValue()).append(",");
     }
     return sb.toString();
   }
 
   /**
-   * Zero pad.
-   * 
+   * Pads a numeric string with leading zeros to achieve specified length.
+   *
    * @param encodeString
-   *          the encode string
+   *          the string to pad
    * @param padding
-   *          the padding
-   * @return the string
+   *          the desired total length after padding
+   * @return the padded string, or original string if not numeric
    */
   public static String zeroPad(String encodeString, int padding) {
     if (StringUtils.isBlank(encodeString)) {
@@ -242,13 +267,13 @@ public class StrgUtils {
   }
 
   /**
-   * gets regular expression based substring.
-   * 
+   * Extracts a substring matching a regular expression pattern with one capturing group.
+   *
    * @param str
-   *          the string to search
+   *          the string to search in
    * @param pattern
-   *          the pattern to match; with ONE group bracket ()
-   * @return the matched substring or empty string
+   *          the regex pattern with one capturing group
+   * @return the matched substring from the capturing group, or empty string if no match
    */
   public static String substr(String str, String pattern) {
     if (StringUtils.isBlank(str)) {
@@ -266,11 +291,11 @@ public class StrgUtils {
   }
 
   /**
-   * Remove all duplicate whitespace characters and line terminators are replaced with a single space.
-   * 
+   * Removes duplicate whitespace characters and replaces all whitespace with single spaces.
+   *
    * @param s
-   *          a not null String
-   * @return a string with unique whitespace.
+   *          the string to process
+   * @return the string with normalized whitespace, or empty string if input was blank
    */
   public static String removeDuplicateWhitespace(String s) {
     if (StringUtils.isBlank(s)) {
@@ -292,11 +317,11 @@ public class StrgUtils {
   }
 
   /**
-   * Replaces characters which are prohibited on some file systems with their Unicode counterparts
-   * 
+   * Replaces filesystem-forbidden characters with their Unicode equivalents.
+   *
    * @param input
-   *          the {@link String} to replace characters in
-   * @return a _cleaned_ version of the {@link String}
+   *          the string to process
+   * @return the string with forbidden characters replaced, or null if input was null
    */
   public static String replaceForbiddenFilesystemCharacters(String input) {
     if (input == null) {
@@ -322,7 +347,7 @@ public class StrgUtils {
   }
 
   /**
-   * Replaces separator characters from the systems with their Unicode counterparts
+   * Replaces separator characters from the file system with their Unicode counterparts
    *
    * @param input
    *          the {@link String} to replace characters in
@@ -352,11 +377,11 @@ public class StrgUtils {
   }
 
   /**
-   * Replaces a Unicode counterpart of a common character with the common character itself.
+   * Converts Unicode characters back to their common ASCII equivalents.
    *
    * @param input
-   *          the {@link String} to replace characters in
-   * @return a _cleaned_ version of the {@link String}
+   *          the string to process
+   * @return the string with Unicode characters converted, or null if input was null
    */
   public static String replaceUnicodeCharactersInverse(String input) {
     if (input == null) {
@@ -401,16 +426,13 @@ public class StrgUtils {
   }
 
   /**
-   * This method takes an input String and replaces all special characters like umlauts, accented or other letter with diacritical marks with their
-   * basic ascii equivalents. Originally written by Jens Hausherr (https://gist.github.com/jabbrwcky/2111727), modified by Manuel Laggner and Myron.
-   * 
+   * Converts special characters (umlauts, accented letters, etc.) to their ASCII equivalents.
+   *
    * @param input
-   *          String to convert
+   *          the string to convert
    * @param replaceAllCapitalLetters
-   *          <code>true</code> causes uppercase special chars that are replaced by more than one character to be replaced by all-uppercase
-   *          replacements; <code>false</code> will cause only the initial character of the replacements to be in uppercase and all subsequent
-   *          replacement characters will be in lowercase.
-   * @return Input string reduced to ASCII-safe characters.
+   *          if true, uses uppercase for all replacement characters
+   * @return the ASCII-safe string, or null if input was null
    */
   public static String convertToAscii(String input, boolean replaceAllCapitalLetters) {
     String result = null;
@@ -425,8 +447,18 @@ public class StrgUtils {
     return result;
   }
 
-  /*
-   * replace special characters
+  /**
+   * Internal helper method to process special characters during ASCII conversion.
+   *
+   * @param target
+   *          character array to process
+   * @param offset
+   *          starting position
+   * @param len
+   *          length to process
+   * @param uppercase
+   *          whether to use uppercase replacements
+   * @return the processed string
    */
   private static String processSpecialChars(char[] target, int offset, int len, boolean uppercase) {
     StringBuilder result = new StringBuilder();
@@ -494,29 +526,42 @@ public class StrgUtils {
   }
 
   /**
-   * Combination of replacements for upper- and lowercase mode.
+   * Internal class for handling character replacements with case sensitivity. Stores uppercase and lowercase versions of replacement characters.
    */
   private static class Replacement {
     private final String UPPER;
     private final String LOWER;
 
+    /**
+     * Creates a replacement with different uppercase and lowercase versions.
+     *
+     * @param ucReplacement
+     *          uppercase replacement
+     * @param lcReplacement
+     *          lowercase replacement
+     */
     Replacement(String ucReplacement, String lcReplacement) {
       UPPER = ucReplacement;
       LOWER = lcReplacement;
     }
 
+    /**
+     * Creates a replacement with the same string for both cases.
+     *
+     * @param caseInsensitiveReplacement
+     *          the replacement to use for both cases
+     */
     Replacement(String caseInsensitiveReplacement) {
       this(caseInsensitiveReplacement, caseInsensitiveReplacement);
     }
   }
 
   /**
-   * Returns the common name of title/originaltitle when it is named sortable <br>
-   * eg "Bourne Legacy, The" -> "The Bourne Legacy".
-   * 
+   * Converts a sortable title back to its natural form (e.g., "Bourne Legacy, The" to "The Bourne Legacy").
+   *
    * @param title
-   *          the title
-   * @return the original title
+   *          the sortable title
+   * @return the natural title form, or empty string if input was null/empty
    */
   public static String removeCommonSortableName(String title) {
     if (title == null || title.isEmpty()) {
@@ -534,17 +579,13 @@ public class StrgUtils {
   }
 
   /**
-   * compares the given version (v1) against another one (v2)<br>
-   * Special case:<br>
-   * if we have SNAPSHOT, SVN or GIT version, and both are the same, return -1
-   * 
+   * Compares two version strings, handling special cases for SNAPSHOT, SVN and GIT versions.
+   *
    * @param v1
-   *          given version
+   *          first version string
    * @param v2
-   *          other version
-   * @return < 0 if v1 is lower<br>
-   *         > 0 if v1 is higher<br>
-   *         = 0 if equal
+   *          second version string
+   * @return negative if v1 < v2, positive if v1 > v2, zero if equal
    */
   public static int compareVersion(String v1, String v2) {
     if (v1.contains("-SNAPSHOT") && v1.equals(v2) || v1.equals("SVN") || v1.equals("GIT")) {
@@ -557,10 +598,28 @@ public class StrgUtils {
     return s1.compareTo(s2);
   }
 
+  /**
+   * Normalizes a version string using default separator and width.
+   *
+   * @param version
+   *          the version string to normalize
+   * @return the normalized version string
+   */
   private static String normalisedVersion(String version) {
     return normalisedVersion(version, ".", 4);
   }
 
+  /**
+   * Normalizes a version string using specified separator and width.
+   *
+   * @param version
+   *          the version string to normalize
+   * @param sep
+   *          the separator to use
+   * @param maxWidth
+   *          the maximum width for padding
+   * @return the normalized version string
+   */
   private static String normalisedVersion(String version, String sep, int maxWidth) {
     // SNAPSHOT should be considered as lower version
     // so just removing does not work
@@ -580,6 +639,13 @@ public class StrgUtils {
     return sb.toString();
   }
 
+  /**
+   * Finds the longest string in an array of strings.
+   *
+   * @param array
+   *          the array of strings to search
+   * @return the longest string, or null if array is empty
+   */
   public static String getLongestString(String[] array) {
     int maxLength = 0;
     String longestString = null;
@@ -593,11 +659,11 @@ public class StrgUtils {
   }
 
   /**
-   * check the given String not to be null - returning always a not null String
-   * 
+   * Returns a non-null string, converting null to empty string.
+   *
    * @param originalString
-   *          the string to be checked
-   * @return the originalString or an empty String
+   *          the string to check
+   * @return the original string or empty string if null
    */
   public static String getNonNullString(String originalString) {
     if (originalString == null) {
@@ -607,11 +673,11 @@ public class StrgUtils {
   }
 
   /**
-   * normalizes the given {@link String}
-   * 
+   * Normalizes a string by removing diacritical marks and duplicate whitespace.
+   *
    * @param original
-   *          the {@link String} to normalize
-   * @return the normalized {@link String}
+   *          the string to normalize
+   * @return the normalized string
    */
   public static String normalizeString(String original) {
     String nfdNormalizedString = Normalizer.normalize(original, Normalizer.Form.NFD);
@@ -619,11 +685,11 @@ public class StrgUtils {
   }
 
   /**
-   * convert a {@link String} in Array notation ([1,2,3,4,5]) into a String Array
-   * 
+   * Converts a string in array notation to a string array.
+   *
    * @param source
-   *          the source String
-   * @return the converted array
+   *          the string in array notation (e.g., "[1,2,3,4,5]")
+   * @return the converted string array
    */
   public static String[] convertStringToArray(String source) {
     if (StringUtils.isBlank(source)) {
@@ -633,9 +699,10 @@ public class StrgUtils {
   }
 
   /**
-   * TMMs style of capitalizing strings. CapitalizeFully is not so good, and capitalize misses some.
-   * 
+   * Capitalizes text according to tMM's custom rules.
+   *
    * @param text
+   *          the text to capitalize
    * @return the capitalized string
    */
   public static String capitalize(String text) {
@@ -648,11 +715,11 @@ public class StrgUtils {
   }
 
   /**
-   * Calls strip() on the given {@link String} - returning an empty {@link String} if the given String is null
-   * 
+   * Strips whitespace from a string, handling null input.
+   *
    * @param source
-   *          the source {@link String} to strip()
-   * @return the stripped {@link String} or an empty {@link String}
+   *          the string to strip
+   * @return the stripped string, or empty string if input was null
    */
   public static String strip(String source) {
     return source == null ? "" : source.strip();
