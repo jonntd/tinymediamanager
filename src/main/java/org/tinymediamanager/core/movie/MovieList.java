@@ -82,6 +82,8 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
+import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.databind.ObjectReader;
 
@@ -825,6 +827,18 @@ public final class MovieList extends AbstractModelObject {
       options.setSearchYear(year);
     }
 
+    // year in brackets (0000) - this cannot be a movie title!
+    String yearInTitle = StrgUtils.substr(searchTerm, "(\\(\\d{4}\\))");
+    if (!yearInTitle.isEmpty()) {
+      String newSearchTerm = searchTerm.replace(yearInTitle, "").strip();
+      if (!newSearchTerm.isBlank()) {
+        options.setSearchQuery(newSearchTerm);
+        yearInTitle = yearInTitle.substring(1, 5); // yeah, since we have a fixed regex
+        year = MetadataUtil.parseInt(yearInTitle, 0);
+        options.setSearchYear(year);
+      }
+    }
+
     LOGGER.info("=====================================================");
     LOGGER.info("Searching with scraper: {}", provider.getProviderInfo().getId());
     LOGGER.info("options: {}", options);
@@ -833,6 +847,7 @@ public final class MovieList extends AbstractModelObject {
 
     // Before retrying ALL scrapers, use this as first fallback:
     // check if title starts with a year, and remove/retry...
+
     if (sr.isEmpty() && options.getSearchQuery().matches("^\\d{4}.*")) {
       MovieSearchAndScrapeOptions o = new MovieSearchAndScrapeOptions(options); // copy
       o.setSearchQuery(options.getSearchQuery().substring(4));

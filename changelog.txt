@@ -3,6 +3,8 @@ Version 5.1.7
 x [IMDB] rule out some weird posters on scrape #2949
 x [UI] fixed an issue with maximized dialogs on Linux
 x [Anime] again tweak some regex #2945 #2946 #2950
+x [scraping] better remove year from title for search
+
 
 Version 5.1.6
 =======================
