@@ -247,10 +247,10 @@ public class MediaSource extends DynaEnum<MediaSource> {
       if (o1 == null && o2 == null) {
         return 0;
       }
-      if (o1.name() == null) {
+      if (o1 == null || o1.name() == null) {
         return 1;
       }
-      if (o2.name() == null) {
+      if (o2 == null || o2.name() == null) {
         return -1;
       }
       return Integer.compare(o2.name().length(), o1.name().length());
