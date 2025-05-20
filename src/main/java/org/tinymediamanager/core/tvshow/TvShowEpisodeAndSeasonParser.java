@@ -77,7 +77,7 @@ public class TvShowEpisodeAndSeasonParser {
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4    = Pattern.compile(
-      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3}))+)");
 
@@ -180,7 +180,6 @@ public class TvShowEpisodeAndSeasonParser {
     String nameNoExt = name.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
     result = parseAnimeExclusive(result, nameNoExt);
     if (!result.episodes.isEmpty()) {
-      LOGGER.debug("parsed as Anime '{}'", name);
       // ALWAYS parse date if we have none (but do not use year as season in this case)
       if (result.date == null) {
         EpisodeMatchingResult add = new EpisodeMatchingResult();
@@ -712,6 +711,7 @@ public class TvShowEpisodeAndSeasonParser {
     m = ANIME_PREPEND1.matcher(name);
     if (m.find()) {
       try {
+        LOGGER.debug("parsed as Anime PREPEND1 '{}'", name);
         int ep = Integer.parseInt(m.group(2));
         result.episodes.add(ep);
         result.season = 0;
@@ -724,6 +724,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Inside a directory that specifies the season. May include any number of subdirectories. Doesn't try to find season markers in the file name
       m = ANIME_PREPEND2.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime PREPEND2 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           result.episodes.add(ep);
@@ -738,6 +739,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Include season marker in the filename
       m = ANIME_PREPEND3.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime PREPEND3 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           result.episodes.add(ep);
@@ -752,6 +754,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Anything else gets the default blank first capture, which sets the file to season 1
       m = ANIME_PREPEND4.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime PREPEND4 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           result.episodes.add(ep);
@@ -762,6 +765,7 @@ public class TvShowEpisodeAndSeasonParser {
           // do a second regex here, to split it manually
           m = ANIME_PREPEND4_2.matcher(name);
           if (m.find()) {
+            LOGGER.debug("parsed as Anime PREPEND4_2 '{}'", name);
             String[] nums = m.group(1).split("-");
             for (String num : nums) {
               ep = Integer.parseInt(num);
@@ -786,6 +790,7 @@ public class TvShowEpisodeAndSeasonParser {
     // Anything with the filename marked as Special/OVA/OAV/etc goes to season 0, regardless of what the directory may say
     m = ANIME_APPEND1.matcher(name);
     if (m.find()) {
+      LOGGER.debug("parsed as Anime APPEND1 '{}'", name);
       try {
         int ep = Integer.parseInt(m.group(2));
         if (!result.episodes.contains(ep)) {
@@ -801,6 +806,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Inside a directory that specifies the season. May include any number of subdirectories. Doesn't try to find season markers in the file name
       m = ANIME_APPEND2.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime APPEND2 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           if (!result.episodes.contains(ep)) {
@@ -817,6 +823,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Include season marker in the filename
       m = ANIME_APPEND3.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime APPEND3 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           if (!result.episodes.contains(ep)) {
@@ -837,6 +844,7 @@ public class TvShowEpisodeAndSeasonParser {
       // Anything else gets the default blank first capture, which sets the file to season 1
       m = ANIME_APPEND4.matcher(name);
       if (m.find()) {
+        LOGGER.debug("parsed as Anime APPEND4 '{}'", name);
         try {
           int ep = Integer.parseInt(m.group(2));
           if (ep > 0 && !result.episodes.contains(ep)) {

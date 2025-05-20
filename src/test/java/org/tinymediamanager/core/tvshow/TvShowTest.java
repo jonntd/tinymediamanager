@@ -214,6 +214,10 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:135", detectEpisode("[Taka]_Naruto_Shippuuden_135_[480p][9073B8C2]"));
     assertEqual("S:2 E:4", detectEpisode("Season 2/[Erai-raws] Shy 2nd Season - 04 [1080p][Multiple Subtitle][79770C75].mkv"));
     assertEqual("S:13 E:2", detectEpisode("Season 13/[Erai-raws] Yami Shibai 13 - 02 [1080p][Multiple Subtitle][D7E29CA3].mkv"));
+    assertEqual("S:1 E:1035", detectEpisode("[Taka]_Naruto_Shippuuden_1035_[480p][9073B8C2].mkv")); // EP>1000
+    assertEqual("S:1 E:135", detectEpisode("[Taka]_Naruto_Shippuuden_135_[480p][9073B8C2].mkv"));
+    assertEqual("S:1 E:35", detectEpisode("[Taka]_Naruto_Shippuuden_135_[480p].mkv")); // no Anime prepend, but normal TV - append would have found it
+
     // anime multi
     assertEqual("S:1 E:1", detectEpisode("[Triad]_Dokuro-chan_-_01 [12345678].mkv"));
     assertEqual("S:1 E:1 E:2", detectEpisode("[Triad]_Dokuro-chan_-_01-02 [12345678].mkv"));
@@ -271,6 +275,22 @@ public class TvShowTest extends BasicTvShowTest {
     // except for 3 char ones ;)
     assertEqual("S:1 E:1 E:2 E:3", detectEpisode("101 102 103.mkv"));
     assertEqual("S:1 E:3", detectEpisode("1 12 103 25 7.mkv")); // start with highest number
+
+    assertEqual("S:1", detectEpisode("name - 100.mkv"));
+    assertEqual("S:3", detectEpisode("name - 300.mkv"));
+    // assertEqual("S:10", detectEpisode("name - 1000.mkv")); // FIXME -1
+    assertEqual("S:1 E:1", detectEpisode("name - 101.mkv"));
+    assertEqual("S:1 E:30", detectEpisode("name - 130.mkv"));
+    assertEqual("S:2 E:1", detectEpisode("name - 201.mkv"));
+    assertEqual("S:8 E:99", detectEpisode("name - 899.mkv"));
+    assertEqual("S:9 E:22", detectEpisode("name - 922.mkv"));
+
+    assertEqual("S:1 E:101", detectEpisode("name Episode 101.mkv"));
+    assertEqual("S:1 E:130", detectEpisode("name ePisode 130.mkv"));
+    assertEqual("S:1 E:201", detectEpisode("name Episode 201.mkv"));
+    assertEqual("S:1 E:899", detectEpisode("name Episode 899.mkv"));
+    assertEqual("S:1 E:922", detectEpisode("name Episode 922.mkv"));
+    assertEqual("S:1 E:1000", detectEpisode("name Episode 1000.mkv"));
 
     // ************************************************************************
     // http://wiki.xbmc.org/index.php?title=Video_library/Naming_files/TV_shows
