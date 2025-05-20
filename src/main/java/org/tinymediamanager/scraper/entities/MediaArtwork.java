@@ -279,13 +279,12 @@ public class MediaArtwork {
    * @return
    */
   public static int getSizeOrder(MediaArtworkType type, int width) {
-    int size = switch (type) {
+    return switch (type) {
       case POSTER -> PosterSizes.getSizeOrder(width);
       case BACKGROUND -> FanartSizes.getSizeOrder(width);
       case THUMB -> ThumbSizes.getSizeOrder(width);
       default -> 0;
     };
-    return size;
   }
 
   /**

@@ -969,7 +969,7 @@ public abstract class ImdbParser {
   private List<MediaArtwork> parseImagesPageJson(Document doc, MediaArtworkType type) {
     List<MediaArtwork> images = new ArrayList<>();
 
-    // get the MAIN/CINEMA image from page directly;
+    // MAIN/CINEMA image from page directly;
     // it is not necessarily in that list (for all countries)
     if (type == MediaArtworkType.POSTER) {
       Element img = doc.getElementsByAttributeValue("property", "og:image").first();

@@ -79,7 +79,7 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern ANIME_PREPEND4    = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3}))+)");
+  private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
 
   private static final Pattern ANIME_APPEND1     = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
