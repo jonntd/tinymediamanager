@@ -299,7 +299,7 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
         }
 
         RenamerPreviewContainer container = new TvShowRenamerPreview(tvShow).generatePreview();
-        if (container.isNeedsRename()) {
+        if (container.isNeedsRename() || container.hasRenamerProblems()) {
           results.add(container);
         }
       }

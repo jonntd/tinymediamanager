@@ -315,7 +315,7 @@ public class MovieRenamerPreviewDialog extends TmmDialog {
           dupeNewPath.put(container.newPath, container);
         }
 
-        if (container.isNeedsRename()) {
+        if (container.isNeedsRename() || container.hasRenamerProblems()) {
           results.add(container);
         }
       }
