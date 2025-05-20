@@ -8,3 +8,4 @@ Version 5.2.0
 + [macOS] changed hotkey modifier to comply with macOS standards
 + [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
 + [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
+x [UI] some UI fixes

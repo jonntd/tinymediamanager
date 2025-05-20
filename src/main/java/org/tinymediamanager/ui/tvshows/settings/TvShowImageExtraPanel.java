@@ -24,7 +24,9 @@ import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -54,9 +56,9 @@ class TvShowImageExtraPanel extends JPanel {
   private JCheckBox            cbActorImages;
   private JSpinner             spDownloadCountExtrafanart;
   private JCheckBox            chckbxEnableExtrafanart;
-  private JCheckBox            chckbxExtraFanart1;
-  private JCheckBox            chckbxExtraFanart2;
-  private JCheckBox            chckbxExtraFanart3;
+  private JRadioButton         rbExtraFanart1;
+  private JRadioButton         rbExtraFanart2;
+  private JRadioButton         rbExtraFanart3;
 
   TvShowImageExtraPanel() {
     checkBoxListener = e -> checkChanges();
@@ -67,9 +69,9 @@ class TvShowImageExtraPanel extends JPanel {
 
     // further init
     ButtonGroup buttonGroup = new ButtonGroup();
-    buttonGroup.add(chckbxExtraFanart1);
-    buttonGroup.add(chckbxExtraFanart2);
-    buttonGroup.add(chckbxExtraFanart3);
+    buttonGroup.add(rbExtraFanart1);
+    buttonGroup.add(rbExtraFanart2);
+    buttonGroup.add(rbExtraFanart3);
 
     settings.addPropertyChangeListener(evt -> {
       if ("preset".equals(evt.getPropertyName())) {
@@ -82,35 +84,35 @@ class TvShowImageExtraPanel extends JPanel {
 
   private void buildCheckBoxes() {
     // initialize
-    clearSelection(chckbxExtraFanart1, chckbxExtraFanart2, chckbxExtraFanart3);
+    clearSelection(rbExtraFanart1, rbExtraFanart2, rbExtraFanart3);
 
     // extrafanart filenames
     for (TvShowExtraFanartNaming fanart : settings.getExtraFanartFilenames()) {
       switch (fanart) {
         case EXTRAFANART:
-          chckbxExtraFanart1.setSelected(true);
+          rbExtraFanart1.setSelected(true);
           break;
 
         case FOLDER_EXTRAFANART:
-          chckbxExtraFanart2.setSelected(true);
+          rbExtraFanart2.setSelected(true);
           break;
 
         case EXTRABACKDROP:
-          chckbxExtraFanart3.setSelected(true);
+          rbExtraFanart3.setSelected(true);
           break;
       }
     }
 
     // listen to changes of the checkboxes
-    chckbxExtraFanart1.addItemListener(checkBoxListener);
-    chckbxExtraFanart2.addItemListener(checkBoxListener);
-    chckbxExtraFanart3.addItemListener(checkBoxListener);
+    rbExtraFanart1.addItemListener(checkBoxListener);
+    rbExtraFanart2.addItemListener(checkBoxListener);
+    rbExtraFanart3.addItemListener(checkBoxListener);
   }
 
-  private void clearSelection(JCheckBox... checkBoxes) {
-    for (JCheckBox checkBox : checkBoxes) {
-      checkBox.removeItemListener(checkBoxListener);
-      checkBox.setSelected(false);
+  private void clearSelection(JToggleButton... toggleButtons) {
+    for (JToggleButton button : toggleButtons) {
+      button.removeItemListener(checkBoxListener);
+      button.setSelected(false);
     }
   }
 
@@ -121,13 +123,13 @@ class TvShowImageExtraPanel extends JPanel {
     // set poster filenames
     settings.clearExtraFanartFilenames();
 
-    if (chckbxExtraFanart1.isSelected()) {
+    if (rbExtraFanart1.isSelected()) {
       settings.addExtraFanartFilename(TvShowExtraFanartNaming.EXTRAFANART);
     }
-    if (chckbxExtraFanart2.isSelected()) {
+    if (rbExtraFanart2.isSelected()) {
       settings.addExtraFanartFilename(TvShowExtraFanartNaming.FOLDER_EXTRAFANART);
     }
-    if (chckbxExtraFanart3.isSelected()) {
+    if (rbExtraFanart3.isSelected()) {
       settings.addExtraFanartFilename(TvShowExtraFanartNaming.EXTRABACKDROP);
     }
   }
@@ -152,14 +154,14 @@ class TvShowImageExtraPanel extends JPanel {
         panelOptions.add(panel, "cell 2 1,growx");
         panel.setLayout(new MigLayout("insets 0", "[][20lp!][]", "[][]"));
 
-        chckbxExtraFanart1 = new JCheckBox("fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panel.add(chckbxExtraFanart1, "cell 0 0");
+        rbExtraFanart1 = new JRadioButton("fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panel.add(rbExtraFanart1, "cell 0 0");
 
-        chckbxExtraFanart2 = new JCheckBox("extrafanart/fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panel.add(chckbxExtraFanart2, "cell 2 0");
+        rbExtraFanart2 = new JRadioButton("extrafanart/fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panel.add(rbExtraFanart2, "cell 2 0");
 
-        chckbxExtraFanart3 = new JCheckBox("backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panel.add(chckbxExtraFanart3, "cell 0 1");
+        rbExtraFanart3 = new JRadioButton("backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panel.add(rbExtraFanart3, "cell 0 1");
 
         JLabel lblDownloadCount = new JLabel(TmmResourceBundle.getString("Settings.amount.autodownload"));
         panelOptions.add(lblDownloadCount, "cell 2 3");
@@ -198,12 +200,16 @@ class TvShowImageExtraPanel extends JPanel {
     autoBinding_2.bind();
     //
     Property jCheckBoxBeanProperty_2 = BeanProperty.create("enabled");
-    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart, jCheckBoxBeanProperty, chckbxExtraFanart1,
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart, jCheckBoxBeanProperty, rbExtraFanart1,
         jCheckBoxBeanProperty_2);
     autoBinding_9.bind();
     //
-    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart, jCheckBoxBeanProperty, chckbxExtraFanart2,
+    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart, jCheckBoxBeanProperty, rbExtraFanart2,
         jCheckBoxBeanProperty_2);
     autoBinding_10.bind();
+    //
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart, jCheckBoxBeanProperty, rbExtraFanart3,
+        jCheckBoxBeanProperty_2);
+    autoBinding_11.bind();
   }
 }

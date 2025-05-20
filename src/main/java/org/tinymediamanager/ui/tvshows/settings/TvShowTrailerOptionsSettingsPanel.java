@@ -20,7 +20,6 @@ import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import static org.tinymediamanager.ui.TmmFontHelper.L2;
 
 import java.awt.event.ItemListener;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.ButtonGroup;
@@ -29,20 +28,20 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JToggleButton;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Bindings;
 import org.jdesktop.beansbinding.Property;
-import org.jdesktop.observablecollections.ObservableCollections;
 import org.tinymediamanager.addon.YtDlpAddon;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowTrailerNaming;
-import org.tinymediamanager.ui.ScraperInTable;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
@@ -53,19 +52,18 @@ import net.miginfocom.swing.MigLayout;
 
 public class TvShowTrailerOptionsSettingsPanel extends JPanel {
 
-  private final TvShowSettings       settings                   = TvShowModuleManager.getInstance().getSettings();
-  private final List<ScraperInTable> scrapers                   = ObservableCollections.observableList(new ArrayList<>());
-  private final ItemListener         checkBoxListener;
-  private final ButtonGroup          trailerFilenameButtonGroup = new ButtonGroup();
+  private final TvShowSettings      settings                   = TvShowModuleManager.getInstance().getSettings();
+  private final ItemListener        checkBoxListener;
+  private final ButtonGroup         trailerFilenameButtonGroup = new ButtonGroup();
 
-  private JComboBox<TrailerQuality>  cbTrailerQuality;
-  private JCheckBox                  checkBox;
-  private JCheckBox                  chckbxAutomaticTrailerDownload;
-  private JCheckBox                  cbTrailerFilename1;
-  private JCheckBox                  cbTrailerFilename2;
-  private JCheckBox                  cbTrailerFilename3;
-  private JCheckBox                  cbTrailerFilename4;
-  private JCheckBox                  chckbxUseYtDlp;
+  private JComboBox<TrailerQuality> cbTrailerQuality;
+  private JCheckBox                 checkBox;
+  private JCheckBox                 chckbxAutomaticTrailerDownload;
+  private JRadioButton              rbTrailerFilename1;
+  private JRadioButton              rbTrailerFilename2;
+  private JRadioButton              rbTrailerFilename3;
+  private JRadioButton              rbTrailerFilename4;
+  private JCheckBox                 chckbxUseYtDlp;
 
   TvShowTrailerOptionsSettingsPanel() {
     checkBoxListener = e -> checkChanges();
@@ -87,52 +85,49 @@ public class TvShowTrailerOptionsSettingsPanel extends JPanel {
   }
 
   private void buildCheckBoxes() {
-    cbTrailerFilename1.removeItemListener(checkBoxListener);
-    cbTrailerFilename2.removeItemListener(checkBoxListener);
-    cbTrailerFilename3.removeItemListener(checkBoxListener);
-    cbTrailerFilename4.removeItemListener(checkBoxListener);
-    clearSelection(cbTrailerFilename1, cbTrailerFilename2, cbTrailerFilename3, cbTrailerFilename4);
+    clearSelection(rbTrailerFilename1, rbTrailerFilename2, rbTrailerFilename3, rbTrailerFilename4);
 
     // trailer filenames
     List<TvShowTrailerNaming> trailerFilenames = settings.getTrailerFilenames();
     if (trailerFilenames.contains(TvShowTrailerNaming.TVSHOW_TRAILER)) {
-      cbTrailerFilename1.setSelected(true);
+      rbTrailerFilename1.setSelected(true);
     }
     else if (trailerFilenames.contains(TvShowTrailerNaming.TVSHOWNAME_TRAILER)) {
-      cbTrailerFilename2.setSelected(true);
+      rbTrailerFilename2.setSelected(true);
     }
     else if (trailerFilenames.contains(TvShowTrailerNaming.TRAILERS_TVSHOWNAME_TRAILER)) {
-      cbTrailerFilename3.setSelected(true);
+      rbTrailerFilename3.setSelected(true);
     }
     else if (trailerFilenames.contains(TvShowTrailerNaming.TRAILER)) {
-      cbTrailerFilename4.setSelected(true);
+      rbTrailerFilename4.setSelected(true);
     }
 
-    cbTrailerFilename1.addItemListener(checkBoxListener);
-    cbTrailerFilename2.addItemListener(checkBoxListener);
-    cbTrailerFilename3.addItemListener(checkBoxListener);
-    cbTrailerFilename4.addItemListener(checkBoxListener);
+    rbTrailerFilename1.addItemListener(checkBoxListener);
+    rbTrailerFilename2.addItemListener(checkBoxListener);
+    rbTrailerFilename3.addItemListener(checkBoxListener);
+    rbTrailerFilename4.addItemListener(checkBoxListener);
   }
 
-  private void clearSelection(JCheckBox... checkBoxes) {
-    for (JCheckBox checkBox : checkBoxes) {
-      checkBox.setSelected(false);
+  private void clearSelection(JToggleButton... toggleButtons) {
+    for (JToggleButton button : toggleButtons) {
+      button.removeItemListener(checkBoxListener);
+      button.setSelected(false);
     }
   }
 
   private void checkChanges() {
     // set trailer filenames
     settings.clearTrailerFilenames();
-    if (cbTrailerFilename1.isSelected()) {
+    if (rbTrailerFilename1.isSelected()) {
       settings.addTrailerFilename(TvShowTrailerNaming.TVSHOW_TRAILER);
     }
-    if (cbTrailerFilename2.isSelected()) {
+    if (rbTrailerFilename2.isSelected()) {
       settings.addTrailerFilename(TvShowTrailerNaming.TVSHOWNAME_TRAILER);
     }
-    if (cbTrailerFilename3.isSelected()) {
+    if (rbTrailerFilename3.isSelected()) {
       settings.addTrailerFilename(TvShowTrailerNaming.TRAILERS_TVSHOWNAME_TRAILER);
     }
-    if (cbTrailerFilename4.isSelected()) {
+    if (rbTrailerFilename4.isSelected()) {
       settings.addTrailerFilename(TvShowTrailerNaming.TRAILER);
     }
   }
@@ -180,23 +175,23 @@ public class TvShowTrailerOptionsSettingsPanel extends JPanel {
         JLabel lblTrailerFileNaming = new JLabel(TmmResourceBundle.getString("Settings.trailerFileNaming"));
         panelTrailerFilenames.add(lblTrailerFileNaming, "cell 0 0");
 
-        cbTrailerFilename1 = new JCheckBox("tvshow-trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        trailerFilenameButtonGroup.add(cbTrailerFilename1);
-        panelTrailerFilenames.add(cbTrailerFilename1, "cell 1 0");
+        rbTrailerFilename1 = new JRadioButton("tvshow-trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        trailerFilenameButtonGroup.add(rbTrailerFilename1);
+        panelTrailerFilenames.add(rbTrailerFilename1, "cell 1 0");
 
-        cbTrailerFilename2 = new JCheckBox(
+        rbTrailerFilename2 = new JRadioButton(
             TmmResourceBundle.getString("Settings.trailer.tvshowtitle") + "-trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        trailerFilenameButtonGroup.add(cbTrailerFilename2);
-        panelTrailerFilenames.add(cbTrailerFilename2, "cell 1 1");
+        trailerFilenameButtonGroup.add(rbTrailerFilename2);
+        panelTrailerFilenames.add(rbTrailerFilename2, "cell 1 1");
 
-        cbTrailerFilename3 = new JCheckBox("trailers/" + TmmResourceBundle.getString("Settings.trailer.tvshowtitle") + "-trailer."
+        rbTrailerFilename3 = new JRadioButton("trailers/" + TmmResourceBundle.getString("Settings.trailer.tvshowtitle") + "-trailer."
             + TmmResourceBundle.getString("Settings.artwork.extension"));
-        trailerFilenameButtonGroup.add(cbTrailerFilename3);
-        panelTrailerFilenames.add(cbTrailerFilename3, "cell 1 2");
+        trailerFilenameButtonGroup.add(rbTrailerFilename3);
+        panelTrailerFilenames.add(rbTrailerFilename3, "cell 1 2");
 
-        cbTrailerFilename4 = new JCheckBox("trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        trailerFilenameButtonGroup.add(cbTrailerFilename4);
-        panelTrailerFilenames.add(cbTrailerFilename4, "cell 1 3");
+        rbTrailerFilename4 = new JRadioButton("trailer." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        trailerFilenameButtonGroup.add(rbTrailerFilename4);
+        panelTrailerFilenames.add(rbTrailerFilename4, "cell 1 3");
       }
     }
   }

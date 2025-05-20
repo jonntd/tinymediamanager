@@ -24,7 +24,9 @@ import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -56,13 +58,13 @@ class MovieImageExtraPanel extends JPanel {
   private JSpinner            spExtrathumbWidth;
   private JSpinner            spDownloadCountExtrathumbs;
   private JSpinner            spDownloadCountExtrafanart;
-  private JCheckBox           chckbxExtrafanart1;
-  private JCheckBox           chckbxExtrafanart2;
-  private JCheckBox           chckbxExtrafanart3;
-  private JCheckBox           chckbxExtrafanart4;
-  private JCheckBox           chckbxExtrafanart5;
-  private JCheckBox           chckbxExtrafanart6;
-  private JCheckBox           chckbxExtrafanart7;
+  private JRadioButton        rbExtrafanart1;
+  private JRadioButton        rbExtrafanart2;
+  private JRadioButton        rbExtrafanart3;
+  private JRadioButton        rbExtrafanart4;
+  private JRadioButton        rbExtrafanart5;
+  private JRadioButton        rbExtrafanart6;
+  private JRadioButton        rbExtrafanart7;
 
   /**
    * Instantiates a new movie image settings panel.
@@ -76,13 +78,13 @@ class MovieImageExtraPanel extends JPanel {
 
     // further init
     ButtonGroup buttonGroup = new ButtonGroup();
-    buttonGroup.add(chckbxExtrafanart1);
-    buttonGroup.add(chckbxExtrafanart2);
-    buttonGroup.add(chckbxExtrafanart3);
-    buttonGroup.add(chckbxExtrafanart4);
-    buttonGroup.add(chckbxExtrafanart5);
-    buttonGroup.add(chckbxExtrafanart6);
-    buttonGroup.add(chckbxExtrafanart7);
+    buttonGroup.add(rbExtrafanart1);
+    buttonGroup.add(rbExtrafanart2);
+    buttonGroup.add(rbExtrafanart3);
+    buttonGroup.add(rbExtrafanart4);
+    buttonGroup.add(rbExtrafanart5);
+    buttonGroup.add(rbExtrafanart6);
+    buttonGroup.add(rbExtrafanart7);
 
     settings.addPropertyChangeListener(evt -> {
       if ("preset".equals(evt.getPropertyName())) {
@@ -95,56 +97,55 @@ class MovieImageExtraPanel extends JPanel {
 
   private void buildCheckBoxes() {
     // initialize
-    clearSelection(chckbxExtrafanart1, chckbxExtrafanart2, chckbxExtrafanart3, chckbxExtrafanart4, chckbxExtrafanart5, chckbxExtrafanart6,
-        chckbxExtrafanart7);
+    clearSelection(rbExtrafanart1, rbExtrafanart2, rbExtrafanart3, rbExtrafanart4, rbExtrafanart5, rbExtrafanart6, rbExtrafanart7);
 
     // extrafanart filenames
     for (MovieExtraFanartNaming fanart : settings.getExtraFanartFilenames()) {
       switch (fanart) {
         case FILENAME_EXTRAFANART:
-          chckbxExtrafanart1.setSelected(true);
+          rbExtrafanart1.setSelected(true);
           break;
 
         case FILENAME_EXTRAFANART2:
-          chckbxExtrafanart2.setSelected(true);
+          rbExtrafanart2.setSelected(true);
           break;
 
         case EXTRAFANART:
-          chckbxExtrafanart3.setSelected(true);
+          rbExtrafanart3.setSelected(true);
           break;
 
         case FOLDER_EXTRAFANART:
-          chckbxExtrafanart4.setSelected(true);
+          rbExtrafanart4.setSelected(true);
           break;
 
         case FILENAME_EXTRABACKDROP:
-          chckbxExtrafanart5.setSelected(true);
+          rbExtrafanart5.setSelected(true);
           break;
 
         case FILENAME_EXTRABACKDROP2:
-          chckbxExtrafanart6.setSelected(true);
+          rbExtrafanart6.setSelected(true);
           break;
 
         case EXTRABACKDROP:
-          chckbxExtrafanart7.setSelected(true);
+          rbExtrafanart7.setSelected(true);
           break;
       }
     }
 
     // listen to changes of the checkboxes
-    chckbxExtrafanart1.addItemListener(checkBoxListener);
-    chckbxExtrafanart2.addItemListener(checkBoxListener);
-    chckbxExtrafanart3.addItemListener(checkBoxListener);
-    chckbxExtrafanart4.addItemListener(checkBoxListener);
-    chckbxExtrafanart5.addItemListener(checkBoxListener);
-    chckbxExtrafanart6.addItemListener(checkBoxListener);
-    chckbxExtrafanart7.addItemListener(checkBoxListener);
+    rbExtrafanart1.addItemListener(checkBoxListener);
+    rbExtrafanart2.addItemListener(checkBoxListener);
+    rbExtrafanart3.addItemListener(checkBoxListener);
+    rbExtrafanart4.addItemListener(checkBoxListener);
+    rbExtrafanart5.addItemListener(checkBoxListener);
+    rbExtrafanart6.addItemListener(checkBoxListener);
+    rbExtrafanart7.addItemListener(checkBoxListener);
   }
 
-  private void clearSelection(JCheckBox... checkBoxes) {
-    for (JCheckBox checkBox : checkBoxes) {
-      checkBox.removeItemListener(checkBoxListener);
-      checkBox.setSelected(false);
+  private void clearSelection(JToggleButton... toggleButtons) {
+    for (JToggleButton button : toggleButtons) {
+      button.removeItemListener(checkBoxListener);
+      button.setSelected(false);
     }
   }
 
@@ -155,25 +156,25 @@ class MovieImageExtraPanel extends JPanel {
     // set poster filenames
     settings.clearExtraFanartFilenames();
 
-    if (chckbxExtrafanart1.isSelected()) {
+    if (rbExtrafanart1.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.FILENAME_EXTRAFANART);
     }
-    if (chckbxExtrafanart2.isSelected()) {
+    if (rbExtrafanart2.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.FILENAME_EXTRAFANART2);
     }
-    if (chckbxExtrafanart3.isSelected()) {
+    if (rbExtrafanart3.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.EXTRAFANART);
     }
-    if (chckbxExtrafanart4.isSelected()) {
+    if (rbExtrafanart4.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.FOLDER_EXTRAFANART);
     }
-    if (chckbxExtrafanart5.isSelected()) {
+    if (rbExtrafanart5.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.FILENAME_EXTRABACKDROP);
     }
-    if (chckbxExtrafanart6.isSelected()) {
+    if (rbExtrafanart6.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.FILENAME_EXTRABACKDROP2);
     }
-    if (chckbxExtrafanart7.isSelected()) {
+    if (rbExtrafanart7.isSelected()) {
       settings.addExtraFanartFilename(MovieExtraFanartNaming.EXTRABACKDROP);
     }
   }
@@ -212,30 +213,30 @@ class MovieImageExtraPanel extends JPanel {
         panelExtra.add(panelExtraFanart, "cell 2 5,grow");
         panelExtraFanart.setLayout(new MigLayout("insets 0", "[][]", "[][][][]"));
 
-        chckbxExtrafanart1 = new JCheckBox(
+        rbExtrafanart1 = new JRadioButton(
             TmmResourceBundle.getString("Settings.moviefilename") + "-fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart1, "flowy,cell 0 0");
+        panelExtraFanart.add(rbExtrafanart1, "flowy,cell 0 0");
 
-        chckbxExtrafanart2 = new JCheckBox(
+        rbExtrafanart2 = new JRadioButton(
             TmmResourceBundle.getString("Settings.moviefilename") + ".fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart2, "cell 0 1");
+        panelExtraFanart.add(rbExtrafanart2, "cell 0 1");
 
-        chckbxExtrafanart3 = new JCheckBox("fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart3, "cell 0 2");
+        rbExtrafanart3 = new JRadioButton("fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panelExtraFanart.add(rbExtrafanart3, "cell 0 2");
 
-        chckbxExtrafanart4 = new JCheckBox("extrafanart/fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart4, "cell 0 3");
+        rbExtrafanart4 = new JRadioButton("extrafanart/fanartX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panelExtraFanart.add(rbExtrafanart4, "cell 0 3");
 
-        chckbxExtrafanart5 = new JCheckBox(
+        rbExtrafanart5 = new JRadioButton(
             TmmResourceBundle.getString("Settings.moviefilename") + "-backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart5, "cell 1 0");
+        panelExtraFanart.add(rbExtrafanart5, "cell 1 0");
 
-        chckbxExtrafanart6 = new JCheckBox(
+        rbExtrafanart6 = new JRadioButton(
             TmmResourceBundle.getString("Settings.moviefilename") + ".backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart6, "cell 1 1");
+        panelExtraFanart.add(rbExtrafanart6, "cell 1 1");
 
-        chckbxExtrafanart7 = new JCheckBox("backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
-        panelExtraFanart.add(chckbxExtrafanart7, "cell 1 2");
+        rbExtrafanart7 = new JRadioButton("backdropX." + TmmResourceBundle.getString("Settings.artwork.extension"));
+        panelExtraFanart.add(rbExtrafanart7, "cell 1 2");
 
         JLabel lblDownloadCount = new JLabel(TmmResourceBundle.getString("Settings.amount.autodownload"));
         panelExtra.add(lblDownloadCount, "cell 2 7");
@@ -306,22 +307,35 @@ class MovieImageExtraPanel extends JPanel {
         jCheckBoxBeanProperty, spExtrathumbWidth, jSpinnerBeanProperty);
     autoBinding_9.bind();
     //
-    BeanProperty<JCheckBox, Boolean> jCheckBoxBeanProperty_2 = BeanProperty.create("enabled");
+    BeanProperty<JRadioButton, Boolean> jRadioButtonBeanProperty_2 = BeanProperty.create("enabled");
 
-    AutoBinding<JCheckBox, Boolean, JCheckBox, Boolean> autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
-        jCheckBoxBeanProperty, chckbxExtrafanart1, jCheckBoxBeanProperty_2);
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart1, jRadioButtonBeanProperty_2);
     autoBinding.bind();
     //
-    AutoBinding<JCheckBox, Boolean, JCheckBox, Boolean> autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
-        jCheckBoxBeanProperty, chckbxExtrafanart2, jCheckBoxBeanProperty_2);
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart2, jRadioButtonBeanProperty_2);
     autoBinding_1.bind();
     //
-    AutoBinding<JCheckBox, Boolean, JCheckBox, Boolean> autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
-        jCheckBoxBeanProperty, chckbxExtrafanart3, jCheckBoxBeanProperty_2);
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart3, jRadioButtonBeanProperty_2);
     autoBinding_4.bind();
     //
-    AutoBinding<JCheckBox, Boolean, JCheckBox, Boolean> autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
-        jCheckBoxBeanProperty, chckbxExtrafanart4, jCheckBoxBeanProperty_2);
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart4, jRadioButtonBeanProperty_2);
     autoBinding_5.bind();
+    //
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart5, jRadioButtonBeanProperty_2);
+    autoBinding_6.bind();
+    //
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_16 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart6, jRadioButtonBeanProperty_2);
+    autoBinding_16.bind();
+    //
+    AutoBinding<JCheckBox, Boolean, JRadioButton, Boolean> autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxEnableExtrafanart,
+        jCheckBoxBeanProperty, rbExtrafanart7, jRadioButtonBeanProperty_2);
+    autoBinding_17.bind();
+
   }
 }
