@@ -304,7 +304,7 @@ class TvShowImageTypeSettingsPanel extends JPanel {
     chckbxSeasonPoster2.removeItemListener(checkBoxListener);
     chckbxSeasonPoster3.removeItemListener(checkBoxListener);
     chckbxSeasonPoster4.removeItemListener(checkBoxListener);
-    clearSelection(chckbxSeasonPoster1, chckbxSeasonPoster2, chckbxSeasonPoster3,chckbxSeasonPoster4);
+    clearSelection(chckbxSeasonPoster1, chckbxSeasonPoster2, chckbxSeasonPoster3, chckbxSeasonPoster4);
 
     chckbxSeasonFanart1.removeItemListener(checkBoxListener);
     chckbxSeasonFanart2.removeItemListener(checkBoxListener);
@@ -433,6 +433,7 @@ class TvShowImageTypeSettingsPanel extends JPanel {
 
         case SEASON_FOLDER2:
           chckbxSeasonPoster4.setSelected(true);
+          break;
 
         case FOLDER:
           chckbxSeasonPoster3.setSelected(true);

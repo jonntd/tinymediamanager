@@ -1257,6 +1257,7 @@ public class TvShowNfoParser {
             if (child.ownText().equals("GuestStar")) {
               actor.guestStar = true;
             }
+            break;
 
           case "tmdbid":
             actor.tmdbId = child.ownText();

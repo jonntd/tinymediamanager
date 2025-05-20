@@ -100,6 +100,8 @@ public class MediaInfoXmlCreator {
             case Video:
             case Text:
               hasValidTracks = true;
+              break;
+
             default:
               break;
           }

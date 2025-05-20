@@ -25,7 +25,7 @@ public class WolDevice extends AbstractModelObject {
   private static final String NAME        = "name";
   private static final String MAC_ADDRESS = "macAddress";
 
-  private String              name;
+  private String              deviceName;
   private String              macAddress;
 
   public WolDevice() {
@@ -38,12 +38,12 @@ public class WolDevice extends AbstractModelObject {
    *          the original to copy
    */
   public WolDevice(WolDevice original) {
-    this.name = original.name;
+    this.deviceName = original.deviceName;
     this.macAddress = original.macAddress;
   }
 
   public String getName() {
-    return name;
+    return deviceName;
   }
 
   public String getMacAddress() {
@@ -51,8 +51,8 @@ public class WolDevice extends AbstractModelObject {
   }
 
   public void setName(String newValue) {
-    String oldValue = this.name;
-    this.name = newValue;
+    String oldValue = this.deviceName;
+    this.deviceName = newValue;
     firePropertyChange(NAME, oldValue, newValue);
   }
 
