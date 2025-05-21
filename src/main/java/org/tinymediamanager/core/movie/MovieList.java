@@ -1580,14 +1580,22 @@ public final class MovieList extends AbstractModelObject {
       return;
     }
 
+    // create a movie and set it as MF
+    Movie movie = new Movie();
+    movie.setTitle(title);
+
+    String cleanedTitle = MovieRenamer.createDestinationForFoldername(MovieModuleManager.getInstance().getSettings().getRenamerPathname(), movie);
+
     // check if there is already an identical stub folder
     int i = 1;
-    Path stubFolder = Paths.get(datasource, title);
+    Path stubFolder = Paths.get(datasource, cleanedTitle);
     while (Files.exists(stubFolder)) {
-      stubFolder = Paths.get(datasource, title + "(" + i++ + ")");
+      stubFolder = Paths.get(datasource, cleanedTitle + "(" + i++ + ")");
     }
 
-    Path stubFile = stubFolder.resolve(title + ".disc");
+    cleanedTitle = MovieRenamer.createDestinationForFilename(MovieModuleManager.getInstance().getSettings().getRenamerPathname(), movie);
+
+    Path stubFile = stubFolder.resolve(cleanedTitle + ".disc");
 
     // create the stub file
     try {
@@ -1599,16 +1607,14 @@ public final class MovieList extends AbstractModelObject {
       return;
     }
 
-    // create a movie and set it as MF
-    MediaFile mf = new MediaFile(stubFile);
-    mf.gatherMediaInformation();
-    Movie movie = new Movie();
-
-    movie.setTitle(title);
     movie.setPath(stubFolder.toAbsolutePath().toString());
+
     movie.setDataSource(datasource);
     movie.setMediaSource(mediaSource);
     movie.setDateAdded(new Date());
+
+    MediaFile mf = new MediaFile(stubFile);
+    mf.gatherMediaInformation();
     movie.addToMediaFiles(mf);
     movie.setOffline(true);
     movie.setNewlyAdded(true);
