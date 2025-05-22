@@ -519,7 +519,9 @@ public final class TinyMediaManager {
     }
 
     try {
-      KodiRPC.getInstance().connect();
+      if (!Settings.getInstance().getKodiHost().isBlank()) {
+        KodiRPC.getInstance().connect();
+      }
     }
     catch (Exception e) {
       // catch all, to not kill JVM on any other exceptions!
