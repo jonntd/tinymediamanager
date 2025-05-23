@@ -204,7 +204,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   writeActorImages                       = false;
 
   // trailer scraper
-  boolean                                   useYtDlp                               = false;
+  boolean                                   useYtDlp                               = true;
   boolean                                   useTrailerPreference                   = true;
   boolean                                   automaticTrailerDownload               = false;
   TrailerQuality                            trailerQuality                         = TrailerQuality.HD_720;

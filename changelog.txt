@@ -9,3 +9,4 @@ Version 5.2.0
 + [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
 + [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
 x [UI] some UI fixes
+x [Trailer] activated yt-dlp as a default trailer downloader

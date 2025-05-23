@@ -217,7 +217,7 @@ public final class TvShowSettings extends AbstractSettings {
   int                                            imageExtraFanartCount                  = 5;
 
   // trailer scraper
-  boolean                                        useYtDlp                               = false;
+  boolean                                        useYtDlp                               = true;
   boolean                                        useTrailerPreference                   = true;
   boolean                                        automaticTrailerDownload               = false;
   TrailerQuality                                 trailerQuality                         = TrailerQuality.HD_720;
