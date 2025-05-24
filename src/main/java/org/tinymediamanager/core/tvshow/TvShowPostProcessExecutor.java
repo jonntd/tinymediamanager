@@ -56,12 +56,8 @@ public class TvShowPostProcessExecutor extends PostProcessExecutor {
       try {
         executeCommand(command, tvs);
       }
-      catch (InterruptedException e) {
-        // ignored
-        return;
-      }
-      catch (Exception e) {
-        LOGGER.error("Problem executing post process", e);
+      catch (Exception ignored) {
+        // already logged in executeCommand
       }
     }
   }
