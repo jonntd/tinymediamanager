@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 
 import javax.swing.JFileChooser;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
@@ -760,19 +761,34 @@ public class TmmUIHelper {
   /**
    * Get all selected rows from the given {@link JTable} as rows from the underlying model
    * 
-   * @param table
+   * @param jTable
    *          the {@link JTable}
    * @return an int[] containing the model indices of all selected rows
    */
-  public static int[] getSelectedRowsAsModelRows(JTable table) {
-    int[] tableRows = table.getSelectedRows();
+  public static int[] getSelectedRowsAsModelRows(JTable jTable) {
+    int[] tableRows = jTable.getSelectedRows();
     int[] modelRows = new int[tableRows.length];
     for (int i = 0; i < tableRows.length; i++) {
-      modelRows[i] = table.convertRowIndexToModel(tableRows[i]);
+      modelRows[i] = jTable.convertRowIndexToModel(tableRows[i]);
     }
 
     // sort it (descending)
     ArrayUtils.reverse(modelRows);
     return modelRows;
+  }
+
+  /**
+   * Get all selected rows from the given {@link JList} as rows from the underlying model
+   *
+   * @param jList
+   *          the {@link JList}
+   * @return an int[] containing the model indices of all selected rows
+   */
+  public static int[] getSelectedRowsAsModelRows(JList<?> jList) {
+    int[] selectedIndices = jList.getSelectedIndices();
+
+    // sort it (descending)
+    ArrayUtils.reverse(selectedIndices);
+    return selectedIndices;
   }
 }

@@ -416,5 +416,10 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
     AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_11, chckbxDateAdded,
         jCheckBoxBeanProperty);
     autoBinding_11.bind();
+    //
+    Property jCheckBoxBeanProperty_1 = BeanProperty.create("enabled");
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxWriteEpisodeguide, jCheckBoxBeanProperty,
+        chckbxNewEpisodeguideFormat, jCheckBoxBeanProperty_1);
+    autoBinding_12.bind();
   }
 }

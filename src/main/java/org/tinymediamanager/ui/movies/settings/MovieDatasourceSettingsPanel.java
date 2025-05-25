@@ -154,12 +154,19 @@ class MovieDatasourceSettingsPanel extends JPanel {
     });
 
     btnRemoveSkipFolder.addActionListener(e -> {
-      int row = listSkipFolder.getSelectedIndex();
-      if (row != -1) { // nothing selected
-        String ignore = settings.getSkipFolder().get(row);
-        settings.removeSkipFolder(ignore);
-        panelIgnore.revalidate();
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listSkipFolder);
+
+      for (int indexRow : indexRows) {
+        try {
+          String skipFolder = settings.getSkipFolder().get(indexRow);
+          settings.removeSkipFolder(skipFolder);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
+
+      panelIgnore.revalidate();
     });
 
     btnAddBadWord.addActionListener(e -> {
@@ -177,10 +184,16 @@ class MovieDatasourceSettingsPanel extends JPanel {
     });
 
     btnRemoveBadWord.addActionListener(arg0 -> {
-      int row = listBadWords.getSelectedIndex();
-      if (row != -1) {
-        String badWord = MovieModuleManager.getInstance().getSettings().getBadWord().get(row);
-        MovieModuleManager.getInstance().getSettings().removeBadWord(badWord);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listBadWords);
+
+      for (int indexRow : indexRows) {
+        try {
+          String badWord = settings.getBadWord().get(indexRow);
+          settings.removeBadWord(badWord);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
 
