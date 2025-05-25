@@ -16,7 +16,10 @@
 package org.tinymediamanager.ui.tvshows.dialogs;
 
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
+import static org.tinymediamanager.core.entities.Person.Type.CAMERA;
+import static org.tinymediamanager.core.entities.Person.Type.COMPOSER;
 import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
+import static org.tinymediamanager.core.entities.Person.Type.EDITOR;
 import static org.tinymediamanager.core.entities.Person.Type.GUEST;
 import static org.tinymediamanager.core.entities.Person.Type.OTHER;
 import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
@@ -594,7 +597,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         tableCrew = new PersonTable(crew);
         tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
         tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
-        tableCrew.setAllowedEditorTypes(new Person.Type[] { DIRECTOR, WRITER, PRODUCER, OTHER });
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { DIRECTOR, WRITER, PRODUCER, COMPOSER, EDITOR, CAMERA, OTHER });
 
         JScrollPane scrollPane = new JScrollPane();
         tableCrew.configureScrollPane(scrollPane);

@@ -303,11 +303,12 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
-        panelSearchDetail.setLayout(new MigLayout("", "[150lp:15%:25%,grow][300lp:500lp,grow]", "[][][150lp:300lp,grow][]"));
+        panelSearchDetail
+            .setLayout(new MigLayout("", "[150lp:15%:25%,grow][15lp!][300lp:500lp,grow]", "[][][15lp!][150lp:25%:50%,grow][100lp:25%:35%,grow]"));
         {
           lblTtitle = new JLabel("");
           TmmFontHelper.changeFont(lblTtitle, 1.166, Font.BOLD);
-          panelSearchDetail.add(lblTtitle, "cell 1 0,wmin 0");
+          panelSearchDetail.add(lblTtitle, "cell 2 0,wmin 0");
         }
         {
           lblTvShowPoster = new ImageLabel(false);
@@ -316,11 +317,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         }
         {
           lblOriginalTitle = new JLabel("");
-          panelSearchDetail.add(lblOriginalTitle, "cell 1 1,wmin 0");
+          panelSearchDetail.add(lblOriginalTitle, "cell 2 1,wmin 0");
         }
         {
           JScrollPane scrollPane = new NoBorderScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 1 2,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 3,grow");
 
           taOverview = new ReadOnlyTextArea();
           scrollPane.setViewportView(taOverview);
@@ -346,7 +347,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           btnCompareEpisodeGroup.setVisible(false);
           panelEpisodeGroup.add(btnCompareEpisodeGroup);
 
-          panelSearchDetail.add(panelEpisodeGroup, "cell 1 3,aligny bottom");
+          panelSearchDetail.add(panelEpisodeGroup, "cell 2 4,aligny bottom");
         }
       }
     }

@@ -784,7 +784,8 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         tableCrew = new PersonTable(crew);
         tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
         tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
-        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.OTHER });
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.COMPOSER,
+            Person.Type.EDITOR, Person.Type.CAMERA, Person.Type.OTHER });
 
         JScrollPane scrollPane = new JScrollPane();
         tableCrew.configureScrollPane(scrollPane);

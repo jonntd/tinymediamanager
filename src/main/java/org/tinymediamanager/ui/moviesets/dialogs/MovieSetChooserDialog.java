@@ -212,27 +212,28 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
-        panelSearchDetail.setLayout(new MigLayout("", "[150lp:15%:25%,grow][300lp:500lp,grow 3]", "[][250lp,grow][150lp][]"));
+        panelSearchDetail
+            .setLayout(new MigLayout("", "[150lp:15%:20%,grow][15lp!][300lp:500lp,grow 3]", "[][15lp!][100lp:25%:40%,grow][100lp:25%:40%,grow][]"));
         {
           lblMovieSetName = new JLabel("");
           TmmFontHelper.changeFont(lblMovieSetName, 1.166, Font.BOLD);
-          panelSearchDetail.add(lblMovieSetName, "cell 0 0 2 1,growx");
+          panelSearchDetail.add(lblMovieSetName, "cell 2 0,growx");
         }
         {
           lblMovieSetPoster = new ImageLabel();
           lblMovieSetPoster.setDesiredAspectRatio(2 / 3f);
-          panelSearchDetail.add(lblMovieSetPoster, "cell 0 1,grow");
+          panelSearchDetail.add(lblMovieSetPoster, "cell 0 0 1 3,grow");
         }
         {
           JScrollPane scrollPane = new NoBorderScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 1 1,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 2,grow");
 
           tpPlot = new ReadOnlyTextPane();
           scrollPane.setViewportView(tpPlot);
         }
         {
           JScrollPane scrollPane = new JScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 0 2 2 1,grow");
+          panelSearchDetail.add(scrollPane, "cell 0 3 3 1,grow");
 
           tableMovies = new TmmTable();
           tableMovies.configureScrollPane(scrollPane);
@@ -241,7 +242,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
         {
           cbAssignMovies = new JCheckBox(TmmResourceBundle.getString("movieset.movie.assign"));
           cbAssignMovies.setSelected(true);
-          panelSearchDetail.add(cbAssignMovies, "cell 0 3 2 1,growx,aligny top");
+          panelSearchDetail.add(cbAssignMovies, "cell 0 4 3 1,growx,aligny top");
         }
       }
       {

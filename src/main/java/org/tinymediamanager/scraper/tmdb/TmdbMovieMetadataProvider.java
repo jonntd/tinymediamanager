@@ -15,7 +15,10 @@
  */
 package org.tinymediamanager.scraper.tmdb;
 
+import static org.tinymediamanager.core.entities.Person.Type.CAMERA;
+import static org.tinymediamanager.core.entities.Person.Type.COMPOSER;
 import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
+import static org.tinymediamanager.core.entities.Person.Type.EDITOR;
 import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.MediaMetadata.IMDB;
@@ -908,11 +911,25 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         if ("Director".equals(crewMember.job)) {
           cm.setType(DIRECTOR);
         }
-        else if ("Writing".equals(crewMember.department)) {
+        else if ("Writing".equals(crewMember.department) && ("Screenplay".equals(crewMember.job))) {
+          // only take the screenplay writers, not the story writers
           cm.setType(WRITER);
         }
-        else if ("Production".equals(crewMember.department)) {
+        else if ("Production".equals(crewMember.department) && crewMember.job.contains("Producer")) {
+          // only take producers, not casting or similar jobs
           cm.setType(PRODUCER);
+        }
+        else if ("Editing".equals(crewMember.department) && ("Editor".equals(crewMember.job))) {
+          // only take the editors, not the assistant editors
+          cm.setType(EDITOR);
+        }
+        else if ("Sound".equals(crewMember.department) && ("Original Music Composer".equals(crewMember.job))) {
+          // only take the original music composers, not the sound designers
+          cm.setType(COMPOSER);
+        }
+        else if ("Camera".equals(crewMember.department) && ("Director of Photography".equals(crewMember.job))) {
+          // only take the directors of photography, not the camera operators
+          cm.setType(CAMERA);
         }
         else {
           continue;

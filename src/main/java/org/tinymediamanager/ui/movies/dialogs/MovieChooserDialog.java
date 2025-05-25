@@ -302,28 +302,29 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
-        panelSearchDetail.setLayout(new MigLayout("", "[100lp:15%:20%,grow][300lp:500lp,grow 3]", "[]2lp[]2lp[][150lp:25%:50%][50lp:100lp,grow]"));
+        panelSearchDetail.setLayout(
+            new MigLayout("", "[150lp:15%:20%,grow][15lp!][300lp:500lp,grow 3]", "[]2lp[]2lp[8lp!]2lp[][15lp!][100lp:15%:30%][100lp:25%:50%,grow]"));
         {
           lblTitle = new JLabel("");
           TmmFontHelper.changeFont(lblTitle, 1.167, Font.BOLD);
-          panelSearchDetail.add(lblTitle, "cell 1 0, wmin 0");
+          panelSearchDetail.add(lblTitle, "cell 2 0,wmin 0");
         }
         {
           lblOriginalTitle = new JLabel("");
-          panelSearchDetail.add(lblOriginalTitle, "cell 1 1,wmin 0");
+          panelSearchDetail.add(lblOriginalTitle, "cell 2 1,wmin 0");
         }
         {
           lblTagline = new JLabel("");
-          panelSearchDetail.add(lblTagline, "cell 1 2, wmin 0");
+          panelSearchDetail.add(lblTagline, "cell 2 3,wmin 0");
         }
         {
           lblMoviePoster = new ImageLabel(false);
           lblMoviePoster.setDesiredAspectRatio(2 / 3f);
-          panelSearchDetail.add(lblMoviePoster, "cell 0 0 1 4,grow");
+          panelSearchDetail.add(lblMoviePoster, "cell 0 0 1 6,grow");
         }
         {
           JScrollPane scrollPane = new NoBorderScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 1 3,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 5,grow");
           {
             taMovieDescription = new ReadOnlyTextArea();
             scrollPane.setViewportView(taMovieDescription);
@@ -331,7 +332,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         }
         {
           JScrollPane scrollPane = new JScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 0 4 2 1,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 6,grow");
           {
             tableCastMembers = new TmmTable(new TmmTableModel<>(castMemberEventList, new CastMemberTableFormat()));
             tableCastMembers.configureScrollPane(scrollPane);

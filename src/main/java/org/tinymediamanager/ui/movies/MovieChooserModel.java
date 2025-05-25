@@ -16,8 +16,6 @@
 package org.tinymediamanager.ui.movies;
 
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
-import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
-import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -279,29 +277,29 @@ public class MovieChooserModel extends AbstractModelObject {
       setOriginalTitle(metadata.getOriginalTitle());
 
       List<Person> cast = new ArrayList<>();
-      int i = 0;
-      for (Person castMember : metadata.getCastMembers(DIRECTOR)) {
-        cast.add(new Person(castMember));
 
-        // display at max 2 directors
-        if (++i >= 2) {
-          break;
+      // crew - add at max 2 of each type
+      for (Person.Type type : Person.Type.values()) {
+        if (type == ACTOR) {
+          continue;
+        }
+
+        int i = 0;
+        for (Person castMember : metadata.getCastMembers(type)) {
+          cast.add(new Person(castMember));
+
+          // display at max 2 directors
+          if (++i >= 2) {
+            break;
+          }
         }
       }
 
-      i = 0;
-      for (Person castMember : metadata.getCastMembers(PRODUCER)) {
-        cast.add(new Person(castMember));
-
-        // display at max 2 producers
-        if (++i >= 2) {
-          break;
-        }
-      }
-
+      // actors - add all
       for (Person castMember : metadata.getCastMembers(ACTOR)) {
         cast.add(new Person(castMember));
       }
+
       setCastMembers(cast);
       setOverview(metadata.getPlot());
       setTagline(metadata.getTagline());

@@ -1310,8 +1310,9 @@ public abstract class ImdbParser {
     md.addCastMembers(parseReferencePeople(doc, "directors", Person.Type.DIRECTOR));
     md.addCastMembers(parseReferencePeople(doc, "writers", Person.Type.WRITER));
     md.addCastMembers(parseReferencePeople(doc, "producers", Person.Type.PRODUCER));
-    md.addCastMembers(parseReferencePeople(doc, "editors", Person.Type.OTHER));
-    md.addCastMembers(parseReferencePeople(doc, "composers", Person.Type.OTHER));
+    md.addCastMembers(parseReferencePeople(doc, "editors", Person.Type.EDITOR));
+    md.addCastMembers(parseReferencePeople(doc, "composers", Person.Type.COMPOSER));
+    md.addCastMembers(parseReferencePeople(doc, "cinematographers", Person.Type.CAMERA));
 
     // production companies
     Elements prodCompHeaderElements = doc.getElementsByClass("ipl-list-title");

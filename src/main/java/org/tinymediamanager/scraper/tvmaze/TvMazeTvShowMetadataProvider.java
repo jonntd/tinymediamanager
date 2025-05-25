@@ -204,19 +204,29 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
         }
         person.setRole(crew.type);
         switch (crew.type) {
-          // case "Executive Producer":
+          case "Executive Producer":
           case "Producer": {
             person.setType(Person.Type.PRODUCER);
             break;
           }
 
           case "Director Of Photography": {
-            person.setType(Person.Type.DIRECTOR);
+            person.setType(Person.Type.CAMERA);
             break;
           }
 
           case "Creator": {
             person.setType(Person.Type.WRITER);
+            break;
+          }
+
+          case "Editor": {
+            person.setType(Person.Type.EDITOR);
+            break;
+          }
+
+          case "Music": {
+            person.setType(Person.Type.COMPOSER);
             break;
           }
 

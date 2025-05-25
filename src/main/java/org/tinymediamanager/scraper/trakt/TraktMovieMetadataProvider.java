@@ -16,6 +16,8 @@
 package org.tinymediamanager.scraper.trakt;
 
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
+import static org.tinymediamanager.core.entities.Person.Type.CAMERA;
+import static org.tinymediamanager.core.entities.Person.Type.COMPOSER;
 import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
 import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
@@ -252,6 +254,12 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
         }
         for (CrewMember crew : ListUtils.nullSafe(credits.crew.writing)) {
           md.addCastMember(TraktUtils.toTmmCast(crew, WRITER));
+        }
+        for (CrewMember crew : ListUtils.nullSafe(credits.crew.sound)) {
+          md.addCastMember(TraktUtils.toTmmCast(crew, COMPOSER));
+        }
+        for (CrewMember crew : ListUtils.nullSafe(credits.crew.camera)) {
+          md.addCastMember(TraktUtils.toTmmCast(crew, CAMERA));
         }
       }
     }

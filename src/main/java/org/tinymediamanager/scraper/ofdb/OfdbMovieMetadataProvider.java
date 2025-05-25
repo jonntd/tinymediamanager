@@ -353,11 +353,17 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
             type = Person.Type.PRODUCER;
             crewRole = "Produzent";
           }
+          else if (tag.text().contains("Komponist")) {
+            type = Person.Type.COMPOSER;
+            crewRole = "Komponist";
+          }
+          else if (tag.text().contains("Cutter") || tag.text().contains("Schnitt")) {
+            type = Person.Type.EDITOR;
+            crewRole = "Schnitt";
+          }
           else {
             type = Person.Type.OTHER;
             continue; // we usually do not save other crew members... as we have no place to display them yet.
-            // Komponist(in)
-            // Cutter (Schnitt)
             // Stunts
             // Second Unit-Regisseur(in)
             // Casting

@@ -812,7 +812,8 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         tableCrew = new PersonTable(crew);
         tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
         tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
-        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.OTHER });
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.COMPOSER,
+            Person.Type.EDITOR, Person.Type.CAMERA, Person.Type.OTHER });
 
         JScrollPane scrollPane = new JScrollPane();
         tableCrew.configureScrollPane(scrollPane);
@@ -832,17 +833,17 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         crewPanel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
       }
       {
-        JButton btnAddProducer = new SquareIconButton(new AddCrewAction());
-        crewPanel.add(btnAddProducer, "cell 3 0,alignx right");
+        JButton btnAddCrew = new SquareIconButton(new AddCrewAction());
+        crewPanel.add(btnAddCrew, "cell 3 0,alignx right");
 
-        JButton btnRemoveProducer = new SquareIconButton(new RemoveCrewAction());
-        crewPanel.add(btnRemoveProducer, "cell 3 0,alignx right");
+        JButton btnRemoveCrew = new SquareIconButton(new RemoveCrewAction());
+        crewPanel.add(btnRemoveCrew, "cell 3 0,alignx right");
 
-        JButton btnMoveProducerUp = new SquareIconButton(new MoveCrewUpAction());
-        crewPanel.add(btnMoveProducerUp, "cell 3 0,alignx right");
+        JButton btnMoveCrewUp = new SquareIconButton(new MoveCrewUpAction());
+        crewPanel.add(btnMoveCrewUp, "cell 3 0,alignx right");
 
-        JButton btnMoveProducerDown = new SquareIconButton(new MoveCrewDownAction());
-        crewPanel.add(btnMoveProducerDown, "cell 3 0,alignx right,aligny top");
+        JButton btnMoveCrewDown = new SquareIconButton(new MoveCrewDownAction());
+        crewPanel.add(btnMoveCrewDown, "cell 3 0,alignx right,aligny top");
       }
     }
 

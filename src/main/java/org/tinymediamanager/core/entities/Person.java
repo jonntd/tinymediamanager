@@ -53,6 +53,9 @@ public class Person extends AbstractModelObject implements IPrintable {
     WRITER,
     PRODUCER,
     GUEST, // guest actor on episode level
+    COMPOSER,
+    EDITOR,
+    CAMERA,
     OTHER;
 
     @Override
