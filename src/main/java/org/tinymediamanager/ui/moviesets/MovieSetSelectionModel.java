@@ -180,7 +180,7 @@ public class MovieSetSelectionModel extends AbstractModelObject {
 
     int[] rows = treeTable.getSelectedRows();
     for (int row : rows) {
-      DefaultMutableTreeNode node = (DefaultMutableTreeNode) treeTable.getValueAt(row, 0);
+      DefaultMutableTreeNode node = treeTable.getTreeNode(row);
       if (node != null) {
         Object userObject = node.getUserObject();
         if (userObject instanceof MovieSet) {

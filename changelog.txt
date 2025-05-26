@@ -2,6 +2,7 @@ Version 5.1.7
 =======================
 x [Movies/TV shows] fixed rendering of file names with JMTE
 x [TV shows] added an option to activate scraping of episode thumbs from all scrapers #2941
+x [TV shows] prevent hiding of the first table column #2959
 x [IMDB] rule out some weird posters on scrape #2949
 x [UI] fixed an issue with maximized dialogs on Linux
 x [Anime] again tweak some regex #2945 #2946 #2950
