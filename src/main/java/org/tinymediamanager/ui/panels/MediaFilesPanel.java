@@ -237,7 +237,7 @@ public class MediaFilesPanel extends JPanel {
           }
           catch (Exception e) {
             LOGGER.error("open file", e);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", e.getLocalizedMessage() }));
           }
         }
@@ -247,7 +247,7 @@ public class MediaFilesPanel extends JPanel {
           }
           catch (Exception e) {
             LOGGER.error("open file", e);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", e.getLocalizedMessage() }));
           }
         }

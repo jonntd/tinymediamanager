@@ -248,7 +248,7 @@ public abstract class ARDetectorTask extends TmmTask {
 
       if (videoInfo.sampleCount == 0) {
         LOGGER.debug("No results from scanning");
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.failed", new String[] { ":", mediaFile.getFilename() }));
         return;
       }
@@ -287,7 +287,7 @@ public abstract class ARDetectorTask extends TmmTask {
     }
     catch (Exception ex) {
       LOGGER.error("Error detecting aspect ratio", ex);
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.failed", new String[] { ":", mediaFile.getFilename() }));
     }
   }
@@ -718,7 +718,7 @@ public abstract class ARDetectorTask extends TmmTask {
   protected boolean canRun() {
     if (!FFmpeg.isAvailable()) {
       LOGGER.warn("Would have executed aspect ration detection - unfortunately, FFMpeg could not be found.");
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.ffmpegmissing"));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.ffmpegmissing"));
       return false;
     }
 

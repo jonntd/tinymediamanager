@@ -152,8 +152,9 @@ class UiSettingsPanel extends JPanel {
       }
       catch (Exception e) {
         LOGGER.error(e.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, lblLinkTranslate.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-2$
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, lblLinkTranslate.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-2$
       }
     });
 

@@ -76,7 +76,7 @@ public class TvShowExtraImageFetcherTask implements Runnable {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed: ", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.extraimage.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.extraimage.threadcrashed"));
     }
   }
 

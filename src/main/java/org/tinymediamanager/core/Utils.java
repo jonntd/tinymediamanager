@@ -786,7 +786,7 @@ public class Utils {
       if (!rename) {
         LOGGER.error("Failed to rename directory {} to {}", srcDir, destDir);
         LOGGER.error("Renaming aborted.");
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename")); // NOSONAR
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename")); // NOSONAR
         return false;
       }
       else {
@@ -909,7 +909,7 @@ public class Utils {
 
       if (!rename) {
         LOGGER.error("Failed to rename file '{}' to '{}'", srcFile, destFile);
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, srcFile, "message.renamer.failedrename")); // NOSONAR
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, srcFile, "message.renamer.failedrename")); // NOSONAR
         return false;
       }
       else {
@@ -1041,7 +1041,7 @@ public class Utils {
 
       if (!rename) {
         LOGGER.error("Failed to copy file {} to {}", srcFile, destFile);
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, srcFile, "message.renamer.failedrename")); // NOSONAR
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, srcFile, "message.renamer.failedrename")); // NOSONAR
         return false;
       }
       else {

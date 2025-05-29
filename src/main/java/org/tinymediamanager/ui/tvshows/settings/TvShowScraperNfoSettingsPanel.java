@@ -233,8 +233,9 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
         }
         catch (Exception e) {
           LOGGER.error(e.getMessage());
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, lblEpisodeGuideLink.getText(), "message.erroropenurl",
-              new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-1$
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, lblEpisodeGuideLink.getText(), "message.erroropenurl",
+                  new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-1$
         }
       });
 

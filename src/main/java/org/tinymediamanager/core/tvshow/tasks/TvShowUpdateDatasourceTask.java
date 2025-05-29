@@ -210,7 +210,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     Utils.removeEmptyStringsFromList(dataSources);
     if (dataSources.isEmpty() && showsToUpdate.isEmpty()) {
       LOGGER.info("no datasource to update");
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
       return;
     }
 
@@ -264,7 +264,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           if (!Files.exists(dsAsPath)) {
             // error - continue with next datasource
             LOGGER.warn("Datasource not available/empty {}", ds);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
             continue;
           }
@@ -289,7 +289,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
-              MessageManager.instance
+              MessageManager.getInstance()
                   .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
               continue;
             }
@@ -327,8 +327,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
               // File in root folder - not possible for TV datasource (at least, for videos ;)
               String ext = FilenameUtils.getExtension(path.getFileName().toString()).toLowerCase(Locale.ROOT);
               if (Settings.getInstance().getVideoFileType().contains("." + ext)) {
-                MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.episodeinroot",
-                    new String[] { path.getFileName().toString() }));
+                MessageManager.getInstance()
+                    .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.episodeinroot",
+                        new String[] { path.getFileName().toString() }));
               }
             }
           }
@@ -377,7 +378,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           // if the DS exists (and we have access to read it): Files.exist = true
           if (!Files.exists(dsAsPath)) {
             // error - continue with next datasource
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
             continue;
           }
@@ -398,7 +399,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
             if (isEmpty) {
               // error - continue with next datasource
-              MessageManager.instance
+              MessageManager.getInstance()
                   .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
               continue;
             }
@@ -511,7 +512,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     Exception e) {
       LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
 

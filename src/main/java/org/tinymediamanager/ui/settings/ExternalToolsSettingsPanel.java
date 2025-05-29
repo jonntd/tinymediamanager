@@ -216,7 +216,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
             TmmUIHelper.browseUrl(url);
           }
           catch (Exception e1) {
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
           }
         });

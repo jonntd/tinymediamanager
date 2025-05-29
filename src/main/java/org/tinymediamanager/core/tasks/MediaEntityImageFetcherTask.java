@@ -147,8 +147,9 @@ public class MediaEntityImageFetcherTask implements Runnable {
     }
     catch (Exception e) {
       LOGGER.error("fetch image {} - {}", url, e.getMessage());
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, "ArtworkDownload", "message.artwork.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, "ArtworkDownload", "message.artwork.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 }

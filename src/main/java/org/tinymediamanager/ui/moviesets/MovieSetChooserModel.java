@@ -200,13 +200,14 @@ public class MovieSetChooserModel extends AbstractModelObject {
         }
         catch (MissingIdException e) {
           LOGGER.warn("missing id for scrape");
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "scraper.error.missingid"));
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "scraper.error.missingid"));
           return;
         }
         catch (ScrapeException e) {
           LOGGER.error("getMetadata", e);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.metadatamoviesetfailed",
-              new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.metadatamoviesetfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
           return;
         }
 
@@ -262,8 +263,9 @@ public class MovieSetChooserModel extends AbstractModelObject {
     }
     catch (Exception e) {
       LOGGER.error("scrapeMedia", e);
-      MessageManager.instance.pushMessage(
-          new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.threadcrashed",
+              new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 
@@ -326,8 +328,9 @@ public class MovieSetChooserModel extends AbstractModelObject {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, movieSetToScrape, "message.scrape.movieartworkfailed",
-              new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSetToScrape, "message.scrape.movieartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 

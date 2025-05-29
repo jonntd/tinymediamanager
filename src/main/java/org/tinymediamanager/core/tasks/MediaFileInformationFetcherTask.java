@@ -137,8 +137,9 @@ public class MediaFileInformationFetcherTask implements Runnable {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed: ", e);
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, "MediaInformation", "message.mediainfo.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, "MediaInformation", "message.mediainfo.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
     }
 
     if (mediaEntity != null) {

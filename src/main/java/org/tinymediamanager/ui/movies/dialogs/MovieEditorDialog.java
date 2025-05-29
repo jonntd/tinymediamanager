@@ -593,7 +593,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           }
           catch (Exception ex) {
             LOGGER.error("open file - {}", e);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         });
@@ -1695,7 +1695,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
         }
         catch (Exception ex) {
           LOGGER.error(ex.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
         }
       }

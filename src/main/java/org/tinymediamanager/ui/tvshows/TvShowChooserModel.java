@@ -293,15 +293,16 @@ public class TvShowChooserModel extends AbstractModelObject {
     }
     catch (MissingIdException e) {
       LOGGER.warn("missing id for scrape");
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "scraper.error.missingid"));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "scraper.error.missingid"));
     }
     catch (NothingFoundException ignored) {
       LOGGER.debug("nothing found");
     }
     catch (ScrapeException e) {
       LOGGER.error("getMetadata", e);
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "message.scrape.metadatatvshowfailed",
-          new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "message.scrape.metadatatvshowfailed",
+              new String[] { ":", e.getLocalizedMessage() }));
     }
     catch (Exception e) {
       LOGGER.error("unforeseen error: ", e);
@@ -342,12 +343,13 @@ public class TvShowChooserModel extends AbstractModelObject {
     }
     catch (MissingIdException e) {
       LOGGER.warn("missing id for scrape");
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "scraper.error.missingid"));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "scraper.error.missingid"));
     }
     catch (ScrapeException e) {
       LOGGER.error("getEpisodeList", e);
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "message.scrape.episodelistfailed",
-          new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowChooser", "message.scrape.episodelistfailed",
+              new String[] { ":", e.getLocalizedMessage() }));
     }
     return episodes;
   }
@@ -422,8 +424,9 @@ public class TvShowChooserModel extends AbstractModelObject {
       }
       catch (ScrapeException e) {
         LOGGER.error("getArtwork", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -500,8 +503,9 @@ public class TvShowChooserModel extends AbstractModelObject {
         }
         catch (ScrapeException e) {
           LOGGER.error("getTrailers {}", e.getMessage());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 

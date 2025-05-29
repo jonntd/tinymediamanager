@@ -48,7 +48,7 @@ public class FaqAction extends TmmAction {
     }
     catch (Exception e1) {
       LOGGER.error("FAQ", e1);
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
     }
   }

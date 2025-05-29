@@ -256,13 +256,14 @@ public class MovieChooserModel extends AbstractModelObject {
       }
       catch (MissingIdException e) {
         LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "scraper.error.missingid"));
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "scraper.error.missingid"));
         return;
       }
       catch (ScrapeException e) {
         LOGGER.error("searchMovieFallback", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
         return;
       }
       catch (Exception e) {
@@ -312,8 +313,9 @@ public class MovieChooserModel extends AbstractModelObject {
     }
     catch (Exception e) {
       LOGGER.error("scrapeMedia", e);
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 
@@ -412,8 +414,9 @@ public class MovieChooserModel extends AbstractModelObject {
       }
       catch (ScrapeException e) {
         LOGGER.error("getArtwork", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
       catch (Error e) {
         LOGGER.debug("uncaught error", e);
@@ -493,8 +496,9 @@ public class MovieChooserModel extends AbstractModelObject {
         }
         catch (ScrapeException e) {
           LOGGER.error("getTrailers {}", e.getMessage());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 

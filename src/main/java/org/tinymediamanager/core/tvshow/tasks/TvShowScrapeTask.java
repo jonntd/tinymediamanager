@@ -148,20 +148,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
               // if both results have 100% score - do not take any result
               if (result1.getScore() == 1 && result2.getScore() == 1) {
                 LOGGER.info("two 100% results, can't decide which to take - ignore result");
-                MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
                 return;
               }
               // create a treshold of 0.75 - to minimize false positives
               if (result1.getScore() < 0.75) {
                 LOGGER.info("score is lower than 0.75 ({}) - ignore result", result1.getScore());
-                MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
                 return;
               }
             }
           }
           else {
             LOGGER.info("no result found for {}", tvShow.getTitle());
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
           }
         }
 
@@ -283,12 +283,13 @@ public class TvShowScrapeTask extends TmmThreadPool {
             }
             catch (MissingIdException e) {
               LOGGER.warn("missing id for scrape");
-              MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+              MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
             }
             catch (ScrapeException e) {
               LOGGER.error("searchMovieFallback", e);
-              MessageManager.instance.pushMessage(
-                  new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed", new String[] { ":", e.getLocalizedMessage() }));
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
             }
             catch (Exception e) {
               LOGGER.error("unforeseen error: ", e);
@@ -373,23 +374,25 @@ public class TvShowScrapeTask extends TmmThreadPool {
           }
           catch (MissingIdException e) {
             LOGGER.warn("missing id for scrape");
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
           }
           catch (NothingFoundException e) {
             LOGGER.debug("nothing found");
           }
           catch (ScrapeException e) {
             LOGGER.error("getTvShowMetadata", e);
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
         }
       }
 
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "TvShowScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "TvShowScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -430,8 +433,9 @@ public class TvShowScrapeTask extends TmmThreadPool {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
         finally {
           lock.writeLock().unlock();
@@ -466,7 +470,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
         }
         catch (ScrapeException e) {
           LOGGER.error("getTrailers", e);
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
         finally {

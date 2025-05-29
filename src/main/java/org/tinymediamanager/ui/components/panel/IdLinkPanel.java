@@ -66,7 +66,7 @@ public class IdLinkPanel extends JPanel {
         }
         catch (Exception e) {
           LOGGER.error("browse to '{}' - {}", url, e.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
         }
       });

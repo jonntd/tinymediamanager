@@ -191,7 +191,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     Utils.removeEmptyStringsFromList(dataSources);
     if (dataSources.isEmpty() && moviesToUpdate.isEmpty()) {
       LOGGER.info("no datasource to update");
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
       return;
     }
     preDir = 0;
@@ -239,7 +239,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
 
@@ -269,7 +269,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // if the DS exists (and we have access to read it): Files.exist = true
       if (!Files.exists(dsAsPath)) {
         // error - continue with next datasource
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
         continue;
       }
@@ -297,7 +297,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
         if (isEmpty) {
           // error - continue with next datasource
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
           continue;
         }
@@ -310,8 +310,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           if (name.equalsIgnoreCase(MediaFileHelper.BDMV) || name.equalsIgnoreCase(MediaFileHelper.VIDEO_TS)
               || name.equalsIgnoreCase(MediaFileHelper.HVDVD_TS)) {
             // there cannot be a disc folder in root! Everything breaks...
-            MessageManager.instance.pushMessage(
-                new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.discfolderinroot", new String[] { path.toString() }));
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.discfolderinroot", new String[] { path.toString() }));
             continue;
           }
           if (existingMovies.contains(path)) {
@@ -494,7 +495,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // if the DS exists (and we have access to read it): Files.exist = true
       if (!Files.exists(dsAsPath)) {
         // error - continue with next datasource
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
         continue;
       }
@@ -515,7 +516,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
         if (isEmpty) {
           // error - continue with next datasource
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
           continue;
         }

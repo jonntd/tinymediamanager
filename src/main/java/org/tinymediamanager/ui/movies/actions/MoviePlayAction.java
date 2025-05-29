@@ -58,7 +58,7 @@ public class MoviePlayAction extends TmmAction {
       }
       catch (Exception ex) {
         LOGGER.error("open file", ex);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
       }
     }

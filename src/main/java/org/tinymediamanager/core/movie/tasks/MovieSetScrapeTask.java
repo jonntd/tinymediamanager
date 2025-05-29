@@ -149,8 +149,9 @@ public class MovieSetScrapeTask extends TmmThreadPool {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 

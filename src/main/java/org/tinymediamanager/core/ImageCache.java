@@ -54,8 +54,10 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.madgag.gif.fmsware.GifDecoder;
 
 /**
- * The Class ImageCache - used to build a local image cache (scaled down versions & thumbnails - also for offline access).
- * 
+ * The ImageCache class provides functionality to manage a local cache of scaled images. It handles caching, scaling, and retrieving of images used in
+ * tinyMediaManager, supporting both local files and URLs. The cache helps with offline access and improves performance by storing scaled versions and
+ * thumbnails.
+ *
  * @author Manuel Laggner
  */
 public class ImageCache {
@@ -63,6 +65,9 @@ public class ImageCache {
   private static final Path   CACHE_DIR  = Paths.get(Globals.CACHE_FOLDER + "/image");
   private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
 
+  /**
+   * Defines the available cache sizes for scaled images.
+   */
   public enum CacheSize {
     SMALL,
     @JsonEnumDefaultValue
@@ -70,6 +75,9 @@ public class ImageCache {
     ORIGINAL
   }
 
+  /**
+   * Defines the available quality settings for image scaling.
+   */
   public enum CacheType {
     BALANCED,
     @JsonEnumDefaultValue
@@ -77,15 +85,28 @@ public class ImageCache {
     ULTRA_QUALITY
   }
 
-  static {
+  /**
+   * Initializes the ImageCache by creating necessary subdirectories in the cache directory. This method should be called at application startup to
+   * ensure the cache is ready for use.
+   */
+  public static void init() {
     createSubdirs();
   }
 
+  /**
+   * Private constructor to prevent instantiation of this utility class.
+   * 
+   * @throws IllegalAccessError
+   *           as this is a utility class
+   */
   private ImageCache() {
     throw new IllegalAccessError();
   }
 
-  public static void createSubdirs() {
+  /**
+   * Creates the subdirectories in the cache directory for storing cached images. Each subdirectory corresponds to a hexadecimal digit (0-9, A-F) to
+   */
+  private static void createSubdirs() {
     if (!Files.exists(CACHE_DIR)) {
       try {
         Files.createDirectories(CACHE_DIR);

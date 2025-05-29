@@ -44,7 +44,7 @@ public class ClearImageCacheAction extends TmmAction {
     if (Files.exists(cache)) {
       try {
         Utils.deleteDirectoryRecursive(cache);
-        ImageCache.createSubdirs();
+        ImageCache.init();
       }
       catch (Exception e) {
         LOGGER.warn(e.getMessage());

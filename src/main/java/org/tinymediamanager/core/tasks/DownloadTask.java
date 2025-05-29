@@ -218,7 +218,7 @@ public abstract class DownloadTask extends TmmTask {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "DownloadTask", e.getMessage()));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "DownloadTask", e.getMessage()));
       LOGGER.error("problem downloading: ", e);
       setState(TaskState.FAILED);
     }
@@ -341,7 +341,7 @@ public abstract class DownloadTask extends TmmTask {
    */
   protected void handleDownloadProblem(Url url) {
     LOGGER.error("Could not download the url '{}' - HTTP '{}' - '{}'", url.getUrlAsString(), url.getStatusCode(), url.getStatusLine());
-    MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, url.getUrlAsString(), url.getStatusLine()));
+    MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, url.getUrlAsString(), url.getStatusLine()));
   }
 
   /**

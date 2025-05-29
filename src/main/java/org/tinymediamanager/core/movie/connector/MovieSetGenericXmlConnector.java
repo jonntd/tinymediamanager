@@ -200,7 +200,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
       }
       catch (Exception e) {
         LOGGER.error("write '" + nfoPath + "'", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }

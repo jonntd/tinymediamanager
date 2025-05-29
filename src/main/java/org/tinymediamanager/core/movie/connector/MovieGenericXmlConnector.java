@@ -217,7 +217,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       }
       catch (Exception e) {
         LOGGER.error("write '" + movie.getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }

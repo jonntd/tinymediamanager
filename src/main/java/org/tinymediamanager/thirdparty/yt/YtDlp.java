@@ -37,30 +37,50 @@ import org.tinymediamanager.core.threading.TmmTaskHandle.TaskType;
 import org.tinymediamanager.thirdparty.FFmpeg;
 
 /**
- * the class {@link YtDlp} is used to access yt-dlp for downloading trailers from yt
+ * The {@link YtDlp} class provides functionality for managing and using yt-dlp within tinyMediaManager. It handles downloading trailers from YouTube,
+ * managing the yt-dlp executable, and performing automatic updates. This is a utility class with only static methods.
  * 
  * @author Manuel Laggner
  */
 public class YtDlp {
   private static final Logger LOGGER = LoggerFactory.getLogger(YtDlp.class);
 
+  /**
+   * Private constructor to prevent instantiation.
+   *
+   * @throws IllegalAccessError
+   *           as this is a utility class
+   */
   private YtDlp() {
     throw new IllegalAccessError();
   }
 
   /**
-   * download the trailer with yt-dlp for the given video url
+   * Initializes yt-dlp.
+   */
+  public static void init() {
+    YtDlpAddon ytDlpAddon = new YtDlpAddon();
+    if (ytDlpAddon.isAvailable()) {
+      LOGGER.info("yt-dlp is available at {}", ytDlpAddon.getExecutablePath());
+    }
+    else {
+      LOGGER.warn("yt-dlp is not available");
+    }
+  }
+
+  /**
+   * Downloads a trailer from a given URL using yt-dlp. Performs an update check before downloading and uses FFmpeg if available.
    *
    * @param url
-   *          the url to the trailer
+   *          the URL of the trailer to download
    * @param height
-   *          the desired height
+   *          desired video height in pixels; use 0 for original quality
    * @param trailerFile
-   *          the path to the trailer file which should be written (without extension)
+   *          target path for the downloaded trailer (without extension)
    * @throws IOException
-   *           any {@link IOException} occurred
+   *           if there are issues with file operations or yt-dlp execution
    * @throws InterruptedException
-   *           being thrown if the thread has been interrupted
+   *           if the download process is interrupted
    */
   public static void downloadTrailer(String url, int height, Path trailerFile) throws IOException, InterruptedException {
     selfUpdateIfAvailable();
@@ -68,16 +88,17 @@ public class YtDlp {
   }
 
   /**
-   * create the download command for yt-dlp for the given video url
+   * Constructs the yt-dlp command for downloading a video. Includes configuration for cookies, video quality, and download parameters.
    *
    * @param url
-   *          the url to the trailer
+   *          URL of the video to download
    * @param height
-   *          the desired height
+   *          desired video height; affects quality selection
    * @param trailerFile
-   *          the path to the trailer file which should be written (without extension)
+   *          target file path for the download
+   * @return list of command arguments for yt-dlp
    * @throws IOException
-   *           any {@link IOException} occurred
+   *           if yt-dlp executable cannot be found
    */
   private static List<String> createCommandForDownload(String url, int height, Path trailerFile) throws IOException {
     List<String> cmdList = new ArrayList<>();
@@ -119,6 +140,17 @@ public class YtDlp {
     return cmdList;
   }
 
+  /**
+   * Executes a command using yt-dlp and captures its output.
+   * 
+   * @param cmdline
+   *          the command line arguments to execute
+   * @return the output of the command as a String
+   * @throws IOException
+   *           if there are issues with executing the command or reading its output
+   * @throws InterruptedException
+   *           if the command execution is interrupted
+   */
   private static String executeCommand(List<String> cmdline) throws IOException, InterruptedException {
     LOGGER.debug("Running command: {}", String.join(" ", cmdline));
 
@@ -144,20 +176,30 @@ public class YtDlp {
       return response;
     }
     finally {
-      if (process != null) {
-        process.destroy();
-        // Process must be destroyed before closing streams, can't use try-with-resources,
-        // as resources are closing when leaving try block, before finally
-        IOUtils.close(process.getErrorStream());
-      }
+      process.destroy();
+      // Process must be destroyed before closing streams, can't use try-with-resources,
+      // as resources are closing when leaving try block, before finally
+      IOUtils.close(process.getErrorStream());
     }
   }
 
+  /**
+   * Checks if yt-dlp is available and usable.
+   *
+   * @return true if yt-dlp is available and executable
+   */
   public static boolean isAvailable() {
     YtDlpAddon ytDlpAddon = new YtDlpAddon();
     return ytDlpAddon.isAvailable();
   }
 
+  /**
+   * Retrieves the path to the yt-dlp executable.
+   *
+   * @return absolute path to yt-dlp executable
+   * @throws IOException
+   *           if yt-dlp is not available
+   */
   private static String getYtDlpExecutable() throws IOException {
     YtDlpAddon ytDlpAddon = new YtDlpAddon();
 
@@ -169,6 +211,10 @@ public class YtDlp {
     }
   }
 
+  /**
+   * Checks for and performs yt-dlp updates if needed. Updates are limited to once every 2 days to avoid rate limiting. The update process runs as a
+   * background task.
+   */
   public static void selfUpdateIfAvailable() {
     YtDlpAddon ytDlpAddon = new YtDlpAddon();
     if (ytDlpAddon.isAvailable()) {

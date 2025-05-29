@@ -224,7 +224,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           }
           catch (Exception ex) {
             LOGGER.error("open file", ex);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         });
@@ -505,7 +505,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         if (model != MovieChooserModel.emptyResult) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed"));
             return;
           }
 

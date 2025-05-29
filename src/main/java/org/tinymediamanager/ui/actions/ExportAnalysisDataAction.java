@@ -87,8 +87,9 @@ public class ExportAnalysisDataAction extends TmmAction {
     }
     catch (Exception ex) {
       LOGGER.error("Could not write logs.zip: {}", ex.getMessage());
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, file != null ? file.toString() : "", "message.erroropenfile",
-          new String[] { ":", ex.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, file != null ? file.toString() : "", "message.erroropenfile",
+              new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 

@@ -156,7 +156,7 @@ public class MovieSetInformationPanel extends JPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to tmdbid", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });

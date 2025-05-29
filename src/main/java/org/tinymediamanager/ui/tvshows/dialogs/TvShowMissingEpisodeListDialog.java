@@ -261,12 +261,13 @@ public class TvShowMissingEpisodeListDialog extends TmmDialog {
       }
       catch (MissingIdException e) {
         LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
       }
       catch (ScrapeException e) {
         LOGGER.error("getMetadata", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadataepisodefailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadataepisodefailed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
       return null;
     }

@@ -100,7 +100,7 @@ public class MovieFindMissingTask extends TmmThreadPool {
           MediaFile mf = new MediaFile(file);
           if (!mfs.contains(mf)) {
             LOGGER.info("found possible movie file {}", file);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "possible movie", "found possible movie " + file, new String[] { ds }));
           }
         }
@@ -111,7 +111,7 @@ public class MovieFindMissingTask extends TmmThreadPool {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
 

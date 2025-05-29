@@ -1551,7 +1551,7 @@ public final class MovieList extends AbstractModelObject {
           // ignored
         }
         Message message = new Message(MessageLevel.SEVERE, "tmm.movies", "message.database.corrupteddata");
-        MessageManager.instance.pushMessage(message);
+        MessageManager.getInstance().pushMessage(message);
       });
       thread.start();
     }

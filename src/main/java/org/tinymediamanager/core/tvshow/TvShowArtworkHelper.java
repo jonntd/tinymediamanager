@@ -729,7 +729,7 @@ public class TvShowArtworkHelper {
         String filename = fileNaming.getFilename(tvShowSeason, Utils.getArtworkExtensionFromUrl(seasonArtworkUrl), false);
         if (StringUtils.isBlank(filename)) {
           LOGGER.warn("empty filename for artwork: {} - {}", fileNaming.name(), tvShowSeason); // NOSONAR
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
           continue;
         }
 
@@ -742,7 +742,7 @@ public class TvShowArtworkHelper {
           }
           catch (IOException e) {
             LOGGER.error("could not create folder: {} - {}", destFile.getParent(), e.getMessage());
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
             continue;
           }
         }

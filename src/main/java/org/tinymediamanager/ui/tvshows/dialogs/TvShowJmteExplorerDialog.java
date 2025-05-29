@@ -218,7 +218,7 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
           TmmUIHelper.browseUrl(url);
         }
         catch (Exception ex) {
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
         }
       });
@@ -576,7 +576,7 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception ex) {
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
       }
     });

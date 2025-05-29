@@ -189,7 +189,7 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
         }
         catch (Exception ex) {
           LOGGER.error("open file - '{}'", e);
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
         }
       }
@@ -211,7 +211,7 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -225,7 +225,7 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to thetvdb", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });

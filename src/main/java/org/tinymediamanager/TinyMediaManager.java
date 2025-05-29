@@ -47,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.tinymediamanager.cli.TinyMediaManagerCLI;
+import org.tinymediamanager.core.ImageCache;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmModuleManager;
@@ -71,6 +73,8 @@ import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.thirdparty.ExternalTools;
 import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.thirdparty.upnp.Upnp;
+import org.tinymediamanager.thirdparty.yt.YtDlp;
+import org.tinymediamanager.thirdparty.yt.YtDownloader;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmTaskbar;
 import org.tinymediamanager.ui.TmmUIHelper;
@@ -448,6 +452,10 @@ public final class TinyMediaManager {
     // various initializations of classes
     MediaGenres.init();
     LanguageUtils.init();
+    ImageCache.init();
+    MessageManager.init();
+    YtDlp.init();
+    YtDownloader.init();
 
     // init http server
     if (Settings.getInstance().isEnableHttpServer()) {

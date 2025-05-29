@@ -177,8 +177,9 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
       }
       catch (Exception e) {
         LOGGER.error("write '" + tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, tvShowSeason, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, tvShowSeason, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 

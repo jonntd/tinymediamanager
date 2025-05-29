@@ -217,7 +217,7 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
       }
     });
 
-    MessageManager.instance.addListener(TmmUIMessageCollector.instance);
+    MessageManager.getInstance().addListener(TmmUIMessageCollector.instance);
 
     // mouse event listener for context menu
     Toolkit.getDefaultToolkit().addAWTEventListener(arg0 -> {

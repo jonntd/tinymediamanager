@@ -473,7 +473,7 @@ public class TmmUIHelper {
     }
     catch (Exception ex) {
       LOGGER.error("open filemanager", ex);
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, path, "message.erroropenfolder", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
@@ -531,7 +531,7 @@ public class TmmUIHelper {
     }
     catch (Exception e) {
       LOGGER.error("could not open url '{}' - {}", url, e.getMessage());
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
     }
   }

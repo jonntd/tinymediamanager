@@ -775,7 +775,7 @@ public class MovieRenamer {
               && MovieModuleManager.getInstance().getSettings().isAllowMultipleMoviesInSameDir()) {
             // destination folder exists and is not empty - assume there is another movie -> MMD = true
             newDestIsMultiMovieDir = true;
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.INFO, srcDir, "message.renamer.mergetommd", new String[] { movie.getTitle() }));
           }
         }
@@ -801,12 +801,12 @@ public class MovieRenamer {
         }
         catch (Exception e) {
           LOGGER.error("error moving folder: ", e);
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
           return false;
         }
         if (!ok) {
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { movie.getTitle() }));
           LOGGER.error("Could not move to destination '{}' - NOT renaming folder", destDir);
           return false;
@@ -1602,7 +1602,7 @@ public class MovieRenamer {
     }
     catch (Exception e) {
       LOGGER.error("error moving file '{}' - '{}'", oldFilename.toAbsolutePath(), e.getMessage());
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldFilename, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
     }
@@ -1634,7 +1634,7 @@ public class MovieRenamer {
     }
     catch (Exception e) {
       LOGGER.error("error moving folder '{}' - '{}'", oldName.toAbsolutePath(), e.getMessage());
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldName, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
     }

@@ -400,7 +400,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
         if (model != MovieSetChooserModel.EMPTY_RESULT) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.threadcrashed"));
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.threadcrashed"));
             return;
           }
 

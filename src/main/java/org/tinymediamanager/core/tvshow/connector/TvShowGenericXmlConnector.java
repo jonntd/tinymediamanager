@@ -220,7 +220,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       }
       catch (Exception e) {
         LOGGER.error("write '" + tvShow.getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }

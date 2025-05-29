@@ -121,8 +121,9 @@ public class MediaTrailerTable extends TmmEditorTable {
       }
       catch (Exception ex) {
         LOGGER.error(ex.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, trailer.getUrl(), "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, trailer.getUrl(), "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
       }
     }
   }

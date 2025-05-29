@@ -290,7 +290,7 @@ public class MainMenuPanel extends JPanel {
       trace.addActionListener(arg0 -> {
         System.setProperty("tmm.consoleloglevel", "TRACE");
         TinyMediaManager.setConsoleLogLevel();
-        MessageManager.instance.pushMessage(new Message("Trace levels set!", "Test"));
+        MessageManager.getInstance().pushMessage(new Message("Trace levels set!", "Test"));
         LOGGER.trace("if you see that, we're now on TRACE logging level ;)");
       });
       debugMenu.add(trace);

@@ -47,7 +47,7 @@ public class HomepageAction extends TmmAction {
     }
     catch (Exception e1) {
       LOGGER.error("homepage", e1);
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
     }
   }

@@ -120,8 +120,9 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
             }
             catch (ScrapeException e) {
               LOGGER.error("getArtwork", e);
-              MessageManager.instance.pushMessage(
-                  new Message(MessageLevel.ERROR, movieSet, "message.scrape.moviesetartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+              MessageManager.getInstance()
+                  .pushMessage(new Message(MessageLevel.ERROR, movieSet, "message.scrape.moviesetartworkfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
             }
             finally {
               lock.writeLock().unlock();
@@ -136,8 +137,9 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "MovieMissingArtwork", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(MessageLevel.ERROR, "MovieMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

@@ -117,13 +117,14 @@ public class TvShowChangeDatasourceTask extends TmmThreadPool {
         }
         else {
           LOGGER.error("Could not move to destination '{}' - NOT changing datasource", destDir);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
         }
       }
       catch (Exception e) {
         LOGGER.error("error moving folder: ", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

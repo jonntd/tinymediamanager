@@ -242,8 +242,9 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
       }
       catch (Exception e) {
         LOGGER.error("write '" + firstEpisode.getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, firstEpisode, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, firstEpisode, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 

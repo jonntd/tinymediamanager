@@ -191,8 +191,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
           }
           catch (ScrapeException e) {
             LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(
-                new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
           finally {
             lock.writeLock().unlock();
@@ -206,8 +207,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }
@@ -254,8 +256,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
           }
           catch (ScrapeException e) {
             LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(
-                new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
           finally {
             lock.writeLock().unlock();
@@ -271,8 +274,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }
@@ -324,8 +328,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
           }
           catch (ScrapeException e) {
             LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
         }
 
@@ -343,8 +348,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

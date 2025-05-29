@@ -175,8 +175,9 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "ThemeDownloader", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "ThemeDownloader", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

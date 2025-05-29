@@ -190,15 +190,16 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
       }
       catch (MissingIdException e) {
         LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, episode, "scraper.error.missingid"));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, episode, "scraper.error.missingid"));
       }
       catch (NothingFoundException ignored) {
         LOGGER.debug("nothing found");
       }
       catch (ScrapeException e) {
         LOGGER.error("scrape error - '{}'", e.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
       catch (Exception e) {
         LOGGER.warn("could not scrape episode - unknown error", e);
@@ -263,8 +264,9 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
       }
     }
@@ -283,8 +285,9 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
       }
     }

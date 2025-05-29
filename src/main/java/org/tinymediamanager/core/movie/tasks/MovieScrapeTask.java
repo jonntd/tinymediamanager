@@ -235,12 +235,13 @@ public class MovieScrapeTask extends TmmThreadPool {
             }
             catch (MissingIdException e) {
               LOGGER.warn("missing id for scrape");
-              MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "scraper.error.missingid"));
+              MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "scraper.error.missingid"));
             }
             catch (ScrapeException e) {
               LOGGER.error("searchMovieFallback", e);
-              MessageManager.instance.pushMessage(
-                  new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+              MessageManager.getInstance()
+                  .pushMessage(
+                      new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
             }
 
             if (md != null && (ScraperMetadataConfig.containsAnyMetadata(movieScrapeParams.scraperMetadataConfig)
@@ -294,8 +295,9 @@ public class MovieScrapeTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "MovieScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "MovieScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -311,7 +313,7 @@ public class MovieScrapeTask extends TmmThreadPool {
           // if both results have the same score - do not take any result
           if (result.getScore() == result2.getScore()) {
             LOGGER.info("two identical results, can't decide which to take - ignore result");
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.toosimilar"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.toosimilar"));
             return null;
           }
         }
@@ -321,14 +323,15 @@ public class MovieScrapeTask extends TmmThreadPool {
         LOGGER.info("using treshold from settings of {}", scraperTreshold);
         if (result.getScore() < scraperTreshold) {
           LOGGER.info("score is lower than {} ({}) - ignore result", scraperTreshold, result.getScore());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, movie, "movie.scrape.toolowscore", new String[] { String.format("%.2f", scraperTreshold) }));
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, movie, "movie.scrape.toolowscore", new String[] { String.format("%.2f", scraperTreshold) }));
           return null;
         }
       }
       else {
         LOGGER.info("no result found for {}", movie.getTitle());
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.nomatchfound"));
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.nomatchfound"));
       }
 
       return result;
@@ -367,8 +370,9 @@ public class MovieScrapeTask extends TmmThreadPool {
         }
         catch (ScrapeException e) {
           LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
         finally {
           lock.writeLock().unlock();
@@ -401,7 +405,7 @@ public class MovieScrapeTask extends TmmThreadPool {
         }
         catch (ScrapeException e) {
           LOGGER.error("getTrailers", e);
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
         finally {

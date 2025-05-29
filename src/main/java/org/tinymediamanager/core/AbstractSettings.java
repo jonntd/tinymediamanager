@@ -195,7 +195,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
     }
     catch (Exception e) {
       getLogger().error("saveSettings", e);
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
     }
     finally {
       if (writer != null) {
@@ -204,7 +204,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
         }
         catch (Exception e) {
           getLogger().error("saveSettings", e);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
         }
       }
     }
@@ -266,7 +266,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
       }
       catch (Throwable e2) {
         LOGGER.error("getInstance", e2);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.loadsettingserror"));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.loadsettingserror"));
       }
     }
 

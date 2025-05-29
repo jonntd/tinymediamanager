@@ -548,7 +548,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         if (model != TvShowChooserModel.emptyResult) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.threadcrashed"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.threadcrashed"));
             return;
           }
 

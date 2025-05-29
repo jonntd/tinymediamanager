@@ -218,7 +218,7 @@ public class TraktTv implements TmmFeature {
           break;
       }
       if (!msg.isEmpty()) {
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
       }
       throw new HttpException(response.code(), message);
     }

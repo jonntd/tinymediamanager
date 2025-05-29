@@ -299,7 +299,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
           }
           catch (Exception ex) {
             LOGGER.error("open file - {}", e);
-            MessageManager.instance
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         });

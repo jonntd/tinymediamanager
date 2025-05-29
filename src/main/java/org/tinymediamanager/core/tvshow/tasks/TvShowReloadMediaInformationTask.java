@@ -113,7 +113,7 @@ public class TvShowReloadMediaInformationTask extends TmmThreadPool {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MediaInfo", "message.mediainfo.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MediaInfo", "message.mediainfo.threadcrashed"));
     }
   }
 

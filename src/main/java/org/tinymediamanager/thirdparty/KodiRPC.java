@@ -97,13 +97,13 @@ public class KodiRPC {
       @Override
       public void disconnected() {
         LOGGER.info("Event: Disconnected");
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.INFO, "Kodi disconnected"));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.INFO, "Kodi disconnected"));
       }
 
       @Override
       public void connected() {
         LOGGER.info("Event: Connected to {}", connectionManager.getHostConfig().getAddress());
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.INFO, "Kodi connected"));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.INFO, "Kodi connected"));
       }
     });
   }
@@ -804,7 +804,7 @@ public class KodiRPC {
     }
     catch (Exception cex) {
       LOGGER.error("Error connecting to Kodi instance! {}", cex.getMessage());
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
     }
   }
 

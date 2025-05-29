@@ -179,8 +179,9 @@ public class PersonTable extends TmmEditorTable {
         }
         catch (Exception e1) {
           LOGGER.error("Opening actor profile", e1);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, person.getProfileUrl(), "message.erroropenurl",
-              new String[] { ":", e1.getLocalizedMessage() }));
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, person.getProfileUrl(), "message.erroropenurl",
+                  new String[] { ":", e1.getLocalizedMessage() }));
         }
       }
       else if (isImageColumn(column) && StringUtils.isNotBlank(person.getThumbUrl())) {

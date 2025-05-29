@@ -32,7 +32,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
@@ -112,7 +112,7 @@ public class TvShowTrailerDownloadTask extends TmmTask {
 
         Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(url);
         if (matcher.matches()) {
-          task = new YTDownloadTask(trailer, desiredQuality, TvShowModuleManager.getInstance().getSettings().isUseYtDlp()) {
+          task = new YtDownloadTask(trailer, desiredQuality, TvShowModuleManager.getInstance().getSettings().isUseYtDlp()) {
             @Override
             protected Path getDestinationWoExtension() {
               return getDestination();

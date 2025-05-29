@@ -331,7 +331,7 @@ public class TvShowRenamer {
         }
         catch (Exception e) {
           LOGGER.error("error moving folder: {}", e.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
         }
       }
@@ -914,8 +914,9 @@ public class TvShowRenamer {
     // test for valid season/episode number
     if (episode.getSeason() < 0 || episode.getEpisode() < 0) {
       LOGGER.warn("failed to rename episode {} (TV show {}) - invalid season/episode number", episode.getTitle(), episode.getTvShow().getTitle());
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, episode.getTvShow().getTitle(), "tvshow.renamer.failedrename", new String[] { episode.getTitle() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, episode.getTvShow().getTitle(), "tvshow.renamer.failedrename", new String[] { episode.getTitle() }));
       return;
     }
 
@@ -1274,7 +1275,7 @@ public class TvShowRenamer {
         }
         catch (Exception e) {
           LOGGER.error(e.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, epFolder, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
         }
         if (ok) {
@@ -1298,8 +1299,9 @@ public class TvShowRenamer {
     }
     catch (Exception e) {
       LOGGER.error("error moving video file " + disc + " to " + newFoldername, e);
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, mf.getFilename(), "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, mf.getFilename(), "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 
@@ -1354,7 +1356,7 @@ public class TvShowRenamer {
         }
         catch (Exception e) {
           LOGGER.error("error moving folder: {}", e.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
         }
       }
@@ -1589,7 +1591,7 @@ public class TvShowRenamer {
       }
       catch (Exception e) {
         LOGGER.error(e.getMessage());
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, newEpFolder, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       }
       if (ok) {
@@ -1607,8 +1609,9 @@ public class TvShowRenamer {
     }
     catch (Exception e) {
       LOGGER.error("error moving video file " + newEpFolder + " to " + oldEpFolder, e);
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, mf.getFilename(), "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, mf.getFilename(), "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 
@@ -2598,7 +2601,7 @@ public class TvShowRenamer {
     }
     catch (Exception e) {
       LOGGER.error("error moving file", e);
-      MessageManager.instance
+      MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldFilename, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
     }

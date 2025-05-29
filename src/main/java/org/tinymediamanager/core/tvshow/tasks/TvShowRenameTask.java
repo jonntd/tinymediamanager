@@ -110,7 +110,7 @@ public class TvShowRenameTask extends TmmThreadPool {
     }
     catch (Exception e) {
       LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "Settings.renamer", "message.renamer.threadcrashed"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "Settings.renamer", "message.renamer.threadcrashed"));
     }
   }
 

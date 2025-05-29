@@ -145,8 +145,9 @@ public class MovieAssignMovieSetTask extends TmmThreadPool {
             }
             catch (ScrapeException e) {
               LOGGER.error("getMovieSet", e);
-              MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
-                  new String[] { ":", e.getLocalizedMessage() }));
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
             }
           }
 
@@ -169,8 +170,9 @@ public class MovieAssignMovieSetTask extends TmmThreadPool {
       }
       catch (ScrapeException e) {
         LOGGER.error("getMovieSet", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.metadatamoviesetfailed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

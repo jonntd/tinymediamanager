@@ -138,7 +138,7 @@ public class TvShowInformationPanel extends InformationPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -150,7 +150,7 @@ public class TvShowInformationPanel extends InformationPanel {
       }
       catch (Exception e) {
         LOGGER.error("browse to thetvdb", e);
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });

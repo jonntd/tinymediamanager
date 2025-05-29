@@ -1407,7 +1407,7 @@ public final class TvShowList extends AbstractModelObject {
           // ignored
         }
         Message message = new Message(MessageLevel.SEVERE, "tmm.tvshows", "message.database.corrupteddata");
-        MessageManager.instance.pushMessage(message);
+        MessageManager.getInstance().pushMessage(message);
       });
       thread.start();
     }

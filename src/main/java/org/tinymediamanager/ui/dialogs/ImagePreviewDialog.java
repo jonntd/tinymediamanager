@@ -134,8 +134,9 @@ public class ImagePreviewDialog extends TmmDialog {
                 }
                 catch (Exception e) {
                   LOGGER.error("browse to image url '{}' - '{}'", imageUrl, e.getMessage());
-                  MessageManager.instance.pushMessage(
-                      new Message(Message.MessageLevel.ERROR, imageUrl, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
+                  MessageManager.getInstance()
+                      .pushMessage(
+                          new Message(Message.MessageLevel.ERROR, imageUrl, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
                 }
               });
 
@@ -199,7 +200,7 @@ public class ImagePreviewDialog extends TmmDialog {
         }
         catch (Exception ex) {
           LOGGER.error("Could not save image file: {}", ex.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, "", "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
         }
       });

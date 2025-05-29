@@ -49,8 +49,8 @@ import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.scraper.http.StreamingUrl;
 import org.tinymediamanager.scraper.http.Url;
-import org.tinymediamanager.thirdparty.yt.YTDownloader;
 import org.tinymediamanager.thirdparty.yt.YtDlp;
+import org.tinymediamanager.thirdparty.yt.YtDownloader;
 
 import com.github.kiulian.downloader.downloader.request.RequestVideoInfo;
 import com.github.kiulian.downloader.downloader.response.Response;
@@ -68,9 +68,9 @@ import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
  *
  * @author Wolfgang Janes
  */
-public abstract class YTDownloadTask extends TmmTask {
+public abstract class YtDownloadTask extends TmmTask {
 
-  private static final Logger  LOGGER            = LoggerFactory.getLogger(YTDownloadTask.class);
+  private static final Logger  LOGGER            = LoggerFactory.getLogger(YtDownloadTask.class);
   private static final int     MAX_CHUNK_SIZE    = 10 * 1024 * 1024;                             // 8M
 
   private final MediaTrailer   mediaTrailer;
@@ -86,7 +86,7 @@ public abstract class YTDownloadTask extends TmmTask {
   private long                 bytesDonePrevious = 0;
   private double               speed             = 0;
 
-  protected YTDownloadTask(MediaTrailer mediaTrailer, TrailerQuality desiredQuality, boolean useYtDlp) {
+  protected YtDownloadTask(MediaTrailer mediaTrailer, TrailerQuality desiredQuality, boolean useYtDlp) {
     super(TmmResourceBundle.getString("trailer.download") + " - " + mediaTrailer.getName(), 100, TaskType.BACKGROUND_TASK);
     this.mediaTrailer = mediaTrailer;
     this.desiredQuality = desiredQuality;
@@ -116,7 +116,7 @@ public abstract class YTDownloadTask extends TmmTask {
     }
 
     try {
-      YTDownloader downloader = new YTDownloader();
+      YtDownloader downloader = YtDownloader.getInstance();
 
       // get the youtube id
       String id = downloader.extractYoutubeId(mediaTrailer.getUrl());
@@ -169,8 +169,9 @@ public abstract class YTDownloadTask extends TmmTask {
       }
     }
     catch (Exception | Error e) { // Error due to some AssertionErrors which may be thrown by the mp4parser
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.downloadfailed",
-          new String[] { getMediaEntityToAdd().getTitle() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.downloadfailed",
+              new String[] { getMediaEntityToAdd().getTitle() }));
       setState(TaskState.FAILED);
       LOGGER.error("download of Trailer {} failed", mediaTrailer.getUrl());
       LOGGER.debug("trailer download - '{}'", e.getMessage());
@@ -444,8 +445,9 @@ public abstract class YTDownloadTask extends TmmTask {
     MediaEntity mediaEntity = getMediaEntityToAdd();
 
     if (videoFormat == null || audioFormat == null) {
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.unsupported",
-          new String[] { mediaEntity.getTitle() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.unsupported",
+              new String[] { mediaEntity.getTitle() }));
       LOGGER.error("Could not download movieTrailer for {}", mediaEntity.getTitle());
       setState(TaskState.FAILED);
       return;
