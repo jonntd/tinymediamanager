@@ -975,7 +975,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setOriginalTitle(StrgUtils.capitalize(metadata.getOriginalTitle()));
@@ -985,7 +986,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
@@ -1038,11 +1040,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && (overwriteExistingItems || getFirstAired() == null)) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && metadata.getReleaseDate() != null
+        && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 

@@ -1093,7 +1093,8 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.ORIGINAL_TITLE) && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
+    if (config.contains(TvShowScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setOriginalTitle(StrgUtils.capitalize(metadata.getOriginalTitle()));
@@ -1103,11 +1104,12 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.PLOT) && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
+    if (config.contains(TvShowScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.YEAR) && (overwriteExistingItems || getYear() <= 0)) {
+    if (config.contains(TvShowScraperMetadataConfig.YEAR) && metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
       setYear(metadata.getYear());
     }
 
@@ -1131,28 +1133,31 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       setRatings(newRatings);
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.AIRED) && (overwriteExistingItems || getFirstAired() == null)) {
+    if (config.contains(TvShowScraperMetadataConfig.AIRED) && metadata.getReleaseDate() != null
+        && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.TOP250) && (overwriteExistingItems || getTop250() <= 0)) {
+    if (config.contains(TvShowScraperMetadataConfig.TOP250) && metadata.getTop250() > 0 && (overwriteExistingItems || getTop250() <= 0)) {
       setTop250(metadata.getTop250());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.STATUS)
+    if (config.contains(TvShowScraperMetadataConfig.STATUS) && metadata.getStatus() != MediaAiredStatus.UNKNOWN
         && (overwriteExistingItems || getStatus() == null || getStatus() == MediaAiredStatus.UNKNOWN)) {
       setStatus(metadata.getStatus());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.RUNTIME) && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(TvShowScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.COUNTRY) && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
+    if (config.contains(TvShowScraperMetadataConfig.COUNTRY) && !metadata.getCountries().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
       setCountry(StringUtils.join(metadata.getCountries(), ", "));
     }
 
-    if (config.contains(TvShowScraperMetadataConfig.STUDIO) && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
+    if (config.contains(TvShowScraperMetadataConfig.STUDIO) && !metadata.getProductionCompanies().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
       setProductionCompany(StringUtils.join(metadata.getProductionCompanies(), ", "));
     }
 

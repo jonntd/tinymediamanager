@@ -803,7 +803,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
+    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (settings.getCapitalWordsInTitles()) {
         setOriginalTitle(StrgUtils.capitalize(metadata.getOriginalTitle()));
@@ -813,19 +814,22 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
+    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && StringUtils.isNotBlank(metadata.getTagline())
+        && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
       setTagline(metadata.getTagline());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.PLOT) && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
+    if (config.contains(MovieScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.YEAR) && (overwriteExistingItems || getYear() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.YEAR) && metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
       setYear(metadata.getYear());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && (overwriteExistingItems || getReleaseDate() == null)) {
+    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && metadata.getReleaseDate() != null
+        && (overwriteExistingItems || getReleaseDate() == null)) {
       setReleaseDate(metadata.getReleaseDate());
     }
 
@@ -849,20 +853,22 @@ public class Movie extends MediaEntity implements IMediaInformation {
       setRatings(newRatings);
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TOP250) && (overwriteExistingItems || getTop250() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.TOP250) && metadata.getTop250() > 0 && (overwriteExistingItems || getTop250() <= 0)) {
       setTop250(metadata.getTop250());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && (overwriteExistingItems || StringUtils.isBlank(getSpokenLanguages()))) {
+    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && !metadata.getSpokenLanguages().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getSpokenLanguages()))) {
       setSpokenLanguages(StringUtils.join(metadata.getSpokenLanguages(), ", "));
     }
 
     // country
-    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
+    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && !metadata.getCountries().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
       setCountry(StringUtils.join(metadata.getCountries(), ", "));
     }
 
@@ -894,7 +900,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     // studio
-    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
+    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && !metadata.getProductionCompanies().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
       setProductionCompany(StringUtils.join(metadata.getProductionCompanies(), ", "));
     }
 

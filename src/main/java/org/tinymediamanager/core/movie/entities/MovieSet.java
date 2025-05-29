@@ -606,7 +606,7 @@ public class MovieSet extends MediaEntity {
     setIds(metadata.getIds());
 
     // set chosen metadata
-    if (config.contains(MovieSetScraperMetadataConfig.TITLE)) {
+    if (config.contains(MovieSetScraperMetadataConfig.TITLE) && StringUtils.isNotBlank(metadata.getTitle())) {
       // Capitalize first letter of title if setting is set!
       if (MovieModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setTitle(StrgUtils.capitalize(metadata.getTitle()));
@@ -616,7 +616,7 @@ public class MovieSet extends MediaEntity {
       }
     }
 
-    if (config.contains(MovieSetScraperMetadataConfig.PLOT)) {
+    if (config.contains(MovieSetScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())) {
       setPlot(metadata.getPlot());
     }
 
