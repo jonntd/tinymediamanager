@@ -98,7 +98,7 @@ public final class Settings extends AbstractSettings {
 
   private boolean                                          imageCache                   = true;
   private CacheSize                                        imageCacheSize               = CacheSize.BIG;
-  private CacheType                                        imageCacheType               = CacheType.QUALITY;
+  private CacheType                                        imageCacheType               = CacheType.ULTRA_QUALITY;
 
   // language 2 char - saved to config
   private String                                           language;

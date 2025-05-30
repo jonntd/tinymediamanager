@@ -182,15 +182,8 @@ public class ImageLabel extends JComponent {
       // this is just a normal pic
       BufferedImage originalImage = ImageUtils.createImage(originalImageBytes);
       originalImageSize = new Dimension(originalImage.getWidth(), originalImage.getHeight());
+      scaledImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, width, height, Scalr.OP_ANTIALIAS);
 
-      if (width < 1000 || height < 1000) {
-        // scale fast
-        scaledImage = Scalr.resize(originalImage, Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC, width, height, Scalr.OP_ANTIALIAS);
-      }
-      else {
-        // scale good
-        scaledImage = Scalr.resize(originalImage, Scalr.Method.BALANCED, Scalr.Mode.AUTOMATIC, width, height, Scalr.OP_ANTIALIAS);
-      }
       originalImage.flush();
       animatedGif = null;
     }

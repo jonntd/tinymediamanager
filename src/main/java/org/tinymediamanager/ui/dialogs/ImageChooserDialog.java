@@ -651,7 +651,7 @@ public class ImageChooserDialog extends TmmDialog {
     }
     else {
       ImageIcon imageIcon = new ImageIcon(
-          Scalr.resize(originalImage, Scalr.Method.BALANCED, Scalr.Mode.AUTOMATIC, size.x, size.y, Scalr.OP_ANTIALIAS));
+          Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, size.x, size.y, Scalr.OP_ANTIALIAS));
       button.setIcon(imageIcon);
     }
 
