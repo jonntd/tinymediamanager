@@ -335,7 +335,7 @@
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>yt</artifactId>
-            <version>3.3.1-tmm1</version>
+            <version>3.3.1-tmm2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -629,6 +629,39 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${jar.version}</version>
             </plugin>
+            <!-- embed tmm created/modified dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <configuration>
+                    <artifactSet>
+                        <includes>
+                            <include>org.tinymediamanager:yt</include>
+                            <include>org.tinymediamanager:kodi-json-rpc</include>
+                            <include>org.tinymediamanager:libdvd</include>
+                            <include>org.tinymediamanager:libbluray</include>
+                            <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
+                            <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
+                        </includes>
+                    </artifactSet>
+                    <filters>
+                        <filter>
+                            <excludes>
+                                <exclude>META-INF/*.MF</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -825,6 +858,10 @@
                                 <configuration>
                                     <includeScope>runtime</includeScope>
                                     <stripVersion>true</stripVersion>
+                                    <!-- exclude shaded dependencies -->
+                                    <excludeArtifactIds>
+                                        yt,kodi-json-rpc,libdvd,libbluray,loop-fs-iso-impl,loop-fs-udf-impl
+                                    </excludeArtifactIds>
                                 </configuration>
                             </execution>
                             <execution>
