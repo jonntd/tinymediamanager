@@ -498,6 +498,30 @@
                         </archive>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.4</version>
+                    <configuration>
+                        <artifactSet>
+                            <includes>
+                                <include>org.tinymediamanager:yt</include>
+                                <include>org.tinymediamanager:kodi-json-rpc</include>
+                                <include>org.tinymediamanager:libdvd</include>
+                                <include>org.tinymediamanager:libbluray</include>
+                                <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
+                                <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
+                            </includes>
+                        </artifactSet>
+                        <filters>
+                            <filter>
+                                <excludes>
+                                    <exclude>META-INF/*.MF</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -628,31 +652,21 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${jar.version}</version>
+                <executions>
+                    <execution>
+                        <!-- move default-jar to another phase -->
+                        <id>default-jar</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- embed tmm created/modified dependencies -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
-                <configuration>
-                    <artifactSet>
-                        <includes>
-                            <include>org.tinymediamanager:yt</include>
-                            <include>org.tinymediamanager:kodi-json-rpc</include>
-                            <include>org.tinymediamanager:libdvd</include>
-                            <include>org.tinymediamanager:libbluray</include>
-                            <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
-                            <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
-                        </includes>
-                    </artifactSet>
-                    <filters>
-                        <filter>
-                            <excludes>
-                                <exclude>META-INF/*.MF</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
                 <executions>
                     <execution>
                         <phase>prepare-package</phase>
