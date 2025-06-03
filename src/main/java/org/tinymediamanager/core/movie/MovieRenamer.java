@@ -934,18 +934,18 @@ public class MovieRenamer {
     }
 
     String newFilename = newVideoFileName;
-    if (newFilename == null || newFilename.isEmpty()) {
+    if (StringUtils.isBlank(newFilename)) {
       // empty only when first generating basename, so generation here is OK
       newFilename = createDestinationForFilename(MovieModuleManager.getInstance().getSettings().getRenamerFilename(), movie);
     }
     // when renaming with $originalFilename, we get already the extension added!
-    if (newFilename.endsWith(mf.getExtension())) {
+    if (newFilename.endsWith("." + mf.getExtension())) {
       newFilename = FilenameUtils.getBaseName(newFilename);
     }
 
     // happens, when renaming pattern returns nothing (empty field like originalTitle)
     // just return same file
-    if (newFilename.isEmpty()) {
+    if (StringUtils.isBlank(newFilename)) {
       newFiles.add(mf);
       return newFiles;
     }

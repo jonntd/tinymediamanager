@@ -1687,14 +1687,10 @@ public class TvShowRenamer {
     else {
       newFilename = createDestination(template, eps);
     }
+
     if (mf.getStacking() > 0) {
       // remove the stacking here, so we have a correct basename
       newFilename = Utils.cleanFolderStackingMarkers(newFilename); // i know, but this needs no extension ;)
-    }
-
-    // when renaming with $originalFilename, we get already the extension added!
-    if (newFilename.endsWith(mf.getExtension())) {
-      newFilename = FilenameUtils.getBaseName(newFilename);
     }
 
     String seasonFoldername = getSeasonFoldername(tvShow, eps.get(0));
@@ -2222,21 +2218,19 @@ public class TvShowRenamer {
    * @return the string
    */
   public static String createDestination(String template, List<TvShowEpisode> episodes) {
-    if (StringUtils.isBlank(template)) {
+    if (StringUtils.isBlank(template) || episodes.isEmpty()) {
       return "";
     }
 
+    TvShowEpisode firstEp = episodes.get(0);
     String newDestination = template;
 
     if (episodes.size() == 1) {
       // single episode
-      TvShowEpisode firstEp = episodes.get(0);
-
       newDestination = getTokenValue(firstEp.getTvShow(), firstEp, template);
     }
     else {
       // multi episodes
-      TvShowEpisode firstEp = episodes.get(0);
       String loopNumbers = "";
 
       // *******************
@@ -2361,6 +2355,11 @@ public class TvShowRenamer {
 
       newDestination = getTokenValue(firstEp.getTvShow(), firstEp, newDestination);
     } // end multi episodes
+
+    // when renaming with $originalFilename, we get already the extension added!
+    if (newDestination.endsWith("." + firstEp.getMainVideoFile().getExtension())) {
+      newDestination = FilenameUtils.getBaseName(newDestination);
+    }
 
     boolean spaceSubstitution = TvShowModuleManager.getInstance().getSettings().isRenamerFilenameSpaceSubstitution();
     String spaceReplacement = TvShowModuleManager.getInstance().getSettings().getRenamerFilenameSpaceReplacement();
