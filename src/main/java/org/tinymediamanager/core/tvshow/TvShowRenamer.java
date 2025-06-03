@@ -2460,6 +2460,11 @@ public class TvShowRenamer {
     int seCnt = count(filePattern, seasonNumbers);
     int seFolderCnt = count(seasonPattern, seasonNumbers);// check season folder pattern
 
+    // when using ${originalFilename} or ${originalBasename}, we do not check any further
+    if (count(filePattern, new String[] { "originalFilename", "originalBasename" }) > 0) {
+      return true;
+    }
+
     // check rules
     if (epCnt != 1 || titleCnt > 1 || seCnt > 1 || seFolderCnt > 1 || (seCnt + seFolderCnt) == 0) {
       LOGGER.debug("Too many/less episode/season/title replacer patterns");
