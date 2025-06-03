@@ -21,8 +21,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.TrailerSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.entities.MediaType;
@@ -69,9 +69,9 @@ public class ImdbTvShowTrailerProvider extends ImdbMetadataProvider implements I
     }
 
     LOGGER.debug("getTrailers(): {}", options);
-    MovieSearchAndScrapeOptions mso = new MovieSearchAndScrapeOptions();
-    mso.setImdbId(options.getImdbId()); // get metadata solely by imdbid
-    MediaMetadata md = (new ImdbTvShowParser(this, EXECUTOR)).getMetadata(mso);
+    TvShowSearchAndScrapeOptions tso = new TvShowSearchAndScrapeOptions();
+    tso.setImdbId(options.getImdbId()); // get metadata solely by imdbid
+    MediaMetadata md = (new ImdbTvShowParser(this, EXECUTOR)).getMetadata(tso);
     return md.getTrailers();
   }
 

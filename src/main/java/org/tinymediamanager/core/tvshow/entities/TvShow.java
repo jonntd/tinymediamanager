@@ -1983,7 +1983,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
         trailer.setInNfo(Boolean.TRUE);
       }
 
-      newItems.add(preferredTrailer);
+      newItems.add(trailer);
     }
 
     addToTrailer(newItems);
