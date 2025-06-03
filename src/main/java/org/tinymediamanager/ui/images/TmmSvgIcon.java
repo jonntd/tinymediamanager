@@ -23,6 +23,7 @@ import java.awt.Dimension;
 import java.net.URI;
 
 import com.kitfox.svg.SVGDiagram;
+import com.kitfox.svg.SVGElement;
 import com.kitfox.svg.SVGUniverse;
 import com.kitfox.svg.app.beans.SVGIcon;
 
@@ -56,6 +57,17 @@ public class TmmSvgIcon extends SVGIcon {
       // preferredSize = new Dimension((int)diagram.getWidth(), (int)diagram.getHeight());
       setPreferredSize(new Dimension((int) (diagram.getWidth() * height / diagram.getHeight()), height));
     }
+  }
+
+  /**
+   * Gets a SVGElement out of parsed XML structure<br>
+   * Impl takes it out of the URI #fragment, which is the ID.
+   * 
+   * @param id
+   * @return SVGElement or null
+   */
+  public SVGElement getElement(String id) {
+    return getSvgUniverse().getElement(getSvgURI().resolve("#" + id));
   }
 
   /**
