@@ -167,7 +167,9 @@ public class MediaScraper {
     }
 
     for (IMediaProvider p : plugins) {
-      scraper.add(new MediaScraper(type, p));
+      if (p.getProviderInfo() != null) {
+        scraper.add(new MediaScraper(type, p));
+      }
     }
 
     // Kodi scrapers
