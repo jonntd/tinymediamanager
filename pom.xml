@@ -71,6 +71,7 @@
         <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>17</maven.compiler.release>
+        <maven.shade.extra></maven.shade.extra>
         <skipTests>true</skipTests> <!-- to override on command line -->
         <skipITests>true</skipITests> <!-- to override on command line -->
         <skipSign>true</skipSign> <!-- to override on command line -->
@@ -501,7 +502,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.4</version>
+                    <version>3.6.0</version>
                     <configuration>
                         <artifactSet>
                             <includes>
@@ -513,10 +514,15 @@
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
                             </includes>
                         </artifactSet>
+                        <extraJars>${maven.shade.extra}</extraJars>
                         <filters>
                             <filter>
+                                <artifact>*:*</artifact>
                                 <excludes>
                                     <exclude>META-INF/*.MF</exclude>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
                                 </excludes>
                             </filter>
                         </filters>
