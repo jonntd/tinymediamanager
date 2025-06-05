@@ -257,9 +257,11 @@ public class MediaProviders {
     try {
       IMediaProvider provider = clazz.getDeclaredConstructor().newInstance();
 
-      // add the provider to our list of supported providers
-      List<IMediaProvider> providers = MEDIA_PROVIDERS.computeIfAbsent(provider.getId(), k -> new ArrayList<>());
-      providers.add(provider);
+      if (provider.getProviderInfo() != null) {
+        // add the provider to our list of supported providers
+        List<IMediaProvider> providers = MEDIA_PROVIDERS.computeIfAbsent(provider.getId(), k -> new ArrayList<>());
+        providers.add(provider);
+      }
     }
     catch (Exception e) {
       LOGGER.error("could not load media provider {} - {}", clazz.getName(), e.getMessage());
