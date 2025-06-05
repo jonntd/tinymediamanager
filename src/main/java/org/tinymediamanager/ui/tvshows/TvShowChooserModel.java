@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -395,6 +396,7 @@ public class TvShowChooserModel extends AbstractModelObject {
   }
 
   public List<MediaArtwork> getArtwork() {
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     List<MediaArtwork> artwork = new ArrayList<>();
 
     ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.TV_SHOW);
@@ -410,10 +412,11 @@ public class TvShowChooserModel extends AbstractModelObject {
       options.setId(entry.getKey(), entry.getValue().toString());
     }
 
-    // scrape providers till one artwork has been found
-    for (MediaScraper artworkScraper : artworkScrapers) {
+    // scrape providers
+    artworkScrapers.parallelStream().forEach(artworkScraper -> {
       ITvShowArtworkProvider artworkProvider = (ITvShowArtworkProvider) artworkScraper.getMediaProvider();
       try {
+        lock.writeLock().lock();
         artwork.addAll(artworkProvider.getArtwork(options));
       }
       catch (MissingIdException e) {
@@ -428,7 +431,10 @@ public class TvShowChooserModel extends AbstractModelObject {
             .pushMessage(
                 new Message(MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
-    }
+      finally {
+        lock.writeLock().unlock();
+      }
+    });
 
     // at last take the poster from the result
     if (StringUtils.isNotBlank(getPosterUrl())) {

@@ -215,6 +215,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        writeActorImages                       = false;
   boolean                                        imageExtraFanart                       = false;
   int                                            imageExtraFanartCount                  = 5;
+  boolean                                        imageEpisodeScrapeAllSources           = false;
 
   // trailer scraper
   boolean                                        useYtDlp                               = true;
@@ -1871,6 +1872,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.imageExtraFanart;
     this.imageExtraFanart = newValue;
     firePropertyChange("imageExtraFanart", oldValue, newValue);
+  }
+
+  public boolean isImageEpisodeScrapeAllSources() {
+    return imageEpisodeScrapeAllSources;
+  }
+
+  public void setImageEpisodeScrapeAllSources(boolean newValue) {
+    boolean oldValue = this.imageEpisodeScrapeAllSources;
+    this.imageEpisodeScrapeAllSources = newValue;
+    firePropertyChange("imageEpisodeScrapeAllSources", oldValue, newValue);
   }
 
   public boolean getCapitalWordsInTitles() {

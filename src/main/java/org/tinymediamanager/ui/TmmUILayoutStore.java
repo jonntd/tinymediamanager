@@ -155,15 +155,18 @@ public class TmmUILayoutStore {
           dummy.dispose();
         }
 
+        // do not set the whole screen size on Linux when maximized (Wayland problem with missing window decorations)
+        if (SystemUtils.IS_OS_LINUX && properties.getPropertyAsBoolean("mainWindowMaximized")) {
+          rect.width = rect.width - 1;
+          rect.height = rect.height - 1;
+        }
+
         frame.setBounds(rect);
 
         // was the main window maximized?
-        // do not set this on linux (Wayland problem with missing window decorations)
-        if (!SystemUtils.IS_OS_LINUX) {
-          if (Boolean.TRUE.equals(properties.getPropertyAsBoolean("mainWindowMaximized"))) {
-            frame.setExtendedState(frame.getExtendedState() | MAXIMIZED_BOTH);
-            frame.validate();
-          }
+        if (properties.getPropertyAsBoolean("mainWindowMaximized")) {
+          frame.setExtendedState(frame.getExtendedState() | MAXIMIZED_BOTH);
+          frame.validate();
         }
       }
       else {

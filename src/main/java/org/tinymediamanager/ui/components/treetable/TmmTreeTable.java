@@ -63,8 +63,9 @@ import org.tinymediamanager.ui.components.tree.TmmTreeModel;
 import org.tinymediamanager.ui.components.tree.TmmTreeNode;
 
 /**
- * The class TmmTreeTable provides a combination of a tree and a table
- * 
+ * The {@code TmmTreeTable} class provides a combination of a tree and a table, allowing hierarchical data to be displayed and interacted with in a
+ * tabular format. It supports filtering, sorting, and custom rendering of tree nodes within a table structure.
+ *
  * @author Manuel Laggner
  */
 public class TmmTreeTable extends TmmTable {
@@ -80,6 +81,14 @@ public class TmmTreeTable extends TmmTable {
 
   private int[]                                    lastEditPosition;
 
+  /**
+   * Constructs a new {@code TmmTreeTable} with the given data provider and table format.
+   *
+   * @param dataProvider
+   *          the data provider for the tree nodes
+   * @param tableFormat
+   *          the table format for the tree table
+   */
   public TmmTreeTable(TmmTreeDataProvider<TmmTreeNode> dataProvider, TmmTreeTableFormat<TmmTreeNode> tableFormat) {
     this.dataProvider = dataProvider;
     this.treeFilters = new CopyOnWriteArraySet<>();
@@ -92,6 +101,12 @@ public class TmmTreeTable extends TmmTable {
     initTreeTable();
   }
 
+  /**
+   * Adds a column to the tree table.
+   *
+   * @param aColumn
+   *          the column to add
+   */
   @Override
   public void addColumn(TableColumn aColumn) {
     if (aColumn.getIdentifier() == null && getModel() instanceof TmmTreeTableModel) {
@@ -103,6 +118,9 @@ public class TmmTreeTable extends TmmTable {
     super.addColumn(aColumn);
   }
 
+  /**
+   * Initializes the tree table, setting up selection and header properties.
+   */
   protected void initTreeTable() {
     getSelectionModel().addListSelectionListener(e -> {
       if (getSelectedRowCount() == 1) {
@@ -124,6 +142,15 @@ public class TmmTreeTable extends TmmTable {
     addKeyListener(new TmmTreeTableKeyAdapter(this));
   }
 
+  /**
+   * Returns the cell renderer for the specified cell.
+   *
+   * @param row
+   *          the row index
+   * @param column
+   *          the column index
+   * @return the TableCellRenderer for the cell
+   */
   @Override
   public TableCellRenderer getCellRenderer(int row, int column) {
     int c = convertColumnIndexToModel(column);
@@ -178,6 +205,11 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Returns the tree table model used by this table.
+   *
+   * @return the TmmTreeTableModel instance or null if not available
+   */
   public TmmTreeTableModel getTreeTableModel() {
     TableModel mdl = getModel();
     if (mdl instanceof TmmTreeTableModel) {
@@ -188,6 +220,9 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Sets the default hidden columns based on the table format.
+   */
   @Override
   public void setDefaultHiddenColumns() {
     if (getColumnModel() instanceof TmmTableColumnModel && getModel() instanceof TmmTreeTableModel) {
@@ -206,72 +241,170 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Returns whether the column configurator should be used for this table.
+   *
+   * @return true if the model is a TmmTreeTableModel, false otherwise
+   */
   @Override
   protected boolean useColumnConfigurator() {
     return getModel() instanceof TmmTreeTableModel;
   }
 
+  /**
+   * Returns the tree node at the specified row.
+   *
+   * @param row
+   *          the row index
+   * @return the DefaultMutableTreeNode at the given row
+   */
   public DefaultMutableTreeNode getTreeNode(int row) {
-    Object obj = getTreeTableModel().getValueAt(row, 0);
-    if (obj instanceof DefaultMutableTreeNode) {
-      return (DefaultMutableTreeNode) obj;
-    }
-    return null;
+    return getTreeTableModel().getTreeNode(row);
   }
 
+  /**
+   * Expands the tree node at the specified row.
+   *
+   * @param row
+   *          the row index
+   */
   public void expandRow(int row) {
     expandPath(getRowPath(row));
   }
 
+  /**
+   * Collapses the tree node at the specified row.
+   *
+   * @param row
+   *          the row index
+   */
   public void collapseRow(int row) {
     collapsePath(getRowPath(row));
   }
 
+  /**
+   * Expands the tree node at the specified path.
+   *
+   * @param path
+   *          the TreePath to expand
+   */
   public void expandPath(TreePath path) {
     getTreePathSupport().expandPath(path);
   }
 
+  /**
+   * Checks if the tree node at the specified path is expanded.
+   *
+   * @param path
+   *          the TreePath to check
+   * @return true if expanded, false otherwise
+   */
   public boolean isExpanded(TreePath path) {
     return getTreePathSupport().isExpanded(path);
   }
 
+  /**
+   * Checks if the tree node at the specified row is expanded.
+   *
+   * @param row
+   *          the row index
+   * @return true if expanded, false otherwise
+   */
   public boolean isExpanded(int row) {
     return isExpanded(getRowPath(row));
   }
 
+  /**
+   * Checks if the tree node at the specified row is collapsed.
+   *
+   * @param row
+   *          the row index
+   * @return true if collapsed, false otherwise
+   */
   public boolean isCollapsed(int row) {
     return !isExpanded(row);
   }
 
+  /**
+   * Checks if the tree node at the specified path is a leaf.
+   *
+   * @param path
+   *          the TreePath to check
+   * @return true if the node is a leaf, false otherwise
+   */
   public boolean isLeaf(TreePath path) {
     return getTreePathSupport().isLeaf(path);
   }
 
+  /**
+   * Checks if the tree node at the specified row is a leaf.
+   *
+   * @param row
+   *          the row index
+   * @return true if the node is a leaf, false otherwise
+   */
   public boolean isLeaf(int row) {
     return isLeaf(getRowPath(row));
   }
 
+  /**
+   * Checks if the tree node at the specified row is a branch (not a leaf).
+   *
+   * @param row
+   *          the row index
+   * @return true if the node is a branch, false otherwise
+   */
   public boolean isBranch(int row) {
     return !isLeaf(row);
   }
 
+  /**
+   * Collapses the tree node at the specified path.
+   *
+   * @param path
+   *          the TreePath to collapse
+   */
   public void collapsePath(TreePath path) {
     getTreePathSupport().collapsePath(path);
   }
 
+  /**
+   * Returns the TreePath for the specified row.
+   *
+   * @param row
+   *          the row index
+   * @return the TreePath for the row
+   */
   TreePath getRowPath(int row) {
     return treeTableModel.getLayout().getPathForRow(row);
   }
 
+  /**
+   * Returns the TreePaths for all selected rows.
+   *
+   * @return an array of selected TreePaths
+   */
   TreePath[] getSelectedTreePaths() {
     return IntStream.of(getSelectedRows()).mapToObj(this::getRowPath).toArray(TreePath[]::new);
   }
 
+  /**
+   * Checks if the specified column index is the tree column.
+   *
+   * @param column
+   *          the column index
+   * @return true if it is the tree column, false otherwise
+   */
   boolean isTreeColumnIndex(int column) {
     int columnIndex = convertColumnIndexToModel(column);
     return columnIndex == 0;
   }
 
+  /**
+   * Returns the layout cache used by this tree table.
+   *
+   * @return the AbstractLayoutCache instance
+   */
   public final AbstractLayoutCache getLayoutCache() {
     TmmTreeTableModel model = getTreeTableModel();
     if (model != null) {
@@ -282,6 +415,12 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Sets whether the root node is visible.
+   *
+   * @param val
+   *          true to make the root visible, false otherwise
+   */
   public void setRootVisible(boolean val) {
     if (getTreeTableModel() == null) {
       cachedRootVisible = val;
@@ -300,6 +439,11 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Checks if the root node is visible.
+   *
+   * @return true if the root is visible, false otherwise
+   */
   public boolean isRootVisible() {
     if (getLayoutCache() == null) {
       return cachedRootVisible;
@@ -309,6 +453,18 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Handles editing of a cell at the specified position. If it's the tree column (column 0), handles expansion/collapse of nodes and checkbox
+   * interactions. Otherwise delegates to the standard table cell editing.
+   *
+   * @param row
+   *          the row to be edited
+   * @param column
+   *          the column to be edited
+   * @param e
+   *          the event that triggered the edit
+   * @return true if the cell was successfully edited, false otherwise
+   */
   @Override
   public boolean editCellAt(int row, int column, EventObject e) {
     // If it was on column 0, it may be a request to expand a tree node - check for that first.
@@ -387,6 +543,17 @@ public class TmmTreeTable extends TmmTable {
     return res;
   }
 
+  /**
+   * Determines if the mouse event should trigger a cell edit. Takes into account click count and modifiers to decide if editing should begin.
+   *
+   * @param row
+   *          the row being clicked
+   * @param column
+   *          the column being clicked
+   * @param me
+   *          the mouse event
+   * @return true if the event should trigger cell editing, false otherwise
+   */
   private boolean isEditEvent(int row, int column, MouseEvent me) {
     if (me.getClickCount() > 1) {
       return true;
@@ -419,6 +586,17 @@ public class TmmTreeTable extends TmmTable {
     return false;
   }
 
+  /**
+   * Handles checkbox interactions in the tree column. Manages the state of checkboxes including their position and selection.
+   *
+   * @param row
+   *          the row containing the checkbox
+   * @param column
+   *          the column containing the checkbox
+   * @param me
+   *          the mouse event that triggered the check, or null for keyboard events
+   * @return true if the checkbox state was changed, false otherwise
+   */
   protected final boolean checkAt(int row, int column, MouseEvent me) {
     TmmTreeTableRenderDataProvider render = getRenderDataProvider();
     TableCellRenderer tcr = getDefaultRenderer(Object.class);
@@ -465,6 +643,16 @@ public class TmmTreeTable extends TmmTable {
     return false;
   }
 
+  /**
+   * Configures the tree cell editor component with appropriate border and visual properties.
+   *
+   * @param editor
+   *          the editor component to configure
+   * @param row
+   *          the row being edited
+   * @param column
+   *          the column being edited
+   */
   protected void configureTreeCellEditor(Component editor, int row, int column) {
     if (!(editor instanceof JComponent)) {
       return;
@@ -495,12 +683,18 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Called when this component is added to a container. Recalculates the row height based on font metrics and expansion handle height.
+   */
   @Override
   public void addNotify() {
     super.addNotify();
     calcRowHeight();
   }
 
+  /**
+   * Calculates and sets the appropriate row height for the tree table. Takes into account the font metrics and expansion handle height.
+   */
   private void calcRowHeight() {
     // Users of themes can set an explicit row height, so check for it
 
@@ -684,6 +878,9 @@ public class TmmTreeTable extends TmmTable {
     return null;
   }
 
+  /**
+   * Inner class that implements a border for tree cell editors. Handles the painting of expansion handles, checkboxes, and icons with proper spacing.
+   */
   private static class TreeCellEditorBorder implements Border {
     private final Insets insets      = new Insets(0, 0, 0, 0);
     private final int    iconTextGap = new JLabel().getIconTextGap();
@@ -695,6 +892,13 @@ public class TmmTreeTable extends TmmTable {
     private int          checkWidth;
     private JCheckBox    checkBox;
 
+    /**
+     * Returns the border insets for the specified component.
+     *
+     * @param c
+     *          the component to get insets for
+     * @return the border insets
+     */
     @Override
     public Insets getBorderInsets(Component c) {
       insets.left = (nestingDepth * TmmTreeTableCellRenderer.getNestingWidth()) + TmmTreeTableCellRenderer.getExpansionHandleWidth() + 1;
@@ -705,11 +909,32 @@ public class TmmTreeTable extends TmmTable {
       return insets;
     }
 
+    /**
+     * Returns whether this border is opaque.
+     *
+     * @return always returns false
+     */
     @Override
     public boolean isBorderOpaque() {
       return false;
     }
 
+    /**
+     * Paints the border with the appropriate expansion handles, checkboxes, and icons.
+     *
+     * @param c
+     *          the component whose border is being painted
+     * @param g
+     *          the graphics context
+     * @param x
+     *          the x coordinate of the painting origin
+     * @param y
+     *          the y coordinate of the painting origin
+     * @param width
+     *          the width of the border area
+     * @param height
+     *          the height of the border area
+     */
     @Override
     public void paintBorder(Component c, java.awt.Graphics g, int x, int y, int width, int height) {
       int iconY;
@@ -745,10 +970,21 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Checks if the tree table is currently adjusting its content.
+   *
+   * @return true if the tree table is adjusting, false otherwise
+   */
   public boolean isAdjusting() {
     return ((TmmTreeModel) treeTableModel.getTreeModel()).isAdjusting();
   }
 
+  /**
+   * Sets the selected rows in the tree table. Handles adjusting state to ensure proper selection behavior.
+   *
+   * @param selectedRows
+   *          array of row indices to select
+   */
   private void setSelectedRows(int[] selectedRows) {
     ((TmmTreeModel) treeTableModel.getTreeModel()).setAdjusting(true);
     clearSelection();
@@ -758,6 +994,12 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Inner class that extends TmmTreeModel to provide tree model functionality specific to the tree table.
+   *
+   * @param <E>
+   *          the type of tree node
+   */
   private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel<E> {
 
     /**
@@ -770,6 +1012,9 @@ public class TmmTreeTable extends TmmTable {
       super(null, dataProvider);
     }
 
+    /**
+     * Updates the sorting and filtering of the tree table content. Handles caching of changes and adaptive timing of updates.
+     */
     @Override
     public void updateSortingAndFiltering() {
       long now = System.currentTimeMillis();
@@ -810,6 +1055,11 @@ public class TmmTreeTable extends TmmTable {
     }
   }
 
+  /**
+   * Gets the current sorting strategy used by the tree table.
+   *
+   * @return the current ITmmTreeTableSortingStrategy, or null if none is set
+   */
   public ITmmTreeTableSortingStrategy getSortStrategy() {
     Comparator<?> comparator = ((TmmTreeModel<?>) getTreeTableModel().getTreeModel()).getDataProvider().getTreeComparator();
     if (comparator instanceof ITmmTreeTableSortingStrategy sortStrategy) {
@@ -818,6 +1068,12 @@ public class TmmTreeTable extends TmmTable {
     return null;
   }
 
+  /**
+   * Sets the sorting strategy from an encoded string representation.
+   *
+   * @param stringEncoded
+   *          the encoded sorting strategy configuration
+   */
   public void setSortStrategy(String stringEncoded) {
     ITmmTreeTableSortingStrategy sortingStrategy = getSortStrategy();
 
@@ -832,6 +1088,9 @@ public class TmmTreeTable extends TmmTable {
     getTableHeader().repaint();
   }
 
+  /**
+   * Inner class that handles keyboard events for the tree table. Manages expansion, collapse, and navigation of tree nodes.
+   */
   private class TmmTreeTableKeyAdapter extends KeyAdapter {
     final TmmTreeTable treeTable;
 
@@ -839,6 +1098,13 @@ public class TmmTreeTable extends TmmTable {
       this.treeTable = treeTable;
     }
 
+    /**
+     * Gets the parent rows for the given child rows.
+     *
+     * @param childRows
+     *          array of child row indices
+     * @return array of parent row indices
+     */
     private int[] getParentRows(int[] childRows) {
       return IntStream.of(childRows).map(leafRow -> {
         @Nonnull
@@ -852,6 +1118,14 @@ public class TmmTreeTable extends TmmTable {
       }).toArray();
     }
 
+    /**
+     * Toggles the expansion state of the specified rows.
+     *
+     * @param rows
+     *          array of row indices to toggle
+     * @param expand
+     *          true to expand, false to collapse
+     */
     private void toggleRows(int[] rows, boolean expand) {
       int[] collapsedAndLeafRows = IntStream.of(rows).filter(treeTable::isCollapsed).toArray();
 
@@ -882,6 +1156,12 @@ public class TmmTreeTable extends TmmTable {
       setSelectedRows(treeTableModel.getLayout().getRowsForPaths(selectedPaths));
     }
 
+    /**
+     * Handles key press events for navigation and expansion/collapse.
+     *
+     * @param e
+     *          the key event
+     */
     @Override
     public void keyPressed(KeyEvent e) {
       int[] selectedRows = treeTable.getSelectedRows();

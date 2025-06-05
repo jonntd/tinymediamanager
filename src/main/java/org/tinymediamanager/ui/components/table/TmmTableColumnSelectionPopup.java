@@ -110,6 +110,7 @@ public class TmmTableColumnSelectionPopup {
       if (etc.getCellRenderer() instanceof TmmTreeTableCellRenderer) {
         checkBox.setSelected(true);
         checkBox.setEnabled(false);
+        checkBox.putClientProperty("nodeColumn", Boolean.TRUE);
       }
 
       checkBoxMenuItems.add(checkBox);
@@ -123,7 +124,7 @@ public class TmmTableColumnSelectionPopup {
       }
       else {
         // the same display name is used for more columns - fuj
-        ArrayList<JCheckBoxMenuItem> al = null;
+        List<JCheckBoxMenuItem> al = null;
         Object theFirstOne = displayNameToCheckBox.get(columnName);
         if (theFirstOne instanceof JCheckBoxMenuItem) {
           JCheckBoxMenuItem firstCheckBox = (JCheckBoxMenuItem) theFirstOne;
@@ -132,7 +133,7 @@ public class TmmTableColumnSelectionPopup {
         }
         else {
           // already a list there
-          if (theFirstOne instanceof ArrayList<?> arrayList) {
+          if (theFirstOne instanceof ArrayList<?>) {
             al = (ArrayList<JCheckBoxMenuItem>) theFirstOne;
           }
           else {
@@ -156,7 +157,7 @@ public class TmmTableColumnSelectionPopup {
         // in case there are duplicate names we store ArrayLists
         // of JCheckBoxes
         if (obj instanceof ArrayList) {
-          ArrayList<JCheckBoxMenuItem> al = (ArrayList<JCheckBoxMenuItem>) obj;
+          List<JCheckBoxMenuItem> al = (ArrayList<JCheckBoxMenuItem>) obj;
           if (index >= al.size()) {
             index = 0;
           }
@@ -198,7 +199,10 @@ public class TmmTableColumnSelectionPopup {
     else {
       // re-enable all
       for (JCheckBoxMenuItem item : checkBoxMenuItems) {
-        item.setEnabled(true);
+        if (!Boolean.TRUE.equals(item.getClientProperty("nodeColumn"))) {
+          // do not enable the node column checkbox
+          item.setEnabled(true);
+        }
       }
     }
   }

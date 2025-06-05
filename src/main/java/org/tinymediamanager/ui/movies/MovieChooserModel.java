@@ -19,6 +19,7 @@ import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -385,6 +386,7 @@ public class MovieChooserModel extends AbstractModelObject {
   }
 
   public List<MediaArtwork> getArtwork() {
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     List<MediaArtwork> artwork = new ArrayList<>();
 
     ArtworkSearchAndScrapeOptions options = new ArtworkSearchAndScrapeOptions(MediaType.MOVIE);
@@ -404,9 +406,10 @@ public class MovieChooserModel extends AbstractModelObject {
     options.setPosterSize(MovieModuleManager.getInstance().getSettings().getImagePosterSize());
 
     // scrape providers
-    for (MediaScraper artworkScraper : artworkScrapers) {
+    artworkScrapers.parallelStream().forEach(artworkScraper -> {
       IMovieArtworkProvider artworkProvider = (IMovieArtworkProvider) artworkScraper.getMediaProvider();
       try {
+        lock.writeLock().lock();
         artwork.addAll(artworkProvider.getArtwork(options));
       }
       catch (MissingIdException e) {
@@ -421,7 +424,10 @@ public class MovieChooserModel extends AbstractModelObject {
       catch (Error e) {
         LOGGER.debug("uncaught error", e);
       }
-    }
+      finally {
+        lock.writeLock().unlock();
+      }
+    });
 
     // at last take the poster from the result
     if (StringUtils.isNotBlank(getPosterUrl())) {

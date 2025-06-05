@@ -65,6 +65,7 @@ import org.tinymediamanager.core.jmte.NamedReplacementRenderer;
 import org.tinymediamanager.core.jmte.NamedSplitRenderer;
 import org.tinymediamanager.core.jmte.NamedTitleCaseRenderer;
 import org.tinymediamanager.core.jmte.NamedUpperCaseRenderer;
+import org.tinymediamanager.core.jmte.PathRenderer;
 import org.tinymediamanager.core.jmte.RegexpProcessor;
 import org.tinymediamanager.core.jmte.TmmModelAdaptor;
 import org.tinymediamanager.core.jmte.TmmOutputAppender;
@@ -1446,6 +1447,7 @@ public class MovieRenamer {
   public static Engine createEngine() {
     Engine engine = Engine.createEngine();
     engine.registerRenderer(Number.class, new ZeroNumberRenderer());
+    engine.registerRenderer(Path.class, new PathRenderer());
     engine.registerNamedRenderer(new MovieNamedFirstCharacterRenderer());
     engine.registerNamedRenderer(new MovieNamedIndexOfMovieSetRenderer());
     engine.registerNamedRenderer(new MovieNamedIndexOfMovieSetWithDummyRenderer());

@@ -272,6 +272,22 @@ public class MediaArtwork {
   }
 
   /**
+   * gets the correct size order based on type
+   * 
+   * @param type
+   * @param width
+   * @return
+   */
+  public static int getSizeOrder(MediaArtworkType type, int width) {
+    return switch (type) {
+      case POSTER -> PosterSizes.getSizeOrder(width);
+      case BACKGROUND -> FanartSizes.getSizeOrder(width);
+      case THUMB -> ThumbSizes.getSizeOrder(width);
+      default -> 0;
+    };
+  }
+
+  /**
    * Get a preview url or the default url if no preview url is available
    * 
    * @return the preview url or the default url

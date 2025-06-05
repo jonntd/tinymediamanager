@@ -40,6 +40,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
@@ -69,6 +70,7 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxResolutions;
   private JCheckBox                 chckbxFallback;
   private JCheckBox                 chckbxFanartWoText;
+  private JHintCheckBox             chckbxEpisodeFetchAllThumbs;
 
   TvShowImageOptionsSettingsPanel() {
     // UI init
@@ -118,8 +120,9 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
 
     {
       JPanel panelOptions = new JPanel();
-      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][15lp!][][][][15lp!][][]")); // 16lp ~ width of
-                                                                                                                                 // the
+      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][15lp!][][][][15lp!][][][15lp!][]")); // 16lp ~
+                                                                                                                                          // width of
+      // the
 
       JLabel lblOptionsT = new TmmLabel(TmmResourceBundle.getString("Settings.advancedoptions"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOptions, lblOptionsT, true);
@@ -190,6 +193,10 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
 
       chckbxFallback = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape.fallback"));
       panelOptions.add(chckbxFallback, "cell 1 10 2 1");
+
+      chckbxEpisodeFetchAllThumbs = new JHintCheckBox(TmmResourceBundle.getString("Settings.tvshow.episode.fetchallsources"));
+      chckbxEpisodeFetchAllThumbs.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.episode.fetchallsources.hint"));
+      panelOptions.add(chckbxEpisodeFetchAllThumbs, "cell 1 12 2 1");
     }
   }
 
@@ -234,5 +241,10 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty, chckbxAutomaticallyScrapeImages,
         jCheckBoxBeanProperty);
     autoBinding_6.bind();
+    //
+    Property tvShowSettingsBeanProperty_5 = BeanProperty.create("imageEpisodeScrapeAllSources");
+    AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_5,
+        chckbxEpisodeFetchAllThumbs, jCheckBoxBeanProperty);
+    autoBinding_7.bind();
   }
 }
