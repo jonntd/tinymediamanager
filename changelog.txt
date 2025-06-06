@@ -1,6 +1,7 @@
 Version 5.1.7
 =======================
 x [Movies/TV shows] fixed rendering of file names with JMTE
+x [Movies/TV shows] fixed changing filters in the renamer preview #2965
 x [TV shows] added an option to activate scraping of episode thumbs from all scrapers #2941
 x [TV shows] prevent hiding of the first table column #2959
 x [IMDB] rule out some weird posters on scrape #2949
