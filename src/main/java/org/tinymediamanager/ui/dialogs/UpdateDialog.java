@@ -83,7 +83,7 @@ public class UpdateDialog extends TmmDialog {
             TmmUIHelper.browseUrl(hle.getURL().toString());
           }
           catch (Exception e) {
-            LOGGER.error("error browsing to \"{}\" : {}", hle.getURL(), e.getMessage());
+            LOGGER.error("Could not open '{}' in browser - '{}'", hle.getURL(), e.getMessage());
           }
         }
       });
@@ -108,7 +108,7 @@ public class UpdateDialog extends TmmDialog {
             TmmUIHelper.browseUrl(baseurl);
           }
           catch (Exception e) {
-            LOGGER.warn("could not open '{}' - '{}'", baseurl, e.getMessage());
+            LOGGER.warn("Could not open '{}' - '{}'", baseurl, e.getMessage());
           }
         }
       });

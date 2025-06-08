@@ -74,7 +74,7 @@ public class SearchTitleWithGoogle {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("error searching {}", e.getMessage());
+      LOGGER.debug("error searching {}", e.getMessage());
       return resultList;
     }
 
@@ -112,7 +112,7 @@ public class SearchTitleWithGoogle {
       }
     }
     catch (Exception e) {
-      LOGGER.error("failed to search for {} - {}", searchTerm, e.getMessage());
+      LOGGER.debug("failed to search for {} - {}", searchTerm, e.getMessage());
     }
 
     return resultList;

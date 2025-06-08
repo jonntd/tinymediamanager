@@ -298,7 +298,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
             TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
           }
           catch (Exception ex) {
-            LOGGER.error("open file - {}", e);
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
@@ -975,10 +975,13 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       options.setEpisodeGroup(episodeToEdit.getTvShow().getEpisodeGroup());
 
       try {
-        LOGGER.info("=====================================================");
-        LOGGER.info("Scrape episode metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
-        LOGGER.info(options.toString());
-        LOGGER.info("=====================================================");
+        LOGGER.info("Scraping episode '{}' (S{} E{}) with '{}'", episodeToEdit.getTitle(), episodeToEdit.getSeason(), episodeToEdit.getEpisode(),
+            mediaScraper.getMediaProvider().getProviderInfo().getId());
+
+        LOGGER.debug("=====================================================");
+        LOGGER.debug("Scrape episode metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
+        LOGGER.debug(options.toString());
+        LOGGER.debug("=====================================================");
         metadata = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getMetadata(options);
 
         // also inject other ids
@@ -995,16 +998,18 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         }
       }
       catch (MissingIdException e) {
-        LOGGER.warn("missing id for scrape");
+        LOGGER.warn("Missing IDs for scraping TV show '{}', episode '{}' with '{}'", episodeToEdit.getTvShow().getTitle(), episodeToEdit.getTitle(),
+            mediaScraper.getId());
         message = TmmResourceBundle.getString("scraper.error.missingid");
       }
-      catch (NothingFoundException ignored) {
+      catch (NothingFoundException e) {
         LOGGER.debug("nothing found");
         message = TmmResourceBundle.getString("message.scrape.tvshowepisodefailed");
       }
       catch (Exception e) {
         // other exception
-        LOGGER.error("getMetadata", e);
+        LOGGER.error("Could not scrape TV show '{}', S{} E{} with '{}' - '{}'", episodeToEdit.getTvShow().getTitle(), episodeToEdit.getSeason(),
+            episodeToEdit.getEpisode(), mediaScraper.getId(), e.getMessage());
         message = TmmResourceBundle.getString("message.scrape.tvshowepisodefailed");
       }
       finally {

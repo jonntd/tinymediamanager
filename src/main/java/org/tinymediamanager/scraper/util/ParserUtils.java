@@ -84,7 +84,7 @@ public class ParserUtils {
     LOGGER.trace("Parse filename for title: \"{}\"", filename);
 
     if (filename == null || filename.isEmpty()) {
-      LOGGER.warn("Filename empty?!");
+      LOGGER.debug("Filename empty?!");
       return ret;
     }
 

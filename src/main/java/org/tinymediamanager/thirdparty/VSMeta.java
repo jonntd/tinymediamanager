@@ -174,7 +174,7 @@ public class VSMeta {
       Files.write(file, bytes);
     }
     catch (IOException e) {
-      LOGGER.warn("Could not write image {}", file, e);
+      LOGGER.debug("Could not write image {}", file, e);
     }
   }
 
@@ -273,7 +273,7 @@ public class VSMeta {
               info.releaseDate = dateFormat.parse(data.readStringVL());
             }
             catch (ParseException e) {
-              LOGGER.warn("Could not parse date...");
+              LOGGER.debug("Could not parse date...");
             }
             break;
 
@@ -336,14 +336,14 @@ public class VSMeta {
           }
 
           default: {
-            LOGGER.warn("[MAIN] Unexpected kind={} at {} - try skipping", Integer.toHexString(kind), pos);
+            LOGGER.debug("[MAIN] Unexpected kind={} at {} - try skipping", Integer.toHexString(kind), pos);
             data.readStringVL(); // interpret next value as string.....
           }
         }
       }
     }
     catch (Exception e) {
-      LOGGER.warn("SYNO: Error parsing file ({})", vsMetaFile, e);
+      LOGGER.debug("SYNO: Error parsing file ({})", vsMetaFile, e);
     }
   }
 
@@ -369,7 +369,7 @@ public class VSMeta {
           break;
 
         default:
-          LOGGER.warn("[GROUP1] Unexpected kind={} at {}", kind, pos);
+          LOGGER.debug("[GROUP1] Unexpected kind={} at {}", kind, pos);
       }
     }
   }
@@ -396,7 +396,7 @@ public class VSMeta {
             info.tvshowReleaseDate = dateFormat.parse(s.readStringVL());
           }
           catch (ParseException e) {
-            LOGGER.warn("Could not parse date...");
+            LOGGER.debug("Could not parse date...");
           }
           break;
 
@@ -433,7 +433,7 @@ public class VSMeta {
         }
 
         default:
-          LOGGER.warn("[GROUP2] Unexpected kind={} at {}", kind, pos);
+          LOGGER.debug("[GROUP2] Unexpected kind={} at {}", kind, pos);
       }
     }
   }
@@ -459,7 +459,7 @@ public class VSMeta {
           break;
 
         default:
-          LOGGER.warn("[GROUP3] Unexpected kind={} at {}", kind, pos);
+          LOGGER.debug("[GROUP3] Unexpected kind={} at {}", kind, pos);
       }
     }
   }
@@ -470,7 +470,7 @@ public class VSMeta {
       ret = Base64.getDecoder().decode(str.replaceAll("\\s+", ""));
     }
     catch (Exception e) {
-      LOGGER.warn("Could not decode image: {}", e.getMessage());
+      LOGGER.debug("Could not decode image: {}", e.getMessage());
     }
     return ret;
   }
@@ -607,7 +607,7 @@ public class VSMeta {
       reader.close();
     }
     catch (IOException e) {
-      LOGGER.warn("Could not parse Synology VSMETA JSON part!", e);
+      LOGGER.debug("Could not parse Synology VSMETA JSON part!", e);
     }
   }
 

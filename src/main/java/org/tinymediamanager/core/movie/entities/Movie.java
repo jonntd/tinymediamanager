@@ -738,14 +738,9 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return;
     }
 
-    if (metadata == null) {
-      LOGGER.error("metadata was null");
-      return;
-    }
-
     // check if metadata has at least an id (aka it is not empty)
-    if (metadata.getIds().isEmpty()) {
-      LOGGER.warn("wanted to save empty metadata for {}", getTitle());
+    if (metadata == null || metadata.getIds().isEmpty()) {
+      LOGGER.warn("Wanted to save empty metadata for movie '{}'", getTitle());
       return;
     }
 
@@ -1319,7 +1314,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public void writeNFO() {
     if (MovieModuleManager.getInstance().getSettings().getNfoFilenames().isEmpty()) {
-      LOGGER.info("Not writing any NFO file, because NFO filename preferences were empty...");
+      LOGGER.debug("Not writing any NFO file, because NFO filename preferences were empty...");
       return;
     }
 
@@ -1367,13 +1362,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
       nfonames = MovieModuleManager.getInstance().getSettings().getNfoFilenames();
     }
 
-    try {
-      connector.write(nfonames);
-      firePropertyChange(HAS_NFO_FILE, false, true);
-    }
-    catch (Exception e) {
-      LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-    }
+    connector.write(nfonames);
+    firePropertyChange(HAS_NFO_FILE, false, true);
   }
 
   /**
@@ -2378,7 +2368,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return vid;
     }
 
-    LOGGER.warn("Movie without video file? {} | {}", getPathNIO(), getTitle());
+    LOGGER.debug("Movie without video file? {} | {}", getPathNIO(), getTitle());
     // cannot happen - movie MUST always have a video file
     return MediaFile.EMPTY_MEDIAFILE;
   }

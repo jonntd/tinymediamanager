@@ -61,7 +61,7 @@ public class YtDlp {
   public static void init() {
     YtDlpAddon ytDlpAddon = new YtDlpAddon();
     if (ytDlpAddon.isAvailable()) {
-      LOGGER.info("yt-dlp is available at {}", ytDlpAddon.getExecutablePath());
+      LOGGER.info("yt-dlp is available at '{}'", ytDlpAddon.getExecutablePath());
     }
     else {
       LOGGER.warn("yt-dlp is not available");
@@ -170,8 +170,8 @@ public class YtDlp {
       int processValue = process.waitFor();
       String response = outputStream.toString(StandardCharsets.UTF_8);
       if (processValue != 0) {
-        LOGGER.warn("error at yt-dlp: '{}'", response);
-        throw new IOException("error running yt-dlp - code '" + processValue + "'");
+        LOGGER.warn("Error calling yt-dlp - '{}'", response);
+        throw new IOException("error running yt-dlp - code '" + processValue + "' / '" + response + "'");
       }
       return response;
     }
@@ -233,10 +233,10 @@ public class YtDlp {
             TmmProperties.getInstance().writeProperties();
             try {
               String response = executeCommand(List.of(ytDlpAddon.getExecutablePath(), "--update"));
-              LOGGER.info(response);
+              LOGGER.debug(response);
             }
             catch (Exception e) {
-              LOGGER.error("Error self-updating yt-dlp: {}", e.getMessage());
+              LOGGER.warn("Error self-updating yt-dlp - '{}'", e.getMessage());
             }
           }
         };

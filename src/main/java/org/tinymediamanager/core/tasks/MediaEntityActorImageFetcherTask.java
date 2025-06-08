@@ -99,11 +99,11 @@ public abstract class MediaEntityActorImageFetcherTask implements Runnable {
           downloadPersonImage(person, overwriteExistingItems);
         }
         catch (InterruptedException | InterruptedIOException e) {
-          LOGGER.info("artwork download aborted");
+          LOGGER.debug("artwork download aborted");
           throw e;
         }
         catch (Exception e) {
-          LOGGER.warn("Problem downloading actor artwork: {}", e.getMessage());
+          LOGGER.error("Problem downloading actor artwork for '{}' - '{}'", person, e.getMessage());
         }
       }
     }
@@ -113,7 +113,7 @@ public abstract class MediaEntityActorImageFetcherTask implements Runnable {
     }
     catch (Exception e) {
       // log any other exception
-      LOGGER.error("Thread crashed: ", e);
+      LOGGER.error("Could not download actor images - '{}'", e.getMessage());
     }
   }
 

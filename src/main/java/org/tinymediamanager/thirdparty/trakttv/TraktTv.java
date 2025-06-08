@@ -97,7 +97,7 @@ public class TraktTv implements TmmFeature {
         };
       }
       catch (Exception e) {
-        LOGGER.error("could not initialize the API: {}", e.getMessage());
+        LOGGER.debug("could not initialize the Trakt.tv API - '{}'", e.getMessage());
         // force re-initialization the next time this will be called
         api = null;
         throw new ScrapeException(e);
@@ -254,7 +254,7 @@ public class TraktTv implements TmmFeature {
       }
     }
     catch (Exception e) {
-      LOGGER.error("failed gettinguser lists: {}", e.getMessage());
+      LOGGER.debug("failed gettinguser lists: {}", e.getMessage());
       return;
     }
   }

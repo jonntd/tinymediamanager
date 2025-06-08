@@ -75,7 +75,7 @@ class TmdbTrailerProvider {
     }
 
     if (tmdbId == 0) {
-      LOGGER.warn("not possible to scrape from TMDB - no tmdbId found");
+      LOGGER.debug("not possible to scrape from TMDB - no tmdbId found");
       throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
     }
 

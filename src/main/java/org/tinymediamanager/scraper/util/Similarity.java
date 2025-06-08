@@ -142,7 +142,7 @@ public class Similarity {
       return score;
     }
     catch (Exception e) {
-      LOGGER.warn("Exception in compareStrings str1 = " + str1 + " str12 = " + str2);
+      LOGGER.debug("Exception in compareStrings str1 = " + str1 + " str12 = " + str2);
       return (float) 0.0;
     }
   }

@@ -917,9 +917,9 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       return;
     }
 
-    // check against null metadata (e.g. aborted request)
+    // check if metadata has at least an id (aka it is not empty)
     if (metadata == null) {
-      LOGGER.error("metadata was null");
+      LOGGER.warn("Wanted to save empty metadata for episode '{}'", getTitle());
       return;
     }
 
@@ -1108,7 +1108,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   public void writeNFO() {
     List<TvShowEpisodeNfoNaming> nfoNamings = TvShowModuleManager.getInstance().getSettings().getEpisodeNfoFilenames();
     if (nfoNamings.isEmpty()) {
-      LOGGER.info("Not writing any NFO file, because NFO filename preferences were empty...");
+      LOGGER.debug("Not writing any NFO file, because NFO filename preferences were empty...");
       return;
     }
 
@@ -1133,14 +1133,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       default -> new TvShowEpisodeToKodiConnector(episodesInNfo);
     };
 
-    try {
-      connector.write(Collections.singletonList(TvShowEpisodeNfoNaming.FILENAME));
-
-      firePropertyChange(HAS_NFO_FILE, false, true);
-    }
-    catch (Exception e) {
-      LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-    }
+    connector.write(Collections.singletonList(TvShowEpisodeNfoNaming.FILENAME));
+    firePropertyChange(HAS_NFO_FILE, false, true);
   }
 
   /**

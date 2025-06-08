@@ -72,7 +72,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
       scraper = parser.parseScraper(scraper, KodiUtil.commonXmls);
     }
     catch (Exception e) {
-      LOGGER.error("Failed to Load Kodi Scraper: {}", scraper);
+      LOGGER.debug("Failed to Load Kodi Scraper: {}", scraper);
       throw new RuntimeException("Failed to Load Kodi Scraper: " + scraper, e);
     }
     this.scraper = scraper;
@@ -160,14 +160,14 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
           l.add(sr);
         }
         catch (Exception e) {
-          LOGGER.error("Error process an xml node!  Ignoring it from the search results.");
+          LOGGER.debug("Error process an xml node!  Ignoring it from the search results.");
         }
       }
 
       return l;
     }
     catch (Exception e) {
-      LOGGER.error("problem searching: {}", e.getMessage());
+      LOGGER.debug("problem searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
   }
@@ -209,7 +209,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
       return md;
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
   }
@@ -263,12 +263,12 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
         break;
       }
       catch (Throwable t) {
-        LOGGER.error("Failed to parse xml using charset: " + charset + " - " + t.getMessage());
+        LOGGER.debug("Failed to parse xml using charset: " + charset + " - " + t.getMessage());
       }
     }
 
     if (doc == null) {
-      LOGGER.error("Unabled to parse xml string");
+      LOGGER.debug("Unabled to parse xml string");
       LOGGER.trace(xml);
       throw new Exception("Unable to parse xml!");
     }
@@ -617,7 +617,7 @@ public abstract class AbstractKodiMetadataProvider implements IKodiMetadataProvi
       return serializer.writeToString(el);
     }
     catch (Exception e) {
-      LOGGER.error("Could not parse XML element!");
+      LOGGER.debug("Could not parse XML element!");
     }
     return null;
   }

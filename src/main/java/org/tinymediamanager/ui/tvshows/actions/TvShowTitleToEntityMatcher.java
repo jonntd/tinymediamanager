@@ -18,13 +18,15 @@ package org.tinymediamanager.ui.tvshows.actions;
 
 import java.awt.event.ActionEvent;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import javax.swing.JOptionPane;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel.SelectedObjects;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
@@ -48,34 +50,31 @@ public class TvShowTitleToEntityMatcher extends TmmAction {
   protected void processAction(ActionEvent e) {
     SelectedObjects sel = TvShowUIModule.getInstance().getSelectionModel().getSelectedObjects(false, false);
     if (sel.getEpisodes().isEmpty()) {
-      LOGGER.warn("No episode selected");
+      JOptionPane.showMessageDialog(MainWindow.getInstance(), TmmResourceBundle.getString("tmm.nothingselected"));
+      return;
     }
 
     // loop over all selected episodes
     for (TvShowEpisode ep : sel.getEpisodes()) {
       if (ep.isDummy()) {
-        LOGGER.warn("Cannot operate on dummy episode '{}'", ep.getTitle());
+        LOGGER.debug("Cannot operate on dummy episode '{}'", ep.getTitle());
         continue;
       }
       // loop over all episodes of TvShow to find possible dummy match
-      List<TvShowEpisode> eps = ep.getTvShow()
-          .getDummyEpisodes()
-          .stream()
-          .filter(dummy -> dummy.getTitle().equalsIgnoreCase(ep.getTitle()))
-          .collect(Collectors.toList());
+      List<TvShowEpisode> eps = ep.getTvShow().getDummyEpisodes().stream().filter(dummy -> dummy.getTitle().equalsIgnoreCase(ep.getTitle())).toList();
 
       // not found? try to match via releaseDate
-      if (eps.size() == 0 && ep.getFirstAired() != null) {
+      if (eps.isEmpty() && ep.getFirstAired() != null) {
         eps = ep.getTvShow()
             .getDummyEpisodes()
             .stream()
             .filter(dummy -> dummy.getFirstAired() != null && dummy.getFirstAired().equals(ep.getFirstAired()))
-            .collect(Collectors.toList());
+            .toList();
       }
 
       // MUST only match ONE named episode
-      if (eps.size() == 0) {
-        LOGGER.warn("Did not find an episode named '{}'", ep.getTitle());
+      if (eps.isEmpty()) {
+        LOGGER.warn("Did not find an episode named '{}' in TV show '{}'", ep.getTitle(), ep.getTvShow().getTitle());
       }
       else if (eps.size() == 1) {
         TvShowEpisode wanted = eps.get(0);
@@ -85,14 +84,14 @@ public class TvShowTitleToEntityMatcher extends TmmAction {
           ep.saveToDb();
           ep.writeNFO();
           ep.firePropertyChange(Constants.EPISODE, null, ep);
-          LOGGER.info("Episode '{}' has been matched to S{}E{}", ep.getTitle(), ep.getSeason(), ep.getEpisode());
+          LOGGER.info("Episode '{}' has been matched to S{} E{}", ep.getTitle(), ep.getSeason(), ep.getEpisode());
         }
         else {
-          LOGGER.warn("Episode '{}' is already assigned - skipping", ep.getTitle());
+          LOGGER.info("Episode '{}' is already assigned - skipping", ep.getTitle());
         }
       }
       else {
-        LOGGER.warn("Found multiple episodes named '{}' - skipping", ep.getTitle());
+        LOGGER.warn("Found multiple episodes named '{}' in TV show '{}' - skipping", ep.getTitle(), ep.getTvShow().getTitle());
       }
     }
   }

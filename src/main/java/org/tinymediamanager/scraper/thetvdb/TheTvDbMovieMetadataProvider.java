@@ -128,7 +128,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
       }
     }
 
@@ -159,12 +159,12 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
             }
           }
           catch (Exception e) {
-            LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+            LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
           }
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb: {}", e.getMessage());
         throw new ScrapeException(e);
       }
     }
@@ -268,7 +268,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     }
 
     if (id == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getId());
     }
 
@@ -315,7 +315,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
       }
     }
     catch (Exception e) {
-      LOGGER.error("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 

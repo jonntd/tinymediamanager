@@ -18,6 +18,7 @@ package org.tinymediamanager.thirdparty;
 
 import java.io.File;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -96,13 +97,13 @@ public class KodiRPC {
 
       @Override
       public void disconnected() {
-        LOGGER.info("Event: Disconnected");
+        LOGGER.info("Kodi RPC: Disconnected");
         MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.INFO, "Kodi disconnected"));
       }
 
       @Override
       public void connected() {
-        LOGGER.info("Event: Connected to {}", connectionManager.getHostConfig().getAddress());
+        LOGGER.info("Kodi RPC: Connected to {}", connectionManager.getHostConfig().getAddress());
         MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.INFO, "Kodi connected"));
       }
     });
@@ -166,7 +167,7 @@ public class KodiRPC {
             String mp = res.file.replace("multipath://", ""); // remove prefix
             String[] source = mp.split("/"); // split on slash
             for (String ds : source) {
-              String s = URLDecoder.decode(ds, "UTF-8");
+              String s = URLDecoder.decode(ds, StandardCharsets.UTF_8);
               this.videodatasources.put(s, res.label);
             }
           }
@@ -221,7 +222,7 @@ public class KodiRPC {
             }
             else {
               // no putIfAbsent since i wanna have a log!
-              LOGGER.warn("Kodi movie {} already attached to another datasource - skipping", rel);
+              LOGGER.info("Kodi movie '{}' already attached to another datasource - skipping", rel);
             }
           }
         }
@@ -237,7 +238,7 @@ public class KodiRPC {
           }
           else {
             // no putIfAbsent since i wanna have a log!
-            LOGGER.warn("Kodi movie {} already attached to another datasource - skipping", rel);
+            LOGGER.info("Kodi movie '{}' already attached to another datasource - skipping", rel);
           }
         }
       }
@@ -304,7 +305,7 @@ public class KodiRPC {
     Map<String, UUID> fileMap = new HashMap<>();
     Path ds = Paths.get(entity.getDataSource());
     if (ds == null || ds.toString().isBlank()) {
-      LOGGER.warn("Datasource was null? Ignoring {}", entity.toString());
+      LOGGER.debug("Datasource was empty? Ignoring {}", entity);
       return fileMap;
     }
 
@@ -337,7 +338,7 @@ public class KodiRPC {
           }
           else {
             // no putIfAbsent since i wanna have a log!
-            LOGGER.warn("File {} already attached to another datasource - skipping", rel);
+            LOGGER.warn("File '{}' already attached to another datasource - skipping", rel);
           }
         }
       }
@@ -350,7 +351,7 @@ public class KodiRPC {
       }
       else {
         // no putIfAbsent since i wanna have a log!
-        LOGGER.warn("File {} already attached to another datasource - skipping", rel);
+        LOGGER.warn("File '{}' already attached to another datasource - skipping", rel);
       }
     }
     return fileMap;
@@ -384,7 +385,7 @@ public class KodiRPC {
         }
         else {
           // no putIfAbsent since i wanna have a log!
-          LOGGER.warn("Kodi show {} already attached to another datasource - skipping", rel);
+          LOGGER.warn("Kodi show '{}' already attached to another datasource - skipping", rel);
         }
       }
       LOGGER.debug("KODI {} shows", kodiDsAndFolder.size());
@@ -407,7 +408,7 @@ public class KodiRPC {
           }
         }
         catch (Exception e) {
-          LOGGER.error("Error mapping TvShow: {} on {}", e.getMessage(), tmmShow);
+          LOGGER.error("Error mapping Kodi TV show '{}' on '{}'", e.getMessage(), tmmShow);
         }
       }
       LOGGER.debug("mapped {} shows", tvshowmappings.size());
@@ -420,10 +421,10 @@ public class KodiRPC {
     if (kodiID != null) {
       List<MediaFile> nfo = movie.getMediaFiles(MediaFileType.NFO);
       if (!nfo.isEmpty()) {
-        LOGGER.info("Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
+        LOGGER.debug("Kodi RPC: Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
       }
       else {
-        LOGGER.error("No NFO file found to refresh! {}", movie.getTitle());
+        LOGGER.debug("Kodi RPC: No NFO file found to refresh! {}", movie.getTitle());
         // we do NOT return here, maybe Kodi will do something even w/o nfo...
       }
 
@@ -431,7 +432,7 @@ public class KodiRPC {
       sendWoResponse(call);
     }
     else {
-      LOGGER.error("Unable to refresh - could not map '{}' to Kodi library! {}", movie.getTitle(), movie.getDbId());
+      LOGGER.warn("Kodi RPC: Unable to refresh - could not map movie '{}' to Kodi library!", movie.getTitle());
     }
   }
 
@@ -441,10 +442,10 @@ public class KodiRPC {
     if (kodiID != null) {
       List<MediaFile> nfo = tvShow.getMediaFiles(MediaFileType.NFO);
       if (!nfo.isEmpty()) {
-        LOGGER.info("Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
+        LOGGER.debug("Kodi RPC: Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
       }
       else {
-        LOGGER.error("No NFO file found to refresh! {}", tvShow.getTitle());
+        LOGGER.debug("Kodi RPC: No NFO file found to refresh! {}", tvShow.getTitle());
         // we do NOT return here, maybe Kodi will do something even w/o nfo...
       }
 
@@ -452,7 +453,7 @@ public class KodiRPC {
       sendWoResponse(call);
     }
     else {
-      LOGGER.error("Unable to refresh - could not map '{}' to Kodi library! {}", tvShow.getTitle(), tvShow.getDbId());
+      LOGGER.warn("Kodi RPC: Unable to refresh - could not map TV show '{}' to Kodi library!", tvShow.getTitle());
     }
   }
 
@@ -462,10 +463,10 @@ public class KodiRPC {
     if (kodiID != null) {
       List<MediaFile> nfo = episode.getMediaFiles(MediaFileType.NFO);
       if (!nfo.isEmpty()) {
-        LOGGER.info("Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
+        LOGGER.debug("Kodi RPC: Refreshing from NFO: {}", nfo.get(0).getFileAsPath());
       }
       else {
-        LOGGER.error("No NFO file found to refresh! {}", episode.getTitle());
+        LOGGER.debug("Kodi RPC: No NFO file found to refresh! {}", episode.getTitle());
         // we do NOT return here, maybe Kodi will do something even w/o nfo...
       }
 
@@ -473,7 +474,7 @@ public class KodiRPC {
       sendWoResponse(call);
     }
     else {
-      LOGGER.error("Unable to refresh - could not map '{}' to Kodi library! {}", episode.getTitle(), episode.getDbId());
+      LOGGER.warn("Kodi RPC: Unable to refresh - could not map episode '{}' to Kodi library", episode.getTitle());
     }
   }
 
@@ -506,7 +507,7 @@ public class KodiRPC {
       }
     }
     else {
-      LOGGER.error("Unable get playcount - could not map '{}' to Kodi library! {}", movie.getTitle(), movie.getDbId());
+      LOGGER.warn("Kodi RPC: Unable get playcount - could not map movie '{}' to Kodi library!", movie.getTitle());
     }
   }
 
@@ -539,7 +540,7 @@ public class KodiRPC {
       }
     }
     else {
-      LOGGER.error("Unable get playcount - could not map '{}' to Kodi library! {}", episode.getTitle(), episode.getDbId());
+      LOGGER.warn("Kodi RPC: Unable get playcount - could not map episode '{}' to Kodi library!", episode.getTitle());
     }
   }
 
@@ -582,7 +583,7 @@ public class KodiRPC {
         }
         else {
           // no putIfAbsent since i wanna have a log!
-          LOGGER.warn("Kodi episode {} already attached to another datasource - skipping", rel);
+          LOGGER.warn("Kodi RPC: Kodi episode '{}' already attached to another datasource - skipping", rel);
         }
       }
       LOGGER.debug("KODI {} episodes", kodiDsAndFolder.size());
@@ -730,14 +731,14 @@ public class KodiRPC {
    */
   public void send(AbstractCall<?> call) {
     if (!isConnected()) {
-      LOGGER.warn("Cannot send RPC call - not connected");
+      LOGGER.warn("Kodi RPC: Cannot send RPC call - not connected");
       return;
     }
     try {
       call.setResponse(JsonApiRequest.execute(connectionManager.getHostConfig(), call.getRequest()));
     }
     catch (ApiException e) {
-      LOGGER.error("Error calling Kodi: {}", e.getMessage());
+      LOGGER.error("Kodi RPC: Error calling Kodi - '{}'", e.getMessage());
     }
   }
 
@@ -749,7 +750,7 @@ public class KodiRPC {
    */
   public void sendWoResponse(AbstractCall<?> call) {
     if (!isConnected()) {
-      LOGGER.warn("Cannot send RPC call - not connected");
+      LOGGER.warn("Kodi RPC: Cannot send RPC call - not connected");
       return;
     }
 
@@ -757,7 +758,7 @@ public class KodiRPC {
       JsonApiRequest.execute(connectionManager.getHostConfig(), call.getRequest());
     }
     catch (ApiException e) {
-      LOGGER.error("Error calling Kodi: {}", e.getMessage());
+      LOGGER.error("Kodi RPC: Error calling Kodi - '{}'", e.getMessage());
     }
   }
 
@@ -776,7 +777,7 @@ public class KodiRPC {
 
     new Thread(() -> {
       try {
-        LOGGER.info("Connecting to {}...", config.getAddress());
+        LOGGER.info("Kodi RPC: Connecting to {}...", config.getAddress());
         connectionManager.connect(config);
 
         if (isConnected()) {
@@ -788,7 +789,7 @@ public class KodiRPC {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Error connecting to Kodi - '{}'", e.getMessage());
+        LOGGER.error("Kodi RPC: Error connecting to Kodi - '{}'", e.getMessage());
       }
     }).start();
   }
@@ -803,7 +804,7 @@ public class KodiRPC {
       connect(new HostConfig(s.getKodiHost(), s.getKodiHttpPort(), s.getKodiTcpPort(), s.getKodiUsername(), s.getKodiPassword()));
     }
     catch (Exception cex) {
-      LOGGER.error("Error connecting to Kodi instance! {}", cex.getMessage());
+      LOGGER.error("Kodi RPC: Error connecting to Kodi instance - '{}'", cex.getMessage());
       MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
     }
   }
@@ -841,7 +842,7 @@ public class KodiRPC {
 
       @Override
       public void onResponse(AbstractCall<MovieDetail> call) {
-        LOGGER.info("found " + call.getResults().size() + " movies");
+        LOGGER.info("Kodi RPC: found " + call.getResults().size() + " movies");
         for (MovieDetail res : call.getResults()) {
           LOGGER.debug(res.toString());
         }
@@ -849,7 +850,7 @@ public class KodiRPC {
 
       @Override
       public void onError(int code, String message, String hint) {
-        LOGGER.error("Error {}: {}", code, message);
+        LOGGER.error("Kodi RPC: Error {} - '{}'", code, message);
       }
     });
   }
@@ -866,7 +867,7 @@ public class KodiRPC {
 
       @Override
       public void onResponse(AbstractCall<MovieDetail> call) {
-        LOGGER.info("found " + call.getResults().size() + " movies");
+        LOGGER.info("Kodi RPC: found " + call.getResults().size() + " movies");
         for (MovieDetail res : call.getResults()) {
           LOGGER.debug(res.toString());
         }
@@ -874,7 +875,7 @@ public class KodiRPC {
 
       @Override
       public void onError(int code, String message, String hint) {
-        LOGGER.error("Error {}: {}", code, message);
+        LOGGER.error("Kodi RPC: Error {} - '{}'", code, message);
       }
     });
   }
@@ -885,7 +886,7 @@ public class KodiRPC {
 
       @Override
       public void onResponse(AbstractCall<TVShowDetail> call) {
-        LOGGER.info("found " + call.getResults().size() + " shows");
+        LOGGER.info("Kodi RPC: found " + call.getResults().size() + " shows");
         for (TVShowDetail res : call.getResults()) {
           LOGGER.debug(res.toString());
         }
@@ -893,7 +894,7 @@ public class KodiRPC {
 
       @Override
       public void onError(int code, String message, String hint) {
-        LOGGER.error("Error {}: {}", code, message);
+        LOGGER.error("Kodi RPC: Error {} - '{}'", code, message);
       }
     });
   }

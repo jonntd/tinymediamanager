@@ -46,6 +46,8 @@ public class TvShowARDetectorTask extends ARDetectorTask {
       return;
     }
 
+    LOGGER.info("Detecting aspect ratio for {} episodes", this.episodes.size());
+
     int filesTotal = this.episodes.stream().map(episode -> episode.getMediaFiles(MediaFileType.VIDEO).size()).reduce(Integer::sum).orElse(0);
 
     if (filesTotal > 0) {
@@ -61,11 +63,13 @@ public class TvShowARDetectorTask extends ARDetectorTask {
         analyze(mediaFile, idx++);
       }
       if (cancel) {
-        LOGGER.info("Abort queue");
+        LOGGER.debug("Abort queue");
         break;
       }
       episode.saveToDb();
       episode.writeNFO();
     }
+
+    LOGGER.info("Finished detecting aspect ratio - took {} ms", getRuntime());
   }
 }

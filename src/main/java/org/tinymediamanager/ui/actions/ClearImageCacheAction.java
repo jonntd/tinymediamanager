@@ -47,7 +47,7 @@ public class ClearImageCacheAction extends TmmAction {
         ImageCache.init();
       }
       catch (Exception e) {
-        LOGGER.warn(e.getMessage());
+        LOGGER.warn("Could not delete image cache - '{}'", e.getMessage());
       }
     }
   }

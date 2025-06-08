@@ -178,13 +178,13 @@ public class DynaComparator<E> implements Comparator<E>, Serializable {
       response = compareActual(v1, v2, returnType);
     }
     catch (NoSuchMethodException nsme) {
-      LOGGER.error("NoSuchMethodException occurred while comparing", nsme);
+      LOGGER.debug("NoSuchMethodException occurred while comparing", nsme);
     }
     catch (IllegalAccessException iae) {
-      LOGGER.error("IllegalAccessException occurred while comparing", iae);
+      LOGGER.debug("IllegalAccessException occurred while comparing", iae);
     }
     catch (InvocationTargetException ite) {
-      LOGGER.error("InvocationTargetException occurred while comparing", ite);
+      LOGGER.debug("InvocationTargetException occurred while comparing", ite);
     }
     return response;
   }

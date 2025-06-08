@@ -65,7 +65,7 @@ public class IdLinkPanel extends JPanel {
           TmmUIHelper.browseUrl(url);
         }
         catch (Exception e) {
-          LOGGER.error("browse to '{}' - {}", url, e.getMessage());
+          LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
         }

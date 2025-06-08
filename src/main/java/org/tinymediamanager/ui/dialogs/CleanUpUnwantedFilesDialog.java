@@ -267,7 +267,7 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Could not delete {} - {}", selectedFile.file, e.getMessage());
+        LOGGER.error("Could not delete '{}' - '{}'", selectedFile.file, e.getMessage());
       }
     }
 

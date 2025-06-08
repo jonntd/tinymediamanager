@@ -63,15 +63,16 @@ public class MovieMissingArtworkDownloadTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
-    LOGGER.info("Getting missing artwork");
+    LOGGER.info("Getting missing artwork for '{}' movies", moviesToScrape.size());
+
     initThreadPool(3, "scrapeMissingMovieArtwork");
-    start();
 
     for (Movie movie : moviesToScrape) {
       submitTask(new Worker(movie, scrapeOptions, metadataConfig));
     }
     waitForCompletionOrCancel();
-    LOGGER.info("Done getting missing artwork");
+
+    LOGGER.info("Finished getting missing artwork - took {} ms", getRuntime());
   }
 
   @Override
@@ -130,13 +131,16 @@ public class MovieMissingArtworkDownloadTask extends TmmThreadPool {
               artwork.addAll(artworkProvider.getArtwork(options));
             }
             catch (MissingIdException e) {
-              LOGGER.debug("missing ID for scraper {}", artworkProvider.getProviderInfo().getId());
+              LOGGER.info("Missing IDs for scraping '{}' with '{}'", movie.getTitle(), scraper.getId());
             }
             catch (ScrapeException e) {
-              LOGGER.error("getArtwork", e);
+              LOGGER.error("Could not scrape movie artwork for '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
               MessageManager.getInstance()
                   .pushMessage(
                       new Message(MessageLevel.ERROR, movie, "message.scrape.moviesetartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            }
+            catch (Exception e) {
+              LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movie.getTitle(), e);
             }
             finally {
               lock.writeLock().unlock();
@@ -145,18 +149,19 @@ public class MovieMissingArtworkDownloadTask extends TmmThreadPool {
 
           // now set & download the artwork
           if (!artwork.isEmpty()) {
+            LOGGER.info("Download missing artwork for movie '{}'", movie.getTitle());
             MovieArtworkHelper.downloadMissingArtwork(movie, artwork, metadataConfig);
           }
         }
         catch (Exception e) {
-          LOGGER.error("Thread crashed", e);
+          LOGGER.error("Could not get missing artwork for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, "MovieMissingArtwork", "message.scrape.threadcrashed",
                   new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 
-      // b) do we need to cleanup artwork filenames?
+      // b) do we need to clean up artwork filenames?
       MovieArtworkHelper.cleanupArtwork(movie, metadataConfig);
     }
   }

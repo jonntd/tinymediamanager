@@ -114,13 +114,13 @@ public abstract class PostProcessExecutor {
       int processValue = process.waitFor();
       String response = outputStream.toString(StandardCharsets.UTF_8);
       if (processValue != 0) {
-        LOGGER.warn("error at Script: '{}'", response);
-        throw new IOException("error running Script - code '" + processValue + "'");
+        LOGGER.error("Error running post-process script - '{}'", response);
+        throw new IOException("error running script - code '" + processValue + "'");
       }
       if (StringUtils.isNotBlank(response)) {
-        LOGGER.info(response);
+        LOGGER.debug(response);
       }
-      LOGGER.info("PostProcessing: END");
+      LOGGER.trace("PostProcessing: END");
     }
     finally {
       process.destroy();

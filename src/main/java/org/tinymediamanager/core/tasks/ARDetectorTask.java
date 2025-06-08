@@ -132,7 +132,7 @@ public abstract class ARDetectorTask extends TmmTask {
     }
 
     if (mediaFile.getExtension().equalsIgnoreCase("iso")) {
-      LOGGER.warn("Can not execute FFMPEG on ISO files (yet)");
+      LOGGER.warn("Can not execute FFmpeg on ISO files (yet)");
       return;
     }
 
@@ -178,7 +178,7 @@ public abstract class ARDetectorTask extends TmmTask {
       }
 
       if (videoInfo.duration <= 30) {
-        LOGGER.warn("video is not long enough to be analyzed '{}' - detected length: '{}' secs", mediaFile.getFilename(), totalDuration);
+        LOGGER.warn("Video '{}' is not long enough to be analyzed - detected length: '{}' secs", mediaFile.getFilename(), totalDuration);
         return;
       }
 
@@ -278,7 +278,7 @@ public abstract class ARDetectorTask extends TmmTask {
           LOGGER.trace("AR_Secondary:      {}", String.format("%.2f", videoInfo.arSecondary));
         }
 
-        LOGGER.info("Detected: {}x{} AR: {}{}", videoInfo.width, videoInfo.height, String.format("%.2f", videoInfo.arPrimary),
+        LOGGER.debug("Detected: {}x{} AR: {}{}", videoInfo.width, videoInfo.height, String.format("%.2f", videoInfo.arPrimary),
             videoInfo.arSecondary > 0f ? (" (AR2: " + String.format("%.2f", videoInfo.arSecondary)) + ")" : "");
       }
       else {
@@ -286,7 +286,7 @@ public abstract class ARDetectorTask extends TmmTask {
       }
     }
     catch (Exception ex) {
-      LOGGER.error("Error detecting aspect ratio", ex);
+      LOGGER.warn("Error detecting aspect ratio for '{}' - '{}'", mediaFile.getFileAsPath(), ex.getMessage());
       MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.failed", new String[] { ":", mediaFile.getFilename() }));
     }
@@ -305,7 +305,7 @@ public abstract class ARDetectorTask extends TmmTask {
           return null;
         }
         duration = mif.getDuration();
-        LOGGER.info("{}: total duration: {} - file duration: {} - filepos: {}", mif.getFilename(), totalDuration, duration, pos - totalDuration);
+        LOGGER.debug("{}: total duration: {} - file duration: {} - filepos: {}", mif.getFilename(), totalDuration, duration, pos - totalDuration);
         if (pos <= (totalDuration + duration)) {
           result = new MediaFilePosition(mif.getFileAsPath(), pos - totalDuration);
           break;
@@ -361,7 +361,7 @@ public abstract class ARDetectorTask extends TmmTask {
           LOGGER.trace("parsed duration: {}", videoInfo.duration);
         }
         catch (Exception e) {
-          LOGGER.warn("Could not parse dateformat '{}'", m.group(1));
+          LOGGER.debug("Could not parse dateformat '{}'", m.group(1));
         }
       }
       else {
@@ -379,7 +379,7 @@ public abstract class ARDetectorTask extends TmmTask {
 
         }
         catch (Exception e) {
-          LOGGER.warn("Could not parse resolution '{}x{}'", m.group(1), m.group(2));
+          LOGGER.debug("Could not parse resolution '{}x{}'", m.group(1), m.group(2));
         }
       }
       else {
@@ -400,7 +400,7 @@ public abstract class ARDetectorTask extends TmmTask {
           LOGGER.trace("parsed SAR: {}", videoInfo.arSample);
         }
         catch (Exception e) {
-          LOGGER.warn("Could not parse SAR '{}:{}'", m.group(1), m.group(2));
+          LOGGER.debug("Could not parse SAR '{}:{}'", m.group(1), m.group(2));
         }
       }
       else {
@@ -459,8 +459,8 @@ public abstract class ARDetectorTask extends TmmTask {
         checkPlausibility(result, width, height, blackLeft, blackRight, blackTop, blackBottom, barstxt, seconds, increment, videoInfo);
       }
       else {
-        // got a result - but did not match. lets see...
-        LOGGER.warn("Got a result - but it did no match!");
+        // got a result - but did not match. let's see...
+        LOGGER.debug("Got a result - but it did no match!");
         LOGGER.trace("TRACE: \\n{}", result);
       }
     }
@@ -642,7 +642,7 @@ public abstract class ARDetectorTask extends TmmTask {
     boolean roundNearest = false;
 
     if (this.arCustomList.isEmpty()) {
-      LOGGER.info("Aspect ratio list is empty. Round to two decimal points ");
+      LOGGER.debug("Aspect ratio list is empty. Round to two decimal points ");
       return Math.round(ar * 100f) / 100f;
     }
 
@@ -717,7 +717,7 @@ public abstract class ARDetectorTask extends TmmTask {
 
   protected boolean canRun() {
     if (!FFmpeg.isAvailable()) {
-      LOGGER.warn("Would have executed aspect ration detection - unfortunately, FFMpeg could not be found.");
+      LOGGER.warn("Would have executed aspect ration detection - unfortunately, FFmpeg could not be found.");
       MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "task.ard", "message.ard.ffmpegmissing"));
       return false;
     }

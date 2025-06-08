@@ -58,9 +58,9 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
-    LOGGER.info("Getting missing movieset artwork");
+    LOGGER.info("Getting missing artwork for '{}' movie sets", moviesToScrape.size());
+
     initThreadPool(3, "scrapeMissingMovieSetArtwork");
-    start();
 
     for (MovieSet movieSet : moviesToScrape) {
       // first do the cleanup of all artwork types
@@ -72,7 +72,8 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
       }
     }
     waitForCompletionOrCancel();
-    LOGGER.info("Done getting missing artwork");
+
+    LOGGER.info("Finished getting missing artwork - took {} ms", getRuntime());
   }
 
   @Override
@@ -116,10 +117,10 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
               artwork.addAll(artworkProvider.getArtwork(options));
             }
             catch (MissingIdException ignored) {
-              // no need to log a missing ID here
+              LOGGER.info("Missing IDs for scraping movie set artwork '{}' with '{}'", movieSet.getTitle(), scraper.getId());
             }
             catch (ScrapeException e) {
-              LOGGER.error("getArtwork", e);
+              LOGGER.error("Could not scrape movie set artwork of '{}' with '{}' - '{}'", movieSet.getTitle(), scraper.getId(), e.getMessage());
               MessageManager.getInstance()
                   .pushMessage(new Message(MessageLevel.ERROR, movieSet, "message.scrape.moviesetartworkfailed",
                       new String[] { ":", e.getLocalizedMessage() }));
@@ -136,7 +137,7 @@ public class MovieSetMissingArtworkDownloadTask extends TmmThreadPool {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
+        LOGGER.error("Could not scrape movie set '{}' - '{}'", movieSet.getTitle(), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, "MovieMissingArtwork", "message.scrape.threadcrashed",
                 new String[] { ":", e.getLocalizedMessage() }));

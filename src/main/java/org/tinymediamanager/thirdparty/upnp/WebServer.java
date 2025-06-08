@@ -46,7 +46,7 @@ class WebServer extends NanoHTTPD {
   @Override
   public Response serve(IHTTPSession session) {
     String uri = session.getUri();
-    LOGGER.info("Incoming: {} {} {}", session.getRemoteIpAddress(), session.getMethod(), uri);
+    LOGGER.debug("Incoming: {} {} {}", session.getRemoteIpAddress(), session.getMethod(), uri);
 
     if (uri.startsWith("/upnp")) {
       String[] path = StringUtils.split(uri, '/');
@@ -78,7 +78,7 @@ class WebServer extends NanoHTTPD {
           }
         }
         catch (IllegalArgumentException e) {
-          LOGGER.warn("Seems not to be a valid MediaEntity", e);
+          LOGGER.debug("Seems not to be a valid MediaEntity", e);
         }
       }
     }
@@ -201,7 +201,7 @@ class WebServer extends NanoHTTPD {
       }
     }
     catch (IOException ioe) {
-      LOGGER.error("Error reading file", ioe);
+      LOGGER.error("UPnP: Error reading file '{}' - '{}'", file.getFileAsPath(), ioe.getMessage());
       res = newFixedLengthResponse(Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: Reading file failed.");
     }
 

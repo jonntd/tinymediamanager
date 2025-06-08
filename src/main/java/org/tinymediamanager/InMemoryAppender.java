@@ -19,6 +19,7 @@ package org.tinymediamanager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,7 +83,7 @@ public class InMemoryAppender extends AppenderBase<ILoggingEvent> {
 
   public String getLog() {
     // output the events as formatted by our layout
-    ArrayList<ILoggingEvent> clone = new ArrayList<>(loggingEvents);
+    List<ILoggingEvent> clone = new ArrayList<>(loggingEvents);
 
     try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
       for (ILoggingEvent event : clone) {
@@ -91,7 +92,7 @@ public class InMemoryAppender extends AppenderBase<ILoggingEvent> {
       return out.toString();
     }
     catch (IOException e) {
-      LOGGER.error("could not write trace logging: {}", e.getMessage());
+      LOGGER.debug("Could not get logs - '{}'", e.getMessage());
     }
 
     return "";

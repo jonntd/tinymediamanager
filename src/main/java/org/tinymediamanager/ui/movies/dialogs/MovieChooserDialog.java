@@ -223,7 +223,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
           }
           catch (Exception ex) {
-            LOGGER.error("open file", ex);
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
@@ -479,7 +479,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           }
         }
         catch (Exception ex) {
-          LOGGER.warn(ex.getMessage());
+          LOGGER.debug("scraping", ex);
         }
       }
     });

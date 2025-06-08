@@ -116,7 +116,7 @@ public class TmmHttpServer {
         responseMessage = commandResponse.getResponseMessage();
       }
       catch (Exception e) {
-        LOGGER.error("could not process command '{}' - '{}'", commandHandler.getClass().getName(), e.getMessage());
+        LOGGER.error("Could not process command '{}' - '{}'", commandHandler.getClass().getName(), e.getMessage());
         responseCode = 500;
         responseMessage = e.getMessage();
       }
@@ -140,7 +140,7 @@ public class TmmHttpServer {
       out.write(body.getBytes(StandardCharsets.UTF_8));
     }
     catch (IOException ex) {
-      LOGGER.error("could not send response - '{}'", ex.getMessage());
+      LOGGER.error("Could not send response - '{}'", ex.getMessage());
     }
   }
 

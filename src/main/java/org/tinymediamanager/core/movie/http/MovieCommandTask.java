@@ -159,7 +159,7 @@ class MovieCommandTask extends TmmThreadPool {
 
           }
           catch (Exception e) {
-            LOGGER.error("Could not parse index from command - {}", e.getMessage());
+            LOGGER.debug("Could not parse data source index from command - '{}'", e.getMessage());
           }
         }
         break;
@@ -172,7 +172,7 @@ class MovieCommandTask extends TmmThreadPool {
   private void reloadMediaInfo() {
     for (AbstractCommandHandler.Command command : commands) {
       if ("reloadMediaInfo".equals(command.action)) {
-        LOGGER.info("reload media info... - {}", command);
+        LOGGER.debug("HTTP API: Reload media info - '{}'", command);
         List<Movie> movies = getMoviesForScope(command.scope);
 
         if (!movies.isEmpty()) {
@@ -191,7 +191,7 @@ class MovieCommandTask extends TmmThreadPool {
   private void aspectRatioDetection() {
     for (AbstractCommandHandler.Command command : commands) {
       if ("detectAspectRatio".equals(command.action)) {
-        LOGGER.info("detecting aspect ratio... - {}", command);
+        LOGGER.debug("HTTP API: Detecting aspect ratio - '{}'", command);
         List<Movie> movies = getMoviesForScope(command.scope);
 
         if (!movies.isEmpty()) {
@@ -288,7 +288,7 @@ class MovieCommandTask extends TmmThreadPool {
 
     for (AbstractCommandHandler.Command command : commands) {
       if ("downloadTrailer".equals(command.action)) {
-        LOGGER.info("downloading trailers... - {}", command);
+        LOGGER.debug("HTTP API: Downloading trailers - '{}'", command);
 
         // get movies with missing trailer in this language
         boolean onlyMissingTrailer = true;
@@ -340,7 +340,7 @@ class MovieCommandTask extends TmmThreadPool {
         }
 
         List<Movie> moviesToProcess = new ArrayList<>();
-        LOGGER.info("downloading missing subtitles in - '{}'...", command);
+        LOGGER.debug("HTTP API: Downloading missing subtitles - '{}'", command);
 
         // get movies with missing subtitles in this language
         boolean onlyMissingSubs = true;
@@ -476,7 +476,7 @@ class MovieCommandTask extends TmmThreadPool {
         }
 
         try {
-          LOGGER.info("exporting movies - '{}'...", command);
+          LOGGER.debug("HTTP API: Exporting movies - '{}'", command);
           setTaskName(TmmResourceBundle.getString("movie.export"));
           publishState(TmmResourceBundle.getString("movie.export"), getProgressDone());
 
@@ -486,7 +486,7 @@ class MovieCommandTask extends TmmThreadPool {
 
         }
         catch (Exception e) {
-          LOGGER.error("could not export - '{}", e.getMessage());
+          LOGGER.debug("Could not export movies - '{}'", e.getMessage());
         }
 
         // done

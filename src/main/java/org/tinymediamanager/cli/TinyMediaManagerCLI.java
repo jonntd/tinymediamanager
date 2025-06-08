@@ -82,7 +82,7 @@ public class TinyMediaManagerCLI implements Runnable {
         return false;
       }
       catch (Exception e1) {
-        LOGGER.warn("could not handle picocli exception - {}", e1.getMessage());
+        LOGGER.error("Could not handle picocli exception - '{}'", e1.getMessage());
         return false;
       }
     }
@@ -151,14 +151,13 @@ public class TinyMediaManagerCLI implements Runnable {
         }
         catch (InterruptedException e) {
           // just finish
-          System.out.println("stop");
         }
         catch (Exception e) {
-          LOGGER.error("could not start webserver: {}", e.getMessage());
+          LOGGER.error("Could not start web server: '{}'", e.getMessage());
         }
       }
       else {
-        LOGGER.error("HTTP API is not enabled in the settings!");
+        LOGGER.warn("HTTP API is not enabled in the settings!");
       }
     }
   }

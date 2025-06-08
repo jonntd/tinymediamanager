@@ -405,7 +405,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     // also rebuild the seasons and fire the event for all episodes too
     if (!oldValue.equals(newValue)) {
-      LOGGER.info("Switched episodeGroup '{}' -> '{}' for show {}", oldValue, newValue, getTitle());
+      LOGGER.debug("Switched episodeGroup '{}' -> '{}' for show {}", oldValue, newValue, getTitle());
       // remove all episodes from all seasons
       seasons.forEach(TvShowSeason::removeAllEpisodes);
 
@@ -1029,15 +1029,9 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       return;
     }
 
-    // check against null metadata (e.g. aborted request)
-    if (metadata == null) {
-      LOGGER.error("metadata was null");
-      return;
-    }
-
     // check if metadata has at least an id (aka it is not empty)
-    if (metadata.getIds().isEmpty()) {
-      LOGGER.warn("wanted to save empty metadata for {}", getTitle());
+    if (metadata == null || metadata.getIds().isEmpty()) {
+      LOGGER.warn("Wanted to save empty metadata for TV show '{}'", getTitle());
       return;
     }
 
@@ -1348,13 +1342,8 @@ public class TvShow extends MediaEntity implements IMediaInformation {
         default -> new TvShowToKodiConnector(this);
       };
 
-      try {
-        connector.write(nfoNamings);
-        firePropertyChange(HAS_NFO_FILE, false, true);
-      }
-      catch (Exception e) {
-        LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-      }
+      connector.write(nfoNamings);
+      firePropertyChange(HAS_NFO_FILE, false, true);
     }
   }
 

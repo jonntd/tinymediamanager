@@ -72,7 +72,7 @@ public class MovieSetExporter extends MediaEntityExporter {
    */
   @Override
   public <T extends MediaEntity> void export(List<T> movieSetsToExport, Path exportDir) throws Exception {
-    LOGGER.info("preparing movie set export; using {}", properties.getProperty("name"));
+    LOGGER.debug("preparing movie set export; using {}", properties.getProperty("name"));
 
     if (cancel) {
       return;
@@ -101,7 +101,7 @@ public class MovieSetExporter extends MediaEntityExporter {
     }
 
     // create the list
-    LOGGER.info("generating movie set list");
+    LOGGER.debug("generating movie set list");
     Utils.deleteFileSafely(listExportFile);
 
     Map<String, Object> root = new HashMap<>();
@@ -109,7 +109,7 @@ public class MovieSetExporter extends MediaEntityExporter {
 
     String output = engine.transform(listTemplate, root);
     Utils.writeStringToFile(listExportFile, output);
-    LOGGER.info("movie set list generated: {}", listExportFile);
+    LOGGER.debug("movie set list generated: {}", listExportFile);
 
     if (StringUtils.isNotBlank(detailTemplate)) {
       for (T me : movieSetsToExport) {
@@ -176,7 +176,7 @@ public class MovieSetExporter extends MediaEntityExporter {
       }
     }
     catch (IOException ex) {
-      LOGGER.error("could not copy resources: ", ex);
+      LOGGER.warn("Could not copy resources - '{}'", ex.getMessage());
     }
   }
 
@@ -350,7 +350,7 @@ public class MovieSetExporter extends MediaEntityExporter {
           }
         }
         catch (Exception e) {
-          LOGGER.error("could not copy artwork file: ", e);
+          LOGGER.error("Could not copy artwork file - '{}'", e.getMessage());
           if (StringUtils.isNotBlank((String) parameters.get("default"))) {
             return (String) parameters.get("default");
           }

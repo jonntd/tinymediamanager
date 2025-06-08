@@ -1356,7 +1356,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
             Files.move(oldCache, newCache);
           }
           catch (IOException e) {
-            LOGGER.warn("Error moving cached file - '{}'", e.getMessage());
+            LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
           }
         }
       }

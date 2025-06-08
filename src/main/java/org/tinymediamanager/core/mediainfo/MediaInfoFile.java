@@ -184,7 +184,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
       return Paths.get(path, readLine);
     }
     catch (Exception | Error e) {
-      LOGGER.error("Mediainfo could not read stream file: {} - {}", file, e.getMessage());
+      LOGGER.debug("Mediainfo could not read stream file: {} - {}", file, e.getMessage());
     }
 
     return file;
@@ -203,7 +203,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
 
     try (MediaInfo mediaInfo = new MediaInfo()) {
       if (!mediaInfo.open(file)) {
-        LOGGER.error("Mediainfo could not open file: {}", file);
+        LOGGER.error("MediaInfo could not open file  '{}'", file);
       }
       else {
         setSnapshot(mediaInfo.snapshot());
@@ -211,7 +211,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
     }
     // sometimes also an error is thrown
     catch (Exception | Error e) {
-      LOGGER.error("Mediainfo could not open file: {} - {}", file, e.getMessage());
+      LOGGER.error("MediaInfo could not open file '{}' - '{}'", file, e.getMessage());
     }
   }
 

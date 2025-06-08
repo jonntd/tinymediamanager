@@ -51,14 +51,16 @@ public class TvShowChangeDatasourceTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
+    LOGGER.info("Changing data source for '{}' TV shows", tvShowsToChange.size());
+
     initThreadPool(1, "changeDataSource");
-    start();
 
     for (TvShow tvShow : tvShowsToChange) {
       submitTask(new Worker(tvShow));
     }
     waitForCompletionOrCancel();
-    LOGGER.info("Done changing data sources");
+
+    LOGGER.info("Finished changing data sources - took {} ms", getRuntime());
   }
 
   @Override
@@ -75,12 +77,13 @@ public class TvShowChangeDatasourceTask extends TmmThreadPool {
 
     @Override
     public void run() {
-      LOGGER.info("changing data source of TV show '{}' to '{}", tvShow.getTitle(), datasource);
-
       if (tvShow.getDataSource().equals(datasource)) {
-        LOGGER.warn("old and new data source is the same");
+        LOGGER.debug("old and new data source is the same");
         return;
       }
+
+      LOGGER.info("changing data source of TV show '{}' to '{}", tvShow.getTitle(), datasource);
+
       moveTvShow();
     }
 
@@ -116,12 +119,12 @@ public class TvShowChangeDatasourceTask extends TmmThreadPool {
           tvShow.cacheImages();
         }
         else {
-          LOGGER.error("Could not move to destination '{}' - NOT changing datasource", destDir);
+          LOGGER.error("Could not move TV show '{}' to destination '{}' - NOT changing datasource", tvShow.getTitle(), destDir);
           MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
         }
       }
       catch (Exception e) {
-        LOGGER.error("error moving folder: ", e);
+        LOGGER.error("Could not move TV show '{}' to destination '{}' ('{}') - NOT changing datasource", tvShow.getTitle(), destDir, e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove",
                 new String[] { ":", e.getLocalizedMessage() }));

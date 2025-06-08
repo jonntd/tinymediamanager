@@ -219,7 +219,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + tvShow.getPathNIO().resolve(nfoFilename) + "'", e);
+        LOGGER.error("Could not write TV show NFO file '{}' - '{}'", tvShow.getPathNIO().resolve(nfoFilename), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -610,7 +610,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
           root.appendChild(episodeguide);
         }
         catch (Exception e) {
-          LOGGER.warn("could not set episodeguide");
+          LOGGER.debug("could not set episodeguide");
         }
       }
     }
@@ -628,7 +628,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       episodeguide.setTextContent(new ObjectMapper().writeValueAsString(ids));
     }
     catch (Exception e) {
-      LOGGER.warn("could not create episodeguide - '{}'", e.getMessage());
+      LOGGER.debug("could not create episodeguide - '{}'", e.getMessage());
     }
 
     return episodeguide;
@@ -955,7 +955,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }

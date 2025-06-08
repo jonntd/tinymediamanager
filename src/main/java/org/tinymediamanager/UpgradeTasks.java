@@ -120,7 +120,7 @@ public abstract class UpgradeTasks {
           Files.move(wrongExtra, correctExtra, StandardCopyOption.REPLACE_EXISTING);
         }
         catch (IOException e) {
-          LOGGER.warn("Could not move launcher-extra.yml from {} to {}", wrongExtra, correctExtra);
+          LOGGER.warn("Could not move launcher-extra.yml from '{}' to '{}'", wrongExtra, correctExtra);
         }
       }
     }
@@ -371,7 +371,7 @@ public abstract class UpgradeTasks {
       pb.start();
     }
     catch (Exception e) {
-      LOGGER.error("Cannot spawn process:", e);
+      LOGGER.error("Could not restart tinyMediaManager", e);
     }
 
     TinyMediaManager.shutdownLogger();

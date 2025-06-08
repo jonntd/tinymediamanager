@@ -146,7 +146,7 @@ public class MediaEntityImageFetcherTask implements Runnable {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("fetch image {} - {}", url, e.getMessage());
+      LOGGER.error("Could not fetch image '{}' - '{}'", url, e.getMessage());
       MessageManager.getInstance()
           .pushMessage(
               new Message(MessageLevel.ERROR, "ArtworkDownload", "message.artwork.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));

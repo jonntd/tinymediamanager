@@ -46,15 +46,16 @@ public class TvShowPostProcessExecutor extends PostProcessExecutor {
 
     List<TvShow> selectedTvShows = TvShowUIModule.getInstance().getSelectionModel().getSelectedTvShows();
 
-    for (TvShow tvs : selectedTvShows) {
-      LOGGER.info("PostProcessing: START {}", postProcess);
+    for (TvShow tvShow : selectedTvShows) {
+      LOGGER.info("Executing post process '{}' for TV show '{}'", postProcess.getName(), tvShow.getTitle());
+
       Map<String, Object> mappings = new HashMap<>();
-      mappings.put("tvShow", tvs);
+      mappings.put("tvShow", tvShow);
 
       String[] command = substituteTokens(mappings);
 
       try {
-        executeCommand(command, tvs);
+        executeCommand(command, tvShow);
       }
       catch (Exception ignored) {
         // already logged in executeCommand

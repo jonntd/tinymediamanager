@@ -60,8 +60,9 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
+    LOGGER.info("Downloading theme for {} TV shows", tvShows.size());
+
     initThreadPool(3, "themeDownload");
-    start();
 
     for (TvShow tvShow : tvShows) {
       submitTask(new Worker(tvShow, overwrite));
@@ -69,7 +70,7 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
 
     waitForCompletionOrCancel();
 
-    LOGGER.info("Done downloading themes");
+    LOGGER.info("Finished downloading themes - took {} ms", getRuntime());
   }
 
   @Override
@@ -130,8 +131,8 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
               url = new Url(urlAsString);
             }
             catch (Exception e) {
-              LOGGER.error("url is invalid {} - {}", urlAsString, e.getMessage());
-              throw e;
+              LOGGER.debug("url is invalid {} - {}", urlAsString, e.getMessage());
+              return;
             }
 
             try (InputStream is = url.getInputStreamWithRetry(5); FileOutputStream outputStream = new FileOutputStream(tempFile.toFile())) {
@@ -174,7 +175,7 @@ public class TvShowThemeDownloadTask extends TmmThreadPool {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
+        LOGGER.error("Could not download theme for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(
                 new Message(MessageLevel.ERROR, "ThemeDownloader", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));

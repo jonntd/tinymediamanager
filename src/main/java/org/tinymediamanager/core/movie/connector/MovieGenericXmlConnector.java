@@ -216,7 +216,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + movie.getPathNIO().resolve(nfoFilename) + "'", e);
+        LOGGER.error("Could not write movie NFO file '{}' - '{}'", movie.getPathNIO().resolve(nfoFilename), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -1013,7 +1013,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }

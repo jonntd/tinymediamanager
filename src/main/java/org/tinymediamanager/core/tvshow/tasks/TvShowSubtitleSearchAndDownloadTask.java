@@ -86,8 +86,9 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
+    LOGGER.info("Downloading subtitles for {} episodes", episodes.size());
+
     initThreadPool(3, "searchAndDownloadSubtitles");
-    start();
 
     for (TvShowEpisode episode : episodes) {
       submitTask(new Worker(episode));
@@ -95,7 +96,7 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
 
     waitForCompletionOrCancel();
 
-    LOGGER.info("Done searching and downloading subtitles");
+    LOGGER.info("Finished downloading subtitles - took {} ms", getRuntime());
   }
 
   @Override
@@ -174,17 +175,25 @@ public class TvShowSubtitleSearchAndDownloadTask extends TmmThreadPool {
                 .addDownloadTask(new SubtitleDownloadTask(result.getUrl(), episode.getPathNIO().resolve(filename), episode, lang));
           }
           catch (MissingIdException ignored) {
+            LOGGER.info("Missing IDs for scraping subtitles of TV show '{}', S{} E{} with '{}'", episode.getTvShow().getTitle(), episode.getSeason(),
+                episode.getEpisode(), scraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("getSubtitles", e);
+            LOGGER.error("Could not scrape subtitle of TV show '{}', episode '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+                e.getMessage());
             MessageManager.getInstance()
                 .pushMessage(
                     new Message(MessageLevel.ERROR, episode, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
           }
+          catch (Exception e) {
+            LOGGER.error("Unforeseen error in subtitle scrape for TV show '{}', S{} E{}", episode.getTvShow().getTitle(), episode.getSeason(),
+                episode.getEpisode(), e);
+          }
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
+        LOGGER.error("Could not scrape subtitle of TV show '{}', episode '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+            e.getMessage());
         MessageManager.getInstance()
             .pushMessage(
                 new Message(MessageLevel.ERROR, "SubtitleDownloader", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));

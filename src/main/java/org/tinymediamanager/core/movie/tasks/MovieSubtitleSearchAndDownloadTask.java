@@ -20,7 +20,6 @@ import static org.tinymediamanager.scraper.entities.MediaType.MOVIE;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -95,8 +94,9 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
       return;
     }
 
+    LOGGER.info("Downloading subtitles for {} movies", movies.size());
+
     initThreadPool(3, "searchAndDownloadSubtitles");
-    start();
 
     for (Movie movie : movies) {
       submitTask(new Worker(movie));
@@ -104,7 +104,7 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
 
     waitForCompletionOrCancel();
 
-    LOGGER.info("Done searching and downloading subtitles");
+    LOGGER.info("Finished downloading subtitles - took {} ms", getRuntime());
   }
 
   @Override
@@ -164,10 +164,10 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
                 .addDownloadTask(new SubtitleDownloadTask(result.getUrl(), movie.getPathNIO().resolve(filename), movie, lang));
           }
           catch (MissingIdException ignored) {
-            // no need to log here
+            LOGGER.info("Missing IDs for scraping movie subtitles of '{}' with '{}'", movie.getTitle(), scraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("getSubtitles", e);
+            LOGGER.error("Could not scrape movie subtitles of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
           }
@@ -202,7 +202,7 @@ public class MovieSubtitleSearchAndDownloadTask extends TmmThreadPool {
           return true;
         }
         return false;
-      }).collect(Collectors.toList());
+      }).toList();
 
       if (filteredResults.isEmpty()) {
         return null;

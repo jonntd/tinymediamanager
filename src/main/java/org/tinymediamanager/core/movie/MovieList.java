@@ -329,7 +329,7 @@ public final class MovieList extends AbstractModelObject {
         EventBus.publishEvent(TOPIC_MOVIES, Event.createRemoveEvent(movie));
       }
       catch (Exception e) {
-        LOGGER.error("Error removing movie from DB: {}", e.getMessage());
+        LOGGER.error("Error removing movie '{}' from DB - '{}'", movie.getTitle(), e.getMessage());
       }
 
       // and remove the image cache
@@ -373,7 +373,7 @@ public final class MovieList extends AbstractModelObject {
         EventBus.publishEvent(TOPIC_MOVIES, Event.createRemoveEvent(movie));
       }
       catch (Exception e) {
-        LOGGER.error("Error removing movie from DB: {}", e.getMessage());
+        LOGGER.error("Error removing movie '{}' from DB - '{}'", movie.getTitle(), e.getMessage());
       }
 
       // and remove the image cache
@@ -419,7 +419,7 @@ public final class MovieList extends AbstractModelObject {
 
         // some sanity checks
         if (isCorrupt(movie)) {
-          LOGGER.error("Removing corrupt movie: {}", json);
+          LOGGER.debug("Removing corrupt movie: {}", json);
           toRemove.add(uuid);
           return;
         }
@@ -427,13 +427,13 @@ public final class MovieList extends AbstractModelObject {
         // for performance reasons we add movies directly
         if (!loadedMoviesWithoutDuplicates.add(movie)) {
           // already in there?! remove dupe
-          LOGGER.info("removed duplicate '{}'", movie.getTitle());
+          LOGGER.debug("removed duplicate '{}'", movie.getTitle());
           toRemove.add(uuid);
         }
       }
       catch (Exception e) {
-        LOGGER.warn("problem decoding movie json string: {}", e.getMessage());
-        LOGGER.info("dropping corrupt movie: {}", json);
+        LOGGER.debug("problem decoding movie json string: {}", json);
+        LOGGER.warn("Dropping corrupt movie from database because of '{}'", e.getMessage());
         toRemove.add(uuid);
       }
     });
@@ -470,8 +470,8 @@ public final class MovieList extends AbstractModelObject {
         lock.writeLock().unlock();
       }
       catch (Exception e) {
-        LOGGER.warn("problem decoding movie set json string: {}", e.getMessage());
-        LOGGER.info("dropping corrupt movie set");
+        LOGGER.debug("problem decoding movie set json string: {}", e.getMessage());
+        LOGGER.info("Dropping corrupt movie set");
         lock.writeLock().lock();
         toRemove.add(uuid);
         lock.writeLock().unlock();
@@ -507,19 +507,19 @@ public final class MovieList extends AbstractModelObject {
 
   private boolean isCorrupt(Movie movie) {
     if (movie.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
-      LOGGER.error("Movie without MediaFiles - dropping");
+      LOGGER.debug("Movie without MediaFiles - dropping");
       return true;
     }
     if (StringUtils.isBlank(movie.getPath())) {
-      LOGGER.error("Movie without path - dropping");
+      LOGGER.debug("Movie without path - dropping");
       return true;
     }
     if (StringUtils.isBlank(movie.getDataSource())) {
-      LOGGER.error("Movie without datasource - dropping");
+      LOGGER.debug("Movie without datasource - dropping");
       return true;
     }
     if (TmmOsUtils.hasInvalidCharactersForFilesystem(movie.getPath())) {
-      LOGGER.error("Movie with invalid characters for this OS - dropping");
+      LOGGER.debug("Movie with invalid characters for this OS - dropping");
       return true;
     }
     return false;
@@ -537,7 +537,7 @@ public final class MovieList extends AbstractModelObject {
 
     if (isCorrupt(movie)) {
       // not valid -> remove
-      LOGGER.info("Cannot persist movie \"{}\" - dropping", movie.getTitle());
+      LOGGER.warn("Cannot persist movie '{}' - dropping", movie.getTitle());
       removeMovies(Collections.singletonList(movie));
     }
     else {
@@ -548,7 +548,7 @@ public final class MovieList extends AbstractModelObject {
         updateLists(Collections.singletonList(movie));
       }
       catch (Exception e) {
-        LOGGER.error("failed to persist movie: {} - {}", movie.getTitle(), e.getMessage());
+        LOGGER.error("Failed to persist movie '{}' - '{}'", movie.getTitle(), e.getMessage());
       }
     }
   }
@@ -560,7 +560,7 @@ public final class MovieList extends AbstractModelObject {
       EventBus.publishEvent(TOPIC_MOVIE_SETS, Event.createSaveEvent(movieSet));
     }
     catch (Exception e) {
-      LOGGER.error("failed to persist movie set: {}", movieSet.getTitle());
+      LOGGER.error("Failed to persist movie set '{}' - '{}'", movieSet.getTitle(), e.getMessage());
     }
   }
 
@@ -645,7 +645,7 @@ public final class MovieList extends AbstractModelObject {
       } while (path != null);
     }
 
-    LOGGER.info("re-evaluating MMD for {} movies...", movieList.size());
+    LOGGER.debug("re-evaluating MMD for {} movies...", movieList.size());
     for (Movie movie : movieList) {
       boolean old = movie.isMultiMovieDir();
 
@@ -812,42 +812,48 @@ public final class MovieList extends AbstractModelObject {
       }
     }
 
-    LOGGER.info("=====================================================");
-    LOGGER.info("Searching with scraper: {}", provider.getProviderInfo().getId());
-    LOGGER.info("options: {}", options);
-    LOGGER.info("=====================================================");
+    LOGGER.info("Search '{}' for movie title '{}'", provider.getProviderInfo().getId(), searchTerm);
+
+    LOGGER.debug("=====================================================");
+    LOGGER.debug("Searching with scraper: {}", provider.getProviderInfo().getId());
+    LOGGER.debug("options: {}", options);
+    LOGGER.debug("=====================================================");
     sr.addAll(provider.search(options));
 
     // Before retrying ALL scrapers, use this as first fallback:
     // check if title starts with a year, and remove/retry...
 
     if (sr.isEmpty() && options.getSearchQuery().matches("^\\d{4}.*")) {
+      LOGGER.info("Nothing found - trying to search without year in title");
+
       MovieSearchAndScrapeOptions o = new MovieSearchAndScrapeOptions(options); // copy
       o.setSearchQuery(options.getSearchQuery().substring(4));
-      LOGGER.info("=====================================================");
-      LOGGER.info("Searching again without year in title: {}", provider.getProviderInfo().getId());
-      LOGGER.info("options: {}", o);
-      LOGGER.info("=====================================================");
+      LOGGER.debug("=====================================================");
+      LOGGER.debug("Searching again without year in title: {}", provider.getProviderInfo().getId());
+      LOGGER.debug("options: {}", o);
+      LOGGER.debug("=====================================================");
       sr.addAll(provider.search(o));
     }
 
     // if result is empty, try all scrapers
     if (sr.isEmpty() && MovieModuleManager.getInstance().getSettings().isScraperFallback()) {
+      LOGGER.info("Nothing found - trying to search with other scrapers");
+
       for (MediaScraper ms : getAvailableMediaScrapers()) {
         if (provider.getProviderInfo().equals(ms.getMediaProvider().getProviderInfo())
             || ms.getMediaProvider().getProviderInfo().getName().startsWith("Kodi") || !ms.getMediaProvider().isActive()) {
           continue;
         }
-        LOGGER.info("no result yet - trying alternate scraper: {}", ms.getName());
+        LOGGER.debug("no result yet - trying alternate scraper: {}", ms.getName());
         try {
-          LOGGER.info("=====================================================");
-          LOGGER.info("Searching with alternate scraper: '{}', '{}'", ms.getMediaProvider().getId(), provider.getProviderInfo().getVersion());
-          LOGGER.info("options: {}", options);
-          LOGGER.info("=====================================================");
+          LOGGER.debug("=====================================================");
+          LOGGER.debug("Searching with alternate scraper: '{}', '{}'", ms.getMediaProvider().getId(), provider.getProviderInfo().getVersion());
+          LOGGER.debug("options: {}", options);
+          LOGGER.debug("=====================================================");
           sr.addAll(((IMovieMetadataProvider) ms.getMediaProvider()).search(options));
         }
         catch (ScrapeException e) {
-          LOGGER.error("searchMovieFallback - '{}'", e.getMessage());
+          LOGGER.error("Could not search for movie '{}' with '{}' - '{}'", searchTerm, ms.getId(), e.getMessage());
           // just swallow those errors here
         }
 
@@ -856,6 +862,8 @@ public final class MovieList extends AbstractModelObject {
         }
       }
     }
+
+    LOGGER.info("Found '{}' results for movie title '{}'", sr.size(), searchTerm);
 
     return new ArrayList<>(sr);
   }
@@ -1384,7 +1392,7 @@ public final class MovieList extends AbstractModelObject {
           movie.setDuplicate();
           Movie movie2 = duplicates.get(id);
           movie2.setDuplicate();
-          LOGGER.info("DUPECHECK: movies have the same ID ({}): {} <=> {}", id, movie.getTitle(), movie2.getTitle());
+          LOGGER.info("Duplicate check: movies have the same ID ({}): {} <=> {}", id, movie.getTitle(), movie2.getTitle());
         }
         else {
           // no, store movie
@@ -1411,7 +1419,7 @@ public final class MovieList extends AbstractModelObject {
           movie.setDuplicate();
           Movie movie2 = duplicates.get(crc);
           movie2.setDuplicate();
-          LOGGER.info("DUPECHECK: files have the same hash ({}): {} <=> {}", crc, movie.getMainFile().getFileAsPath().toAbsolutePath(),
+          LOGGER.info("Duplicate check: files have the same hash ({}): {} <=> {}", crc, movie.getMainFile().getFileAsPath().toAbsolutePath(),
               movie2.getMainFile().getFileAsPath().toAbsolutePath());
         }
         else {
@@ -1494,7 +1502,7 @@ public final class MovieList extends AbstractModelObject {
       EventBus.publishEvent(TOPIC_MOVIE_SETS, Event.createRemoveEvent(movieSet));
     }
     catch (Exception e) {
-      LOGGER.error("Error removing movie set from DB: {}", e.getMessage());
+      LOGGER.error("Error removing movie set '{}' from DB - '{}'", movieSet.getTitle(), e.getMessage());
     }
 
     firePropertyChange(Constants.REMOVED_MOVIE_SET, null, movieSet);
@@ -1553,8 +1561,11 @@ public final class MovieList extends AbstractModelObject {
     }
 
     if (!moviesToRemove.isEmpty()) {
+      LOGGER.debug("movies without VIDEOs detected");
+      for (Movie movie : moviesToRemove) {
+        LOGGER.debug("  -> '{}' / '{}'", movie.getTitle(), movie.getPathNIO());
+      }
       removeMovies(moviesToRemove);
-      LOGGER.warn("movies without VIDEOs detected");
 
       // and push a message
       // also delay it so that the UI has time to start up
@@ -1618,7 +1629,7 @@ public final class MovieList extends AbstractModelObject {
       Files.createFile(stubFile);
     }
     catch (IOException e) {
-      LOGGER.error("could not create stub file - {}", e.getMessage());
+      LOGGER.error("Could not create stub file '{}' - '{}'", stubFile, e.getMessage());
       return;
     }
 

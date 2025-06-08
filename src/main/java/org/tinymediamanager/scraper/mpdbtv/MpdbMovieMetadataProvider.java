@@ -86,14 +86,14 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
     List<SearchEntity> searchResult = new ArrayList<>();
 
     if (StringUtils.isAnyBlank(getAboKey(), getUserName())) {
-      LOGGER.warn("no username/ABO Key found");
+      LOGGER.warn("No username/ABO Key found for MPDb.tv");
       throw new ScrapeException(new HttpException(401, "Unauthorized"));
     }
 
     // we need to force FR as language (no other language available here)
     options.setLanguage(MediaLanguages.fr);
 
-    LOGGER.info("========= BEGIN MPDB.tv Scraper Search for Movie: {} ", options.getSearchQuery());
+    LOGGER.debug("========= BEGIN MPDB.tv Scraper Search for Movie: {} ", options.getSearchQuery());
 
     try {
       Response<List<SearchEntity>> response = controller.getSearchInformation(getEncodedUserName(), getSubscriptionKey(), options.getSearchQuery(),
@@ -106,7 +106,7 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
         catch (IOException e) {
           // ignore
         }
-        LOGGER.warn("request was not successful: HTTP/{} - {}", response.code(), message);
+        LOGGER.debug("request was not successful: HTTP/{} - {}", response.code(), message);
         throw new HttpException(response.code(), response.message());
       }
 
@@ -115,12 +115,12 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
       }
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {} ", e.getMessage());
+      LOGGER.debug("error searching: {} ", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (searchResult.isEmpty()) {
-      LOGGER.warn("no result from MPDB.tv");
+      LOGGER.debug("no result from MPDB.tv");
       return results;
     }
 
@@ -163,7 +163,7 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
     MovieEntity scrapeResult = null;
 
     if (StringUtils.isAnyBlank(getAboKey(), getUserName())) {
-      LOGGER.warn("no username/ABO Key found");
+      LOGGER.warn("No username/ABO Key found found for MPDb.tv");
       throw new ScrapeException(new HttpException(401, "Unauthorized"));
     }
 
@@ -178,7 +178,7 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
       throw new MissingIdException(getId());
     }
 
-    LOGGER.info("========= BEGIN MPDB.tv scraping");
+    LOGGER.debug("========= BEGIN MPDB.tv scraping");
     try {
       Response<MovieEntity> response = controller.getScrapeInformation(getEncodedUserName(), getSubscriptionKey(), id,
           mediaScrapeOptions.getLanguage().toLocale(), null, FORMAT);
@@ -190,7 +190,7 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
         catch (IOException e) {
           // ignore
         }
-        LOGGER.warn("request was not successful: HTTP/{} - {}", response.code(), message);
+        LOGGER.debug("request was not successful: HTTP/{} - {}", response.code(), message);
         throw new HttpException(response.code(), response.message());
       }
       if (response.isSuccessful()) {
@@ -198,12 +198,12 @@ public class MpdbMovieMetadataProvider extends MpdbMetadataProvider implements I
       }
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {} ", e.getMessage());
+      LOGGER.debug("error searching: {} ", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (scrapeResult == null) {
-      LOGGER.warn("no result from MPDB.tv");
+      LOGGER.debug("no result from MPDB.tv");
       return metadata;
     }
 

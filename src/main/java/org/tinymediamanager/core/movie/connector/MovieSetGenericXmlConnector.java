@@ -199,7 +199,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + nfoPath + "'", e);
+        LOGGER.error("Could not write movie set NFO file '{}' - '{}'", nfoPath, e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -510,14 +510,14 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }
   }
 
   /**
-   * add the missing meta data for tinyMediaManager to this NFO
+   * add the missing metadata for tinyMediaManager to this NFO
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));

@@ -78,7 +78,7 @@ public class MdbListMetadataProvider implements IMediaProvider, IRatingProvider 
         controller.setApiKey(apiKey);
       }
       catch (Exception e) {
-        LOGGER.error("could not initialize the API: {}", e.getMessage());
+        LOGGER.debug("could not initialize the API: {}", e.getMessage());
         // force re-initialization the next time this will be called
         controller = null;
         throw new ScrapeException(e);

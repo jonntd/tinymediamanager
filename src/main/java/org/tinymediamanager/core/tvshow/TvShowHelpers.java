@@ -279,7 +279,7 @@ public class TvShowHelpers {
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not start trailer download: {}", e.getMessage());
+      LOGGER.error("Could not start trailer download for '{}' - '{}'", tvshow.getTitle(), e.getMessage());
       MessageManager.getInstance()
           .pushMessage(
               new Message(Message.MessageLevel.ERROR, tvshow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));

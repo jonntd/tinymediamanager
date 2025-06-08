@@ -1426,7 +1426,7 @@ public class MovieArtworkHelper {
         movie.addToMediaFiles(mf);
       }
       catch (Exception e) {
-        LOGGER.warn("could not extract VSMETA artwork: {}", e.getMessage());
+        LOGGER.warn("Could not extract VSMETA artwork from '{}' - '{}'", vsMetaFile.getFileAsPath(), e.getMessage());
       }
     }
 

@@ -85,7 +85,8 @@ public class TvShowRenameTask extends TmmThreadPool {
   @Override
   protected void doInBackground() {
     try {
-      start();
+      LOGGER.info("Renaming '{}' TV shows / '{}' episodes", tvShowsToRename.size(), episodesToRename.size());
+
       initThreadPool(1, "rename");
 
       // 1. episodes first (to get the right season folders for moving season artwork)
@@ -106,10 +107,10 @@ public class TvShowRenameTask extends TmmThreadPool {
         TvShowRenamer.renameTvShow(tvShow); // rename root and artwork and update ShowMFs
       }
 
-      LOGGER.info("Done renaming TV shows)");
+      LOGGER.info("Finished renaming TV shows/episodes - took {} ms", getRuntime());
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed", e);
+      LOGGER.error("Could not rename TV shows - '{}'", e.getMessage());
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "Settings.renamer", "message.renamer.threadcrashed"));
     }
   }

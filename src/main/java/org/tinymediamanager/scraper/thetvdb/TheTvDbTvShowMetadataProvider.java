@@ -146,7 +146,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       id = getTvdbIdViaImdbId(options.getImdbId());
     }
     if (id == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getId());
     }
 
@@ -190,7 +190,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       }
     }
     catch (Exception e) {
-      LOGGER.error("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -351,12 +351,12 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
           }
         }
         catch (Exception e) {
-          LOGGER.error("failed to get season meta data: {}", e.getMessage());
+          LOGGER.debug("failed to get season meta data: {}", e.getMessage());
           throw new ScrapeException(e);
         }
       }
       else {
-        LOGGER.warn("Could not map episodeGroupType: {}", seasonBaseRecord.type.type);
+        LOGGER.debug("Could not map episodeGroupType: {}", seasonBaseRecord.type.type);
       }
     }
 
@@ -424,7 +424,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     int showId = options.createTvShowSearchAndScrapeOptions().getIdAsIntOrDefault(getId(), 0);
 
     if (showId == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getId());
     }
 
@@ -457,7 +457,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       releaseDate = DateUtils.toLocalD(options.getMetadata().getReleaseDate());
     }
     if (releaseDate == null && (seasonNr == -1 || episodeNr == -1) && episodeTvdbId == 0) {
-      LOGGER.warn("no aired date/season number/episode number found");
+      LOGGER.debug("no aired date/season number/episode number found");
       throw new MissingIdException(MediaMetadata.EPISODE_NR);
     }
 
@@ -534,7 +534,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       episode = httpResponse.body().data;
     }
     catch (Exception e) {
-      LOGGER.error("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -628,7 +628,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
       }
     }
 
@@ -656,12 +656,12 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
             }
           }
           catch (Exception e) {
-            LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+            LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
           }
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb: {}", e.getMessage());
         throw new ScrapeException(e);
       }
     }
@@ -766,7 +766,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     // do we have a show id from the options?
     Integer showId = options.getIdAsInteger(getProviderInfo().getId());
     if (showId == null || showId == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getProviderInfo().getId());
     }
 
@@ -900,7 +900,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       id = getTvdbIdViaImdbId(MediaIdUtil.getIdAsString(ids, MediaMetadata.IMDB));
     }
     if (id == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getId());
     }
 
@@ -914,7 +914,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       show = httpResponse.body().data;
     }
     catch (Exception e) {
-      LOGGER.error("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 

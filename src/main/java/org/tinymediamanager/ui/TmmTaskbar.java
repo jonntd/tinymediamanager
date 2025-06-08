@@ -59,7 +59,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not set taskbar image - {}", e.getMessage());
+      LOGGER.debug("could not set taskbar image - {}", e.getMessage());
     }
   }
 
@@ -76,7 +76,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not set taskbar badge - {}", e.getMessage());
+      LOGGER.debug("could not set taskbar badge - {}", e.getMessage());
     }
   }
 
@@ -93,7 +93,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not set taskbar badge - {}", e.getMessage());
+      LOGGER.debug("could not set taskbar badge - {}", e.getMessage());
     }
   }
 
@@ -110,7 +110,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not request user attention - {}", e.getMessage());
+      LOGGER.debug("could not request user attention - {}", e.getMessage());
     }
   }
 
@@ -129,7 +129,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not set progress value - {}", e.getMessage());
+      LOGGER.debug("could not set progress value - {}", e.getMessage());
     }
   }
 
@@ -146,7 +146,7 @@ public class TmmTaskbar {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not set progress state - {}", e.getMessage());
+      LOGGER.debug("could not set progress state - {}", e.getMessage());
     }
   }
 }

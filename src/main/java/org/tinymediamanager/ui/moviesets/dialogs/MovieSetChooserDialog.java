@@ -195,7 +195,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
                 }
               }
               catch (Exception ex) {
-                LOGGER.warn(ex.getMessage());
+                LOGGER.debug("scraping", ex);
               }
             }
           });
@@ -359,7 +359,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
         }
       }
       catch (Exception e1) {
-        LOGGER.warn("SearchTask", e1);
+        LOGGER.debug("SearchTask", e1);
       }
 
       return null;

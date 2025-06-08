@@ -91,12 +91,12 @@ public class TvShowTrailerDownloadTask extends TmmTask {
     trailers.addAll(tvShow.getTrailer());
 
     if (trailers.isEmpty()) {
-      LOGGER.warn("no trailers for '{}' available", tvShow.getTitle());
+      LOGGER.info("No trailers available for '{}'", tvShow.getTitle());
       return;
     }
 
     // now try to download the trailers until we get one ;)
-    LOGGER.info("downloading trailer for '{}'", tvShow.getTitle());
+    LOGGER.info("Downloading trailer for '{}'", tvShow.getTitle());
 
     // now try to download the trailers until we get one ;)
     for (MediaTrailer trailer : trailers) {

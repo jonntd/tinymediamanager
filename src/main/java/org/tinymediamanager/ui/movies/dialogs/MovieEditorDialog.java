@@ -592,7 +592,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
             TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
           }
           catch (Exception ex) {
-            LOGGER.error("open file - {}", e);
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
@@ -1694,7 +1694,7 @@ public class MovieEditorDialog extends AbstractEditorDialog {
           TmmUIHelper.browseUrl(url);
         }
         catch (Exception ex) {
-          LOGGER.error(ex.getMessage());
+          LOGGER.error("Could not open '{}' in browser - '{}'", url, ex.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
         }

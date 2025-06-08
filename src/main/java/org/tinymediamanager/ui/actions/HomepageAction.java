@@ -45,10 +45,10 @@ public class HomepageAction extends TmmAction {
     try {
       TmmUIHelper.browseUrl(url);
     }
-    catch (Exception e1) {
-      LOGGER.error("homepage", e1);
+    catch (Exception ex) {
+      LOGGER.error("Could not open our homepage in browser - '{}'", ex.getMessage());
       MessageManager.getInstance()
-          .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
+          .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 }

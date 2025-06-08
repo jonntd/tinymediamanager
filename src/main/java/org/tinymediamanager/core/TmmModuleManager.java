@@ -128,7 +128,7 @@ public final class TmmModuleManager {
         module.shutDown();
       }
       catch (Exception e) {
-        LOGGER.error("problem shutting down '{}' - {}", module.getModuleTitle(), e.getMessage());
+        LOGGER.error("Problem shutting down '{}' - {}", module.getModuleTitle(), e.getMessage());
       }
     }
 
@@ -149,7 +149,7 @@ public final class TmmModuleManager {
         module.initializeDatabase();
       }
       catch (Exception e) {
-        LOGGER.error("problem shutting down " + module.getModuleTitle() + ": " + e.getMessage());
+        LOGGER.error("Problem shutting down " + module.getModuleTitle() + ": " + e.getMessage());
       }
     }
   }
@@ -167,7 +167,7 @@ public final class TmmModuleManager {
         }
       }
       catch (Exception e) {
-        LOGGER.error("saving settings " + module.getModuleTitle() + ": " + e.getMessage());
+        LOGGER.error("Saving settings for '{}' - '{}'", module.getModuleTitle(), e.getMessage());
       }
     }
   }

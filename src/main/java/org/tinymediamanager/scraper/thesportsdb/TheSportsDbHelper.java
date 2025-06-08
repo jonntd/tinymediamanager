@@ -39,7 +39,7 @@ public class TheSportsDbHelper {
       return ret;
     }
     catch (Exception e) {
-      LOGGER.error("Could not load leagues from json file: {}", e);
+      LOGGER.debug("Could not load leagues from json file: '{}'", e.getMessage());
     }
     return Collections.emptyMap();
   }

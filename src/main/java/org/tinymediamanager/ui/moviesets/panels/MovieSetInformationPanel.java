@@ -155,7 +155,7 @@ public class MovieSetInformationPanel extends JPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to tmdbid", e);
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
@@ -406,7 +406,7 @@ public class MovieSetInformationPanel extends JPanel {
         this.height = img.getHeight();
       }
       catch (Exception e) {
-        LOGGER.warn("Could not read {} dimensions: {}", "mediafiletype." + type, e.getMessage());
+        LOGGER.debug("Could not read {} dimensions: {}", "mediafiletype." + type, e.getMessage());
       }
       return null;
     }

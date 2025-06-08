@@ -189,7 +189,7 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
                 }
               }
               catch (Exception e) {
-                LOGGER.warn("Could not upgrade 5005: {} / {}", tvShow.getPathNIO(), mf.getFileAsPath());
+                LOGGER.debug("Could not upgrade 5005: {} / {}", tvShow.getPathNIO(), mf.getFileAsPath());
               }
             }
           }
@@ -207,7 +207,7 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
         for (TvShowSeason season : tvShow.getSeasons()) {
           for (MediaFile mf : season.getMediaFiles()) {
             if (!mf.getFileAsPath().startsWith(tvShow.getPathNIO())) {
-              LOGGER.info("5006: fixing wrong MediaFile {} / {}", tvShow.getPathNIO(), mf.getFileAsPath());
+              LOGGER.debug("5006: fixing wrong MediaFile {} / {}", tvShow.getPathNIO(), mf.getFileAsPath());
               try {
                 Path mfFolder = mf.getFileAsPath().getParent();
                 if (mfFolder.getFileName().toString().equals(showDirName)) {
@@ -223,7 +223,7 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
                 }
               }
               catch (Exception e) {
-                LOGGER.warn("5006: Whoa, we had some error correcting the paths: {}", e);
+                LOGGER.debug("5006: Whoa, we had some error correcting the paths: {}", e);
               }
             }
           }

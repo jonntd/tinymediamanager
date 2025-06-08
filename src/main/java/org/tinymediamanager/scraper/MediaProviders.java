@@ -111,7 +111,7 @@ public class MediaProviders {
         addons.addAll(addonIterator.next().getAddonClasses());
       }
       catch (Exception | Error e) {
-        LOGGER.error("Could not load addons - '{}'", e.getMessage());
+        LOGGER.error("Could not load addon - '{}'", e.getMessage());
       }
     }
 
@@ -270,7 +270,7 @@ public class MediaProviders {
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not load media provider {} - {}", clazz.getName(), e.getMessage());
+      LOGGER.error("Could not load media provider {} - {}", clazz.getName(), e.getMessage());
     }
   }
 

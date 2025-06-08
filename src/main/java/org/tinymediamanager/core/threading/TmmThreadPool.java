@@ -115,16 +115,16 @@ public abstract class TmmThreadPool extends TmmTask {
         }
       }
       catch (InterruptedException e) { // NOSONAR
-        LOGGER.error("ThreadPool {} interrupted!", poolname);
+        LOGGER.debug("ThreadPool {} interrupted!", poolname);
         cancel = true;
       }
       catch (ExecutionException e) {
-        LOGGER.error("ThreadPool {}: Error getting result! - {}", poolname, e.getMessage());
+        LOGGER.error("ThreadPool '{}': Error getting result! - '{}'", poolname, e.getMessage());
       }
     }
 
     if (cancel) {
-      LOGGER.info("Abort queue (discarding {} tasks)", workUnits - progressDone);
+      LOGGER.info("Aborting task queue (discarding {} tasks)", workUnits - progressDone);
       pool.shutdownNow();
     }
   }

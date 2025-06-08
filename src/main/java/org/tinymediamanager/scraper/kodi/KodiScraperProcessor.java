@@ -67,7 +67,7 @@ class KodiScraperProcessor {
 
     if (func != null) {
       func = scraper.getFunction(function).clone(); // get as clone, since we are changing regexps!!!
-      LOGGER.info("** BEGIN Function: " + func.getName() + "; Dest: " + func.getDest() + "; ClearBuffers: " + func.isClearBuffers());
+      LOGGER.trace("** BEGIN Function: " + func.getName() + "; Dest: " + func.getDest() + "; ClearBuffers: " + func.isClearBuffers());
 
       if (func.isClearBuffers()) {
         clearBuffers();
@@ -75,11 +75,11 @@ class KodiScraperProcessor {
       setBuffers(input);
       executeRegexps(func.getRegExps());
 
-      LOGGER.info("** END Function: " + func.getName() + "; Dest: " + func.getDest() + "; ClearBuffers: " + func.isClearBuffers());
+      LOGGER.trace("** END Function: " + func.getName() + "; Dest: " + func.getDest() + "; ClearBuffers: " + func.isClearBuffers());
       return getBuffer(func.getDest());
     }
     else {
-      LOGGER.warn("** Could not locate Function: " + function + " in the scraper " + scraper.getProviderInfo().getId());
+      LOGGER.debug("** Could not locate Function: " + function + " in the scraper " + scraper.getProviderInfo().getId());
       return "";
     }
   }
@@ -127,14 +127,14 @@ class KodiScraperProcessor {
       in = "";
 
     if (exp == null) {
-      LOGGER.warn("Main Expression was empty.  Returning processed output buffer using input as replacement array.");
+      LOGGER.debug("Main Expression was empty.  Returning processed output buffer using input as replacement array.");
       setBuffer(r.getDest(), processOutputBuffers(r.getOutput(), new String[] { "", in }), r.isAppendBuffer());
       return;
     }
 
     String expr = exp.getExpression();
     if (expr == null || expr.strip().length() == 0) {
-      LOGGER.warn("Expression was empty.  Returning processed output buffer using input as replacement array.");
+      LOGGER.debug("Expression was empty.  Returning processed output buffer using input as replacement array.");
       setBuffer(r.getDest(), processOutputBuffers(r.getOutput(), new String[] { "", in }), r.isAppendBuffer());
       return;
     }
@@ -348,11 +348,11 @@ class KodiScraperProcessor {
         // append = true; // always append sub functions! // NOO, not needed!
       }
       catch (HttpException e) {
-        LOGGER.error("Failed to process function: '{}' - HTTP: '{}'", text, e.getStatusCode());
+        LOGGER.debug("Failed to process function: '{}' - HTTP: '{}'", text, e.getStatusCode());
         text = "";
       }
       catch (Exception e) {
-        LOGGER.error("Failed to process function: " + text, e);
+        LOGGER.debug("Failed to process function: " + text, e);
         text = "";
       }
     }
@@ -375,7 +375,7 @@ class KodiScraperProcessor {
         // append = true; // always append sub functions! // NOO, not needed!
       }
       catch (Exception e) {
-        LOGGER.error("Failed to process function: " + text, e);
+        LOGGER.debug("Failed to process function: " + text, e);
         text = "\n<error>" + text + "\n<msg>" + e.getMessage() + "</msg></error>\n";
       }
     }

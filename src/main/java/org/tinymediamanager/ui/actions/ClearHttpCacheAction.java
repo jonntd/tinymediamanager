@@ -43,7 +43,7 @@ public class ClearHttpCacheAction extends TmmAction {
       InMemoryCachedUrl.clearCache();
     }
     catch (Exception e) {
-      LOGGER.warn("could not delete HTTP cache: {}", e.getMessage());
+      LOGGER.warn("Could not delete HTTP cache - '{}'", e.getMessage());
     }
   }
 }

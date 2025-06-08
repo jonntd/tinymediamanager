@@ -151,7 +151,7 @@ class UiSettingsPanel extends JPanel {
         TmmUIHelper.browseUrl(lblLinkTranslate.getText());
       }
       catch (Exception e) {
-        LOGGER.error(e.getMessage());
+        LOGGER.error("Could not open '{}' in browser - '{}'", lblLinkTranslate.getText(), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(
                 new Message(MessageLevel.ERROR, lblLinkTranslate.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-2$

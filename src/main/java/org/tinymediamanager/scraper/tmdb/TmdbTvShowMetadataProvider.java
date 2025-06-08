@@ -162,7 +162,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
     String language = getRequestLanguage(options.getLanguage());
 
     // begin search
-    LOGGER.info("========= BEGIN TMDB Scraper Search for: {}", searchString);
+    LOGGER.debug("========= BEGIN TMDB Scraper Search for: {}", searchString);
     // 1. try with TMDB id
     if (tmdbId != 0) {
       LOGGER.debug("found TMDB ID {} - getting direct", tmdbId);
@@ -177,7 +177,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         LOGGER.debug("found {} results with TMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -197,7 +197,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         LOGGER.debug("found {} results with IMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -217,7 +217,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         LOGGER.debug("found {} results with TVDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tvdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tvdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -247,7 +247,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         LOGGER.debug("found {} results with search string", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -276,7 +276,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         tmdbId = TmdbUtils.getTmdbIdFromImdbId(api, MediaType.TV_SHOW, options.getImdbId());
       }
       catch (Exception e) {
-        LOGGER.warn("could not get tmdb id via imdb id - {}", e.getMessage());
+        LOGGER.debug("could not get tmdb id via imdb id - {}", e.getMessage());
       }
     }
 
@@ -286,7 +286,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
         tmdbId = TmdbUtils.getTmdbIdFromTvdbId(api, options.getIdAsInteger(TVDB));
       }
       catch (Exception e) {
-        LOGGER.warn("could not get tmdb id via tvdb id - {}", e.getMessage());
+        LOGGER.debug("could not get tmdb id via tvdb id - {}", e.getMessage());
       }
     }
 
@@ -345,12 +345,12 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
               episodeGroups.put(new MediaEpisodeGroup(eg, episodeGroup.name), seasons);
             }
             else {
-              LOGGER.warn("EpisodeGroup '{}' without episodes! {} ", episodeGroupsResponse.body().name, showResponse.body().name);
+              LOGGER.debug("EpisodeGroup '{}' without episodes! {} ", episodeGroupsResponse.body().name, showResponse.body().name);
             }
           }
         }
         catch (Exception e) {
-          LOGGER.info("Could not fetch episode group data - '{}'", e.getMessage());
+          LOGGER.debug("Could not fetch episode group data - '{}'", e.getMessage());
         }
       }
 
@@ -522,7 +522,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
 
     // no tmdb id, no scrape..
     if (tmdbId == 0) {
-      LOGGER.warn("not possible to scrape from TMDB - no tmdbId found");
+      LOGGER.debug("not possible to scrape from TMDB - no tmdbId found");
       throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
     }
 
@@ -543,7 +543,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
       injectTranslations(Locale.forLanguageTag(language), complete);
     }
     catch (Exception e) {
-      LOGGER.warn("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -668,7 +668,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
           episodeGroup.groups = fullEG.groups; // copy to ours, so the rest of our code works 1:1
         }
         catch (Exception e) {
-          LOGGER.warn("failed to get episode group details: {}", e.getMessage());
+          LOGGER.debug("failed to get episode group details: {}", e.getMessage());
           // throw new ScrapeException(e); // continue
         }
 
@@ -806,7 +806,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
 
     // no tmdb id, no scrape..
     if (showTmdbId == 0) {
-      LOGGER.warn("not possible to scrape from TMDB - no TMDB/IMDB id found");
+      LOGGER.debug("not possible to scrape from TMDB - no TMDB/IMDB id found");
       throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
     }
 
@@ -1050,7 +1050,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
 
     // no tmdb id, no scrape..
     if (tmdbId == 0) {
-      LOGGER.warn("not possible to scrape from TMDB - no tmdbId found");
+      LOGGER.debug("not possible to scrape from TMDB - no tmdbId found");
       throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
     }
 
@@ -1166,7 +1166,7 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
 
     // no tmdb id, no scrape..
     if (showTmdbId == 0) {
-      LOGGER.warn("not possible to scrape from TMDB - no tmdbId found");
+      LOGGER.debug("not possible to scrape from TMDB - no tmdbId found");
       throw new MissingIdException(MediaMetadata.TMDB, MediaMetadata.IMDB);
     }
 

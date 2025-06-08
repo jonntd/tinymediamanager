@@ -148,7 +148,7 @@ public class UpdaterTask extends TmmTask {
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not download update: {}", e.getMessage());
+      LOGGER.error("Could not download update - '{}'", e.getMessage());
       downloadSuccessful = false;
     }
 

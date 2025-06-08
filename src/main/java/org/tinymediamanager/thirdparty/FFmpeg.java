@@ -199,8 +199,8 @@ public class FFmpeg {
       int processValue = process.waitFor();
       String response = outputStream.toString(StandardCharsets.UTF_8);
       if (processValue != 0) {
-        LOGGER.warn("error at FFmpeg: '{}'", response);
-        throw new IOException("error running FFmpeg - code '" + processValue + "'");
+        LOGGER.warn("Error calling FFmpeg - '{}'", response);
+        throw new IOException("error running FFmpeg - code '" + processValue + "' / message '" + response + "'");
       }
       return response;
     }

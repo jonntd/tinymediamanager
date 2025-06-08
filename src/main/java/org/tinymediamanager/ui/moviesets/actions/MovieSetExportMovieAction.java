@@ -100,7 +100,7 @@ public class MovieSetExportMovieAction extends TmmAction {
           TmmTaskManager.getInstance().addMainTask(new ExportTask(TmmResourceBundle.getString("movie.export"), exporter, movies, exportPath));
         }
         catch (Exception e) {
-          LOGGER.error("Error exporting movies: ", e);
+          LOGGER.error("Error exporting movie sets - '{}'", e.getMessage());
         }
         setVisible(false);
       }

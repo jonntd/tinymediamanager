@@ -520,7 +520,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           }
         }
         catch (Exception ex) {
-          LOGGER.warn(ex.getMessage());
+          LOGGER.debug("scraping", ex);
         }
       }
     });

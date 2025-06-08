@@ -57,7 +57,7 @@ public class MoviePlayAction extends TmmAction {
         TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
       }
       catch (Exception ex) {
-        LOGGER.error("open file", ex);
+        LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
         MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
       }

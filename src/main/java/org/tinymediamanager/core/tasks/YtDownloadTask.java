@@ -173,7 +173,7 @@ public abstract class YtDownloadTask extends TmmTask {
           .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.downloadfailed",
               new String[] { getMediaEntityToAdd().getTitle() }));
       setState(TaskState.FAILED);
-      LOGGER.error("download of Trailer {} failed", mediaTrailer.getUrl());
+      LOGGER.error("Download of Trailer '{}' failed - '{}'", mediaTrailer.getUrl(), e.getMessage());
       LOGGER.debug("trailer download - '{}'", e.getMessage());
     }
   }
@@ -448,7 +448,7 @@ public abstract class YtDownloadTask extends TmmTask {
       MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.unsupported",
               new String[] { mediaEntity.getTitle() }));
-      LOGGER.error("Could not download movieTrailer for {}", mediaEntity.getTitle());
+      LOGGER.error("Could not download movie trailer for '{}' - no streams found", mediaEntity.getTitle());
       setState(TaskState.FAILED);
       return;
     }
@@ -462,7 +462,7 @@ public abstract class YtDownloadTask extends TmmTask {
         return download(videoFormat);
       }
       catch (Exception e) {
-        LOGGER.error("Could not download video stream: {}", e.getMessage());
+        LOGGER.error("Could not download video stream of trailer for '{}' - '{}'", mediaEntity.getTitle(), e.getMessage());
         setState(TaskState.FAILED);
         return null;
       }
@@ -474,7 +474,7 @@ public abstract class YtDownloadTask extends TmmTask {
         return download(audioFormat);
       }
       catch (Exception e) {
-        LOGGER.error("Could not download audio stream: {}", e.getMessage());
+        LOGGER.error("Could not download audio stream of trailer for '{}' - '{}'", mediaEntity.getTitle(), e.getMessage());
         setState(TaskState.FAILED);
         return null;
       }
@@ -592,7 +592,7 @@ public abstract class YtDownloadTask extends TmmTask {
           while ((count = bis.read(buffer, 0, buffer.length)) != -1) {
             if (cancel) {
               Thread.currentThread().interrupt();
-              LOGGER.info("download of {} aborted", url);
+              LOGGER.debug("download of {} aborted", url);
               return null;
             }
 
@@ -607,7 +607,7 @@ public abstract class YtDownloadTask extends TmmTask {
     }
     catch (AccessDeniedException e) {
       // propagate to UI by logging with error
-      LOGGER.error("ACCESS DENIED (writing trailer) - '{}'", e.getMessage());
+      LOGGER.error("ACCESS DENIED (writing trailer) for '{}' - '{}'", outputFile, e.getMessage());
       // re-throw
       throw e;
     }

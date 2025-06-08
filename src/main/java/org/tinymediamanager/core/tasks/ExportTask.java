@@ -46,13 +46,16 @@ public class ExportTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
-    start();
+    LOGGER.info("Starting export of '{}' items to '{}'", entities.size(), exportPath);
+
     try {
       exporter.export(entities, exportPath);
     }
     catch (Exception e) {
-      LOGGER.error("could not export template: {}", e.getMessage());
+      LOGGER.error("Could not export template - '{}'", e.getMessage());
     }
+
+    LOGGER.info("Finished export - took {} ms", getRuntime());
   }
 
   @Override

@@ -125,7 +125,7 @@ public class ImdbDatasetUtils {
       return ret;
     }
     catch (Exception e) {
-      LOGGER.warn("could not read the MVstore - '{}'", e.getMessage());
+      LOGGER.debug("could not read the MVstore - '{}'", e.getMessage());
       shutdown();
       Utils.deleteFileSafely(Paths.get(Globals.CACHE_FOLDER, IMDB_DATASET_TITLE_EPISODE + ".db"));
     }
@@ -138,23 +138,23 @@ public class ImdbDatasetUtils {
 
     try {
       if (!Files.exists(databaseFile) || Files.getLastModifiedTime(databaseFile).to(TimeUnit.SECONDS) < cut) {
-        LOGGER.info("Preparing IMDB episode dataset...");
+        LOGGER.debug("Preparing IMDB episode dataset...");
 
         boolean ok = downloadDataset(IMDB_DATASET_TITLE_EPISODE, 90);
         if (ok) {
           Path extractedFile = unpackDataset(IMDB_DATASET_TITLE_EPISODE);
 
           LOGGER.debug("Parsing dataset..."); // ~10 sec
-          javaEpisodeMap = new TreeMap<String, List<String>>(); // HashMap slooow
+          javaEpisodeMap = new TreeMap<>(); // HashMap slooow
           try (var stream = Files.lines(extractedFile, StandardCharsets.UTF_8)) {
             stream.skip(1).forEach(line -> {
               // EP, show, S, E
               String[] data = line.split("\t");
-              javaEpisodeMap.computeIfAbsent(data[1], k -> new ArrayList<String>()).add(line);
+              javaEpisodeMap.computeIfAbsent(data[1], k -> new ArrayList<>()).add(line);
             });
           }
           catch (Exception e) {
-            LOGGER.error("Error writing archive {}", e.getMessage());
+            LOGGER.debug("Error writing archive {}", e.getMessage());
           }
 
           // copy JavaMap to H2MVMap
@@ -173,7 +173,7 @@ public class ImdbDatasetUtils {
         }
         else {
           if (Files.exists(databaseFile)) {
-            LOGGER.error("download failed - using old copy");
+            LOGGER.debug("download failed - using old copy");
             mvStore = new MVStore.Builder().fileName(databaseFile.toString()).readOnly().open();
             dbEpisodeMap = mvStore.openMap("imdbEpisodes");
           }
@@ -187,7 +187,7 @@ public class ImdbDatasetUtils {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Error initializing dataset: IMDB_DATASET_TITLE_EPISODE {}", e.getMessage());
+      LOGGER.debug("Error initializing dataset: IMDB_DATASET_TITLE_EPISODE {}", e.getMessage());
       Utils.deleteFileSafely(databaseFile);
     }
   }
@@ -200,7 +200,7 @@ public class ImdbDatasetUtils {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not close MVstore - deleting the cache");
+      LOGGER.debug("Could not close MVstore - deleting the cache");
     }
     finally {
       mvStore = null;

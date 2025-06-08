@@ -17,6 +17,7 @@ package org.tinymediamanager.ui.dialogs;
 
 import java.awt.BorderLayout;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -138,13 +139,13 @@ public class BugReportDialog extends TmmDialog {
 
       String url = "";
       try {
-        url = baseUrl + URLEncoder.encode(params, "UTF-8");
+        url = baseUrl + URLEncoder.encode(params, StandardCharsets.UTF_8);
         TmmUIHelper.browseUrl(url);
       }
-      catch (Exception e1) {
-        LOGGER.error("FAQ", e1);
+      catch (Exception ex) {
+        LOGGER.error("Could not open our issue tracker in browser - '{}'", ex.getMessage());
         MessageManager.getInstance()
-            .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
+            .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
       }
     });
     panelContent.add(btnCreateIssue, "cell 2 8,alignx left,aligny center");

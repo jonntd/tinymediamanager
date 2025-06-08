@@ -44,10 +44,10 @@ public class ForumAction extends TmmAction {
     try {
       TmmUIHelper.browseUrl(url);
     }
-    catch (Exception e1) {
-      LOGGER.error("FAQ", e1);
+    catch (Exception ex) {
+      LOGGER.error("Could not open reddit.com in browser - '{}'", ex.getMessage());
       MessageManager.getInstance()
-          .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
+          .pushMessage(new Message(MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 }

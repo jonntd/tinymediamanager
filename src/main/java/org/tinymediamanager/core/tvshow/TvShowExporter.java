@@ -73,7 +73,7 @@ public class TvShowExporter extends MediaEntityExporter {
    */
   @Override
   public <T extends MediaEntity> void export(List<T> tvShowsToExport, Path exportDir) throws Exception {
-    LOGGER.info("preparing tv show export; using {}", properties.getProperty("name"));
+    LOGGER.debug("preparing tv show export; using {}", properties.getProperty("name"));
 
     if (cancel) {
       return;
@@ -108,14 +108,14 @@ public class TvShowExporter extends MediaEntityExporter {
     }
 
     // create the list
-    LOGGER.info("generating tv show list");
+    LOGGER.debug("generating tv show list");
     Utils.deleteFileSafely(listExportFile);
 
     Map<String, Object> root = new HashMap<>();
     root.put("tvShows", new ArrayList<>(tvShowsToExport));
     String output = engine.transform(listTemplate, root);
     Utils.writeStringToFile(listExportFile, output);
-    LOGGER.info("TvShow list generated: {}", listExportFile);
+    LOGGER.debug("TvShow list generated: {}", listExportFile);
 
     if (StringUtils.isNotBlank(detailTemplate)) {
       for (T me : tvShowsToExport) {
@@ -184,7 +184,7 @@ public class TvShowExporter extends MediaEntityExporter {
       }
     }
     catch (IOException ex) {
-      LOGGER.error("could not copy resources: ", ex);
+      LOGGER.warn("Could not copy resources while exporting - '{}'", ex.getMessage());
     }
   }
 
@@ -361,7 +361,7 @@ public class TvShowExporter extends MediaEntityExporter {
           }
         }
         catch (Exception e) {
-          LOGGER.error("could not copy artwork file: ", e);
+          LOGGER.warn("Could not copy artwork file - '{}'", e.getMessage());
           if (StringUtils.isNotBlank((String) parameters.get("default"))) {
             return (String) parameters.get("default");
           }

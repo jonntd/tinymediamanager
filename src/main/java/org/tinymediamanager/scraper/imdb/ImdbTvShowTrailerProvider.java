@@ -64,7 +64,7 @@ public class ImdbTvShowTrailerProvider extends ImdbMetadataProvider implements I
     }
 
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("not possible to scrape from IMDB - no imdbId found");
+      LOGGER.debug("not possible to scrape from IMDB - no imdbId found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
@@ -88,7 +88,7 @@ public class ImdbTvShowTrailerProvider extends ImdbMetadataProvider implements I
           TvShowModuleManager.getInstance().getSettings().getCertificationCountry().getAlpha2());
     }
     catch (Exception e) {
-      LOGGER.warn("Could not fetch video: {}", e.getMessage());
+      LOGGER.debug("Could not fetch video: {}", e.getMessage());
     }
     return "";
   }

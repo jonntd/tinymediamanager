@@ -112,7 +112,7 @@ public class ImageCache {
         Files.createDirectories(CACHE_DIR);
       }
       catch (IOException e) {
-        LOGGER.warn("Could not create cache dir {} - {}", CACHE_DIR, e.getMessage());
+        LOGGER.warn("Could not create cache dir '{}' - '{}'", CACHE_DIR, e.getMessage());
       }
     }
 
@@ -125,7 +125,7 @@ public class ImageCache {
         // do not care
       }
       catch (IOException e) {
-        LOGGER.warn("Could not create cache sub dir '{}' - {}", sub, e.getMessage());
+        LOGGER.warn("Could not create cache sub dir '{}' - '{}'", sub, e.getMessage());
       }
     }
   }

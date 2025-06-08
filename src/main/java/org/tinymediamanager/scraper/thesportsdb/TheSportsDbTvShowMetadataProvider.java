@@ -75,7 +75,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     // do we have an id from the options?
     String leagueId = options.getIdAsString(MediaMetadata.TSDB);
     if (leagueId == null || leagueId.isEmpty()) {
-      LOGGER.warn("no league id available");
+      LOGGER.debug("no league id available");
       throw new MissingIdException(MediaMetadata.TSDB);
     }
 
@@ -266,7 +266,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     // do we have an id from the options?
     String leagueId = options.getIdAsString(MediaMetadata.TSDB);
     if (leagueId == null || leagueId.isEmpty()) {
-      LOGGER.warn("no league id available");
+      LOGGER.debug("no league id available");
       throw new MissingIdException(MediaMetadata.TSDB);
     }
 

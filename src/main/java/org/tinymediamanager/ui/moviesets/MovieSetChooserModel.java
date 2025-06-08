@@ -49,6 +49,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieArtworkProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieSetMetadataProvider;
@@ -199,15 +200,23 @@ public class MovieSetChooserModel extends AbstractModelObject {
           info = ((IMovieSetMetadataProvider) scraper.getMediaProvider()).getMetadata(options);
         }
         catch (MissingIdException e) {
-          LOGGER.warn("missing id for scrape");
+          LOGGER.warn("Missing IDs for scraping movie set with '{}'", scraper.getId());
           MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "scraper.error.missingid"));
           return;
         }
+        catch (NothingFoundException e) {
+          LOGGER.debug("nothing found");
+          return;
+        }
         catch (ScrapeException e) {
-          LOGGER.error("getMetadata", e);
+          LOGGER.error("Could not scrape movie set with '{}' - '{}'", scraper.getId(), e.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.metadatamoviesetfailed",
                   new String[] { ":", e.getLocalizedMessage() }));
+          return;
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie set scrape", e);
           return;
         }
 
@@ -324,13 +333,17 @@ public class MovieSetChooserModel extends AbstractModelObject {
           artwork.addAll(artworkProvider.getArtwork(options));
         }
         catch (MissingIdException e) {
-          LOGGER.debug("could not get artwork: {}", e.getMessage());
+          LOGGER.info("Missing IDs for scraping movie set artwork of '{}' with '{}'", movieSetToScrape.getTitle(), artworkScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
+          LOGGER.error("Could not scrape movie set artwork of '{}' with '{}' - '{}'", movieSetToScrape.getTitle(), artworkScraper.getId(),
+              e.getMessage());
           MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSetToScrape, "message.scrape.movieartworkfailed",
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSetToScrape, "message.scrape.moviesetartworkfailed",
                   new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Error e) {
+          LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movieSetToScrape.getTitle(), e);
         }
       }
 

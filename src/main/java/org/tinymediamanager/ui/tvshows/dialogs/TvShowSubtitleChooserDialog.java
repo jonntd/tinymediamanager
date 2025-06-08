@@ -44,6 +44,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.LanguageStyle;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tasks.DownloadTask;
@@ -68,7 +70,6 @@ import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.components.table.TmmTableModel;
-import org.tinymediamanager.ui.dialogs.MessageDialog;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 import org.tinymediamanager.ui.tvshows.TvShowSubtitleChooserModel;
 
@@ -325,11 +326,22 @@ public class TvShowSubtitleChooserDialog extends TmmDialog {
           searchResults.addAll(subtitleProvider.search(options));
         }
         catch (MissingIdException ignored) {
-          LOGGER.debug("no id found for scraper {}", scraper.getId());
+          LOGGER.warn("Missing IDs for scraping TV show '{}', S{} E{} with '{}'", episodeToScrape.getTvShow().getTitle(), season, episode,
+              scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getSubtitles", e);
-          MessageDialog.showExceptionWindow(e);
+          LOGGER.error("Could not scrape subtitles of TV show '{}', S{} E{} with '{}' - '{}'", episodeToScrape.getTvShow().getTitle(), season,
+              episode, scraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(Message.MessageLevel.ERROR, episode, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error while scraping TV show '{}', S{} E{} with '{}'", episodeToScrape.getTvShow().getTitle(), season, episode,
+              scraper.getId(), e);
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(Message.MessageLevel.ERROR, episode, "message.scrape.subtitlefailed", new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 

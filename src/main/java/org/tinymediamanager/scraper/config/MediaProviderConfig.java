@@ -83,7 +83,7 @@ public class MediaProviderConfig {
     if (Files.exists(conf)) {
       try (InputStream stream = Files.newInputStream(conf)) {
         p.load(stream);
-        LOGGER.info("load settings '{}'", conf);
+        LOGGER.info("Load scraper settings for '{}' from '{}'", id, conf);
         for (MediaProviderConfigObject co : settings.values()) {
           String value = p.getProperty(co.getKey());
           if (co.isEncrypt()) {
@@ -129,7 +129,7 @@ public class MediaProviderConfig {
       p.store(stream, "");
     }
     catch (IOException e) {
-      LOGGER.warn("Cannot write settings '{}' : {}", conf, e.getMessage());
+      LOGGER.warn("Cannot write scraper settings for '{}/{}' : {}", id, subId, e.getMessage());
     }
   }
 

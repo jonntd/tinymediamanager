@@ -249,8 +249,8 @@ public class AniDbTvShowMetadataProvider extends AniDbMetadataProvider implement
           md = getMetadata(tvShowSearchAndScrapeOptions);
         }
         catch (Exception e) {
-          LOGGER.error("could not get artwork: {}", e.getMessage());
-          throw new ScrapeException(e);
+          LOGGER.debug("could not get artwork: '{}'", e.getMessage());
+          throw new ScrapeException("Could not get artwork: " + e.getMessage());
         }
         artwork.addAll(md.getMediaArt(MediaArtworkType.POSTER));
       }

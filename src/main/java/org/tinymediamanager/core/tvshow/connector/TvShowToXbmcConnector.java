@@ -88,7 +88,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
         return "plugin://plugin.video.hdtrailers_net/video/" + matcher.group(1) + "/" + URLEncoder.encode(trailer.getUrl(), "UTF-8");
       }
       catch (Exception e) {
-        LOGGER.error("failed to escape '{}'", trailer.getUrl());
+        LOGGER.debug("failed to escape '{}'", trailer.getUrl());
       }
     }
     // everything else is stored directly

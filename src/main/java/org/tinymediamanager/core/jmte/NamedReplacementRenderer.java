@@ -75,7 +75,7 @@ public class NamedReplacementRenderer implements NamedRenderer {
           csvContents = tokens;
         }
         catch (Exception e) {
-          LOGGER.error("could not read csv: '{}'", e.getMessage());
+          LOGGER.warn("Could not read replacement CSV '{}' - '{}'", filename, e.getMessage());
         }
       }
     }

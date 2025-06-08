@@ -107,7 +107,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
         return results;
       }
       catch (Exception e) {
-        LOGGER.error("Problem scraping for {} - {}", searchString, e.getMessage());
+        LOGGER.debug("Problem scraping for {} - {}", searchString, e.getMessage());
         // throw new ScrapeException(e); // continue
       }
     }
@@ -117,12 +117,12 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
       searchResults = executeCall(api.search().textQueryMovie(searchString, null, null, null, null, null, null, null, Extended.FULL, 1, 25));
     }
     catch (Exception e) {
-      LOGGER.error("Problem scraping for {} - {}", searchString, e.getMessage());
+      LOGGER.debug("Problem scraping for {} - {}", searchString, e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (searchResults == null || searchResults.isEmpty()) {
-      LOGGER.info("nothing found");
+      LOGGER.debug("nothing found");
       return results;
     }
 
@@ -190,7 +190,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
     }
 
     if (movie == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 
@@ -280,7 +280,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
         }
       }
       catch (Exception e) {
-        LOGGER.warn("Could not get artwork from tmdb - {}", e.getMessage());
+        LOGGER.debug("Could not get artwork from tmdb - {}", e.getMessage());
       }
     }
 
@@ -377,7 +377,7 @@ public class TraktMovieMetadataProvider extends TraktMetadataProvider
     }
 
     if (movie == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 

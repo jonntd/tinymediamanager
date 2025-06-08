@@ -1741,7 +1741,6 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    * Direct file access - should be only used in mediaInfo method!
    */
   public void checkForAnimation() {
-
     if (isGraphic() && getExtension().equalsIgnoreCase("gif")) {
 
       try {
@@ -1753,7 +1752,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
         }
       }
       catch (Exception e) {
-        LOGGER.warn("error checking GIF for animation: {}", e.getMessage());
+        LOGGER.warn("Could not check GIF for animation for '{}' - '{}'", getFileAsPath(), e.getMessage());
       }
     }
   }

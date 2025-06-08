@@ -188,11 +188,11 @@ public class ToolbarPanel extends JPanel {
           UpdateCheck updateCheck = new UpdateCheck();
           if (updateCheck.isUpdateAvailable()) {
             btnUpdateFound.setVisible(true);
-            LOGGER.info("update available");
+            LOGGER.info("Update available");
           }
         }
         catch (Exception e) {
-          LOGGER.warn("Update check failed - {}", e.getMessage());
+          LOGGER.warn("Update check failed - '{}'", e.getMessage());
         }
       }
     };

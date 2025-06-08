@@ -235,20 +235,20 @@ public class MediaFilesPanel extends JPanel {
           try {
             TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
           }
-          catch (Exception e) {
-            LOGGER.error("open file", e);
+          catch (Exception ex) {
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
             MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", e.getLocalizedMessage() }));
+                .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         }
         else if (mf.isMusicTheme()) {
           try {
             TmmUIHelper.openFile(mf.getFileAsPath());
           }
-          catch (Exception e) {
-            LOGGER.error("open file", e);
+          catch (Exception ex) {
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
             MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", e.getLocalizedMessage() }));
+                .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         }
         else if (mf.isGraphic()) {

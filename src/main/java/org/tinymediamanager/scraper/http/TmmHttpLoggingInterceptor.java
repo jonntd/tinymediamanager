@@ -105,7 +105,7 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Problem in HTTP logging detected: {}", e.getMessage());
+      LOGGER.debug("Problem in HTTP logging detected: {}", e.getMessage());
     }
 
     long startNs = System.nanoTime();
@@ -174,7 +174,7 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Problem in HTTP logging detected: {}", e.getMessage());
+      LOGGER.debug("Problem in HTTP logging detected: {}", e.getMessage());
     }
     finally {
       if (buffer != null) {

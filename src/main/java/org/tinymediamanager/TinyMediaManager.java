@@ -141,7 +141,7 @@ public final class TinyMediaManager {
           splashScreen = new TmmSplashScreen();
         }
         catch (Exception e) {
-          LOGGER.error("could not initialize splash - {}", e.getMessage());
+          LOGGER.error("Could not initialize splash - '{}'", e.getMessage());
         }
         TmmTaskbar.setImage(new LogoCircle(512).getImage());
 
@@ -257,7 +257,7 @@ public final class TinyMediaManager {
               System.exit(1);
             }
             catch (Exception e) {
-              LOGGER.error("Exception while start of tmm", e);
+              LOGGER.error("Exception while starting tmm", e);
               MessageDialog.showExceptionWindow(e);
               shutdownLogger();
               System.exit(1);
@@ -286,7 +286,7 @@ public final class TinyMediaManager {
         System.exit(1);
       }
       catch (Exception e) {
-        LOGGER.error("Exception while start of tmm", e);
+        LOGGER.error("Exception while starting tmm", e);
         shutdownLogger();
         System.exit(1);
       }
@@ -312,7 +312,7 @@ public final class TinyMediaManager {
         shutdownLogger();
       }
       catch (Exception ex) {
-        LOGGER.warn(ex.getMessage());
+        LOGGER.error(ex.getMessage());
       }
       System.exit(0);
     }
@@ -445,8 +445,8 @@ public final class TinyMediaManager {
 
     // some infos from lic
     if (License.getInstance().validUntil() != null) {
-      LOGGER.info("{}", License.getInstance().sig());
-      LOGGER.info("{}", License.getInstance().dat());
+      LOGGER.debug("{}", License.getInstance().sig());
+      LOGGER.debug("{}", License.getInstance().dat());
     }
 
     // various initializations of classes
@@ -465,7 +465,7 @@ public final class TinyMediaManager {
         TmmHttpServer.getInstance();
       }
       catch (Exception e) {
-        LOGGER.error("could not start webserver: {}", e.getMessage());
+        LOGGER.error("Could not start web server - '{}'", e.getMessage());
       }
     }
   }
@@ -514,7 +514,7 @@ public final class TinyMediaManager {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Could not start UPNP - '{}'", e.getMessage());
+      LOGGER.error("Could not start UPnP server - '{}'", e.getMessage());
     }
     try {
       if (Settings.getInstance().isUpnpRemotePlay()) {
@@ -525,7 +525,7 @@ public final class TinyMediaManager {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Could not start UPNP - '{}'", e.getMessage());
+      LOGGER.error("Could not start UPnP server - '{}'", e.getMessage());
     }
 
     try {
@@ -535,7 +535,7 @@ public final class TinyMediaManager {
     }
     catch (Exception e) {
       // catch all, to not kill JVM on any other exceptions!
-      LOGGER.error(e.getMessage());
+      LOGGER.error("Could not start KodiRPC - '{}'", e.getMessage());
     }
   }
 
@@ -608,6 +608,7 @@ public final class TinyMediaManager {
     }
     catch (Exception e) {
       LOGGER.error("Could not initialize license module!");
+      LOGGER.debug(e.getMessage());
     }
 
     ReleaseInfo.init();

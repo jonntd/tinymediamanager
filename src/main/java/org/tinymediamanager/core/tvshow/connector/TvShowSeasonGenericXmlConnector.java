@@ -176,7 +176,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename) + "'", e);
+        LOGGER.error("Could not write season NFO file '{}' - '{}'", tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename), e.getMessage());
         MessageManager.getInstance()
             .pushMessage(
                 new Message(Message.MessageLevel.ERROR, tvShowSeason, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
@@ -411,7 +411,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }

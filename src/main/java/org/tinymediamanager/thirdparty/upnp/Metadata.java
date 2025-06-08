@@ -114,7 +114,7 @@ class Metadata {
 
     }
     catch (Exception e) {
-      LOGGER.error("Error getting TMM movie", e);
+      LOGGER.error("UPnP: Error getting movie '{}'", e.getMessage());
     }
     return m;
   }
@@ -174,7 +174,7 @@ class Metadata {
 
     }
     catch (Exception e) {
-      LOGGER.error("Error getting TMM show", e);
+      LOGGER.error("UPnP: Error getting episode - '{}'", e.getMessage());
     }
 
     return m;

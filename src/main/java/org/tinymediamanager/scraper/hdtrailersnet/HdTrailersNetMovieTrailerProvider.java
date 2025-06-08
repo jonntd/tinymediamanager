@@ -91,7 +91,7 @@ public class HdTrailersNetMovieTrailerProvider implements IMovieTrailerProvider 
     MediaMetadata md = options.getMetadata();
 
     if (md == null) {
-      LOGGER.warn("no originalTitle served");
+      LOGGER.debug("no originalTitle served");
       throw new MissingIdException("originalTitle");
     }
 
@@ -100,7 +100,7 @@ public class HdTrailersNetMovieTrailerProvider implements IMovieTrailerProvider 
       ot = md.getTitle();
     }
     if (ot.isEmpty()) {
-      LOGGER.warn("no originalTitle served");
+      LOGGER.debug("no originalTitle served");
       throw new MissingIdException("originalTitle");
     }
 
@@ -230,7 +230,7 @@ public class HdTrailersNetMovieTrailerProvider implements IMovieTrailerProvider 
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not fetch trailer url: {}", e.getMessage());
+      LOGGER.debug("could not fetch trailer url: {}", e.getMessage());
     }
 
     return "";

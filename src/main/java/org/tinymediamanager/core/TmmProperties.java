@@ -60,7 +60,7 @@ public class TmmProperties {
       // simply not here - ignore
     }
     catch (Exception e) {
-      LOGGER.warn("unable to read properties file: {}", e.getMessage());
+      LOGGER.warn("Unable to read properties file: '{}'", e.getMessage());
     }
 
     dirty = false;
@@ -90,7 +90,7 @@ public class TmmProperties {
       properties.store(output, null);
     }
     catch (IOException e) {
-      LOGGER.warn("failed to store properties file: {}", e.getMessage());
+      LOGGER.warn("Failed to store properties file: '{}'", e.getMessage());
     }
   }
 

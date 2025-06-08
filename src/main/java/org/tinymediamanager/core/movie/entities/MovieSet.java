@@ -571,14 +571,9 @@ public class MovieSet extends MediaEntity {
       return;
     }
 
-    if (metadata == null) {
-      LOGGER.error("metadata was null");
-      return;
-    }
-
     // check if metadata has at least an id (aka it is not empty)
-    if (metadata.getIds().isEmpty()) {
-      LOGGER.warn("wanted to save empty metadata for {}", getTitle());
+    if (metadata == null || metadata.getIds().isEmpty()) {
+      LOGGER.warn("Wanted to save empty metadata for '{}'", getTitle());
       return;
     }
 
@@ -660,13 +655,8 @@ public class MovieSet extends MediaEntity {
         connector = new MovieSetToEmbyConnector(this);
     }
 
-    try {
-      connector.write(MovieModuleManager.getInstance().getSettings().getMovieSetNfoFilenames());
-      firePropertyChange(HAS_NFO_FILE, false, true);
-    }
-    catch (Exception e) {
-      LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-    }
+    connector.write(MovieModuleManager.getInstance().getSettings().getMovieSetNfoFilenames());
+    firePropertyChange(HAS_NFO_FILE, false, true);
   }
 
   public void setDummyMovies(List<MovieSetMovie> dummyMovies) {

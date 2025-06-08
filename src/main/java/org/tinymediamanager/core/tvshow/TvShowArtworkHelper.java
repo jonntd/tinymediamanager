@@ -728,7 +728,7 @@ public class TvShowArtworkHelper {
       for (ITvShowSeasonFileNaming fileNaming : fileNamings) {
         String filename = fileNaming.getFilename(tvShowSeason, Utils.getArtworkExtensionFromUrl(seasonArtworkUrl), false);
         if (StringUtils.isBlank(filename)) {
-          LOGGER.warn("empty filename for artwork: {} - {}", fileNaming.name(), tvShowSeason); // NOSONAR
+          LOGGER.warn("Empty filename for season artwork: '{}' - '{}'", fileNaming.name(), tvShowSeason); // NOSONAR
           MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
           continue;
         }
@@ -741,7 +741,7 @@ public class TvShowArtworkHelper {
             Files.createDirectory(destFile.getParent());
           }
           catch (IOException e) {
-            LOGGER.error("could not create folder: {} - {}", destFile.getParent(), e.getMessage());
+            LOGGER.error("Could not create folder '{}' - '{}'", destFile.getParent(), e.getMessage());
             MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShowSeason, "tvshow.seasondownload.failed"));
             continue;
           }
@@ -803,7 +803,7 @@ public class TvShowArtworkHelper {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("fetch image {} - {}", this.url, e.getMessage());
+        LOGGER.error("Could not fetch image '{}' - '{}'", this.url, e.getMessage());
         // fallback
         if (!oldFilename.isEmpty()) {
           tvShowSeason.setArtwork(oldFile, mediaFileType);
@@ -1069,7 +1069,7 @@ public class TvShowArtworkHelper {
         mediaEntity.addToMediaFiles(mf);
       }
       catch (Exception e) {
-        LOGGER.warn("could not extract VSMETA artwork: {}", e.getMessage());
+        LOGGER.warn("Could not extract VSMETA artwork from '{}' - '{}'", vsMetaFile, e.getMessage());
       }
     }
 

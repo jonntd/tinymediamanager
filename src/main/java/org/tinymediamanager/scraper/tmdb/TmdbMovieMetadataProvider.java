@@ -155,7 +155,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     String language = getRequestLanguage(options.getLanguage());
 
     // begin search
-    LOGGER.info("========= BEGIN TMDB Scraper Search for: {}", searchString);
+    LOGGER.debug("========= BEGIN TMDB Scraper Search for: {}", searchString);
 
     // 1. try with TMDBid
     if (tmdbId != 0) {
@@ -174,7 +174,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with TMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -193,7 +193,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with IMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -222,7 +222,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
 
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -241,7 +241,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with search string without year", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -298,7 +298,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
       throw new ScrapeException(e);
     }
 
-    LOGGER.info("found {} results ", movieSetsFound.size());
+    LOGGER.debug("found {} results ", movieSetsFound.size());
     return movieSetsFound;
   }
 
@@ -363,7 +363,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     }
 
     if (movie == null) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -527,7 +527,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         md.addSubItem(mdSubItem);
       }
       catch (Exception e) {
-        LOGGER.warn("could not get metadata for movie set movie - '{}'", e.getMessage());
+        LOGGER.debug("could not get metadata for movie set movie - '{}'", e.getMessage());
         // fall back to the provided data
 
         MediaMetadata mdSubItem = new MediaMetadata(getId());

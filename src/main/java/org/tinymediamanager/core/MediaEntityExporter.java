@@ -78,6 +78,7 @@ public abstract class MediaEntityExporter {
     TV_SHOW
   }
 
+
   protected MediaEntityExporter(Path templatePath, TemplateType type) throws Exception {
     templateDir = templatePath;
 
@@ -222,7 +223,7 @@ public abstract class MediaEntityExporter {
             properties.load(bis);
           }
           catch (Exception e) {
-            LOGGER.warn("error in config \"{}\" - {} ", path, e.getMessage());
+            LOGGER.warn("Error in template config '{}' - '{}' ", path, e.getMessage());
             continue;
           }
 

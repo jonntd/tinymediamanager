@@ -91,10 +91,10 @@ public class MovieFetchImdbTop250 extends TmmAction {
                 }
               }
 
-              LOGGER.info("Matched {} Top 250 values from IMDB", cnt);
+              LOGGER.info("Matched {} Top 250 values from IMDb", cnt);
             }
-            catch (Exception ignored) {
-              LOGGER.warn("Error fetching Top 250: {}", ignored.getMessage());
+            catch (Exception ex) {
+              LOGGER.warn("Could not fetch IMDb Top 250 - '{}'", ex.getMessage());
             }
           }
         });

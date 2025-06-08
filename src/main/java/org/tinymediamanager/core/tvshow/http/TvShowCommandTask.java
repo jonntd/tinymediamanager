@@ -196,7 +196,7 @@ class TvShowCommandTask extends TmmThreadPool {
 
           }
           catch (Exception e) {
-            LOGGER.error("Could not parse index from command - {}", e.getMessage());
+            LOGGER.debug("Could not parse index from command - {}", e.getMessage());
           }
         }
         break;
@@ -209,8 +209,7 @@ class TvShowCommandTask extends TmmThreadPool {
   public void reloadMediaInfo() {
     for (AbstractCommandHandler.Command command : commands) {
       if ("reloadMediaInfo".equals(command.action)) {
-
-        LOGGER.info("reload media info... - {}", command);
+        LOGGER.debug("HTTP API: reload media info - '{}'", command);
         List<TvShow> tvshows = getTvShowsForScope(command.scope);
         List<TvShowEpisode> tvShowEpisodes = getEpisodesForScope(command.scope);
 
@@ -231,8 +230,7 @@ class TvShowCommandTask extends TmmThreadPool {
   public void aspectRatioDetection() {
     for (AbstractCommandHandler.Command command : commands) {
       if ("detectAspectRatio".equals(command.action)) {
-
-        LOGGER.info("detecting aspect ratio... - {}", command);
+        LOGGER.debug("HTTP API: detecting aspect ratio - '{}'", command);
         List<TvShowEpisode> tvShowEpisodes = getEpisodesForScope(command.scope);
 
         if (!tvShowEpisodes.isEmpty()) {
@@ -417,7 +415,7 @@ class TvShowCommandTask extends TmmThreadPool {
 
     for (AbstractCommandHandler.Command command : commands) {
       if ("downloadTrailer".equals(command.action)) {
-        LOGGER.info("downloading trailers... - {}", command);
+        LOGGER.debug("HTTP API: downloading trailers - '{}'", command);
 
         // get movies with missing trailer in this language
         boolean onlyMissingTrailer = true;
@@ -469,7 +467,7 @@ class TvShowCommandTask extends TmmThreadPool {
         }
 
         List<TvShowEpisode> episodesToProcess = new ArrayList<>();
-        LOGGER.info("downloading missing subtitles in - '{}'...", command);
+        LOGGER.debug("HTTP API: downloading missing subtitles - '{}'", command);
 
         // get movies with missing subtitles in this language
         boolean onlyMissingSubs = true;
@@ -609,7 +607,7 @@ class TvShowCommandTask extends TmmThreadPool {
         }
 
         try {
-          LOGGER.info("exporting TV shows - '{}'...", command);
+          LOGGER.debug("HTTP API: exporting TV shows - '{}'", command);
           setTaskName(TmmResourceBundle.getString("tvshow.export"));
           publishState(TmmResourceBundle.getString("tvshow.export"), getProgressDone());
 
@@ -619,7 +617,7 @@ class TvShowCommandTask extends TmmThreadPool {
 
         }
         catch (Exception e) {
-          LOGGER.error("could not export - '{}", e.getMessage());
+          LOGGER.debug("Could not export TV shows - '{}'", e.getMessage());
         }
 
         // done

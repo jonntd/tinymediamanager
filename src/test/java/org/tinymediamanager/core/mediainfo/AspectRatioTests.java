@@ -51,7 +51,7 @@ public class AspectRatioTests extends BasicTest {
   }
 
   private void log(MediaFile mf) {
-    LOGGER.info("AR: {}  Resolution: {}", mf.getAspectRatio(), mf.getVideoResolution());
+    LOGGER.debug("AR: {}  Resolution: {}", mf.getAspectRatio(), mf.getVideoResolution());
     LOGGER.debug("************************************");
   }
 }

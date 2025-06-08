@@ -118,7 +118,7 @@ public abstract class DownloadTask extends TmmTask {
         }
       }
 
-      LOGGER.info("Downloading '{}'", url);
+      LOGGER.debug("Downloading '{}'", url);
       StreamingUrl u = new StreamingUrl(UrlUtil.getURIEncoded(url).toASCIIString());
       if (StringUtils.isNotBlank(userAgent)) {
         u.setUserAgent(userAgent);
@@ -135,7 +135,7 @@ public abstract class DownloadTask extends TmmTask {
         tempFile = tempFolder.resolve(getDestinationWoExtension().getFileName() + "." + uuid + ".part"); // multi episode same file
       }
       catch (Exception e) {
-        LOGGER.warn("could not write to temp folder - {}", e.getMessage());
+        LOGGER.warn("could not write file '{}' to temp folder - '{}'", getDestinationWoExtension(), e.getMessage());
 
         // could not create the temp folder somehow - put the files into the tmm/tmp dir
         tempFile = destination.resolveSibling(destination.getFileName() + "." + uuid + ".part"); // multi episode same file
@@ -213,13 +213,13 @@ public abstract class DownloadTask extends TmmTask {
       } // end isCancelled
     }
     catch (InterruptedException | InterruptedIOException e) {
-      LOGGER.info("download of {} aborted", url);
+      LOGGER.debug("download of {} aborted", url);
       setState(TaskState.CANCELLED);
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "DownloadTask", e.getMessage()));
-      LOGGER.error("problem downloading: ", e);
+      LOGGER.warn("Problem downloading '{}' - '{}", url, e.getMessage());
       setState(TaskState.FAILED);
     }
     finally {
@@ -273,7 +273,7 @@ public abstract class DownloadTask extends TmmTask {
     }
     catch (AccessDeniedException e) {
       // propagate to UI by logging with error
-      LOGGER.error("ACCESS DENIED (trailer download) - '{}'", e.getMessage());
+      LOGGER.error("ACCESS DENIED (trailer download) for '{}' - '{}'", tempFile, e.getMessage());
       // re-throw
       throw e;
     }

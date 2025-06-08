@@ -124,7 +124,7 @@ public class ImdbTvShowParser extends ImdbParser {
     }
 
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("not possible to scrape from IMDB - no imdbId found");
+      LOGGER.debug("not possible to scrape from IMDB - no imdbId found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
@@ -163,7 +163,7 @@ public class ImdbTvShowParser extends ImdbParser {
       json = true;
     }
     catch (Exception e) {
-      LOGGER.warn("Could not get detailpage for id '{}' - '{}'", imdbId, e.getMessage());
+      LOGGER.debug("Could not get detailpage for id '{}' - '{}'", imdbId, e.getMessage());
     }
 
     if (json) {
@@ -202,7 +202,7 @@ public class ImdbTvShowParser extends ImdbParser {
 
       }
       catch (Exception e) {
-        LOGGER.warn("Could not parse page: {}", e.getMessage());
+        LOGGER.debug("Could not parse page: {}", e.getMessage());
       }
     }
     else {
@@ -243,12 +243,12 @@ public class ImdbTvShowParser extends ImdbParser {
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem while scraping: {}", e.getMessage());
+        LOGGER.debug("problem while scraping: {}", e.getMessage());
         throw new ScrapeException(e);
       }
 
       if (md.getIds().isEmpty()) {
-        LOGGER.warn("nothing found");
+        LOGGER.debug("nothing found");
         throw new NothingFoundException();
       }
     }
@@ -286,7 +286,7 @@ public class ImdbTvShowParser extends ImdbParser {
     MediaMetadata wantedEpisode = null;
     if (episodeId.isEmpty() && seasonNr >= 0 && episodeNr > 0) {
       if (!MediaIdUtil.isValidImdbId(showId)) {
-        LOGGER.warn("not possible to scrape from IMDB - no imdbId found");
+        LOGGER.debug("not possible to scrape from IMDB - no imdbId found");
         throw new MissingIdException(MediaMetadata.IMDB);
       }
 
@@ -318,7 +318,7 @@ public class ImdbTvShowParser extends ImdbParser {
 
     // we did not find the episode; return
     if (wantedEpisode == null && StringUtils.isBlank(episodeId)) {
-      LOGGER.warn("episode not found");
+      LOGGER.debug("episode not found");
       throw new NothingFoundException();
     }
 
@@ -368,7 +368,7 @@ public class ImdbTvShowParser extends ImdbParser {
         json = true;
       }
       catch (Exception e1) {
-        LOGGER.warn("Could not get detailpage for id '{}' - '{}'", episodeId, e1.getMessage());
+        LOGGER.debug("Could not get detailpage for id '{}' - '{}'", episodeId, e1.getMessage());
       }
 
       if (json) {
@@ -406,7 +406,7 @@ public class ImdbTvShowParser extends ImdbParser {
           }
         }
         catch (Exception e) {
-          LOGGER.warn("Could not parse page: {}", e.getMessage());
+          LOGGER.debug("Could not parse page: {}", e.getMessage());
         }
       }
       else {
@@ -464,7 +464,7 @@ public class ImdbTvShowParser extends ImdbParser {
       url.addHeader("Accept-Language", getAcceptLanguage(options.getLanguage().getLanguage(), options.getCertificationCountry().getAlpha2()));
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -505,7 +505,7 @@ public class ImdbTvShowParser extends ImdbParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -523,7 +523,7 @@ public class ImdbTvShowParser extends ImdbParser {
         seasonUrl.addHeader("Accept-Language", getAcceptLanguage(options.getLanguage().getLanguage(), options.getCertificationCountry().getAlpha2()));
       }
       catch (Exception e) {
-        LOGGER.error("problem scraping: {}", e.getMessage());
+        LOGGER.debug("problem scraping: {}", e.getMessage());
         throw new ScrapeException(e);
       }
 
@@ -546,7 +546,7 @@ public class ImdbTvShowParser extends ImdbParser {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.warn("problem parsing ep list: {}", e.getMessage());
+        LOGGER.debug("problem parsing ep list: {}", e.getMessage());
       }
     }
 
@@ -689,7 +689,7 @@ public class ImdbTvShowParser extends ImdbParser {
             episodes.add(ep);
           }
           catch (Exception e) {
-            LOGGER.warn("failed parsing: {} for ep data - {}", row.text(), e.getMessage());
+            LOGGER.debug("failed parsing: {} for ep data - {}", row.text(), e.getMessage());
           }
         }
       }

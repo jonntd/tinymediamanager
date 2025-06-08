@@ -232,7 +232,7 @@ class TvShowScraperNfoSettingsPanel extends JPanel {
           TmmUIHelper.browseUrl(lblEpisodeGuideLink.getText());
         }
         catch (Exception e) {
-          LOGGER.error(e.getMessage());
+          LOGGER.error("Could not open '{}' in browser - '{}'", lblEpisodeGuideLink.getText(), e.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, lblEpisodeGuideLink.getText(), "message.erroropenurl",
                   new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-1$

@@ -63,7 +63,8 @@ public class TvShowEpisodePostProcessExecutor extends PostProcessExecutor {
     List<TvShowEpisode> selectedEpisodes = TvShowUIModule.getInstance().getSelectionModel().getSelectedEpisodes();
 
     for (TvShowEpisode episode : selectedEpisodes) {
-      LOGGER.info("PostProcessing: START {}", postProcess);
+      LOGGER.info("Executing post process '{}' for episode '{}'", postProcess.getName(), episode.getTitle());
+
       Map<String, Object> mappings = new HashMap<>();
       mappings.put("tvShow", episode.getTvShow());
       mappings.put("season", episode.getTvShowSeason());
@@ -79,7 +80,7 @@ public class TvShowEpisodePostProcessExecutor extends PostProcessExecutor {
         return;
       }
       catch (Exception e) {
-        LOGGER.error("Problem executing post process", e);
+        LOGGER.error("Problem executing post process '{}' - '{}'", postProcess.getName(), e.getMessage());
       }
     }
   }

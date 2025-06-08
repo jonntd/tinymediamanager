@@ -179,7 +179,7 @@ public class UniversalMovieMetadataProvider implements IMovieMetadataProvider {
       }
     }
     catch (ScrapeException e) {
-      LOGGER.warn("Could not call search method of {} - {}", mp.getProviderInfo().getId(), e.getMessage());
+      LOGGER.debug("Could not call search method of {} - {}", mp.getProviderInfo().getId(), e.getMessage());
       throw e;
     }
 
@@ -280,7 +280,7 @@ public class UniversalMovieMetadataProvider implements IMovieMetadataProvider {
             }
           }
           catch (Exception e) {
-            LOGGER.warn("Could not get a result from scraper: {}", e.getMessage());
+            LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
           }
         }
         // we got a response - parse out TMDB id and IMDB id if needed
@@ -380,7 +380,7 @@ public class UniversalMovieMetadataProvider implements IMovieMetadataProvider {
 
         }
         catch (Exception e) {
-          LOGGER.warn("Problem assigning {} - {}", scraper, e.getMessage());
+          LOGGER.debug("Problem assigning {} - {}", scraper, e.getMessage());
         }
       }
     }
@@ -391,14 +391,14 @@ public class UniversalMovieMetadataProvider implements IMovieMetadataProvider {
       return false;
     }
 
-    if (value instanceof String) {
-      return StringUtils.isNotBlank((String) value);
+    if (value instanceof String string) {
+      return StringUtils.isNotBlank(string);
     }
-    else if (value instanceof Integer) {
-      return (Integer) value != 0;
+    else if (value instanceof Integer i) {
+      return i != 0;
     }
-    else if (value instanceof Float) {
-      return (Float) value != 0;
+    else if (value instanceof Float f) {
+      return f != 0;
     }
     else if (value instanceof Collection) {
       return !((Collection<?>) value).isEmpty();

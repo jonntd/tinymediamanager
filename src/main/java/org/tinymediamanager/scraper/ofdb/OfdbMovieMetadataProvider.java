@@ -117,13 +117,13 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
         }
       }
       catch (Exception e) {
-        LOGGER.warn("failed IMDB search: {}", e.getMessage());
+        LOGGER.debug("failed IMDB search: {}", e.getMessage());
       }
     }
 
     // we can only work further if we got a search result on ofdb.de
     if (StringUtils.isBlank(detailUrl)) {
-      LOGGER.warn("We did not get any useful movie url");
+      LOGGER.debug("We did not get any useful movie url");
       throw new MissingIdException(MediaMetadata.IMDB, getProviderInfo().getId());
     }
 
@@ -147,7 +147,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("could not fetch detail url: {}", e.getMessage());
+      LOGGER.debug("could not fetch detail url: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -301,7 +301,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("failed to get plot page: {}", e.getMessage());
+        LOGGER.debug("failed to get plot page: {}", e.getMessage());
       }
     }
 
@@ -320,7 +320,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("failed to get detail page: {}", e.getMessage());
+      LOGGER.debug("failed to get detail page: {}", e.getMessage());
     }
 
     // **********************************************
@@ -448,7 +448,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("failed to search for imdb Id {}: {}", imdb, e.getMessage());
+        LOGGER.debug("failed to search for imdb Id {}: {}", imdb, e.getMessage());
         savedException = e;
       }
     }
@@ -469,7 +469,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("failed to search for: {} - {}", searchQuery, e.getMessage());
+        LOGGER.debug("failed to search for: {} - {}", searchQuery, e.getMessage());
         savedException = e;
       }
     }
@@ -499,7 +499,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
           sr.setUrl(url);
           String id = StrgUtils.substr(url, "film/(\\d+),");
           if (id.isBlank()) {
-            LOGGER.info("ignoring non-movie result: {}", url);
+            LOGGER.debug("ignoring non-movie result: {}", url);
             continue;
           }
           sr.setId(ID, id);
@@ -533,7 +533,7 @@ public class OfdbMovieMetadataProvider extends OfdbMetadataProvider
         }
       }
       catch (Exception e) {
-        LOGGER.warn("error parsing movie result: {}", e.getMessage());
+        LOGGER.debug("error parsing movie result: {}", e.getMessage());
       }
     }
 

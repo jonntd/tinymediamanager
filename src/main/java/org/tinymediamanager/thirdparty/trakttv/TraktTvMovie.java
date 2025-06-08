@@ -143,7 +143,7 @@ class TraktTvMovie {
       traktMovies = executeCall(api.sync().collectionMovies(Extended.METADATA));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
@@ -219,7 +219,7 @@ class TraktTvMovie {
     }
 
     if (movies.isEmpty()) {
-      LOGGER.info("no new movies for Trakt.tv collection sync found.");
+      LOGGER.info("No new movies for Trakt.tv collection sync found.");
       return;
     }
 
@@ -231,7 +231,7 @@ class TraktTvMovie {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing Trakt.tv: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
     }
   }
 
@@ -254,7 +254,7 @@ class TraktTvMovie {
       traktMovies = executeCall(api.sync().watchedMovies(null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt.tv: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
@@ -306,7 +306,7 @@ class TraktTvMovie {
     // *****************************************************************************
     // Now get all TMM watched movies...
     List<Movie> tmmWatchedMovies = moviesInTmm.stream().filter(Movie::isWatched).collect(Collectors.toList());
-    LOGGER.info("You have now {} movies marked as 'watched' in your TMM database", tmmWatchedMovies.size());
+    LOGGER.info("You have now {} movies marked as 'watched' in your tMM database", tmmWatchedMovies.size());
 
     // ...and subtract the already watched from Trakt
     for (BaseMovie traktWatched : traktMovies) {
@@ -347,7 +347,7 @@ class TraktTvMovie {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
     }
   }
 
@@ -369,7 +369,7 @@ class TraktTvMovie {
       traktMovies = executeCall(api.sync().ratingsMovies(RatingsFilter.ALL, null, null, null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt.tv: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
@@ -413,7 +413,7 @@ class TraktTvMovie {
     List<Movie> tmmRatedMovies = moviesInTmm.stream()
         .filter(movie -> movie.getUserRating() != MediaMetadata.EMPTY_RATING)
         .collect(Collectors.toList());
-    LOGGER.info("You have now {} movies with user rating in your TMM database", tmmRatedMovies.size());
+    LOGGER.info("You have now {} movies with user ratings in your tMM database", tmmRatedMovies.size());
 
     // ...and subtract movies with the same rating on Trakt
     for (RatedMovie traktRated : traktMovies) {
@@ -474,7 +474,7 @@ class TraktTvMovie {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
     }
   }
 
@@ -496,7 +496,7 @@ class TraktTvMovie {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+      LOGGER.error("Failed removing from Trakt.tv collection - '{}'", e.getMessage());
     }
   }
 
@@ -518,7 +518,7 @@ class TraktTvMovie {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+      LOGGER.error("Failed removing from Trakt.tv collection - '{}'", e.getMessage());
     }
   }
 
@@ -537,11 +537,11 @@ class TraktTvMovie {
       traktWatched = executeCall(api.sync().watchedMovies(null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
-    LOGGER.info("You have {} movies in your Trakt.tv collection", traktCollection.size());
-    LOGGER.info("You have {} movies watched", traktWatched.size());
+    LOGGER.debug("You have {} movies in your Trakt.tv collection", traktCollection.size());
+    LOGGER.debug("You have {} movies watched", traktWatched.size());
 
     // *****************************************************************************
     // 2) remove every movie from the COLLECTION state
@@ -559,7 +559,7 @@ class TraktTvMovie {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
         return;
       }
     }
@@ -580,7 +580,7 @@ class TraktTvMovie {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
   }

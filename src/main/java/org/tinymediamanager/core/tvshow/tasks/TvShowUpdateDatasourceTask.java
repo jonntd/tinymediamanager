@@ -252,7 +252,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             continue;
           }
 
-          LOGGER.info("Start UDS on datasource: {}", ds);
+          LOGGER.info("Starting \"update data sources\" on datasource: {}", ds);
           initThreadPool(3, "update");
           setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + ds + "'");
           publishState();
@@ -263,7 +263,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           // true
           if (!Files.exists(dsAsPath)) {
             // error - continue with next datasource
-            LOGGER.warn("Datasource not available/empty {}", ds);
+            LOGGER.warn("Datasource '{}' not available/empty", ds);
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
             continue;
@@ -284,7 +284,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
               isEmpty = Utils.isFolderEmpty(dsAsPath);
             }
             catch (Exception e) {
-              LOGGER.warn("could not check folder '{}' for emptiness - {}", dsAsPath, e.getMessage());
+              LOGGER.warn("Could not check folder '{}' for emptiness - '{}'", dsAsPath, e.getMessage());
             }
 
             if (isEmpty) {
@@ -343,9 +343,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           waitForCompletionOrCancel();
 
           // print stats
-          LOGGER.info("FilesFound: {}", filesFound.size());
-          LOGGER.info("tvShowsFound: {}", tvShowList.getTvShowCount());
-          LOGGER.info("episodesFound: {}", tvShowList.getEpisodeCount());
+          LOGGER.info("Files found: {}", filesFound.size());
+          LOGGER.info("TV shows found: {}", tvShowList.getTvShowCount());
+          LOGGER.info("Episodes found: {}", tvShowList.getEpisodeCount());
           LOGGER.debug("PreDir: {}", preDir);
           LOGGER.debug("PostDir: {}", postDir);
           LOGGER.debug("VisFile: {}", visFile);
@@ -362,6 +362,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         } // end foreach datasource
       }
       else { // for each selected show
+        LOGGER.info("Start \"update data sources\" for selected TV shows");
         initThreadPool(3, "update");
 
         // get distinct data sources
@@ -394,7 +395,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
               isEmpty = Utils.isFolderEmpty(dsAsPath);
             }
             catch (Exception e) {
-              LOGGER.warn("could not check folder '{}' for emptiness - {}", dsAsPath, e.getMessage());
+              LOGGER.warn("Could not check folder '{}' for emptiness - '{}'", dsAsPath, e.getMessage());
             }
 
             if (isEmpty) {
@@ -417,9 +418,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         waitForCompletionOrCancel();
 
         // print stats
-        LOGGER.info("FilesFound: {}", filesFound.size());
-        LOGGER.info("tvShowsFound: {}", tvShowList.getTvShowCount());
-        LOGGER.info("episodesFound: {}", tvShowList.getEpisodeCount());
+        LOGGER.info("Files found: {}", filesFound.size());
+        LOGGER.info("TV shows found: {}", tvShowList.getTvShowCount());
+        LOGGER.info("Episodes found: {}", tvShowList.getEpisodeCount());
         LOGGER.debug("PreDir: {}", preDir);
         LOGGER.debug("PostDir: {}", postDir);
         LOGGER.debug("VisFile: {}", visFile);
@@ -440,7 +441,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         TmmTaskManager.getInstance().addUnnamedTask(() -> KodiRPC.getInstance().updateTvShowMappings());
       }
 
-      LOGGER.info("getting Mediainfo...");
+      LOGGER.info("Getting Mediainfo...");
 
       initThreadPool(2, "mediainfo");
       setTaskName(TmmResourceBundle.getString("update.mediainfo"));
@@ -504,14 +505,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       stopWatch.stop();
-      LOGGER.info("Done updating datasource :) - took {}", stopWatch);
+      LOGGER.info("Finished updating data sources :) - took {} ms", stopWatch);
 
       resetCounters();
     }
-    catch (
-
-    Exception e) {
-      LOGGER.error("Thread crashed", e);
+    catch (Exception e) {
+      LOGGER.error("Could not update data sources for TV shows - '{}'", e.getMessage());
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
@@ -525,7 +524,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     setWorkUnits(showCount);
     publishState();
 
-    LOGGER.info("removing orphaned movies/files...");
+    LOGGER.info("Removing orphaned TV shows/episodes/files...");
     for (int i = showCount - 1; i >= 0; i--) {
       if (cancel) {
         break;
@@ -558,7 +557,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     setWorkUnits(showCount);
     publishState();
 
-    LOGGER.info("removing orphaned tv shows/files...");
+    LOGGER.info("Removing orphaned TV shows/episodes/files...");
 
     for (int i = showCount - 1; i >= 0; i--) {
       if (cancel) {
@@ -784,13 +783,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       TvShow tvShow = tvShowList.getTvShowByPath(showDir);
       if (tvShow != null && tvShow.isLocked()) {
-        LOGGER.info("TV show '{}' found in uds, but is locked", tvShow.getPath());
+        LOGGER.warn("TV show '{}' found in \"update data source\", but is locked", tvShow.getPath());
         return "";
       }
 
       Set<Path> allFiles = getAllFilesRecursive(showDir);
-      if (allFiles == null || allFiles.isEmpty()) {
-        LOGGER.info("skip empty directory: {}", showDir);
+      if (allFiles.isEmpty()) {
+        LOGGER.debug("Skip empty directory: {}", showDir);
         return "";
       }
 
@@ -818,7 +817,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       Collections.sort(mfs);
 
       if (getMediaFiles(mfs, MediaFileType.VIDEO).isEmpty()) {
-        LOGGER.info("no video file found in directory {}", showDir);
+        LOGGER.debug("no video file found in directory {}", showDir);
         return "";
       }
 
@@ -836,7 +835,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             tvShow = parser.toTvShow();
           }
           catch (Exception e) {
-            LOGGER.warn("problem parsing NFO: {}", e.getMessage());
+            LOGGER.debug("problem parsing NFO: {}", e.getMessage());
           }
         }
         if (tvShow == null) {
@@ -884,7 +883,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             }
           }
           catch (IOException e) {
-            LOGGER.warn("| couldn't read NFO {}", showNFO);
+            LOGGER.debug("| couldn't read NFO {}", showNFO);
           }
         }
 
@@ -1568,8 +1567,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
     }
     catch (IOException e) {
-      LOGGER.error("error on listFilesAndDirs", e);
-      LOGGER.debug("falling back to the alternate coding");
+      LOGGER.error("Error while getting a file listing of '{}' - '{}'", directory, e.getMessage());
+      LOGGER.debug("could not list files in normal way", e);
       fileNames = listFilesAndDirs2(directory);
     }
 
@@ -1642,7 +1641,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
     }
     catch (Exception e) {
-      LOGGER.error("error on listFilesAndDirs2", e);
+      LOGGER.error("Error while getting a file listing of '{}' (alternate way) - '{}'", directory, e.getMessage());
+      LOGGER.debug("could not list files in alternate way", e);
     }
 
     // return sorted

@@ -52,7 +52,7 @@ public abstract class TrailerDownloadTask extends DownloadTask {
 
     // we cannot download from Apple Trailer anymore (closed on 01.09.2023)
     if (url.contains("trailers.apple.com")) {
-      LOGGER.error("Could not download trailer: Apple Trailers has been shut down on 01.09.2023");
+      LOGGER.warn("Could not download trailer: Apple Trailers has been shut down on 01.09.2023");
       return;
     }
 

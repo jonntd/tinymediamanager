@@ -177,11 +177,11 @@ public class PersonTable extends TmmEditorTable {
         try {
           TmmUIHelper.browseUrl(person.getProfileUrl());
         }
-        catch (Exception e1) {
-          LOGGER.error("Opening actor profile", e1);
+        catch (Exception ex) {
+          LOGGER.error("Could not open actor profile in browser - '{}'", ex.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, person.getProfileUrl(), "message.erroropenurl",
-                  new String[] { ":", e1.getLocalizedMessage() }));
+                  new String[] { ":", ex.getLocalizedMessage() }));
         }
       }
       else if (isImageColumn(column) && StringUtils.isNotBlank(person.getThumbUrl())) {

@@ -218,7 +218,7 @@ public class MovieRenamer {
       Utils.deleteEmptyDirectoryRecursive(movie.getPathNIO());
     }
     catch (IOException e) {
-      LOGGER.warn("could not delete empty subfolders: {}", e.getMessage());
+      LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", movie.getPathNIO(), e.getMessage());
     }
   }
 
@@ -247,7 +247,7 @@ public class MovieRenamer {
     // skip renamer, if all templates are empty!
     if (MovieModuleManager.getInstance().getSettings().getRenamerPathname().isEmpty()
         && MovieModuleManager.getInstance().getSettings().getRenamerFilename().isEmpty()) {
-      LOGGER.info("NOT renaming Movie '{}' - renaming patterns are empty!", movie.getTitle());
+      LOGGER.warn("NOT renaming Movie '{}' - renaming patterns are empty!", movie.getTitle());
       return;
     }
 
@@ -257,12 +257,12 @@ public class MovieRenamer {
 
     // check if a datasource is set
     if (StringUtils.isEmpty(movie.getDataSource())) {
-      LOGGER.error("no Datasource set");
+      LOGGER.error("No data source set for movie '{}' - aborting!", movie.getTitle());
       return;
     }
 
     if (movie.getTitle().isEmpty()) {
-      LOGGER.error("won't rename movie '{}' / '{}' not even title is set?", movie.getPathNIO(), movie.getTitle());
+      LOGGER.error("Won't rename movie '{}' - not even title is set?", movie.getPathNIO());
       return;
     }
 
@@ -293,12 +293,12 @@ public class MovieRenamer {
         }
       }
       catch (Exception e) {
-        LOGGER.warn("new movie folder name is illegal - '{}'", e.getMessage());
+        LOGGER.warn("New movie folder name '{}' is not allowed - '{}'", newPathname, e.getMessage());
         newPathname = movie.getPathNIO().toString();
       }
     } // folder pattern empty
     else {
-      LOGGER.info("Folder rename settings were empty - NOT renaming folder");
+      LOGGER.debug("Folder rename settings were empty - NOT renaming folder");
       // set it to current for file renaming
       newPathname = movie.getPathNIO().toString();
     }
@@ -357,7 +357,7 @@ public class MovieRenamer {
         vid.setFile(newMF.getFileAsPath()); // update
       }
       else {
-        LOGGER.error("could not movie video file of movie '{}' - abort renaming", movie.getTitle());
+        LOGGER.error("Could not move video file ({}) of movie '{}' - abort renaming", vid, movie.getTitle());
         // could not move main video file - abort!
         // if we're in a MMD, we did not do anything before, just reset the path
         if (movie.isMultiMovieDir()) {
@@ -405,7 +405,7 @@ public class MovieRenamer {
               Files.copy(oldCache, newCache);
             }
             catch (IOException e) {
-              LOGGER.warn("Error moving cached file - '{}'", e.getMessage());
+              LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
             }
           }
         }
@@ -510,7 +510,7 @@ public class MovieRenamer {
         fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, sub.getFileAsPath(), newMF.getFileAsPath()));
       }
       else {
-        LOGGER.error("could not rename subtitle file '{}'", sub.getFileAsPath());
+        LOGGER.warn("Could not rename subtitle file '{}'", sub.getFileAsPath());
         needed.add(sub);
       }
     }
@@ -556,7 +556,7 @@ public class MovieRenamer {
     // ######################################################################
     // ## CLEANUP - delete all files marked for cleanup, which are not "needed"
     // ######################################################################
-    LOGGER.info("Cleanup...");
+    LOGGER.debug("Cleanup...");
 
     // get all existing files in the movie dir, since Files.exist is not reliable in OSX
     List<Path> existingFiles;
@@ -579,7 +579,7 @@ public class MovieRenamer {
       if (!needed.contains(cl)) {
         if (cl.getFileAsPath().equals(Paths.get(movie.getDataSource())) || cl.getFileAsPath().equals(movie.getPathNIO())
             || cl.getFileAsPath().equals(Paths.get(oldPathname))) {
-          LOGGER.warn("Wohoo! We tried to remove complete datasource / movie folder. Nooo way...! {}: {}", cl.getType(), cl.getFileAsPath());
+          LOGGER.warn("Wohoo! We tried to remove complete datasource / movie folder. Nooo way...! '{}' / '{}'", cl.getType(), cl.getFileAsPath());
           // happens when iterating eg over the getNFONaming and we return a "" string.
           // then the path+filename = movie path and we want to delete :/
           continue;
@@ -604,7 +604,7 @@ public class MovieRenamer {
           }
         }
         catch (IOException e) {
-          LOGGER.warn("could not search for empty dir: {}", e.getMessage());
+          LOGGER.debug("could not search for empty dir: {}", e.getMessage());
         }
       }
     }
@@ -650,7 +650,7 @@ public class MovieRenamer {
           vid.setFile(oldMF.getFileAsPath()); // update
         }
         else {
-          LOGGER.error("could not move video file of movie '{}' - abort renaming", movie.getTitle());
+          LOGGER.error("Could not move video file ({}) of movie '{}' - abort renaming", vid, movie.getTitle());
           return;
         }
       }
@@ -660,7 +660,7 @@ public class MovieRenamer {
           vid.setFile(oldMF.getFileAsPath()); // update
         }
         else {
-          LOGGER.error("could not move video file of movie '{}' - abort renaming", movie.getTitle());
+          LOGGER.error("Could not move video file ({}) of movie '{}' - abort renaming", vid, movie.getTitle());
           return;
         }
       }
@@ -731,7 +731,7 @@ public class MovieRenamer {
       Utils.deleteEmptyDirectoryRecursive(newMoviePath);
     }
     catch (IOException e) {
-      LOGGER.warn("could not delete empty subfolders: {}", e.getMessage());
+      LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", newMoviePath, e.getMessage());
     }
   }
 
@@ -781,7 +781,7 @@ public class MovieRenamer {
           }
         }
         catch (Exception e) {
-          LOGGER.warn("could not check if dir '{}' exists/is empty - '{}'", destDir, e.getMessage());
+          LOGGER.warn("Could not check if dir '{}' exists/is empty - '{}'", destDir, e.getMessage());
         }
       }
       LOGGER.debug("movie willBeMulti?: {}", newDestIsMultiMovieDir);
@@ -801,7 +801,7 @@ public class MovieRenamer {
           }
         }
         catch (Exception e) {
-          LOGGER.error("error moving folder: ", e);
+          LOGGER.error("Error renaming movie folder '{}' to '{}' - '{}' ", srcDir, destDir, e.getMessage());
           MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
           return false;
@@ -809,7 +809,7 @@ public class MovieRenamer {
         if (!ok) {
           MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, srcDir, "message.renamer.failedrename", new String[] { movie.getTitle() }));
-          LOGGER.error("Could not move to destination '{}' - NOT renaming folder", destDir);
+          LOGGER.error("Could not move movie '{}' to destination '{}' - NOT renaming folder", movie.getTitle(), destDir);
           return false;
         }
       }
@@ -823,7 +823,7 @@ public class MovieRenamer {
             Files.createDirectories(destDir);
           }
           catch (Exception e) {
-            LOGGER.error("Could not create destination '{}' - NOT renaming folder ('upgrade' movie) - {}", destDir, e.getMessage());
+            LOGGER.error("Could not create destination '{}' - NOT renaming folder ('upgrade' movie) - '{}'", destDir, e.getMessage());
             // well, better not to rename
             return false;
           }
@@ -848,7 +848,7 @@ public class MovieRenamer {
             Files.createDirectories(destDir);
           }
           catch (Exception e) {
-            LOGGER.error("Could not create destination '{}' - NOT renaming folder ('MMD' movie) - {}", destDir, e.getMessage());
+            LOGGER.error("Could not create destination '{}' - NOT renaming folder ('MMD' movie) - '{}'", destDir, e.getMessage());
             // well, better not to rename
             return false;
           }
@@ -866,7 +866,7 @@ public class MovieRenamer {
       // Template empty or not even title set, so we are NOT renaming any files
       // we keep the same name on renaming ;)
       newVideoBasename = movie.getVideoBasenameWithoutStacking();
-      LOGGER.warn("Filepattern is not valid - NOT renaming files!");
+      LOGGER.warn("File pattern '{}' is not valid - NOT renaming files!", MovieModuleManager.getInstance().getSettings().getRenamerFilename());
     }
     else {
       // since we rename, generate the new basename
@@ -931,7 +931,7 @@ public class MovieRenamer {
       newMovieDir = Paths.get(movie.getDataSource(), newPathname);
     }
     catch (Exception e) {
-      LOGGER.warn("new movie folder name is illegal - '{}'", e.getMessage());
+      LOGGER.warn("New movie folder name '{}' is not allowed - '{}'", newPathname, e.getMessage());
     }
 
     String newFilename = newVideoFileName;
@@ -1296,7 +1296,7 @@ public class MovieRenamer {
                   }
                 }
                 catch (IOException e) {
-                  LOGGER.error("could not create extrafanarts folder: {}", e.getMessage());
+                  LOGGER.error("Could not create extrafanarts folder '{}' - '{}'", folder, e.getMessage());
                 }
               }
               else {
@@ -1434,7 +1434,7 @@ public class MovieRenamer {
       return engine.transform(JmteUtils.morphTemplate(token, TOKEN_MAP), root);
     }
     catch (Exception e) {
-      LOGGER.warn("unable to process token: {} - {}", token, e.getMessage());
+      LOGGER.warn("Unable to process token: '{}' - '{}'", token, e.getMessage());
       return token;
     }
   }
@@ -1598,12 +1598,12 @@ public class MovieRenamer {
         return true;
       }
       else {
-        LOGGER.error("Could not move MF '{}' to '{}'", oldFilename, newFilename);
+        LOGGER.warn("Could not move media file '{}' to '{}'", oldFilename, newFilename);
         return false; // rename failed
       }
     }
     catch (Exception e) {
-      LOGGER.error("error moving file '{}' - '{}'", oldFilename.toAbsolutePath(), e.getMessage());
+      LOGGER.error("Error moving file '{}' ro '{}' - '{}'", oldFilename.toAbsolutePath(), newFilename.toAbsolutePath(), e.getMessage());
       MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldFilename, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
@@ -1635,7 +1635,7 @@ public class MovieRenamer {
       }
     }
     catch (Exception e) {
-      LOGGER.error("error moving folder '{}' - '{}'", oldName.toAbsolutePath(), e.getMessage());
+      LOGGER.error("Error moving folder '{}' to '{}' - '{}'", oldName.toAbsolutePath(), newName.toAbsolutePath(), e.getMessage());
       MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldName, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed

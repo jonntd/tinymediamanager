@@ -200,7 +200,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
       }
     }
     catch (ScrapeException e) {
-      LOGGER.warn("Could not call search method of {} - {}", mp.getProviderInfo().getId(), e.getMessage());
+      LOGGER.debug("Could not call search method of {} - {}", mp.getProviderInfo().getId(), e.getMessage());
       throw e;
     }
 
@@ -257,7 +257,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
         }
       }
       catch (Exception e) {
-        LOGGER.warn("Could not get a result from scraper: {}", e.getMessage());
+        LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
       }
     }
     return metadataMap;
@@ -346,7 +346,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
             }
           }
           catch (Exception e) {
-            LOGGER.warn("Could not get a result from scraper: {}", e.getMessage());
+            LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
           }
         }
         // we got a response - parse out TVDB id, TMDB id and IMDB id if needed
@@ -485,7 +485,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
 
         }
         catch (Exception e) {
-          LOGGER.warn("Problem assigning {} - {}", scraper, e.getMessage());
+          LOGGER.debug("Problem assigning {} - {}", scraper, e.getMessage());
         }
       }
     }
@@ -605,7 +605,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
 
         }
         catch (Exception e) {
-          LOGGER.warn("Problem assigning {} - {}", scraper, e.getMessage());
+          LOGGER.debug("Problem assigning {} - {}", scraper, e.getMessage());
         }
       }
     }
@@ -682,7 +682,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
             }
           }
           catch (Exception e) {
-            LOGGER.warn("Could not get a result from scraper: {}", e.getMessage());
+            LOGGER.debug("Could not get a result from scraper: {}", e.getMessage());
           }
         }
         // we got a response - parse out TVDB id, TMDB id and IMDB id if needed

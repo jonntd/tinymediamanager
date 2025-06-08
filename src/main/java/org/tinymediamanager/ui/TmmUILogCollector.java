@@ -15,51 +15,79 @@
  */
 package org.tinymediamanager.ui;
 
-import org.slf4j.LoggerFactory;
-import org.tinymediamanager.ui.TmmUILogAppender.LogOutput;
+import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
+import java.util.List;
+
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 
 /**
- * The Class TmmUILogCollector, collect all logs and store it for the UI.
+ * The {@code TmmUILogCollector} is a singleton utility class responsible for initializing and managing a {@link TmmUILogAppender} instance that
+ * captures log messages for the tinyMediaManager UI.
+ * <p>
+ * This class attaches a custom appender to the root SLF4J/Logback logger at runtime to intercept logs of levels INFO, WARN, and ERROR, format them,
+ * and forward them to a UI component.
+ * </p>
+ * <p>
+ * The collector is initialized statically and can be accessed through the {@link #instance} field.
+ * </p>
+ *
+ * @author Manuel Laggner
  */
 public class TmmUILogCollector {
-  public static final TmmUILogCollector instance = new TmmUILogCollector();
+  private static final TmmUILogCollector instance = new TmmUILogCollector();
 
-  private final TmmUILogAppender        logAppender;
+  private final TmmUILogAppender         uiLogAppender;
 
-  // just to trigger class loading and initializing
+  /**
+   * Initializes the singleton instance of {@code TmmUILogCollector}.
+   * <p>
+   * Calling this method ensures the collector is loaded and the appender is registered.
+   * </p>
+   */
   public static void init() {
-    // do nothing
+    // just to trigger class loading and initializing
   }
 
+  /**
+   * Returns the singleton instance of {@link TmmUILogCollector}.
+   * <p>
+   * This method provides global access to the {@code TmmUILogCollector}, ensuring that only one instance is used throughout the application.
+   * </p>
+   *
+   * @return the singleton {@code TmmUILogCollector} instance
+   */
+  public static TmmUILogCollector getInstance() {
+    return instance;
+  }
+
+  /**
+   * Constructs a new {@code TmmUILogCollector}, creates a {@link TmmUILogAppender} for UI logging, and attaches it to the root Logback logger.
+   * <p>
+   * This constructor is private to enforce singleton behavior.
+   * </p>
+   */
   private TmmUILogCollector() {
-    Logger rootLogger = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    Logger rootLogger = (Logger) LoggerFactory.getLogger(ROOT_LOGGER_NAME);
 
-    // create a new TmmUILogAppender - so we need not to put it in the logback.xml:
-    PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-    encoder.setContext(rootLogger.getLoggerContext());
-    encoder.setPattern("%d{HH:mm:ss.SSS} %-5level %logger{60} - %msg%n");
-    encoder.start();
+    // INFO logs - progress info
+    // create a new TmmUILogAppender - so we don't need to put it in the logback.xml:
+    uiLogAppender = new TmmUILogAppender(List.of(Level.ERROR, Level.WARN, Level.INFO));
+    uiLogAppender.setContext(rootLogger.getLoggerContext());
+    uiLogAppender.start();
 
-    logAppender = new TmmUILogAppender("ERROR");
-    logAppender.setContext(rootLogger.getLoggerContext());
-    logAppender.setEncoder(encoder);
-    logAppender.start();
-
-    rootLogger.addAppender(logAppender);
+    rootLogger.addAppender(uiLogAppender);
   }
 
-  public LogOutput getLogOutput() {
-    return getLogOutput(0);
-  }
-
-  public LogOutput getLogOutput(final int from) {
-    LogOutput output = null;
-    synchronized (logAppender) {
-      output = logAppender.getLogOutput(from);
-    }
-    return output;
+  /**
+   * Returns the configured {@link TmmUILogAppender} instance used to capture and forward logs to the UI.
+   *
+   * @return the UI log appender
+   */
+  public TmmUILogAppender getUiLogAppender() {
+    return uiLogAppender;
   }
 }

@@ -87,7 +87,7 @@ public class TvShowSyncTraktTvTask extends TmmTask {
         traktTV.syncTraktTvShowCollection(tvShows);
       }
       catch (Exception e) {
-        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
 
@@ -97,7 +97,7 @@ public class TvShowSyncTraktTvTask extends TmmTask {
         traktTV.removeFromTraktTvShowCollection(tvShows);
       }
       catch (Exception e) {
-        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
 
@@ -107,7 +107,7 @@ public class TvShowSyncTraktTvTask extends TmmTask {
         traktTV.syncTraktTvShowWatched(tvShows);
       }
       catch (Exception e) {
-        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
 
@@ -117,7 +117,7 @@ public class TvShowSyncTraktTvTask extends TmmTask {
         traktTV.removeFromTraktTvShowWatched(tvShows);
       }
       catch (Exception e) {
-        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
 
@@ -127,7 +127,7 @@ public class TvShowSyncTraktTvTask extends TmmTask {
         traktTV.syncTraktTvShowRating(tvShows);
       }
       catch (Exception e) {
-        LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
   }

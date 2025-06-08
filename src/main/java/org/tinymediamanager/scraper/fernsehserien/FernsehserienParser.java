@@ -156,10 +156,10 @@ public class FernsehserienParser {
       }
     }
     catch (Exception e) {
-      LOGGER.error("tried to fetch search response", e);
+      LOGGER.debug("tried to fetch search response", e);
       throw new ScrapeException(e);
     }
-    LOGGER.info("Found {} results.", results.size());
+    LOGGER.debug("Found {} results.", results.size());
 
     return results;
   }
@@ -207,7 +207,7 @@ public class FernsehserienParser {
     }
     // we did not find the episode; return
     if (wantedEpisode == null && StringUtils.isBlank(episodeId)) {
-      LOGGER.warn("episode not found");
+      LOGGER.debug("episode not found");
       throw new NothingFoundException();
     }
 
@@ -227,7 +227,7 @@ public class FernsehserienParser {
           TimeUnit.DAYS);
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -281,7 +281,7 @@ public class FernsehserienParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -304,7 +304,7 @@ public class FernsehserienParser {
       id = options.getIdAsString(FernsehserienMetadataProvider.ID);
     }
     if (StringUtils.isBlank(id)) {
-      LOGGER.warn("not possible to scrape from Fernsehserien.de - no id found");
+      LOGGER.debug("not possible to scrape from Fernsehserien.de - no id found");
       throw new MissingIdException(FernsehserienMetadataProvider.ID);
     }
     md.setId(FernsehserienMetadataProvider.ID, id);
@@ -315,7 +315,7 @@ public class FernsehserienParser {
       url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id, 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -479,7 +479,7 @@ public class FernsehserienParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -501,7 +501,7 @@ public class FernsehserienParser {
       url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id + postfix, 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -556,7 +556,7 @@ public class FernsehserienParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
   }
@@ -619,7 +619,7 @@ public class FernsehserienParser {
       url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id + "/episodenguide", 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
@@ -721,7 +721,7 @@ public class FernsehserienParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: {}", e.getMessage());
+      LOGGER.debug("problem scraping: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 

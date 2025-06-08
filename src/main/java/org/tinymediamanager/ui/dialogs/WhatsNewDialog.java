@@ -79,7 +79,7 @@ public class WhatsNewDialog extends TmmDialog {
             TmmUIHelper.browseUrl(hle.getURL().toString());
           }
           catch (Exception e) {
-            LOGGER.error("error browsing to " + hle.getURL().toString() + " :" + e.getMessage());
+            LOGGER.error("Could not open '{}' in browser - '{}'", hle.getURL(), e.getMessage());
           }
         }
       });
@@ -150,7 +150,7 @@ public class WhatsNewDialog extends TmmDialog {
     }
     catch (IOException e) {
       // no file found
-      LOGGER.warn(e.getMessage());
+      LOGGER.warn("Could not display changelog - '{}'", e.getMessage());
     }
   }
 }

@@ -91,7 +91,7 @@ public class TvShowExportAction extends TmmAction {
               .addMainTask(new ExportTask(TmmResourceBundle.getString("tvshow.export"), exporter, selectedTvShows, exportPath));
         }
         catch (Exception e) {
-          LOGGER.error("Error exporting TV shows: ", e);
+          LOGGER.error("Error exporting TV shows -'{}'", e.getMessage());
         }
         setVisible(false);
       }

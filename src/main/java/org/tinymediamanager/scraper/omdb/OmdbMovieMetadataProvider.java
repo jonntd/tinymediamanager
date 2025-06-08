@@ -72,7 +72,7 @@ public class OmdbMovieMetadataProvider extends OmdbMetadataProvider implements I
 
     // imdbid check
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("no imdb id found");
+      LOGGER.debug("no imdb id found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
@@ -86,18 +86,18 @@ public class OmdbMovieMetadataProvider extends OmdbMetadataProvider implements I
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
     MediaMetadata metadata = parseDetail(doc, "movie");
     if (metadata == null) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -147,12 +147,12 @@ public class OmdbMovieMetadataProvider extends OmdbMetadataProvider implements I
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -178,7 +178,7 @@ public class OmdbMovieMetadataProvider extends OmdbMetadataProvider implements I
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("error searching: {}", e.getMessage());
+        LOGGER.debug("error searching: {}", e.getMessage());
         throw new ScrapeException(e);
       }
     }
