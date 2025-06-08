@@ -8,6 +8,7 @@ Version 5.2.0
 + [macOS] changed hotkey modifier to comply with macOS standards
 + [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
 + [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
++ [UI] created an "Activity log" to track all tasks and their results/messages #2914
 x [TV shows] fixed scraping multiple trailers
 x [Renamer] fixed using ${originalFilename} in the renamer filename pattern #2966
 x [Scraper] do not overwrite existing fields with empty values #2947
