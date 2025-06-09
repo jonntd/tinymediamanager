@@ -136,24 +136,22 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class MovieChooserDialog extends TmmDialog implements ActionListener {
-  private static final Logger                                                  LOGGER                = LoggerFactory
-      .getLogger(MovieChooserDialog.class);
+  private static final Logger                                                  LOGGER         = LoggerFactory.getLogger(MovieChooserDialog.class);
 
-  private final MovieList                                                      movieList             = MovieModuleManager.getInstance()
-      .getMovieList();
+  private final MovieList                                                      movieList      = MovieModuleManager.getInstance().getMovieList();
   private final Movie                                                          movieToScrape;
   private final List<MediaScraper>                                             artworkScrapers;
   private final List<MediaScraper>                                             trailerScrapers;
+  private final SortedList<MovieChooserModel>                                  searchResultEventList;
+  private final EventList<Person>                                              castMemberEventList;
 
   private MediaScraper                                                         mediaScraper;
-  private SortedList<MovieChooserModel>                                        searchResultEventList = null;
-  private EventList<Person>                                                    castMemberEventList   = null;
-  private MovieChooserModel                                                    selectedResult        = null;
+  private MovieChooserModel                                                    selectedResult = null;
 
   private SearchTask                                                           activeSearchTask;
 
-  private boolean                                                              continueQueue         = true;
-  private boolean                                                              navigateBack          = false;
+  private boolean                                                              continueQueue  = true;
+  private boolean                                                              navigateBack   = false;
 
   /**
    * UI components

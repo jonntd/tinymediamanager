@@ -133,6 +133,12 @@ public class MovieSetChooserModel extends AbstractModelObject {
     firePropertyChange("fanartUrl", "", fanartUrl);
   }
 
+  private void setScraped(boolean newValue) {
+    boolean oldValue = scraped;
+    scraped = newValue;
+    firePropertyChange("scraped", oldValue, newValue);
+  }
+
   public boolean isScraped() {
     return scraped;
   }
@@ -266,7 +272,7 @@ public class MovieSetChooserModel extends AbstractModelObject {
           // try to match movies
           matchWithExistingMovies();
 
-          this.scraped = true;
+          setScraped(true);
         }
       }
     }

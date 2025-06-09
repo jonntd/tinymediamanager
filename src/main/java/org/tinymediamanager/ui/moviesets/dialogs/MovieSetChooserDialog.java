@@ -33,7 +33,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
+import java.beans.PropertyChangeListener;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,6 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
@@ -57,15 +56,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
-import org.jdesktop.beansbinding.AutoBinding;
-import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
-import org.jdesktop.beansbinding.BeanProperty;
-import org.jdesktop.beansbinding.BindingGroup;
-import org.jdesktop.beansbinding.Bindings;
-import org.jdesktop.beansbinding.Property;
-import org.jdesktop.observablecollections.ObservableCollections;
-import org.jdesktop.swingbinding.JTableBinding;
-import org.jdesktop.swingbinding.SwingBindings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
@@ -93,12 +83,20 @@ import org.tinymediamanager.ui.components.combobox.ScraperMetadataConfigCheckCom
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.table.TmmTable;
+import org.tinymediamanager.ui.components.table.TmmTableFormat;
+import org.tinymediamanager.ui.components.table.TmmTableModel;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.dialogs.ImageChooserDialog;
 import org.tinymediamanager.ui.dialogs.TmmDialog;
 import org.tinymediamanager.ui.moviesets.MovieSetChooserModel;
 import org.tinymediamanager.ui.moviesets.MovieSetChooserModel.MovieInSet;
+import org.tinymediamanager.ui.renderer.IntegerTableCellRenderer;
 
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.ObservableElementList;
+import ca.odell.glazedlists.swing.GlazedListsSwing;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -111,8 +109,14 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
       .getLogger(MovieSetChooserDialog.class);
 
   private final MovieSet                                                          movieSetToScrape;
-  private final List<MovieSetChooserModel>                                        movieSetsFound = ObservableCollections
-      .observableList(new ArrayList<>());
+  private final EventList<MovieSetChooserModel>                                   searchResultEventList;
+  private final EventList<MovieInSet>                                             movieInSetEventList;
+
+  private MovieSetChooserModel                                                    selectedResult = null;
+
+  /**
+   * UI components
+   */
   private final JLabel                                                            lblProgressAction;
   private final JProgressBar                                                      progressBar;
   private final JTextField                                                        tfMovieSetName;
@@ -138,6 +142,14 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
     setMinimumSize(new Dimension(800, 600));
 
     movieSetToScrape = movieSet;
+
+    // table format for the search result
+    searchResultEventList = new ObservableElementList<>(GlazedListsSwing.swingThreadProxyList(GlazedLists.threadSafeList(new BasicEventList<>())),
+        GlazedLists.beanConnector(MovieSetChooserModel.class));
+
+    // table format for the castmembers
+    movieInSetEventList = new ObservableElementList<>(GlazedListsSwing.swingThreadProxyList(GlazedLists.threadSafeList(new BasicEventList<>())),
+        GlazedLists.beanConnector(MovieInSet.class));
 
     {
       JPanel panelHeader = new JPanel();
@@ -172,41 +184,9 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
         panelResults.add(panelSearchResults, "cell 0 0,grow");
         splitPane.setLeftComponent(panelResults);
         {
-          tableMovieSets = new TmmTable();
-          panelSearchResults.setViewportView(tableMovieSets);
-          tableMovieSets.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+          tableMovieSets = new TmmTable(new TmmTableModel<>(searchResultEventList, new SearchResultTableFormat()));
           tableMovieSets.configureScrollPane(panelSearchResults);
-          ListSelectionModel rowSM = tableMovieSets.getSelectionModel();
-          rowSM.addListSelectionListener(e -> {
-            // Ignore extra messages.
-            if (e.getValueIsAdjusting()) {
-              return;
-            }
-
-            ListSelectionModel lsm = (ListSelectionModel) e.getSource();
-            if (!lsm.isSelectionEmpty()) {
-              int selectedRow = lsm.getMinSelectionIndex();
-              selectedRow = tableMovieSets.convertRowIndexToModel(selectedRow);
-              try {
-                MovieSetChooserModel model = movieSetsFound.get(selectedRow);
-                if (model != MovieSetChooserModel.EMPTY_RESULT && !model.isScraped()) {
-                  ScrapeTask task = new ScrapeTask(model);
-                  task.execute();
-                }
-              }
-              catch (Exception ex) {
-                LOGGER.debug("scraping", ex);
-              }
-            }
-          });
-          tableMovieSets.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-              if (e.getClickCount() >= 2 && !e.isConsumed() && e.getButton() == MouseEvent.BUTTON1) {
-                actionPerformed(new ActionEvent(btnOk, ActionEvent.ACTION_PERFORMED, "Save"));
-              }
-            }
-          });
+          tableMovieSets.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         }
       }
       {
@@ -235,7 +215,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
           JScrollPane scrollPane = new JScrollPane();
           panelSearchDetail.add(scrollPane, "cell 0 3 3 1,grow");
 
-          tableMovies = new TmmTable();
+          tableMovies = new TmmTable(new TmmTableModel<>(movieInSetEventList, new MovieInSetTableFormat()));
           tableMovies.configureScrollPane(scrollPane);
           scrollPane.setViewportView(tableMovies);
         }
@@ -299,17 +279,82 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
       addButton(btnOk);
     }
 
-    bindingGroup = initDataBindings();
+    tableMovies.adjustColumnPreferredWidths(5);
 
-    // adjust table columns
-    tableMovies.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    tableMovies.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+    // add a change listener for the async loaded metadata
+    PropertyChangeListener listener = evt -> {
+      String property = evt.getPropertyName();
+      if ("scraped".equals(property)) {
+        int row = tableMovieSets.convertRowIndexToModel(tableMovieSets.getSelectedRow());
+        if (row > -1) {
+          setData(searchResultEventList.get(row));
+        }
+      }
+    };
+
+    ListSelectionModel rowSM = tableMovieSets.getSelectionModel();
+    rowSM.addListSelectionListener(e -> {
+      // Ignore extra messages.
+      if (e.getValueIsAdjusting()) {
+        return;
+      }
+
+      int index = tableMovieSets.convertRowIndexToModel(tableMovieSets.getSelectedRow());
+      if (selectedResult != null) {
+        selectedResult.removePropertyChangeListener(listener);
+      }
+      if (index > -1 && index < searchResultEventList.size()) {
+        MovieSetChooserModel model = searchResultEventList.get(index);
+        setData(model);
+
+        selectedResult = model;
+        selectedResult.addPropertyChangeListener(listener);
+      }
+      else {
+        selectedResult = null;
+      }
+
+      ListSelectionModel lsm = (ListSelectionModel) e.getSource();
+      if (!lsm.isSelectionEmpty()) {
+        int selectedRow = lsm.getMinSelectionIndex();
+        selectedRow = tableMovieSets.convertRowIndexToModel(selectedRow);
+        try {
+          MovieSetChooserModel model = searchResultEventList.get(selectedRow);
+          if (model != MovieSetChooserModel.EMPTY_RESULT && !model.isScraped()) {
+            ScrapeTask task = new ScrapeTask(model);
+            task.execute();
+          }
+        }
+        catch (Exception ex) {
+          LOGGER.debug("scraping", ex);
+        }
+      }
+    });
+    tableMovieSets.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        if (e.getClickCount() >= 2 && !e.isConsumed() && e.getButton() == MouseEvent.BUTTON1) {
+          actionPerformed(new ActionEvent(btnOk, ActionEvent.ACTION_PERFORMED, "Save"));
+        }
+      }
+    });
 
     cbScraperConfig.setSelectedItems(MovieSetScraperMetadataConfig.values());
 
-    tableMovieSets.getColumnModel().getColumn(0).setHeaderValue(TmmResourceBundle.getString("chooser.searchresult"));
     tfMovieSetName.setText(movieSet.getTitle());
     searchMovieSet();
+  }
+
+  private void setData(MovieSetChooserModel model) {
+    movieInSetEventList.addAll(model.getMovies());
+    if (!model.getPosterUrl().equals(lblMovieSetPoster.getImageUrl())) {
+      lblMovieSetPoster.setImageUrl(model.getPosterUrl());
+    }
+    lblMovieSetName.setText(model.getName());
+    tpPlot.setText(model.getOverview());
+
+    movieInSetEventList.clear();
+    movieInSetEventList.addAll(model.getMovies());
   }
 
   private void searchMovieSet() {
@@ -318,7 +363,11 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
   }
 
   private class SearchTask extends SwingWorker<Void, Void> {
-    private final String searchTerm;
+    private final String            searchTerm;
+
+    private List<MediaSearchResult> searchResult;
+    private Throwable               error  = null;
+    boolean                         cancel = false;
 
     public SearchTask(String searchTerm) {
       this.searchTerm = searchTerm;
@@ -337,28 +386,11 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
           options.setSearchQuery(searchTerm);
           options.setLanguage(MovieModuleManager.getInstance().getSettings().getScraperLanguage());
 
-          List<MediaSearchResult> movieSets = mp.search(options);
-          movieSetsFound.clear();
-          if (movieSets.isEmpty()) {
-            movieSetsFound.add(MovieSetChooserModel.EMPTY_RESULT);
-          }
-          else {
-            for (MediaSearchResult collection : movieSets) {
-              MovieSetChooserModel model = new MovieSetChooserModel(collection);
-              movieSetsFound.add(model);
-            }
-          }
-        }
-
-        if (!movieSetsFound.isEmpty()) {
-          tableMovieSets.setRowSelectionInterval(0, 0); // select first row
-          // adjust columns - dirty hack, but unless we refactor everything here, the column model is known from here on
-          tableMovies.getColumnModel()
-              .getColumn(1)
-              .setMaxWidth((int) (tableMovies.getFontMetrics(tableMovies.getFont()).stringWidth("2000") * 1.5f + 10));
+          searchResult = mp.search(options);
         }
       }
       catch (Exception e1) {
+        error = e1;
         LOGGER.debug("SearchTask", e1);
       }
 
@@ -368,6 +400,21 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
     @Override
     public void done() {
       stopProgressBar();
+
+      searchResultEventList.clear();
+      if (searchResult.isEmpty()) {
+        searchResultEventList.add(MovieSetChooserModel.EMPTY_RESULT);
+      }
+      else {
+        for (MediaSearchResult collection : searchResult) {
+          MovieSetChooserModel model = new MovieSetChooserModel(collection);
+          searchResultEventList.add(model);
+        }
+      }
+
+      if (!searchResultEventList.isEmpty()) {
+        tableMovieSets.setRowSelectionInterval(0, 0); // select first row
+      }
     }
   }
 
@@ -396,7 +443,7 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
       // save it
       int row = tableMovieSets.getSelectedRow();
       if (row >= 0) {
-        MovieSetChooserModel model = movieSetsFound.get(row);
+        MovieSetChooserModel model = searchResultEventList.get(row);
         if (model != MovieSetChooserModel.EMPTY_RESULT) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
@@ -603,55 +650,51 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
     return continueQueue;
   }
 
-  protected BindingGroup initDataBindings() {
-    JTableBinding jTableBinding = SwingBindings.createJTableBinding(UpdateStrategy.READ, movieSetsFound, tableMovieSets);
-    //
-    Property movieSetChooserModelBeanProperty = BeanProperty.create("name");
-    jTableBinding.addColumnBinding(movieSetChooserModelBeanProperty).setEditable(false);
-    //
-    jTableBinding.bind();
-    //
-    Property jTableBeanProperty = BeanProperty.create("selectedElement.movies");
-    JTableBinding jTableBinding_1 = SwingBindings.createJTableBinding(UpdateStrategy.READ, tableMovieSets, jTableBeanProperty, tableMovies);
-    //
-    Property movieInSetBeanProperty = BeanProperty.create("name");
-    jTableBinding_1.addColumnBinding(movieInSetBeanProperty).setColumnName(TmmResourceBundle.getString("metatag.title")).setEditable(false);
-    //
-    Property movieInSetBeanProperty_1 = BeanProperty.create("year");
-    jTableBinding_1.addColumnBinding(movieInSetBeanProperty_1).setColumnName(TmmResourceBundle.getString("metatag.year")).setEditable(false);
-    //
-    Property movieInSetBeanProperty_2 = BeanProperty.create("movie.title");
-    jTableBinding_1.addColumnBinding(movieInSetBeanProperty_2)
-        .setColumnName(TmmResourceBundle.getString("movieset.movie.matched"))
-        .setEditable(false);
-    //
-    jTableBinding_1.bind();
-    //
-    Property jTableBeanProperty_1 = BeanProperty.create("selectedElement.name");
-    Property jLabelBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, tableMovieSets, jTableBeanProperty_1, lblMovieSetName,
-        jLabelBeanProperty);
-    autoBinding.bind();
-    //
-    Property jTableBeanProperty_2 = BeanProperty.create("selectedElement.posterUrl");
-    Property imageLabelBeanProperty = BeanProperty.create("imageUrl");
-    AutoBinding autoBinding_1 = Bindings.createAutoBinding(UpdateStrategy.READ, tableMovieSets, jTableBeanProperty_2, lblMovieSetPoster,
-        imageLabelBeanProperty);
-    autoBinding_1.bind();
-    //
-    Property jTableBeanProperty_3 = BeanProperty.create("selectedElement.overview");
-    Property readOnlyTextPaneBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ, tableMovieSets, jTableBeanProperty_3, tpPlot,
-        readOnlyTextPaneBeanProperty);
-    autoBinding_2.bind();
-    //
-    BindingGroup bindingGroup = new BindingGroup();
-    //
-    bindingGroup.addBinding(jTableBinding);
-    bindingGroup.addBinding(jTableBinding_1);
-    bindingGroup.addBinding(autoBinding);
-    bindingGroup.addBinding(autoBinding_1);
-    bindingGroup.addBinding(autoBinding_2);
-    return bindingGroup;
+  /**
+   * inner class for representing the result table
+   */
+  private static class SearchResultTableFormat extends TmmTableFormat<MovieSetChooserModel> {
+    private SearchResultTableFormat() {
+      /*
+       * title
+       */
+      Column col = new Column(TmmResourceBundle.getString("chooser.searchresult"), "title", MovieSetChooserModel::getName, String.class);
+      col.setCellTooltip(MovieSetChooserModel::getName);
+      addColumn(col);
+    }
+  }
+
+  /**
+   * inner class for representing the movies in this movie set
+   */
+  private static class MovieInSetTableFormat extends TmmTableFormat<MovieInSet> {
+    public MovieInSetTableFormat() {
+      /*
+       * title
+       */
+      Column col = new Column(TmmResourceBundle.getString("metatag.title"), "title", MovieInSet::getName, String.class);
+      addColumn(col);
+
+      /*
+       * year
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.year"), "year", MovieInSet::getYear, Integer.class);
+      col.setCellRenderer(new IntegerTableCellRenderer());
+      col.setColumnResizeable(false);
+      col.setMinWidth(getFontMetrics().stringWidth("2000") + getCellPadding());
+      addColumn(col);
+
+      /*
+       * matched movie
+       */
+      col = new Column(TmmResourceBundle.getString("movieset.movie.matched"), "machtedTitle", movieInSet -> {
+        Movie movie = movieInSet.getMovie();
+        if (movie != null) {
+          return movie.getTitle();
+        }
+        return null;
+      }, String.class);
+      addColumn(col);
+    }
   }
 }
