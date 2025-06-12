@@ -6,6 +6,7 @@ x [TV shows] added an option to activate scraping of episode thumbs from all scr
 x [TV shows] prevent hiding of the first table column #2959
 x [TV shows] fixed resolving missing episodes #2967
 x [IMDB] rule out some weird posters on scrape #2949
+x [IMDB] update due to site changes
 x [UI] fixed an issue with maximized dialogs on Linux
 x [Anime] again tweak some regex #2945 #2946 #2950
 x [Scraping] better remove year from title for search
