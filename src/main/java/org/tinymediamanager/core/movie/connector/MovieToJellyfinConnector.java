@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.scraper.MediaMetadata;
 import org.w3c.dom.Element;
 
 /**
@@ -30,6 +31,17 @@ public class MovieToJellyfinConnector extends MovieToKodiConnector {
 
   public MovieToJellyfinConnector(Movie movie) {
     super(movie);
+  }
+
+  @Override
+  protected void addOwnTags() {
+    // TmdbSetId is only recognized as collectionnumber, see https://jellyfin.org/docs/general/server/metadata/nfo
+    String setId = movie.getIdAsString(MediaMetadata.TMDB_SET);
+    if (!setId.isEmpty()) {
+      Element id = document.createElement("collectionnumber");
+      id.setTextContent(setId);
+      root.appendChild(id);
+    }
   }
 
   @Override

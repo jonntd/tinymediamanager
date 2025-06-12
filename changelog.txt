@@ -10,6 +10,7 @@ x [UI] fixed an issue with maximized dialogs on Linux
 x [Anime] again tweak some regex #2945 #2946 #2950
 x [Scraping] better remove year from title for search
 x [Scraping] fetch artwork sources in parallel
+x [Jellyfin] write correct collection id in NFO #2973
 
 
 Version 5.1.6
