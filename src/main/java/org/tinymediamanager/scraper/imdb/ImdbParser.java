@@ -1312,9 +1312,7 @@ public abstract class ImdbParser {
         throw e;
       }
     }
-    else
-
-    {
+    else {
       // parse via OLD html
 
       /*
