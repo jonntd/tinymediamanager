@@ -626,6 +626,7 @@ public class TmmUIHelper {
     // update all visible components
     for (Window w : Window.getWindows()) {
       SwingUtilities.updateComponentTreeUI(w);
+      w.invalidate();
     }
 
     // update icons
