@@ -4,13 +4,13 @@ import org.tinymediamanager.scraper.entities.BaseJsonEntity;
 
 public class ImdbImage extends BaseJsonEntity {
 
-  public String        id        = "";
-  public String        url       = "";
-  public Integer       height    = 0;
-  public Integer       width     = 0;
-  public Integer       maxHeight = 0;
-  public Integer       maxWidth  = 0;
-  public ImdbPlaintext caption   = null;
+  public String  id        = "";
+  public String  url       = "";
+  public Integer height    = 0;
+  public Integer width     = 0;
+  public Integer maxHeight = 0;
+  public Integer maxWidth  = 0;
+  public Object  caption   = null; // String on person, PlainText on primary image :/
 
   public int getHeight() {
     return height == 0 ? maxHeight : height;

@@ -1226,15 +1226,15 @@ public abstract class ImdbParser {
         }
 
         // whats that? same as above, but other entries?!?
-        // JsonNode countriesNode2 = JsonUtils.at(node, "/props/pageProps/mainColumnData/countriesOfOrigin/countries");
-        // for (ImdbCountry country : JsonUtils.parseList(mapper, countriesNode2, ImdbCountry.class)) {
-        // if (isScrapeLanguageNames()) {
-        // md.addCountry(country.text);
-        // }
-        // else {
-        // md.addCountry(country.id);
-        // }
-        // }
+        JsonNode countriesNode2 = JsonUtils.at(node, "/props/pageProps/mainColumnData/countriesDetails/countries");
+        for (ImdbCountry country : JsonUtils.parseList(mapper, countriesNode2, ImdbCountry.class)) {
+          if (isScrapeLanguageNames()) {
+            md.addCountry(country.text);
+          }
+          else {
+            md.addCountry(country.id);
+          }
+        }
 
         JsonNode spokenNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/spokenLanguages/spokenLanguages");
         for (ImdbIdTextType lang : JsonUtils.parseList(mapper, spokenNode, ImdbIdTextType.class)) {
