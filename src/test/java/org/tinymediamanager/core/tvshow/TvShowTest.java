@@ -122,6 +122,8 @@ public class TvShowTest extends BasicTvShowTest {
 
     // ************************************************************************
     // various real world examples
+    assertEqual("S:1 E:6 Split", detectEpisode("Totenfrau： Bis ans Ende (6⧸6).mkv")); // Unicode slash; Split... yes, because of "stacking marker"
+    assertEqual("S:2 E:5 Split", detectEpisode("Season 2/Totenfrau： Bis ans Ende (5⧸6).mkv"));
     assertEqual("S:1 E:133 E:134", detectEpisode("InuYasha [tmdbid-35610]/S06E07-E08 [a-S] 133-134 [03A48078].mkv")); // Anime multi abs
     assertEqual("S:4 E:12", detectEpisode("Die Heiland – Wir sind Anwalt - Folge 37_ Kompromisslos (S04_E12) - 20241121 - 220000.mkv"));
     assertEqual("S:2024", detectEpisode("The.Daily.Show.2024.04.23.Stephanie.Kelton.1080p.HEVC.x265"));
