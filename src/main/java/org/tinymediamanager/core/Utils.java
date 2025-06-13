@@ -133,7 +133,7 @@ public class Utils {
 
   // moviename-1of2.avi, moviename-1 of 2.avi
   private static final Pattern      stackingPattern4            = Pattern
-      .compile("(.*?)[ (_.-]+([1-9][0-9]?[ .]?of[ .]?[1-9][0-9]?)[ )_-]?([ _.-].+)$", Pattern.CASE_INSENSITIVE);
+      .compile("(.*?)[ (_.-]+([1-9][0-9]?[ .]?(?:of|⧸|∕|\\/)[ .]?[1-9][0-9]?)[ )_-]?([ _.-].+)$", Pattern.CASE_INSENSITIVE);
 
   // folder stacking marker <cd/dvd/part/pt/disk/disc><0-N> - must be last part
   private static final Pattern      folderStackingPattern       = Pattern.compile("(.*?)[ _.-]*((?:cd|dvd|p(?:ar)?t|dis[ck])[1-9][0-9]?)$",
@@ -463,7 +463,6 @@ public class Utils {
       // see http://kodi.wiki/view/Advancedsettings.xml#moviestacking
       // basically returning <regexp>(Title)(Stacking)(Ignore)(Extension)</regexp>
 
-      // <cd/dvd/part/pt/disk/disc> <0-N>
       Matcher m = stackingPattern1.matcher(filename);
       if (m.matches()) {
         return m.group(2);

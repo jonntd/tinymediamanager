@@ -174,6 +174,8 @@ public class UtilsTest extends BasicTest {
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-1of2.mkv"), "1of2");
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-10of20.mkv"), "10of20");
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-12of21.mkv"), "12of21");
+    assertEqual(Utils.getStackingMarker("Movie Name (2013)-6⧸6.mkv"), "6⧸6"); // Unicode slash
+    assertEqual(Utils.getStackingMarker("Movie Name (2013)-6/6.mkv"), "6/6"); // Normal slash
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-1 of 2.mkv"), "1 of 2");
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-12 of 21.mkv"), "12 of 21");
     assertEqual(Utils.getStackingMarker("Movie Name (2013)-(1 of 2).mkv"), "1 of 2");
@@ -242,6 +244,8 @@ public class UtilsTest extends BasicTest {
 
     assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-cd1.mkv"), "Movie Name (2013).mkv");
     assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-1of2.mkv"), "Movie Name (2013).mkv");
+    assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-6⧸6.mkv"), "Movie Name (2013).mkv"); // Unicode slash
+    assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-6/6.mkv"), "Movie Name (2013).mkv"); // Normal slash (when normalized)
     assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-1 of 2.mkv"), "Movie Name (2013).mkv");
     assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-(1 of 2).mkv"), "Movie Name (2013).mkv");
     assertEqual(Utils.cleanStackingMarkers("Movie Name (2013)-(1-2).mkv"), "Movie Name (2013)-(1-2).mkv"); // nah
