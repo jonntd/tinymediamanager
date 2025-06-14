@@ -1261,10 +1261,10 @@ public abstract class ImdbParser {
               case "director" -> Person.Type.DIRECTOR;
               case "writer" -> Person.Type.WRITER;
               case "producer" -> Person.Type.PRODUCER;
+              case "editor" -> Person.Type.EDITOR;
+              case "composer" -> Person.Type.COMPOSER;
+              case "cinematographers" -> Person.Type.CAMERA;
 
-              case "editor" -> Person.Type.OTHER;
-              case "composer" -> Person.Type.OTHER;
-              case "cinematographers" -> Person.Type.OTHER;
               default -> Person.Type.OTHER;
             };
             if (pt == Type.OTHER) {
