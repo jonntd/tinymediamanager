@@ -574,7 +574,7 @@ public class ImdbTvShowParser extends ImdbParser {
       return epList;
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing JSON: '{}'", e);
+      getLogger().debug("Error parsing JSON: '{}'", e);
     }
     return null;
   }

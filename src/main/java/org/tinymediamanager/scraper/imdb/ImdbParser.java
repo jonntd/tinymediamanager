@@ -333,7 +333,7 @@ public abstract class ImdbParser {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      getLogger().warn("Error fetching advanced search via JSON", e.getMessage());
+      getLogger().debug("Error fetching advanced search via JSON", e.getMessage());
       // do not throw here YET
     }
 
@@ -348,7 +348,7 @@ public abstract class ImdbParser {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        getLogger().warn("Error fetching basic search via JSON", e.getMessage());
+        getLogger().debug("Error fetching basic search via JSON", e.getMessage());
         throw new ScrapeException(e);
       }
     }
@@ -453,7 +453,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing advanced JSON: {}", e.getMessage());
+      getLogger().debug("Error parsing advanced JSON: {}", e.getMessage());
     }
 
     // fallback HTML parsing
@@ -579,7 +579,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing basic JSON: {}", e.getMessage());
+      getLogger().debug("Error parsing basic JSON: {}", e.getMessage());
     }
 
     // fallback HTML parsing
@@ -932,7 +932,7 @@ public abstract class ImdbParser {
 
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing JSON: '{}'", e.getMessage());
+      getLogger().debug("Error parsing JSON: '{}'", e.getMessage());
       throw e;
     }
   }
@@ -1037,7 +1037,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Could not parse images page  - '{}'", e.getMessage());
+      getLogger().debug("Could not parse images page  - '{}'", e.getMessage());
     }
     return images;
   }
@@ -1307,7 +1307,7 @@ public abstract class ImdbParser {
         }
       }
       catch (Exception e) {
-        getLogger().warn("Error parsing JSON: '{}'", e.getMessage());
+        getLogger().debug("Error parsing JSON: '{}'", e.getMessage());
         throw e;
       }
     }
@@ -1598,13 +1598,13 @@ public abstract class ImdbParser {
         }
       }
 
-    md.addCastMembers(parseReferencePeople(doc, "cast", Person.Type.ACTOR));
-    md.addCastMembers(parseReferencePeople(doc, "directors", Person.Type.DIRECTOR));
-    md.addCastMembers(parseReferencePeople(doc, "writers", Person.Type.WRITER));
-    md.addCastMembers(parseReferencePeople(doc, "producers", Person.Type.PRODUCER));
-    md.addCastMembers(parseReferencePeople(doc, "editors", Person.Type.EDITOR));
-    md.addCastMembers(parseReferencePeople(doc, "composers", Person.Type.COMPOSER));
-    md.addCastMembers(parseReferencePeople(doc, "cinematographers", Person.Type.CAMERA));
+      md.addCastMembers(parseReferencePeople(doc, "cast", Person.Type.ACTOR));
+      md.addCastMembers(parseReferencePeople(doc, "directors", Person.Type.DIRECTOR));
+      md.addCastMembers(parseReferencePeople(doc, "writers", Person.Type.WRITER));
+      md.addCastMembers(parseReferencePeople(doc, "producers", Person.Type.PRODUCER));
+      md.addCastMembers(parseReferencePeople(doc, "editors", Person.Type.EDITOR));
+      md.addCastMembers(parseReferencePeople(doc, "composers", Person.Type.COMPOSER));
+      md.addCastMembers(parseReferencePeople(doc, "cinematographers", Person.Type.CAMERA));
 
       // production companies
       Elements prodCompHeaderElements = doc.getElementsByClass("ipl-list-title");
@@ -1740,7 +1740,7 @@ public abstract class ImdbParser {
           ret.add(person);
         }
         catch (Exception e) {
-          getLogger().warn("Could not parse person: {}", e.getMessage());
+          getLogger().debug("Could not parse person: {}", e.getMessage());
         }
       }
     }
@@ -1767,7 +1767,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing JSON: '{}'", e);
+      getLogger().debug("Error parsing JSON: '{}'", e);
     }
 
     // new style as of may 2023
@@ -1867,7 +1867,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Error parsing ReleaseinfoPageJson: '{}'", e);
+      getLogger().debug("Error parsing ReleaseinfoPageJson: '{}'", e);
       throw e;
     }
   }
@@ -2145,7 +2145,7 @@ public abstract class ImdbParser {
       }
     }
     catch (Exception e) {
-      getLogger().warn("Could not get TOP250 listing - '{}'", e.getMessage());
+      getLogger().debug("Could not get TOP250 listing - '{}'", e.getMessage());
     }
 
     return titles;
