@@ -340,6 +340,7 @@ public class MovieRenamerPreviewDialog extends TmmDialog {
 
     ResultSelectionModel() {
       emptyResult = new RenamerPreviewContainer(new Movie());
+      selectedResult = emptyResult;
     }
 
     void updateSelectedResult() {

@@ -323,6 +323,7 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
 
     ResultSelectionModel() {
       emptyResult = new RenamerPreviewContainer(new TvShow());
+      selectedResult = emptyResult;
     }
 
     void updateSelectedResult() {

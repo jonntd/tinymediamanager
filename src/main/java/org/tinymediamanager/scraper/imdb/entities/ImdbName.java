@@ -4,7 +4,7 @@ import org.tinymediamanager.scraper.entities.BaseJsonEntity;
 
 public class ImdbName extends BaseJsonEntity {
   public String       id           = "";
-  public ImdbNameText nameText     = null;
+  public ImdbTextType nameText     = null;
   public ImdbImage    primaryImage = null;
 
 }

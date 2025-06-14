@@ -6,9 +6,10 @@ import java.util.GregorianCalendar;
 import org.tinymediamanager.scraper.entities.BaseJsonEntity;
 
 public class ImdbReleaseDate extends BaseJsonEntity {
-  public int day;
-  public int month;
-  public int year;
+  public int         day;
+  public int         month;
+  public int         year;
+  public ImdbCountry country; // on reference page
 
   /**
    * @return Date or NULL

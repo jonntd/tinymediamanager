@@ -54,13 +54,33 @@ import org.tinymediamanager.scraper.util.MetadataUtil;
  * @author Manuel Laggner
  */
 public class TvShowHelpers {
-  private static final Logger  LOGGER               = LoggerFactory.getLogger(TvShowHelpers.class);
+  private static final Logger                    LOGGER               = LoggerFactory.getLogger(TvShowHelpers.class);
 
-  private static final Pattern SEASON_NUMBER        = Pattern.compile("(?i)season\\s?(\\d+).*");
-  private static final Pattern SEASON_FOLDER_NUMBER = Pattern.compile("(?i).*?(\\d+).*");
+  private static final Pattern                   SEASON_NUMBER        = Pattern.compile("(?i)season\\s?(\\d+).*");
+  private static final Pattern                   SEASON_FOLDER_NUMBER = Pattern.compile("(?i).*?(\\d+).*");
+  private static final Comparator<TvShowEpisode> EPISODE_COMPARATOR   = createEpisodeComparator();
 
   private TvShowHelpers() {
     throw new IllegalAccessError();
+  }
+
+  /**
+   * create a comparator for {@link TvShowEpisode}s which sorts by season, episode and title
+   *
+   * @return the comparator
+   */
+  private static Comparator<TvShowEpisode> createEpisodeComparator() {
+    return (o1, o2) -> {
+      if (o1.getSeason() != o2.getSeason()) {
+        return o1.getSeason() - o2.getSeason();
+      }
+
+      if (o1.getEpisode() != o2.getEpisode()) {
+        return o1.getEpisode() - o2.getEpisode();
+      }
+
+      return o1.getTitle().compareTo(o2.getTitle());
+    };
   }
 
   /**
@@ -449,7 +469,7 @@ public class TvShowHelpers {
       }
     }
 
-    episodes.sort(Comparator.comparingInt(TvShowEpisode::getEpisode));
+    episodes.sort(EPISODE_COMPARATOR);
     return episodes;
   }
 }
