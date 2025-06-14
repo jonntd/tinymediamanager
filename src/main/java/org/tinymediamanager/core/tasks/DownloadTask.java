@@ -359,10 +359,10 @@ public abstract class DownloadTask extends TmmTask {
   protected abstract MediaEntity getMediaEntityToAdd();
 
   private String formatBytesForOutput(long bytes) {
-    return String.format("%.2fM", (double) bytes / (1000d * 1000d));
+    return String.format("%.2f M", (double) bytes / (1000d * 1000d));
   }
 
   private String formatSpeedForOutput(double speed) {
-    return String.format("%.2fkB/s", speed / 1000d);
+    return String.format("%.2f kB/s", speed / 1000d);
   }
 }

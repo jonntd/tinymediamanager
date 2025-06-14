@@ -327,7 +327,9 @@ public abstract class TmmTask implements Runnable, TmmTaskHandle, TmmFeature {
    * Finishes the task, stops the stopwatch, sets the state to FINISHED (unless FAILED), and clears listeners.
    */
   protected void finish() {
-    stopWatch.stop();
+    if (stopWatch != null && stopWatch.isStarted()) {
+      stopWatch.stop();
+    }
 
     if (state != TaskState.FAILED) {
       setState(TaskState.FINISHED);

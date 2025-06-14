@@ -3,6 +3,7 @@ Version 5.2.0
 + [Movies, Movie sets, TV shows] completely reworked internal eventing to improve performance
 + [Movies, TV shows] refactored crew management - merged directors, producers, writers, and others into a unified list
 + [Movies, TV shows] enhanced renamer preview
++ [Movies] added an action to copy movies to external folders
 + [Movie sets] added a column to display the amount of missing movies in a set #2915
 + [Renamer] added an optional Unicode replacement for forbidden filesystem characters
 + [macOS] changed hotkey modifier to comply with macOS standards
