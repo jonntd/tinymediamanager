@@ -17,4 +17,5 @@ x [Scraper] do not overwrite existing fields with empty values #2947
 x [UI] some UI fixes
 x [UI] increased quality level of the scaling algorithm for better image quality
 x [UI] re-layout all visible dialogs when changing the font size #2970
+x [UI] fixed filtering on season artwork #2957
 x [Trailer] activated yt-dlp as a default trailer downloader
