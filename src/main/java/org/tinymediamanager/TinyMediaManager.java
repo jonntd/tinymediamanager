@@ -19,6 +19,7 @@ package org.tinymediamanager;
 import static java.awt.Desktop.getDesktop;
 import static org.tinymediamanager.ui.TmmUIHelper.setLookAndFeel;
 
+import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.GraphicsEnvironment;
 import java.io.ByteArrayInputStream;
@@ -35,6 +36,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Locale;
 
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -575,7 +577,15 @@ public final class TinyMediaManager {
       return;
     }
 
-    SwingUtilities.invokeLater(() -> splashScreen.setProgress(progress, text));
+    SwingUtilities.invokeLater(() -> {
+      splashScreen.setProgress(progress, text);
+
+      // force repaint to update the splash screen
+      Container container = splashScreen.getContentPane();
+      if (container instanceof JComponent content) {
+        content.paintImmediately(content.getBounds());
+      }
+    });
   }
 
   /**
