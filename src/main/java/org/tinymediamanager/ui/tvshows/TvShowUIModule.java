@@ -79,6 +79,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowRenamePreviewAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowResetNewFlagAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteEpisodeNfoAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteNfoAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteSeasonNfoAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeEpisodesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeMissingEpisodesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeNewItemsAction;
@@ -340,6 +341,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     editPopupMenu.add(createAndRegisterAction(TvShowToggleWatchedFlagAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowRewriteNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowReadNfoAction.class));
+    editPopupMenu.add(createAndRegisterAction(TvShowRewriteSeasonNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowRewriteEpisodeNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowReadEpisodeNfoAction.class));
 
@@ -445,6 +447,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowChangeDatasourceAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowChangeSeasonArtworkAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteNfoAction.class));
+    enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteSeasonNfoAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteEpisodeNfoAction.class));
     enhancededitPopupMenu.addSeparator();
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowMediaInformationAction.class));
