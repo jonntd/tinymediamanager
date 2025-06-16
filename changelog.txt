@@ -1,5 +1,6 @@
 Version 5.1.8
 =======================
+x [TV shows] fixed a performance regression when loading TV shows with many episodes #2977
 
 
 Version 5.1.7
