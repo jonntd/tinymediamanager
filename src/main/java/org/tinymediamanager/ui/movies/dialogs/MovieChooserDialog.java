@@ -540,7 +540,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
                 ratingMediaMetadata.setIds(md.getIds());
 
                 ratingMediaMetadata.setRatings(ratingsFromMd);
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                    MovieModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.MOVIE))) {
                   if (!ratingMediaMetadata.getRatings().contains(rating)) {
                     ratingMediaMetadata.addRating(rating);
                   }

@@ -623,7 +623,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
                 ratingMediaMetadata.setIds(md.getIds());
 
                 ratingMediaMetadata.setRatings(ratingsFromMd);
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                    TvShowModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.TV_SHOW))) {
                   if (!ratingMediaMetadata.getRatings().contains(rating)) {
                     ratingMediaMetadata.addRating(rating);
                   }

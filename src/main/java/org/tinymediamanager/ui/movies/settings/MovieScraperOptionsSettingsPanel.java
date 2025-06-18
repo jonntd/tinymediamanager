@@ -18,8 +18,11 @@ package org.tinymediamanager.ui.movies.settings;
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import static org.tinymediamanager.ui.TmmFontHelper.L2;
 
+import java.awt.event.ItemListener;
+import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Locale;
 
 import javax.swing.JCheckBox;
@@ -39,6 +42,7 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
@@ -55,7 +59,7 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 class MovieScraperOptionsSettingsPanel extends JPanel {
-  private final MovieSettings       settings = MovieModuleManager.getInstance().getSettings();
+  private final MovieSettings       settings         = MovieModuleManager.getInstance().getSettings();
 
   private JSlider                   sliderThreshold;
   private JComboBox<MediaLanguages> cbScraperLanguage;
@@ -65,11 +69,23 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
   private JCheckBox                 chckbxFetchAllRatings;
+  private JCheckBox                 chckbxRatingImdb;
+  private JCheckBox                 chckbxRatingRtTomatometer;
+  private JCheckBox                 chckbxRatingRtAudienceScore;
+  private JCheckBox                 chckbxRatingTmdb;
+  private JCheckBox                 chckbxRatingMcMetascore;
+  private JCheckBox                 chckbxRatingMcUserscore;
+  private JCheckBox                 chckbxRatingMyAnimeList;
+  private JCheckBox                 chckbxRatingRogerEbert;
+  private JCheckBox                 chckbxRatingTraktTv;
+  private JCheckBox                 chckbxRatingLetterboxd;
 
   /**
    * Instantiates a new movie scraper settings panel.
    */
   MovieScraperOptionsSettingsPanel() {
+    ItemListener checkBoxListener = e -> checkChanges();
+
     // UI init
     initComponents();
     initDataBindings();
@@ -83,6 +99,17 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
       }
     }
     cbReleaseCountry.addItemListener(l -> settings.setReleaseDateCountry(((CountryItem) cbReleaseCountry.getSelectedItem()).locale.getCountry()));
+
+    chckbxRatingImdb.addItemListener(checkBoxListener);
+    chckbxRatingTmdb.addItemListener(checkBoxListener);
+    chckbxRatingMcMetascore.addItemListener(checkBoxListener);
+    chckbxRatingMcUserscore.addItemListener(checkBoxListener);
+    chckbxRatingRtTomatometer.addItemListener(checkBoxListener);
+    chckbxRatingRtAudienceScore.addItemListener(checkBoxListener);
+    chckbxRatingTraktTv.addItemListener(checkBoxListener);
+    chckbxRatingLetterboxd.addItemListener(checkBoxListener);
+    chckbxRatingMyAnimeList.addItemListener(checkBoxListener);
+    chckbxRatingRogerEbert.addItemListener(checkBoxListener);
 
     // threshold slider
     Dictionary<Integer, JLabel> labelTable = new Hashtable<>();
@@ -100,7 +127,7 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     setLayout(new MigLayout("", "[700lp,grow]", "[][]15lp![][15lp!][]"));
     {
       JPanel panelOptions = new JPanel();
-      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][10lp!][][][]")); // 16lp ~ width of the
+      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][10lp!][][][][10lp!][][]")); // 16lp ~ width of the
 
       JLabel lblOptions = new TmmLabel(TmmResourceBundle.getString("Settings.advancedoptions"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOptions, lblOptions, true);
@@ -129,11 +156,41 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
         chckbxFetchAllRatings.setToolTipText(TmmResourceBundle.getString("Settings.fetchallratings.desc"));
         panelOptions.add(chckbxFetchAllRatings, "cell 1 4 2 1");
 
+        chckbxRatingImdb = new JCheckBox("IMDb");
+        panelOptions.add(chckbxRatingImdb, "flowx,cell 2 5");
+
+        chckbxRatingTmdb = new JCheckBox("TMDB");
+        panelOptions.add(chckbxRatingTmdb, "cell 2 5");
+
+        chckbxRatingMcMetascore = new JCheckBox("Metacritic Metascore");
+        panelOptions.add(chckbxRatingMcMetascore, "cell 2 5");
+
+        chckbxRatingMcUserscore = new JCheckBox("Metacritic Userscore");
+        panelOptions.add(chckbxRatingMcUserscore, "cell 2 5");
+
+        chckbxRatingMyAnimeList = new JCheckBox("MyAnimeList");
+        panelOptions.add(chckbxRatingMyAnimeList, "cell 2 6");
+
+        chckbxRatingRogerEbert = new JCheckBox("RogerEbert.com");
+        panelOptions.add(chckbxRatingRogerEbert, "cell 2 6");
+
+        chckbxRatingTraktTv = new JCheckBox("Trakt.tv");
+        panelOptions.add(chckbxRatingTraktTv, "cell 2 5");
+
+        chckbxRatingLetterboxd = new JCheckBox("Letterboxd");
+        panelOptions.add(chckbxRatingLetterboxd, "cell 2 5");
+
+        chckbxRatingRtTomatometer = new JCheckBox("Rotten Tomatoes - Tomatometer");
+        panelOptions.add(chckbxRatingRtTomatometer, "flowx,cell 2 6");
+
+        chckbxRatingRtAudienceScore = new JCheckBox("RottenTomatoes - Audience Score");
+        panelOptions.add(chckbxRatingRtAudienceScore, "cell 2 6");
+
         chckbxScraperFallback = new JCheckBox(TmmResourceBundle.getString("Settings.scraperfallback"));
-        panelOptions.add(chckbxScraperFallback, "cell 1 5 2 1");
+        panelOptions.add(chckbxScraperFallback, "cell 1 8 2 1");
 
         chckbxCapitalizeWords = new JCheckBox((TmmResourceBundle.getString("Settings.scraper.capitalizeWords")));
-        panelOptions.add(chckbxCapitalizeWords, "cell 1 6 2 1");
+        panelOptions.add(chckbxCapitalizeWords, "cell 1 9 2 1");
       }
     }
     {
@@ -177,6 +234,43 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
         panelAutomaticScrape.add(tpScraperThresholdHint, "cell 1 1 3 1, growx, wmin 0");
       }
     }
+  }
+
+  private void checkChanges() {
+    List<RatingProvider.RatingSource> fetchRatingSources = new ArrayList<>();
+
+    if (chckbxRatingImdb.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.IMDB);
+    }
+    if (chckbxRatingTmdb.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.TMDB);
+    }
+    if (chckbxRatingMcMetascore.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.METACRITIC);
+    }
+    if (chckbxRatingMcUserscore.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.METACRITIC_USER);
+    }
+    if (chckbxRatingRtTomatometer.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.ROTTEN_TOMATOES_TOMATOMETER);
+    }
+    if (chckbxRatingRtAudienceScore.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.ROTTEN_TOMATOES_AVG_RATING);
+    }
+    if (chckbxRatingMyAnimeList.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.MAL);
+    }
+    if (chckbxRatingRogerEbert.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.ROGER_EBERT);
+    }
+    if (chckbxRatingTraktTv.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.TRAKT_TV);
+    }
+    if (chckbxRatingLetterboxd.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.LETTERBOXD);
+    }
+
+    settings.setFetchRatingSources(fetchRatingSources);
   }
 
   private static class CountryItem {
@@ -226,5 +320,46 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_1, chckbxFetchAllRatings,
         jCheckBoxBeanProperty);
     autoBinding_4.bind();
+    //
+    Property jCheckBoxBeanProperty_1 = BeanProperty.create("enabled");
+    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2, chckbxRatingImdb,
+        jCheckBoxBeanProperty_1);
+    autoBinding.bind();
+    //
+    AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingRtTomatometer, jCheckBoxBeanProperty_1);
+    autoBinding_5.bind();
+    //
+    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingRtAudienceScore, jCheckBoxBeanProperty_1);
+    autoBinding_6.bind();
+    //
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2, chckbxRatingTmdb,
+        jCheckBoxBeanProperty_1);
+    autoBinding_9.bind();
+    //
+    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingMcMetascore, jCheckBoxBeanProperty_1);
+    autoBinding_10.bind();
+    //
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingMcUserscore, jCheckBoxBeanProperty_1);
+    autoBinding_11.bind();
+    //
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingMyAnimeList, jCheckBoxBeanProperty_1);
+    autoBinding_12.bind();
+    //
+    AutoBinding autoBinding_13 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingRogerEbert, jCheckBoxBeanProperty_1);
+    autoBinding_13.bind();
+    //
+    AutoBinding autoBinding_14 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2, chckbxRatingTraktTv,
+        jCheckBoxBeanProperty_1);
+    autoBinding_14.bind();
+    //
+    AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
+        chckbxRatingLetterboxd, jCheckBoxBeanProperty_1);
+    autoBinding_15.bind();
   }
 }

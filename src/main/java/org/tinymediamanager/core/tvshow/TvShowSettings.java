@@ -64,6 +64,7 @@ import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -201,6 +202,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig           = new ArrayList<>();
   boolean                                        doNotOverwriteExistingData             = false;
   boolean                                        fetchAllRatings                        = false;
+  final List<RatingProvider.RatingSource> fetchRatingSources = new ArrayList<>();
 
   // artwork scraper
   final List<MediaLanguages>                     imageScraperLanguages                  = ObservableCollections.observableList(new ArrayList<>());
@@ -2005,6 +2007,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.fetchAllRatings;
     this.fetchAllRatings = newValue;
     firePropertyChange("fetchAllRatings", oldValue, newValue);
+  }
+
+  public List<RatingProvider.RatingSource> getFetchRatingSources() {
+    return fetchRatingSources;
+  }
+
+  public void setFetchRatingSources(List<RatingProvider.RatingSource> newValues) {
+    fetchRatingSources.clear();
+    fetchRatingSources.addAll(newValues);
+    firePropertyChange("fetchRatingSources", null, fetchRatingSources);
   }
 
   public void addShowTvShowArtworkTypes(MediaFileType type) {

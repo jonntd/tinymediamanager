@@ -34,7 +34,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
-import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
@@ -210,9 +209,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
             MediaIdUtil.injectMissingIds(md.getIds(), MediaType.TV_SHOW);
 
             // also fill other ratings if ratings are requested
-            if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()
+            if (TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()
                 && tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.RATING)) {
-              for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
+              for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                  TvShowModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.TV_SHOW))) {
                 if (!md.getRatings().contains(rating)) {
                   md.addRating(rating);
                 }

@@ -63,6 +63,7 @@ import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaArtwork.FanartSizes;
 import org.tinymediamanager.scraper.entities.MediaArtwork.PosterSizes;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -183,7 +184,8 @@ public final class MovieSettings extends AbstractSettings {
   final List<MovieScraperMetadataConfig>    scraperMetadataConfig                  = new ArrayList<>();
   boolean                                   doNotOverwriteExistingData             = false;
   boolean                                   capitalWordsInTitles                   = false;
-  boolean                                   fetchAllRatings                        = false;
+  boolean                                   fetchAllRatings                        = true;
+  final List<RatingProvider.RatingSource>   fetchRatingSources                     = new ArrayList<>();
 
   // artwork scraper
   PosterSizes                               imagePosterSize                        = PosterSizes.LARGE;
@@ -388,6 +390,8 @@ public final class MovieSettings extends AbstractSettings {
 
     universalFilterFields.addAll(Arrays.asList(UniversalFilterFields.values()));
     scraperMetadataConfig.addAll(Arrays.asList(MovieScraperMetadataConfig.values()));
+
+    fetchRatingSources.add(RatingProvider.RatingSource.IMDB);
   }
 
   @Override
@@ -1803,6 +1807,16 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.fetchAllRatings;
     this.fetchAllRatings = newValue;
     firePropertyChange("fetchAllRatings", oldValue, newValue);
+  }
+
+  public List<RatingProvider.RatingSource> getFetchRatingSources() {
+    return fetchRatingSources;
+  }
+
+  public void setFetchRatingSources(List<RatingProvider.RatingSource> newValues) {
+    fetchRatingSources.clear();
+    fetchRatingSources.addAll(newValues);
+    firePropertyChange("fetchRatingSources", null, fetchRatingSources);
   }
 
   public boolean isDoNotOverwriteExistingData() {

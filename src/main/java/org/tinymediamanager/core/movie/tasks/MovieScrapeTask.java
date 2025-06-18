@@ -231,7 +231,8 @@ public class MovieScrapeTask extends TmmThreadPool {
             // also fill other ratings if ratings are requested
             if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()
                 && movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.RATING)) {
-              for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
+              for (MediaRating rating : ListUtils.nullSafe(
+                  RatingProvider.getRatings(md.getIds(), MovieModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.MOVIE))) {
                 if (!md.getRatings().contains(rating)) {
                   md.addRating(rating);
                 }

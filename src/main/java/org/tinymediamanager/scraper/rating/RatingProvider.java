@@ -46,8 +46,8 @@ public class RatingProvider {
   public enum RatingSource {
     IMDB("IMDb"),
     TMDB("TMDB"),
-    METACRITIC("Metacritic Metascore"),
-    METACRITIC_USER("Metacritic Userscore"),
+    METACRITIC("Metacritic - Metascore"),
+    METACRITIC_USER("Metacritic - Userscore"),
     ROTTEN_TOMATOES_TOMATOMETER("Rotten Tomatoes - Tomatometer"),
     ROTTEN_TOMATOES_AVG_RATING("Rotten Tomatoes - Audience Score"),
     TRAKT_TV("Trakt.tv"),
