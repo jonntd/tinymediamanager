@@ -150,6 +150,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   private String                             titleSortable         = "";
   private boolean                            dummy                 = false;
   private MediaEpisodeNumber                 mainEpisodeNumber     = null;
+  private int                                runtimeFromMediaFiles = 0;
 
   // LEGACY
   @JsonIgnore
@@ -397,6 +398,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   public void setMultiEpisode(boolean multiEpisode) {
     this.multiEpisode = multiEpisode;
+    runtimeFromMediaFiles = 0; // reset cached runtime from media files
   }
 
   /**
@@ -1485,6 +1487,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   }
 
   public int getRuntimeFromMediaFiles() {
+    // use calculated value if available
+    if (runtimeFromMediaFiles != 0) {
+      return runtimeFromMediaFiles;
+    }
+
     int runtime = 0;
     for (MediaFile mf : getMediaFiles(MediaFileType.VIDEO)) {
       runtime += mf.getDuration();
@@ -1497,6 +1504,9 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
         runtime = (int) (runtime / (float) eps.size());
       }
     }
+
+    // cache
+    runtimeFromMediaFiles = runtime;
 
     return runtime;
   }
@@ -1513,6 +1523,10 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   @Override
   public void callbackForGatheredMediainformation(MediaFile mediaFile) {
     boolean dirty = false;
+
+    if (mediaFile.getType() == MediaFileType.VIDEO) {
+      runtimeFromMediaFiles = 0; // reset cached runtime from media files
+    }
 
     // upgrade MediaSource to UHD bluray, if video format says so
     if (getMediaSource() == MediaSource.BLURAY && getMainVideoFile().getVideoDefinitionCategory().equals(MediaFileHelper.VIDEO_FORMAT_UHD)) {

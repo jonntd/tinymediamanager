@@ -71,6 +71,7 @@ import net.miginfocom.swing.MigLayout;
  */
 public class TmmTable extends JTable {
   private TmmTableComparatorChooser<?> tableComparatorChooser;
+  protected boolean                    columnsAdjusting;
 
   public TmmTable() {
     super();
@@ -85,6 +86,14 @@ public class TmmTable extends JTable {
   @Override
   protected TableColumnModel createDefaultColumnModel() {
     return new TmmTableColumnModel();
+  }
+
+  @Override
+  public void createDefaultColumnsFromModel() {
+    columnsAdjusting = true;
+    super.createDefaultColumnsFromModel();
+    columnsAdjusting = false;
+    adjustColumnPreferredWidths(3);
   }
 
   @Override
@@ -107,12 +116,18 @@ public class TmmTable extends JTable {
     getColumnModel().addColumnModelListener(new TableColumnModelListener() {
       @Override
       public void columnAdded(TableColumnModelEvent e) {
-        adjustColumnPreferredWidths(3);
+        // do not adjust column widths when loading the table model
+        if (!columnsAdjusting) {
+          adjustColumnPreferredWidths(3);
+        }
       }
 
       @Override
       public void columnRemoved(TableColumnModelEvent e) {
-        adjustColumnPreferredWidths(3);
+        // do not adjust column widths when loading the table model
+        if (!columnsAdjusting) {
+          adjustColumnPreferredWidths(3);
+        }
       }
 
       @Override

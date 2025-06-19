@@ -45,6 +45,7 @@ import org.tinymediamanager.ui.TmmUIMessageCollector;
 import org.tinymediamanager.ui.actions.CheckForUpdateAction;
 import org.tinymediamanager.ui.actions.UnlockAction;
 import org.tinymediamanager.ui.dialogs.MessageHistoryDialog;
+import org.tinymediamanager.ui.dialogs.WhatsNewDialog;
 import org.tinymediamanager.updater.UpdateCheck;
 
 import net.miginfocom.swing.MigLayout;
@@ -80,7 +81,7 @@ public class ToolbarPanel extends JPanel {
         new MigLayout("insets 0, hidemode 3", "[][]20lp[]20lp[]20lp[]20lp[]20lp[][grow]15lp[]15lp[]15lp[][][][][][15lp:n]", "[45lp]1lp[]5lp"));
 
     panelCenter.add(new JLabel(IconManager.TOOLBAR_LOGO), "cell 1 0, alignx left, aligny bottom");
-    JLabel lblVersion = new ToolbarLabel(ReleaseInfo.getRealVersion());
+    JLabel lblVersion = new ToolbarLabel(ReleaseInfo.getRealVersion(), (event) -> WhatsNewDialog.showChangelog());
     TmmFontHelper.changeFont(lblVersion, TmmFontHelper.L1, Font.BOLD);
     panelCenter.add(lblVersion, "cell 1 1, alignx center");
 
