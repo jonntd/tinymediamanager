@@ -736,6 +736,7 @@ public abstract class ImdbParser {
       if (md.getOriginalTitle().isEmpty()) {
         md.setOriginalTitle(md.getTitle());
       }
+      md.setEnglishTitle(JsonUtils.at(node, "/props/pageProps/mainColumnData/akas/edges/0/node/text").asText());
       md.setYear(JsonUtils.at(node, "/props/pageProps/aboveTheFoldData/releaseYear/year").asInt(0));
 
       JsonNode plotNode = JsonUtils.at(node, "/props/pageProps/aboveTheFoldData/plot/plotText");
@@ -1127,6 +1128,7 @@ public abstract class ImdbParser {
         if (md.getOriginalTitle().isEmpty()) {
           md.setOriginalTitle(md.getTitle());
         }
+        md.setEnglishTitle(JsonUtils.at(node, "/props/pageProps/mainColumnData/akas/edges/0/node/text").asText());
         md.setYear(JsonUtils.at(node, "/props/pageProps/mainColumnData/releaseYear/year").asInt(0));
 
         JsonNode plotNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/plot/plotText");

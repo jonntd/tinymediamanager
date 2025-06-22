@@ -111,7 +111,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     info.getConfig().addText("pin", "", true);
     info.getConfig().addBoolean("scrapeLanguageNames", true);
 
-    ArrayList<String> fallbackLanguages = new ArrayList<>();
+    List<String> fallbackLanguages = new ArrayList<>();
     for (MediaLanguages mediaLanguages : MediaLanguages.valuesSorted()) {
       fallbackLanguages.add(mediaLanguages.toString());
     }
@@ -153,10 +153,13 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     SeriesExtendedRecord show;
     Translation baseTranslation = null;
     Translation fallbackTranslation = null;
+    Translation englishTranslation = null;
 
     // language in 3 char
     String baseLanguage = LanguageUtils.getIso3Language(options.getLanguage().toLocale());
     String fallbackLanguage = LanguageUtils.getIso3Language(MediaLanguages.get(getProviderInfo().getConfig().getValue(FALLBACK_LANGUAGE)).toLocale());
+    String englishLanguage = LanguageUtils.getIso3Language(MediaLanguages.en.toLocale());
+
     // pt-BR is pt at tvdb...
     if ("pob".equals(baseLanguage)) {
       baseLanguage = "pt";
@@ -188,6 +191,19 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
           fallbackTranslation = translationResponse.body().data;
         }
       }
+
+      if (englishLanguage.equals(baseLanguage) && baseTranslation != null) {
+        englishTranslation = baseTranslation;
+      }
+      else if (englishLanguage.equals(fallbackLanguage) && fallbackTranslation != null) {
+        englishTranslation = fallbackTranslation;
+      }
+      else if (show.nameTranslations.contains(englishLanguage)) {
+        Response<TranslationResponse> translationResponse = tvdb.getSeriesService().getSeriesTranslation(id, englishLanguage).execute();
+        if (translationResponse.isSuccessful()) {
+          englishTranslation = translationResponse.body().data;
+        }
+      }
     }
     catch (Exception e) {
       LOGGER.debug("failed to get meta data: {}", e.getMessage());
@@ -206,6 +222,10 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     }
     else {
       md.setTitle(show.name);
+    }
+
+    if (englishTranslation != null && StringUtils.isNotBlank(englishTranslation.name)) {
+      md.setEnglishTitle(englishTranslation.name);
     }
 
     md.setOriginalTitle(show.name);
@@ -250,7 +270,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
 
     md.setRuntime(MetadataUtil.unboxInteger(show.averageRuntime, 0));
     if (show.originalCountry != null) {
-      if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
+      if (getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames")) {
         md.addCountry(LanguageUtils.getLocalizedCountryForLanguage(options.getLanguage().toLocale(), show.originalCountry));
       }
       else {
@@ -258,7 +278,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
       }
     }
     if (show.originalLanguage != null) {
-      if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
+      if (getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames")) {
         md.setOriginalLanguage(LanguageUtils.getLocalizedLanguageNameFromLocalizedString(options.getLanguage().toLocale(), show.originalLanguage));
       }
       else {
@@ -384,7 +404,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
         t.setProvider("youtube");
       }
       t.setScrapedBy(getProviderInfo().getId());
-      if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
+      if (getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames")) {
         t.setQuality(LanguageUtils.getLocalizedLanguageNameFromLocalizedString(options.getLanguage().toLocale(), trailer.language));
       }
       else {
@@ -557,6 +577,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
     // we get all translations from the episodelist
     md.setTitle(foundEpisode.getTitle());
     md.setOriginalTitle(foundEpisode.getOriginalTitle());
+    md.setEnglishTitle(foundEpisode.getEnglishTitle());
     md.setPlot(foundEpisode.getPlot());
     md.setRuntime(episode.runtime);
 
@@ -831,6 +852,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
             episode.setId(getProviderInfo().getId(), ep.id);
             episode.setEpisodeNumber(episodeGroup, ep.seasonNumber, ep.episodeNumber);
             episode.setTitle(ep.name);
+            episode.setEnglishTitle(ep.englishName);
             episode.setOriginalTitle(ep.originalName);
             episode.setPlot(ep.overview);
             episode.setRuntime(ep.runtime);
@@ -1074,6 +1096,45 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
           catch (Exception e) {
             LOGGER.debug("Could not get episode translations - '{}'  ", e.getMessage());
           }
+        }
+      }
+    }
+
+    // 3. in English
+    language = LanguageUtils.getIso3Language(MediaLanguages.en.toLocale());
+
+    if (StringUtils.isNotBlank(language)) {
+      if (language.equals(seriesEpisodesRecord.series.originalLanguage)) {
+        // original title and requested title is the same - just copy
+        for (EpisodeBaseRecord toInject : ListUtils.nullSafe(seriesEpisodesRecord.episodes)) {
+          toInject.englishName = toInject.originalName;
+        }
+      }
+      else {
+        try {
+          Response<SeriesEpisodesResponse> httpResponse = tvdb.getSeriesService().getSeriesEpisodes(showId, seasonType, language, counter).execute();
+          if (httpResponse.isSuccessful()) {
+            SeriesEpisodesResponse response = httpResponse.body();
+            if (response != null && response.data != null) {
+              for (EpisodeBaseRecord toInject : ListUtils.nullSafe(seriesEpisodesRecord.episodes)) {
+                // find the corresponding episode in the response
+                for (EpisodeBaseRecord translation : ListUtils.nullSafe(response.data.episodes)) {
+                  if (Objects.equals(toInject.id, translation.id)) {
+                    if (language.equals(seriesEpisodesRecord.series.originalLanguage)) {
+                      toInject.originalName = translation.name;
+                    }
+                    if (StringUtils.isNotBlank(translation.name)) {
+                      toInject.name = translation.name;
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        catch (Exception e) {
+          LOGGER.debug("Could not get episode translations - '{}'  ", e.getMessage());
         }
       }
     }

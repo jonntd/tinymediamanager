@@ -55,6 +55,7 @@ public class MovieSetNfoParser {
   private final List<String>  supportedElements   = new ArrayList<>();
 
   public String               title               = "";
+  public String               englishTitle        = "";
   public String               sorttitle           = "";
   public String               plot                = "";
   public String               userNote            = "";
@@ -92,6 +93,7 @@ public class MovieSetNfoParser {
 
     // parse all supported fields
     parseTag(MovieSetNfoParser::parseTitle);
+    parseTag(MovieSetNfoParser::parseEnglishTitle);
     parseTag(MovieSetNfoParser::parseSorttitle);
     parseTag(MovieSetNfoParser::parsePlot);
     parseTag(MovieSetNfoParser::parseIds);
@@ -176,6 +178,20 @@ public class MovieSetNfoParser {
     Element element = getSingleElement(root, "title");
     if (element != null) {
       title = element.ownText();
+    }
+
+    return null;
+  }
+
+  /**
+   * the english title usually comes in the english_title tag
+   */
+  private Void parseEnglishTitle() {
+    supportedElements.add("english_title");
+
+    Element element = getSingleElement(root, "english_title");
+    if (element != null) {
+      englishTitle = element.ownText();
     }
 
     return null;
@@ -395,6 +411,7 @@ public class MovieSetNfoParser {
   public MovieSet toMovieSet() {
     MovieSet movieSet = new MovieSet();
     movieSet.setTitle(title);
+    movieSet.setEnglishTitle(englishTitle);
     movieSet.setSortTitle(sorttitle);
     movieSet.setPlot(plot);
 

@@ -522,6 +522,7 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
     addUserNote();
+    addEnglishTitle();
   }
 
   /**
@@ -531,6 +532,15 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(movieSet.getNote());
     root.appendChild(userNote);
+  }
+
+  /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle() {
+    Element englishTitle = document.createElement("english_title");
+    englishTitle.setTextContent(movieSet.getEnglishTitle());
+    root.appendChild(englishTitle);
   }
 
   /**

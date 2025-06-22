@@ -400,52 +400,47 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     String language = getRequestLanguage(options.getLanguage());
 
     Collection collection = null;
+    Collection collectionEnglish = null;
 
     try {
-      collection = api.collectionService().summary(tmdbId, language).execute().body();
-      // if collection title/overview is not availbale, rescrape in the fallback language
-      if (collection != null && (StringUtils.isBlank(collection.overview) || StringUtils.isBlank(collection.name))
-          && Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("titleFallback"))) {
+      Response<Collection> collectionResponse = api.collectionService().summary(tmdbId, language).execute();
+      if (!collectionResponse.isSuccessful()) {
+        throw new HttpException(collectionResponse.code(), collectionResponse.message());
+      }
+
+      collection = collectionResponse.body();
+
+      // english collection texts
+      if (language.startsWith("en")) {
+        collectionEnglish = collection;
+      }
+      else {
+        try {
+          Response<Collection> response = api.collectionService().summary(tmdbId, "en").execute();
+          if (response.isSuccessful()) {
+            collectionEnglish = response.body();
+          }
+        }
+        catch (Exception e) {
+          LOGGER.debug("problem getting english collection data from tmdb - '{}'", e.getMessage());
+        }
+      }
+
+      // if collection title/overview is not available, rescrape in the fallback language
+      if (collection != null && (StringUtils.isAnyBlank(collection.name, collection.overview))
+          && getProviderInfo().getConfig().getValueAsBool("titleFallback")) {
 
         String fallbackLang = MediaLanguages.get(getProviderInfo().getConfig().getValue("titleFallbackLanguage")).name().replace("_", "-");
-        Collection collectionInFallbackLanguage = api.collectionService().summary(tmdbId, fallbackLang).execute().body();
-
-        if (collectionInFallbackLanguage != null) {
-          Collection collectionInDefaultLanguage = null;
-          if (StringUtils.isBlank(collectionInFallbackLanguage.name) || StringUtils.isBlank(collectionInFallbackLanguage.overview)) {
-            collectionInDefaultLanguage = api.collectionService().summary(tmdbId, null).execute().body();
-
-          }
+        Response<Collection> collectionFallbackResponse = api.collectionService().summary(tmdbId, fallbackLang).execute();
+        if (collectionFallbackResponse.isSuccessful()) {
+          Collection collectionInFallbackLanguage = collectionFallbackResponse.body();
 
           if (StringUtils.isBlank(collection.name) && StringUtils.isNotBlank(collectionInFallbackLanguage.name)) {
             collection.name = collectionInFallbackLanguage.name;
           }
-          else if (StringUtils.isBlank(collection.name) && collectionInDefaultLanguage != null
-              && StringUtils.isNotBlank(collectionInDefaultLanguage.name)) {
-            collection.name = collectionInDefaultLanguage.name;
-          }
 
           if (StringUtils.isBlank(collection.overview) && StringUtils.isNotBlank(collectionInFallbackLanguage.overview)) {
             collection.overview = collectionInFallbackLanguage.overview;
-          }
-          else if (StringUtils.isBlank(collection.overview) && collectionInDefaultLanguage != null
-              && StringUtils.isNotBlank(collectionInDefaultLanguage.overview)) {
-            collection.overview = collectionInDefaultLanguage.overview;
-          }
-
-          for (BaseMovie movie : collection.parts) {
-            for (BaseMovie fallbackMovie : collectionInFallbackLanguage.parts) {
-              if (movie.id.equals(fallbackMovie.id)) {
-                if (StringUtils.isBlank(movie.overview) && !StringUtils.isBlank(fallbackMovie.overview)) {
-                  movie.overview = fallbackMovie.overview;
-                }
-                if (movie.title.equals(movie.original_title) && !movie.original_language.equals(options.getLanguage().getLanguage())
-                    && !StringUtils.isBlank(fallbackMovie.title)) {
-                  movie.title = fallbackMovie.title;
-                }
-                break;
-              }
-            }
           }
         }
       }
@@ -461,6 +456,11 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
 
     md.setId(TMDB_SET, collection.id);
     md.setTitle(collection.name);
+
+    if (collectionEnglish != null) {
+      md.setEnglishTitle(collectionEnglish.name);
+    }
+
     md.setPlot(collection.overview);
 
     // Poster
@@ -493,7 +493,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         continue;
       }
 
-      // get the full meta data
+      // get the full metadata
       try {
         MovieSearchAndScrapeOptions movieSearchAndScrapeOptions = new MovieSearchAndScrapeOptions();
         movieSearchAndScrapeOptions.setTmdbId(MetadataUtil.unboxInteger(part.id));
@@ -783,6 +783,14 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     md.setId(getProviderInfo().getId(), movie.id);
     md.setTitle(movie.title);
     md.setOriginalTitle(movie.original_title);
+
+    String englishTitle = getValuesFromTranslation(movie.translations, MediaLanguages.en.toLocale())[0];
+    // if the original language of the movie is english, there may be no translation -> take the original title
+    if (StringUtils.isBlank(englishTitle) && "en".equals(movie.original_language)) {
+      englishTitle = movie.original_title;
+    }
+    md.setEnglishTitle(englishTitle);
+
     md.setPlot(movie.overview);
     md.setTagline(movie.tagline);
     md.setRuntime(movie.runtime);

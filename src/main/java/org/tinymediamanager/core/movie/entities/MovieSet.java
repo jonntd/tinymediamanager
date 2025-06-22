@@ -76,6 +76,8 @@ public class MovieSet extends MediaEntity {
   private static final Comparator<MediaFile> MEDIA_FILE_COMPARATOR = new MovieMediaFileComparator();
 
   @JsonProperty
+  private String                             englishTitle          = "";
+  @JsonProperty
   private String                             sortTitle             = "";
 
   @JsonProperty
@@ -155,6 +157,27 @@ public class MovieSet extends MediaEntity {
         }
       }
     }
+  }
+
+  /**
+   * Gets the title in English.
+   *
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   *
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   /**
@@ -611,6 +634,16 @@ public class MovieSet extends MediaEntity {
       }
     }
 
+    if (config.contains(MovieSetScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())) {
+      // Capitalize first letter of original title if setting is set!
+      if (MovieModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
+      }
+    }
+
     if (config.contains(MovieSetScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())) {
       setPlot(metadata.getPlot());
     }
@@ -720,6 +753,7 @@ public class MovieSet extends MediaEntity {
     return switch (metadataConfig) {
       case ID -> getIds();
       case TITLE -> getTitle();
+      case ENGLISH_TITLE -> getEnglishTitle();
       case PLOT -> getPlot();
       case RATING -> getRatings();
       case POSTER -> getMediaFiles(MediaFileType.POSTER);
@@ -727,7 +761,6 @@ public class MovieSet extends MediaEntity {
       case BANNER -> getMediaFiles(MediaFileType.BANNER);
       case CLEARART -> getMediaFiles(MediaFileType.CLEARART);
       case THUMB -> getMediaFiles(MediaFileType.THUMB);
-      case LOGO -> getMediaFiles(MediaFileType.LOGO);
       case CLEARLOGO -> getMediaFiles(MediaFileType.CLEARLOGO);
       case DISCART -> getMediaFiles(MediaFileType.DISC);
     };

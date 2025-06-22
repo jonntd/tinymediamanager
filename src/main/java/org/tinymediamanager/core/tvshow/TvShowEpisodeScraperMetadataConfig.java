@@ -36,6 +36,7 @@ public enum TvShowEpisodeScraperMetadataConfig implements ScraperMetadataConfig 
   // meta data
   TITLE(Type.METADATA),
   ORIGINAL_TITLE(Type.METADATA, "metatag.originaltitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   PLOT(Type.METADATA),
   @JsonAlias({ "AIRED_SEASON_EPISODE", "DVD_SEASON_EPISODE", "DISPLAY_SEASON_EPISODE" })
   SEASON_EPISODE(Type.METADATA, "tvshow.seasonepisode"),

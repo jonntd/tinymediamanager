@@ -119,6 +119,7 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
     config.addLabel("tvShowLabel", "tmm.tvshow");
     config.addSelect("title", "metatag.title", compatibleScraperIds, UNDEFINED);
     config.addSelect("originalTitle", "metatag.originaltitle", compatibleScraperIds, UNDEFINED);
+    config.addSelect("englishTitle", "metatag.title.english", Arrays.asList(UNDEFINED, MediaMetadata.TMDB, MediaMetadata.IMDB), UNDEFINED);
     config.addSelect("year", "metatag.year", compatibleScraperIds, UNDEFINED);
     config.addSelect("releaseDate", "metatag.releasedate", compatibleScraperIds, UNDEFINED);
     config.addSelect("plot", "metatag.plot", compatibleScraperIds, UNDEFINED);

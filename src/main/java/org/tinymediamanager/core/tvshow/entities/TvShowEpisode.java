@@ -116,6 +116,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   private static final Comparator<MediaFile> MEDIA_FILE_COMPARATOR = new TvShowMediaFileComparator();
 
   @JsonProperty
+  private String                             englishTitle          = "";
+  @JsonProperty
   private final List<MediaEpisodeNumber>     episodeNumbers        = new CopyOnWriteArrayList<>();
   @JsonProperty
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -185,6 +187,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     path = source.path;
     title = source.title;
     originalTitle = source.originalTitle;
+    englishTitle = source.englishTitle;
     year = source.year;
     plot = source.plot;
 
@@ -258,6 +261,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     }
     super.merge(other, force);
 
+    setEnglishTitle(StringUtils.isBlank(englishTitle) || force ? other.englishTitle : englishTitle);
     setFirstAired(firstAired == null || force ? other.firstAired : firstAired);
     setWatched(!watched || force ? other.watched : watched);
     setPlaycount(playcount == 0 || force ? other.playcount : playcount);
@@ -331,6 +335,27 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   public void clearTitleSortable() {
     titleSortable = "";
+  }
+
+  /**
+   * Gets the title in English.
+   *
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   *
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   public Date getFirstAired() {
@@ -985,6 +1010,17 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
       else {
         setOriginalTitle(metadata.getOriginalTitle());
+      }
+    }
+
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
+      // Capitalize first letter of original title if setting is set!
+      if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
       }
     }
 

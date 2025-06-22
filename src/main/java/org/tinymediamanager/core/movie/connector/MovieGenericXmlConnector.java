@@ -1020,7 +1020,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
   }
 
   /**
-   * add the missing meta data for tinyMediaManager to this NFO
+   * add the missing metadata for tinyMediaManager to this NFO
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
@@ -1028,6 +1028,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     addEdition();
     addOriginalFilename();
     addUserNote();
+    addEnglishTitle();
   }
 
   /**
@@ -1037,6 +1038,15 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(movie.getNote());
     root.appendChild(userNote);
+  }
+
+  /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle() {
+    Element englishTitle = document.createElement("english_title");
+    englishTitle.setTextContent(movie.getEnglishTitle());
+    root.appendChild(englishTitle);
   }
 
   /**

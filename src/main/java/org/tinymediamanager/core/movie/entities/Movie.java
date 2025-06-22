@@ -140,6 +140,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
   private static final Comparator<MediaTrailer> TRAILER_QUALITY_COMPARATOR = new MediaTrailer.QualityComparator();
 
   @JsonProperty
+  private String                                englishTitle               = "";
+  @JsonProperty
   private String                                sortTitle                  = "";
   @JsonProperty
   private String                                tagline                    = "";
@@ -237,6 +239,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
     super.merge(other, force);
 
+    setEnglishTitle(StringUtils.isEmpty(englishTitle) || force ? other.englishTitle : englishTitle);
     setSortTitle(StringUtils.isEmpty(sortTitle) || force ? other.sortTitle : sortTitle);
     setTagline(StringUtils.isEmpty(tagline) || force ? other.tagline : tagline);
     setSpokenLanguages(StringUtils.isEmpty(spokenLanguages) || force ? other.spokenLanguages : spokenLanguages);
@@ -308,6 +311,27 @@ public class Movie extends MediaEntity implements IMediaInformation {
     score = score + returnOneWhenFilled(trailer);
 
     return score;
+  }
+
+  /**
+   * Gets the title in English.
+   * 
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   * 
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   /**
@@ -806,6 +830,17 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
       else {
         setOriginalTitle(metadata.getOriginalTitle());
+      }
+    }
+
+    if (config.contains(MovieScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
+      // Capitalize first letter of original title if setting is set!
+      if (settings.getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
       }
     }
 
@@ -2810,6 +2845,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       case ID -> getIds();
       case TITLE -> getTitle();
       case ORIGINAL_TITLE -> getOriginalTitle();
+      case ENGLISH_TITLE -> getEnglishTitle();
       case TAGLINE -> getTagline();
       case PLOT -> getPlot();
       case YEAR -> getYear();

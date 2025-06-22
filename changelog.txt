@@ -1,6 +1,7 @@
 Version 5.2.0
 =======================
 + [Movies, Movie sets, TV shows] completely reworked internal eventing to improve performance
++ [Movies, Movie sets, TV shows] fetching "English/International title" from supported scrapers for being used in NFO/renaming
 + [Movies, TV shows] refactored crew management - merged directors, producers, writers, and others into a unified list
 + [Movies, TV shows] enhanced renamer preview
 + [Movies, TV shows] added new setting options to specify which ratings should be fetched while scraping

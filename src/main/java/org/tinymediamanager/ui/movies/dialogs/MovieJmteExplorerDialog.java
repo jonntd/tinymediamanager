@@ -388,6 +388,7 @@ public class MovieJmteExplorerDialog extends TmmDialog {
     // examples
     exampleEventList.add(new RenamerExample("${title}"));
     exampleEventList.add(new RenamerExample("${originalTitle}"));
+    exampleEventList.add(new RenamerExample("${englishTitle}"));
     exampleEventList.add(new RenamerExample("${originalFilename}"));
     exampleEventList.add(new RenamerExample("${originalBasename}"));
     exampleEventList.add(new RenamerExample("${title[0]}"));

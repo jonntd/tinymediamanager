@@ -72,6 +72,7 @@ public class TvShowNfoParser {
 
   public String                     title               = "";
   public String                     originalTitle       = "";
+  public String                     englishTitle        = "";
   public String                     sortTitle           = "";
   public String                     showTitle           = "";
   public int                        year                = -1;
@@ -140,6 +141,7 @@ public class TvShowNfoParser {
     // parse all supported fields
     parseTag(TvShowNfoParser::parseTitle);
     parseTag(TvShowNfoParser::parseOriginalTitle);
+    parseTag(TvShowNfoParser::parseEnglishTitle);
     parseTag(TvShowNfoParser::parseSortTitle);
     parseTag(TvShowNfoParser::parseShowTitle);
     parseTag(TvShowNfoParser::parseRatingAndVotes);
@@ -269,6 +271,20 @@ public class TvShowNfoParser {
     Element element = getSingleElement(root, "originaltitle");
     if (element != null) {
       originalTitle = element.ownText();
+    }
+
+    return null;
+  }
+
+  /**
+   * the english title usually comes in the english_title tag
+   */
+  private Void parseEnglishTitle() {
+    supportedElements.add("english_title");
+
+    Element element = getSingleElement(root, "english_title");
+    if (element != null) {
+      englishTitle = element.ownText();
     }
 
     return null;
@@ -1464,6 +1480,7 @@ public class TvShowNfoParser {
     TvShow show = new TvShow();
     show.setTitle(title);
     show.setOriginalTitle(originalTitle);
+    show.setEnglishTitle(englishTitle);
     show.setSortTitle(sortTitle);
 
     for (Map.Entry<String, TvShowNfoParser.Rating> entry : ratings.entrySet()) {

@@ -77,7 +77,7 @@ public class JsonUtils {
   public static JsonNode at(JsonNode node, String jsonPtrExpr) {
     JsonNode ret = node.at(JsonPointer.compile(jsonPtrExpr));
     if (ret == null || ret.isMissingNode()) {
-      LOGGER.debug("Cannot parse JSON at '{}', because is was missing/empty/non-existent", jsonPtrExpr);
+      LOGGER.trace("Cannot parse JSON at '{}', because is was missing/empty/non-existent", jsonPtrExpr);
     }
     return ret;
   }

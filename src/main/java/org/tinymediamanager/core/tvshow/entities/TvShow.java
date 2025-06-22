@@ -131,6 +131,8 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       Pattern.CASE_INSENSITIVE);
 
   @JsonProperty
+  private String                                  englishTitle               = "";
+  @JsonProperty
   private int                                     runtime                    = 0;
   @JsonProperty
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -230,6 +232,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     super.merge(other, force);
 
+    setEnglishTitle(StringUtils.isEmpty(englishTitle) || force ? other.englishTitle : englishTitle);
     setEpisodeGroup(episodeGroup == MediaEpisodeGroup.DEFAULT_AIRED || force ? other.episodeGroup : episodeGroup);
     setSortTitle(StringUtils.isEmpty(sortTitle) || force ? other.sortTitle : sortTitle);
     setRuntime(runtime == 0 || force ? other.runtime : runtime);
@@ -326,6 +329,27 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     String oldValue = this.titleSortable;
     titleSortable = "";
     firePropertyChange(TITLE_SORTABLE, oldValue, titleSortable);
+  }
+
+  /**
+   * Gets the title in English.
+   *
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   *
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   /**
@@ -1095,6 +1119,17 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       }
       else {
         setOriginalTitle(metadata.getOriginalTitle());
+      }
+    }
+
+    if (config.contains(TvShowScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
+      // Capitalize first letter of original title if setting is set!
+      if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
       }
     }
 
@@ -2439,6 +2474,9 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
       case ORIGINAL_TITLE:
         return getOriginalTitle();
+
+      case ENGLISH_TITLE:
+        return getEnglishTitle();
 
       case PLOT:
         return getPlot();

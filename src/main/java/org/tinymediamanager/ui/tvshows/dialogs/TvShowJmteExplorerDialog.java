@@ -401,6 +401,7 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
     // examples
     exampleEventList.add(new RenamerExample("${title}"));
     exampleEventList.add(new RenamerExample("${originalTitle}"));
+    exampleEventList.add(new RenamerExample("${englishTitle}"));
     exampleEventList.add(new RenamerExample("${originalFilename}"));
     exampleEventList.add(new RenamerExample("${originalBasename}"));
     exampleEventList.add(new RenamerExample("${titleSortable}"));
@@ -428,6 +429,7 @@ public class TvShowJmteExplorerDialog extends TmmDialog {
     exampleEventList.add(new RenamerExample("${showYear}"));
     exampleEventList.add(new RenamerExample("${showTitle}"));
     exampleEventList.add(new RenamerExample("${showOriginalTitle}"));
+    exampleEventList.add(new RenamerExample("${showEnglishTitle}"));
     exampleEventList.add(new RenamerExample("${showTitleSortable}"));
     exampleEventList.add(new RenamerExample("${showRating}"));
     exampleEventList.add(new RenamerExample("${showImdb}"));

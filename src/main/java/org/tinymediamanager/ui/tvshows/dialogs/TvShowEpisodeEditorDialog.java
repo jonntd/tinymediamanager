@@ -187,6 +187,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
   private PersonTable                                tableGuests;
   private PersonTable                                tableCrew;
   private JTextArea                                  tfOriginalTitle;
+  private JTextArea                                  tfEnglishTitle;
   private JTextField                                 tfThumb;
   private JTextArea                                  taNote;
   private TmmTable                                   tableEpisodeNumbers;
@@ -230,6 +231,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
     {
       tfTitle.setText(episodeToEdit.getTitle());
       tfOriginalTitle.setText(episodeToEdit.getOriginalTitle());
+      tfEnglishTitle.setText(episodeToEdit.getEnglishTitle());
       spDateAdded.setValue(episodeToEdit.getDateAdded());
       spRating.setModel(new SpinnerNumberModel(userMediaRating.getRating(), 0.0, 10.0, 0.1));
 
@@ -282,7 +284,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       JPanel detailsPanel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details"), detailsPanel);
       detailsPanel.setLayout(new MigLayout("", "[][20lp:100lp:175lp][50lp:100lp:175lp][200lp:250lp,grow][][25lp:n][200lp:250lp,grow]",
-          "[][][100lp:15%:20%][][100lp:125lp:30%,grow][][][][][][50lp:50lp:100lp,grow 50][50lp:50lp:100lp,grow 50]"));
+          "[][][][100lp:15%:20%][][100lp:125lp:30%,grow][][][][][][50lp:50lp:100lp,grow 50][50lp:50lp:100lp,grow 50]"));
 
       {
         JLabel lblTitle = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
@@ -313,8 +315,15 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         detailsPanel.add(tfOriginalTitle, "cell 1 1 4 1,growx, wmin 0");
       }
       {
+        JLabel lblEnglishTitle = new TmmLabel(TmmResourceBundle.getString("metatag.title.english"));
+        detailsPanel.add(lblEnglishTitle, "cell 0 2,alignx right");
+
+        tfEnglishTitle = new TmmRoundTextArea();
+        detailsPanel.add(tfEnglishTitle, "cell 1 2 4 1,growx, wmin 0");
+      }
+      {
         JLabel lblEpisode = new TmmLabel(TmmResourceBundle.getString("metatag.episode"));
-        detailsPanel.add(lblEpisode, "flowy,cell 0 2,alignx right,aligny top");
+        detailsPanel.add(lblEpisode, "flowy,cell 0 3,alignx right,aligny top");
 
         JScrollPane scrollPaneEpisodeNumbers = new JScrollPane();
 
@@ -343,27 +352,27 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
           }
         };
         tableEpisodeNumbers.configureScrollPane(scrollPaneEpisodeNumbers);
-        detailsPanel.add(scrollPaneEpisodeNumbers, "cell 1 2 3 1,grow");
+        detailsPanel.add(scrollPaneEpisodeNumbers, "cell 1 3 3 1,grow");
 
         JButton btnAddEpisodeNumber = new SquareIconButton(new AddEpisodeNumberAction());
-        detailsPanel.add(btnAddEpisodeNumber, "cell 0 2,alignx right");
+        detailsPanel.add(btnAddEpisodeNumber, "cell 0 3,alignx right");
 
         JButton btnRemoveEpisodeNumber = new SquareIconButton(new RemoveEpisodeNumberAction());
-        detailsPanel.add(btnRemoveEpisodeNumber, "cell 0 2,alignx right");
+        detailsPanel.add(btnRemoveEpisodeNumber, "cell 0 3,alignx right");
       }
       {
         JLabel lblFirstAired = new TmmLabel(TmmResourceBundle.getString("metatag.aired"));
-        detailsPanel.add(lblFirstAired, "cell 0 3,alignx right");
+        detailsPanel.add(lblFirstAired, "cell 0 4,alignx right");
 
         dpFirstAired = new DatePicker(episodeToEdit.getFirstAired());
-        detailsPanel.add(dpFirstAired, "cell 1 3 2 1,growx");
+        detailsPanel.add(dpFirstAired, "cell 1 4 2 1,growx");
       }
       {
         JLabel lblPlot = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
-        detailsPanel.add(lblPlot, "cell 0 4,alignx right,aligny top");
+        detailsPanel.add(lblPlot, "cell 0 5,alignx right,aligny top");
 
         JScrollPane scrollPane = new JScrollPane();
-        detailsPanel.add(scrollPane, "cell 1 4 4 1,grow");
+        detailsPanel.add(scrollPane, "cell 1 5 4 1,grow");
 
         taPlot = new TmmTextArea();
         scrollPane.setViewportView(taPlot);
@@ -405,53 +414,53 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
           }
         });
         lblThumb.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        detailsPanel.add(lblThumb, "cell 6 1 1 4,grow");
+        detailsPanel.add(lblThumb, "cell 6 1 1 5,grow");
         lblThumb.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
             e -> setImageSizeAndCreateLink(lblThumbSize, lblThumb, btnDeleteThumb, MediaFileType.THUMB));
       }
       {
         JLabel lblRuntime = new TmmLabel(TmmResourceBundle.getString("metatag.runtime"));
-        detailsPanel.add(lblRuntime, "cell 0 6,alignx right");
+        detailsPanel.add(lblRuntime, "cell 0 7,alignx right");
 
         spRuntime = new JSpinner();
-        detailsPanel.add(spRuntime, "flowx,cell 1 6,growx");
+        detailsPanel.add(spRuntime, "flowx,cell 1 7,growx");
 
         JLabel lblMin = new TmmLabel(TmmResourceBundle.getString("metatag.minutes"));
-        detailsPanel.add(lblMin, "cell 1 6");
+        detailsPanel.add(lblMin, "cell 1 7");
       }
       {
         JLabel lblRating = new TmmLabel(TmmResourceBundle.getString("metatag.userrating"));
-        detailsPanel.add(lblRating, "cell 0 8,alignx right");
+        detailsPanel.add(lblRating, "cell 0 9,alignx right");
 
         spRating = new JSpinner();
-        detailsPanel.add(spRating, "flowx,cell 1 8 2 1");
+        detailsPanel.add(spRating, "flowx,cell 1 9 2 1");
 
         JLabel lblUserRatingHint = new JLabel(IconManager.HINT);
         lblUserRatingHint.setToolTipText(TmmResourceBundle.getString("edit.userrating.hint"));
-        detailsPanel.add(lblUserRatingHint, "cell 1 8 2 1");
+        detailsPanel.add(lblUserRatingHint, "cell 1 9 2 1");
       }
       {
         JLabel lblRatingsT = new TmmLabel(TmmResourceBundle.getString("metatag.ratings"));
-        detailsPanel.add(lblRatingsT, "flowy,cell 0 9,alignx right,aligny top");
+        detailsPanel.add(lblRatingsT, "flowy,cell 0 10,alignx right,aligny top");
 
         JScrollPane scrollPaneRatings = new JScrollPane();
-        detailsPanel.add(scrollPaneRatings, "cell 1 9 3 2,grow");
+        detailsPanel.add(scrollPaneRatings, "cell 1 10 3 2,grow");
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
 
         JButton btnAddRating = new SquareIconButton(new AddRatingAction());
-        detailsPanel.add(btnAddRating, "cell 0 9,alignx right,aligny top");
+        detailsPanel.add(btnAddRating, "cell 0 10,alignx right,aligny top");
 
         JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
-        detailsPanel.add(btnRemoveRating, "cell 0 9,alignx right,aligny top");
+        detailsPanel.add(btnRemoveRating, "cell 0 10,alignx right,aligny top");
       }
       {
         JLabel lblNoteT = new TmmLabel(TmmResourceBundle.getString("metatag.note"));
-        detailsPanel.add(lblNoteT, "cell 0 11,alignx right,aligny top");
+        detailsPanel.add(lblNoteT, "cell 0 12,alignx right,aligny top");
 
         JScrollPane scrollPane = new JScrollPane();
-        detailsPanel.add(scrollPane, "cell 1 11 4 1,wmin 0,grow");
+        detailsPanel.add(scrollPane, "cell 1 12 4 1,wmin 0,grow");
 
         taNote = new JTextArea();
         taNote.setLineWrap(true);
@@ -727,6 +736,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       if (metadata != null && !metadata.getEpisodeNumbers().isEmpty()) {
         tfTitle.setText(metadata.getTitle());
         tfOriginalTitle.setText(metadata.getOriginalTitle());
+        tfEnglishTitle.setText(metadata.getEnglishTitle());
         taPlot.setText(metadata.getPlot());
         spRuntime.setValue(metadata.getRuntime());
 
@@ -782,6 +792,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
       episodeToEdit.setTitle(tfTitle.getText());
       episodeToEdit.setOriginalTitle(tfOriginalTitle.getText());
+      episodeToEdit.setEnglishTitle(tfEnglishTitle.getText());
 
       Map<MediaEpisodeGroup, MediaEpisodeNumber> epNumbers = new HashMap<>();
       for (MediaEpisodeNumber episodeNumber : episodeNumbers) {
@@ -1038,6 +1049,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
       if (metadata != null && StringUtils.isNotBlank(metadata.getTitle())) {
         tfTitle.setText(metadata.getTitle());
         tfOriginalTitle.setText(metadata.getOriginalTitle());
+        tfEnglishTitle.setText(metadata.getEnglishTitle());
         taPlot.setText(metadata.getPlot());
         dpFirstAired.setDate(metadata.getReleaseDate());
 

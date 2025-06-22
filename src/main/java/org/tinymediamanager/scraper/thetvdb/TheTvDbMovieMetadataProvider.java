@@ -275,12 +275,14 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     MovieExtendedRecord movie;
     Translation baseTranslation = null;
     Translation fallbackTranslation = null;
+    Translation englishTranslation = null;
 
     try {
       // language in 3 char
       String baseLanguage = LanguageUtils.getIso3Language(options.getLanguage().toLocale());
       String fallbackLanguage = LanguageUtils
           .getIso3Language(MediaLanguages.get(getProviderInfo().getConfig().getValue(FALLBACK_LANGUAGE)).toLocale());
+      String englishLanguage = LanguageUtils.getIso3Language(MediaLanguages.en.toLocale());
 
       // pt-BR is pt at tvdb...
       if ("pob".equals(baseLanguage)) {
@@ -313,6 +315,19 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
           fallbackTranslation = translationResponse.body().data;
         }
       }
+
+      if (englishLanguage.equals(baseLanguage) && baseLanguage != null) {
+        englishTranslation = baseTranslation;
+      }
+      else if (englishLanguage.equals(fallbackLanguage) && fallbackTranslation != null) {
+        englishTranslation = fallbackTranslation;
+      }
+      else if (movie.nameTranslations.contains(englishLanguage)) {
+        Response<TranslationResponse> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, englishLanguage).execute();
+        if (translationResponse.isSuccessful()) {
+          englishTranslation = translationResponse.body().data;
+        }
+      }
     }
     catch (Exception e) {
       LOGGER.debug("failed to get meta data: {}", e.getMessage());
@@ -321,9 +336,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
 
     // populate metadata
     md.setId(getId(), movie.id);
-    parseRemoteIDs(movie.remoteIds).forEach((k, v) -> {
-      md.setId(k, v);
-    });
+    parseRemoteIDs(movie.remoteIds).forEach(md::setId);
 
     if (baseTranslation != null && StringUtils.isNotBlank(baseTranslation.name)) {
       md.setTitle(baseTranslation.name);
@@ -336,6 +349,11 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     }
 
     md.setOriginalTitle(movie.name);
+
+    if (englishTranslation != null && StringUtils.isNotBlank(englishTranslation.name)) {
+      md.setEnglishTitle(englishTranslation.name);
+    }
+
     if (movie.originalCountry != null) {
       if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
         md.addCountry(LanguageUtils.getLocalizedCountryForLanguage(options.getLanguage().toLocale(), movie.originalCountry));

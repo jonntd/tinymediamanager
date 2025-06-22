@@ -498,9 +498,6 @@ public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
               if (scraperConfig.contains(MovieSetScraperMetadataConfig.BANNER)) {
                 chooseArtwork(MediaFileType.BANNER);
               }
-              if (scraperConfig.contains(MovieSetScraperMetadataConfig.LOGO)) {
-                chooseArtwork(MediaFileType.LOGO);
-              }
               if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARLOGO)) {
                 chooseArtwork(MediaFileType.CLEARLOGO);
               }

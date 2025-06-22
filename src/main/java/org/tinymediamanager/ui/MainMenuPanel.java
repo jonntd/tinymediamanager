@@ -166,7 +166,7 @@ public class MainMenuPanel extends JPanel {
 
     menu.addSeparator();
 
-    JMenuItem tmmLogs = new JMenuItem(TmmResourceBundle.getString("tmm.progresslogs"));
+    JMenuItem tmmLogs = new JMenuItem(TmmResourceBundle.getString("tmm.activitylog"));
     menu.add(tmmLogs);
     tmmLogs.addActionListener(arg0 -> {
       JDialog logDialog = new ActivityLogDialog();

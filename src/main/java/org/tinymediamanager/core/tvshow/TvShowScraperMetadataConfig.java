@@ -36,6 +36,7 @@ public enum TvShowScraperMetadataConfig implements ScraperMetadataConfig {
   ID(Type.METADATA),
   TITLE(Type.METADATA),
   ORIGINAL_TITLE(Type.METADATA, "metatag.originaltitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   PLOT(Type.METADATA),
   YEAR(Type.METADATA),
   AIRED(Type.METADATA, "metatag.aired"),

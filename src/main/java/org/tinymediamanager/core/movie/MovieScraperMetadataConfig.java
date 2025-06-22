@@ -36,6 +36,7 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
   ID(Type.METADATA, "metatag.id"),
   TITLE(Type.METADATA),
   ORIGINAL_TITLE(Type.METADATA, "metatag.originaltitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   TAGLINE(Type.METADATA),
   PLOT(Type.METADATA),
   YEAR(Type.METADATA),

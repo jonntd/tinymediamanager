@@ -21,6 +21,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * The enum MovieSetScraperMetadataConfig is used to control which fields will be set after scraping
  * 
@@ -30,6 +32,7 @@ public enum MovieSetScraperMetadataConfig implements ScraperMetadataConfig {
   // meta data
   ID(Type.METADATA),
   TITLE(Type.METADATA),
+  ENGLISH_TITLE(Type.METADATA, "metatag.englishTitle"),
   PLOT(Type.METADATA),
   RATING(Type.DEPRECATED), // not available at the moment
 
@@ -39,7 +42,6 @@ public enum MovieSetScraperMetadataConfig implements ScraperMetadataConfig {
   BANNER(Type.ARTWORK),
   CLEARART(Type.ARTWORK),
   THUMB(Type.ARTWORK),
-  LOGO(Type.ARTWORK),
   CLEARLOGO(Type.ARTWORK),
   DISCART(Type.ARTWORK, "mediafiletype.disc");
 
@@ -104,5 +106,14 @@ public enum MovieSetScraperMetadataConfig implements ScraperMetadataConfig {
       // just not crash
     }
     return null;
+  }
+
+  @JsonCreator
+  public static MovieSetScraperMetadataConfig forValue(String value) {
+    // map deprecated ones
+    if (value.equals("LOGO")) {
+      return MovieSetScraperMetadataConfig.CLEARLOGO;
+    }
+    return MovieSetScraperMetadataConfig.valueOf(value.toUpperCase());
   }
 }

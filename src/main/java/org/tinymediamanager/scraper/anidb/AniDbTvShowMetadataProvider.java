@@ -156,6 +156,7 @@ public class AniDbTvShowMetadataProvider extends AniDbMetadataProvider implement
       if (StringUtils.isBlank(md.getTitle())) {
         md.setTitle(ep.titles.get("x-jat"));
       }
+      md.setEnglishTitle(ep.titles.get("en"));
 
       md.setPlot(ep.summary);
 

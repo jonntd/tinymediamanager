@@ -884,6 +884,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
     addOriginalFilename(episode, parser);
     addUserNote(episode, parser);
     addEpisodeGroups(episode, parser);
+    addEnglishTitle(episode, parser);
   }
 
   /**
@@ -943,6 +944,17 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
     }
 
     root.appendChild(episodeGroups);
+  }
+
+  /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
+    if (StringUtils.isNotBlank(episode.getEnglishTitle())) {
+      Element englishTitle = document.createElement("english_title");
+      englishTitle.setTextContent(episode.getEnglishTitle());
+      root.appendChild(englishTitle);
+    }
   }
 
   /**

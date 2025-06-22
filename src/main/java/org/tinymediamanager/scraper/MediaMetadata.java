@@ -109,6 +109,7 @@ public class MediaMetadata {
   // general media entity
   private String                                           title               = "";
   private String                                           originalTitle       = "";
+  private String                                           englishTitle        = "";
   private String                                           originalLanguage    = "";
   private int                                              year                = 0;
   private Date                                             releaseDate         = null;
@@ -162,6 +163,7 @@ public class MediaMetadata {
     title = merge(title, md.getTitle());
     originalTitle = merge(originalTitle, md.getOriginalTitle());
     originalLanguage = merge(originalLanguage, md.getOriginalLanguage());
+    englishTitle = merge(englishTitle, md.getEnglishTitle());
     year = merge(year, md.getYear());
     releaseDate = merge(releaseDate, md.getReleaseDate());
     plot = merge(plot, md.getPlot());
@@ -287,8 +289,7 @@ public class MediaMetadata {
    */
   public List<Person> getCastMembers(Person.Type type) {
     // get all cast members for the given type
-    List<Person> ret = new ArrayList<>();
-    ret.addAll(castMembers.stream().filter(person -> person.getType() == type).toList());
+    List<Person> ret = new ArrayList<>(castMembers.stream().filter(person -> person.getType() == type).toList());
     if (type == Person.Type.ACTOR) {
       // if we want actors, add all guest stars too!
       ret.addAll(castMembers.stream().filter(person -> person.getType() == Person.Type.GUEST).toList());
@@ -338,10 +339,10 @@ public class MediaMetadata {
   }
 
   /**
-   * Adds all the cast member.
+   * Adds the cast members.
    * 
-   * @param castMember
-   *          the cast member
+   * @param castMembers
+   *          the cast members
    */
   public void addCastMembers(List<Person> castMembers) {
     for (Person person : ListUtils.nullSafe(castMembers)) {
@@ -837,6 +838,25 @@ public class MediaMetadata {
    */
   public void setOriginalTitle(String originalTitle) {
     this.originalTitle = StrgUtils.getNonNullString(originalTitle);
+  }
+
+  /**
+   * Get the English title
+   * 
+   * @return the English title
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Set the English title
+   * 
+   * @param englishTitle
+   *          the English title to be set
+   */
+  public void setEnglishTitle(String englishTitle) {
+    this.englishTitle = StrgUtils.getNonNullString(englishTitle);
   }
 
   /**
@@ -1377,7 +1397,7 @@ public class MediaMetadata {
   /**
    * generates a SearchResult out of a scraped detail page (when searching via ID)
    *
-   * @return
+   * @return a {@link MediaSearchResult} for the given type
    */
   public MediaSearchResult toSearchResult(MediaType type) {
     MediaSearchResult sr = new MediaSearchResult(providerId, type);

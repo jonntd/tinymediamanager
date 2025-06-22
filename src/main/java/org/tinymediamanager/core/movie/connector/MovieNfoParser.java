@@ -94,6 +94,7 @@ public class MovieNfoParser {
   public MovieEdition         edition             = MovieEdition.NONE;
   public String               originalFilename    = "";
   public String               userNote            = "";
+  public String               englishTitle        = "";
 
   public Map<String, Object>  ids                 = new HashMap<>();
   public Map<String, Rating>  ratings             = new HashMap<>();
@@ -200,6 +201,7 @@ public class MovieNfoParser {
     parseTag(MovieNfoParser::parseDateadded);
     parseTag(MovieNfoParser::parseOriginalFilename);
     parseTag(MovieNfoParser::parseUserNote);
+    parseTag(MovieNfoParser::parseEnglishTitle);
 
     // MUST BE THE LAST ONE!
     parseTag(MovieNfoParser::findUnsupportedElements);
@@ -1589,6 +1591,19 @@ public class MovieNfoParser {
   }
 
   /**
+   * the english title is usually in the english_title tag
+   */
+  private Void parseEnglishTitle() {
+    supportedElements.add("english_title");
+
+    Element element = getSingleElement(root, "english_title");
+    if (element != null) {
+      englishTitle = element.ownText();
+    }
+    return null;
+  }
+
+  /**
    * a trailer is usually in the trailer tag
    */
   private Void parseTrailer() {
@@ -1765,6 +1780,7 @@ public class MovieNfoParser {
     Movie movie = new Movie();
     movie.setTitle(title);
     movie.setOriginalTitle(originaltitle);
+    movie.setEnglishTitle(englishTitle);
 
     for (Map.Entry<String, Rating> entry : ratings.entrySet()) {
       Rating r = entry.getValue();

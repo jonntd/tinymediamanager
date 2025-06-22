@@ -114,6 +114,7 @@ public class UniversalMovieMetadataProvider implements IMovieMetadataProvider {
     config.addLabel("movieLabel", "tmm.metadata");
     config.addSelect("title", "metatag.title", compatibleScraperIds, UNDEFINED);
     config.addSelect("originalTitle", "metatag.originaltitle", compatibleScraperIds, UNDEFINED);
+    config.addSelect("englishTitle", "metatag.title.english", Arrays.asList(UNDEFINED, MediaMetadata.TMDB, MediaMetadata.IMDB), UNDEFINED);
     config.addSelect("tagline", "metatag.tagline", compatibleScraperIds, UNDEFINED);
     config.addSelect("year", "metatag.year", compatibleScraperIds, UNDEFINED);
     config.addSelect("releaseDate", "metatag.releasedate", compatibleScraperIds, UNDEFINED);

@@ -178,6 +178,7 @@ public class TvShowEpisodeNfoParser {
 
     public String                     title               = "";
     public String                     originaltitle       = "";
+    public String                     englishTitle        = "";
     public String                     showTitle           = "";
     public int                        season              = -1;
     public int                        episode             = -1;
@@ -236,6 +237,7 @@ public class TvShowEpisodeNfoParser {
       // parse all supported fields
       parseTag(Episode::parseTitle);
       parseTag(Episode::parseOriginalTitle);
+      parseTag(Episode::parseEnglishTitle);
       parseTag(Episode::parseShowTitle);
       parseTag(Episode::parseSeason);
       parseTag(Episode::parseEpisode);
@@ -352,6 +354,20 @@ public class TvShowEpisodeNfoParser {
       Element element = getSingleElement(root, "originaltitle");
       if (element != null) {
         originaltitle = element.ownText();
+      }
+
+      return null;
+    }
+
+    /**
+     * the english title usually comes in the english_title tag
+     */
+    private Void parseEnglishTitle() {
+      supportedElements.add("english_title");
+
+      Element element = getSingleElement(root, "english_title");
+      if (element != null) {
+        englishTitle = element.ownText();
       }
 
       return null;
@@ -1616,6 +1632,7 @@ public class TvShowEpisodeNfoParser {
       TvShowEpisode episode = new TvShowEpisode();
       episode.setTitle(title);
       episode.setOriginalTitle(originaltitle);
+      episode.setEnglishTitle(englishTitle);
 
       // do we have episode group information
       if (!episodeNumbers.isEmpty()) {

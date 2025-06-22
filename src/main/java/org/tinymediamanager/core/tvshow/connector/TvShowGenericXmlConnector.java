@@ -962,11 +962,12 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   }
 
   /**
-   * add the missing meta data for tinyMediaManager to this NFO
+   * add the missing metadata for tinyMediaManager to this NFO
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
     addUserNote();
+    addEnglishTitle();
   }
 
   /**
@@ -976,6 +977,15 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(tvShow.getNote());
     root.appendChild(userNote);
+  }
+
+  /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle() {
+    Element englishTitle = document.createElement("english_title");
+    englishTitle.setTextContent(tvShow.getEnglishTitle());
+    root.appendChild(englishTitle);
   }
 
   /**

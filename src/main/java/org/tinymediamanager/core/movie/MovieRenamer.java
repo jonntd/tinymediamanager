@@ -107,7 +107,8 @@ public class MovieRenamer {
   private static final List<String>        KNOWN_IMAGE_FILE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "bmp", "tbn", "gif", "webp");
 
   // to not use posix here
-  private static final Pattern             TITLE_PATTERN               = Pattern.compile("\\$\\{.*?title.*?\\}", Pattern.CASE_INSENSITIVE);
+  private static final Pattern             TITLE_PATTERN               = Pattern.compile("\\$\\{.*?(title|originalTitle|englishTitle).*?\\}",
+      Pattern.CASE_INSENSITIVE);
   private static final Pattern             YEAR_ID_PATTERN             = Pattern.compile("\\$\\{.*?(year|imdb|tmdb).*?\\}", Pattern.CASE_INSENSITIVE);
   private static final Pattern             ORIGINAL_FILENAME_PATTERN   = Pattern.compile("\\$\\{.*?originalFilename.*?\\}", Pattern.CASE_INSENSITIVE);
   private static final Pattern             TRAILER_STACKING_PATTERN    = Pattern.compile(".*?(\\d)$");
@@ -127,6 +128,7 @@ public class MovieRenamer {
     Map<String, String> tokenMap = new HashMap<>();
     tokenMap.put("title", "movie.title");
     tokenMap.put("originalTitle", "movie.originalTitle");
+    tokenMap.put("englishTitle", "movie.englishTitle");
     tokenMap.put("originalFilename", "movie.originalFilename");
     tokenMap.put("originalBasename", "movie.originalBasename");
     tokenMap.put("sorttitle", "movie.sortTitle");
