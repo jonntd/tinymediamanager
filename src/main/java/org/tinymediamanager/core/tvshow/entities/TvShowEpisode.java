@@ -871,33 +871,39 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   private void writeThumbImage(boolean async) {
     String thumbUrl = getArtworkUrl(MediaFileType.THUMB);
-    if (StringUtils.isNotBlank(thumbUrl)) {
-      // create correct filename
-      MediaFile mf = getMediaFiles(MediaFileType.VIDEO).get(0);
-      String basename = FilenameUtils.getBaseName(mf.getFilename());
+    if (StringUtils.isBlank(thumbUrl)) {
+      return;
+    }
 
-      List<String> filenames = new ArrayList<>();
-      for (TvShowEpisodeThumbNaming thumbNaming : TvShowModuleManager.getInstance().getSettings().getEpisodeThumbFilenames()) {
-        String filename = thumbNaming.getFilename(basename, Utils.getArtworkExtensionFromUrl(thumbUrl));
-        if (StringUtils.isBlank(filename)) {
-          continue;
-        }
-        if (isDisc()) {
-          filename = "thumb." + FilenameUtils.getExtension(thumbUrl); // DVD/BluRay fixate to thumb.ext
-        }
+    MediaFile mf = getMainVideoFile();
+    if (mf == MediaFile.EMPTY_MEDIAFILE) {
+      return;
+    }
 
-        filenames.add(filename);
+    // create correct filename
+    String basename = FilenameUtils.getBaseName(mf.getFilename());
+
+    List<String> filenames = new ArrayList<>();
+    for (TvShowEpisodeThumbNaming thumbNaming : TvShowModuleManager.getInstance().getSettings().getEpisodeThumbFilenames()) {
+      String filename = thumbNaming.getFilename(basename, Utils.getArtworkExtensionFromUrl(thumbUrl));
+      if (StringUtils.isBlank(filename)) {
+        continue;
+      }
+      if (isDisc()) {
+        filename = "thumb." + FilenameUtils.getExtension(thumbUrl); // DVD/BluRay fixate to thumb.ext
       }
 
-      if (!filenames.isEmpty()) {
-        // get images in thread
-        MediaEntityImageFetcherTask task = new MediaEntityImageFetcherTask(this, thumbUrl, MediaArtworkType.THUMB, filenames);
-        if (async) {
-          TmmTaskManager.getInstance().addImageDownloadTask(task);
-        }
-        else {
-          task.run();
-        }
+      filenames.add(filename);
+    }
+
+    if (!filenames.isEmpty()) {
+      // get images in thread
+      MediaEntityImageFetcherTask task = new MediaEntityImageFetcherTask(this, thumbUrl, MediaArtworkType.THUMB, filenames);
+      if (async) {
+        TmmTaskManager.getInstance().addImageDownloadTask(task);
+      }
+      else {
+        task.run();
       }
     }
 
@@ -1752,7 +1758,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   @Override
   public MediaFile getMainVideoFile() {
-    MediaFile vid = null;
+    MediaFile vid;
 
     if (stacked) {
       // search the first stacked media file (e.g. CD1)
