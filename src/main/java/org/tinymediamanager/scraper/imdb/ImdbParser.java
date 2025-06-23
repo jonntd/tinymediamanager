@@ -1289,10 +1289,13 @@ public abstract class ImdbParser {
                   p.setRole(imdbPerson.attributes);
                 }
               }
-              if (imdbPerson.imageProps != null && imdbPerson.imageProps.imageModel != null) {
-                p.setThumbUrl(imdbPerson.imageProps.imageModel.url);
+              if (imdbPerson.imageProps != null && imdbPerson.imageProps.imageModel != null && !imdbPerson.imageProps.imageModel.url.isBlank()) {
+                String url = imdbPerson.imageProps.imageModel.url;
+                if (url.endsWith("_V1_.jpg")) {
+                  url = url.replace("_V1_.jpg", "_V1_QL75_UX300.jpg"); // scale to 300px
+                }
+                p.setThumbUrl(url);
               }
-
               if (pt == Type.ACTOR && !isScrapeUncreditedActors() && cat.section.splitIndex > 0) {
                 // do not parse number out of refTagSuffix, just count...
                 // splitIndex divides the uncredited from normal actors
