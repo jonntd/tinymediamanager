@@ -933,7 +933,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
-        if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
+        if (mediaTrailer.getInNfo()) {
           trailer.setTextContent(mediaTrailer.getUrl());
           break;
         }

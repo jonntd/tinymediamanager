@@ -2,6 +2,7 @@ Version 5.1.8
 =======================
 x [TV shows] fixed a performance regression when loading TV shows with many episodes #2977
 x [TV shows] fixed an error when downloading thumbs for episodes with no video files #2981
+x [NFO] allow writing of non HTTP trailer URLs to the NFO #2962
 x [UI] improved loading speed of tree tables #2977
 x [IMDB] scale actor image size (as before) #2979
 

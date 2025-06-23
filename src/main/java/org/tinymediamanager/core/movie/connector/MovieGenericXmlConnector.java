@@ -982,7 +982,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(movie.getTrailer())) {
-        if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
+        if (mediaTrailer.getInNfo()) {
           trailer.setTextContent(mediaTrailer.getUrl());
           break;
         }

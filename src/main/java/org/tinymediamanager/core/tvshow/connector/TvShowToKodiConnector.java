@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
@@ -164,14 +163,15 @@ public class TvShowToKodiConnector extends TvShowGenericXmlConnector {
     if (TvShowModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
 
-      // only add a trailer if there is no physical trailer due to a bug in kodi
-      // https://forum.kodi.tv/showthread.php?tid=348759&pid=2900477#pid2900477
-      if (tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty()) {
-        for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
-          if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
+      for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
+        if (mediaTrailer.getInNfo()) {
+          if (mediaTrailer.getUrl().startsWith("http")) {
             trailer.setTextContent(prepareTrailerForKodi(mediaTrailer));
-            break;
           }
+          else {
+            trailer.setTextContent(mediaTrailer.getUrl());
+          }
+          break;
         }
       }
       root.appendChild(trailer);

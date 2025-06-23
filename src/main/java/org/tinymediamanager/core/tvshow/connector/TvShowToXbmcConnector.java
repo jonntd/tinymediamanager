@@ -62,7 +62,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
     if (TvShowModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
-        if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
+        if (mediaTrailer.getInNfo()) {
           trailer.setTextContent(prepareTrailerForXbmc(mediaTrailer));
           break;
         }

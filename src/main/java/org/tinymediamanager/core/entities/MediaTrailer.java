@@ -118,10 +118,7 @@ public class MediaTrailer extends AbstractModelObject implements Comparable<Medi
   }
 
   public void setInNfo(Boolean newValue) {
-    if (!this.url.startsWith("http")) {
-      // local trailers never in url
-      newValue = false;
-    }
+    // allow local trailer urls to be set to inNfo - https://kodi.wiki/view/Trailers#TV_Shows
     Boolean oldValue = this.inNfo;
     this.inNfo = newValue;
     firePropertyChange("inNfo", oldValue, newValue);

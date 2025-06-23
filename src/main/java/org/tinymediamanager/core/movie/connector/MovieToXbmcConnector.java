@@ -57,8 +57,13 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
     if (MovieModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(movie.getTrailer())) {
-        if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
-          trailer.setTextContent(prepareTrailerForXbmc(mediaTrailer));
+        if (mediaTrailer.getInNfo()) {
+          if (mediaTrailer.getUrl().startsWith("http")) {
+            trailer.setTextContent(prepareTrailerForXbmc(mediaTrailer));
+          }
+          else {
+            trailer.setTextContent(mediaTrailer.getUrl());
+          }
           break;
         }
       }
