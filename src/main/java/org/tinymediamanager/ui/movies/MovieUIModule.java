@@ -283,6 +283,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
 
     editPopupMenu.addSeparator();
     editPopupMenu.add(createAndRegisterAction(MovieExportAction.class));
+    editPopupMenu.add(createAndRegisterAction(MovieCopyToAction.class));
 
     // rename popup menu
     renamePopupMenu = new JPopupMenu(TmmResourceBundle.getString("Toolbar.rename"));

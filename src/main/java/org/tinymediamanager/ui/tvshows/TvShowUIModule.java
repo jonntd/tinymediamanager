@@ -57,6 +57,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowChangeSeasonArtworkAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowChangeToAbsoluteAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowCleanUpFilesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowClearImageCacheAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowCopyToAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDeleteAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadActorImagesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadMissingArtworkAction;
@@ -371,6 +372,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
 
     editPopupMenu.addSeparator();
     editPopupMenu.add(createAndRegisterAction(TvShowExportAction.class));
+    editPopupMenu.add(createAndRegisterAction(TvShowCopyToAction.class));
 
     // rename popup menu
     renamePopupMenu = new JPopupMenu(TmmResourceBundle.getString("Toolbar.rename"));
@@ -485,6 +487,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
 
     popupMenu.addSeparator();
     popupMenu.add(createAndRegisterAction(TvShowExportAction.class));
+    popupMenu.add(createAndRegisterAction(TvShowCopyToAction.class));
     popupMenu.add(createAndRegisterAction(TvShowOpenFolderAction.class));
 
     popupMenu.addSeparator();

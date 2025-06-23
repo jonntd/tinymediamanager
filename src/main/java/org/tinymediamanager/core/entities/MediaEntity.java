@@ -962,6 +962,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * fire an add event for the given {@link MediaFile}
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to fire the event for
+   */
   protected void fireAddedEventForMediaFile(MediaFile mediaFile) {
     if (mediaFile == null) {
       return;
@@ -1023,6 +1029,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * fire a remove event for the given {@link MediaFile}
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to fire the event for
+   */
   protected void fireRemoveEventForMediaFile(MediaFile mediaFile) {
     if (mediaFile == null) {
       return;
@@ -1084,6 +1096,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * gets all MediaFiles of this entity<br>
+   * <b>Note:</b> this is a copy of the internal list, so you can modify it without affecting the original list
+   *
+   * @return list of MF (may be empty, but never null)
+   */
   public List<MediaFile> getMediaFiles() {
     List<MediaFile> mf = new ArrayList<>();
 
@@ -1097,6 +1115,21 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     return mf;
   }
 
+  /**
+   * gets all MediaFiles of this entity and embedded/child entities<br>
+   * <b>Note:</b> this is a copy of the internal list, so you can modify it without affecting the original list
+   *
+   * @return list of MF (may be empty, but never null)
+   */
+  public List<MediaFile> getMediaFilesRecursive() {
+    return getMediaFiles();
+  }
+
+  /**
+   * checks whether this {@link MediaEntity} has any MediaFiles or not
+   *
+   * @return true if there are MediaFiles, false otherwise
+   */
   public boolean hasMediaFiles() {
     return !mediaFiles.isEmpty();
   }

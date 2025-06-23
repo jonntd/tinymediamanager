@@ -120,7 +120,7 @@ public class MediaEntityCopyTask extends TmmTask {
         Files.createDirectories(newFolder);
 
         // copy all media files of the entity
-        for (MediaFile mf : me.getMediaFiles()) {
+        for (MediaFile mf : me.getMediaFilesRecursive()) {
           if (cancel) {
             break;
           }

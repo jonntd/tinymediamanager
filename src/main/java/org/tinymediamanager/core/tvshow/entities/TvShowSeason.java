@@ -458,7 +458,7 @@ public class TvShowSeason extends MediaEntity implements Comparable<TvShowSeason
    * @return a {@link List} of all {@link MediaFile}s
    */
   public List<MediaFile> getMediaFilesRecursive() {
-    Set<MediaFile> unique = new LinkedHashSet<>(super.getMediaFiles());
+    Set<MediaFile> unique = new LinkedHashSet<>(getMediaFiles());
 
     for (TvShowEpisode episode : episodes) {
       unique.addAll(episode.getMediaFiles());

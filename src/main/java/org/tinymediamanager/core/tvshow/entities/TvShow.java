@@ -2050,6 +2050,20 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     firePropertyChange("extraFanartUrls", null, this.extraFanartUrls);
   }
 
+  @Override
+  public List<MediaFile> getMediaFilesRecursive() {
+    // TV show
+    Set<MediaFile> unique = new LinkedHashSet<>(getMediaFiles());
+
+    // seasons
+    unique.addAll(getSeasonMediaFiles());
+
+    // episodes
+    unique.addAll(getEpisodesMediaFiles());
+
+    return new ArrayList<>(unique);
+  }
+
   /**
    * Gets the media files of all episodes.<br>
    * (without the TV show MFs like poster/banner/...)
