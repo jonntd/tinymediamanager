@@ -68,13 +68,13 @@ public class TvShowEpisodeAndSeasonParser {
 
   // https://kodi.wiki/view/Anime - PREP should run before any default Kodi regex
   private static final Pattern ANIME_PREPEND1    = Pattern.compile(
-      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND2    = Pattern.compile(
-      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND3    = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
+      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_PREPEND4    = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
@@ -82,16 +82,16 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
 
   private static final Pattern ANIME_APPEND1     = Pattern.compile(
-      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND2     = Pattern.compile(
-      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*?$",
+      "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*?$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND3     = Pattern.compile(
-      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern ANIME_APPEND4     = Pattern.compile(
-      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,3})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
+      "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
 
   private TvShowEpisodeAndSeasonParser() {

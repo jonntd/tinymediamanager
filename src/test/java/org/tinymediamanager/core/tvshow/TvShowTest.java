@@ -148,6 +148,8 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:3 E:5", detectEpisode("S03.EP05.The.Bed.of.Nails.avi"));
     assertEqual("S:1 E:101", detectEpisode("Eisenbahn-Romantik.S01.E101.mp4"));
     assertEqual("S:5 E:1001", detectEpisode("S05.E1001.El.beso.de.la.mujer.veneno.mp4"));
+    assertEqual("S:1 E:1001", detectEpisode("E1001.El.beso.de.la.mujer.veneno.mp4"));
+    assertEqual("S:1 E:11", detectEpisode("E0011.El.beso.de.la.mujer.veneno.mp4"));
     assertEqual("S:2011", detectEpisode("Game of Thrones\\2011-04-17 - Winter Is Coming.avi"));
     assertEqual("S:2011", detectEpisode("Game of Thrones\\17.04.2011 - Winter Is Coming.avi"));
     assertEqual("S:5 E:1", detectEpisode("Breaking Bad S05E01 S05E02 HDTV XViD-xyz\\E01 - Live Free or Die.avi"));
