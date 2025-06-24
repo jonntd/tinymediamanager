@@ -155,6 +155,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   nfoWriteLockdata                       = false;
   boolean                                   nfoWriteTrailer                        = true;
   boolean                                   nfoWriteFileinfo                       = true;
+  boolean                                   nfoWriteArtworkUrls                    = true;
 
   // renamer
   boolean                                   renameAfterScrape                      = false;
@@ -1757,6 +1758,16 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.nfoWriteFileinfo;
     this.nfoWriteFileinfo = newValue;
     firePropertyChange("nfoWriteFileinfo", oldValue, newValue);
+  }
+
+  public boolean isNfoWriteArtworkUrls() {
+    return nfoWriteArtworkUrls;
+  }
+
+  public void setNfoWriteArtworkUrls(boolean newValue) {
+    boolean oldValue = this.nfoWriteArtworkUrls;
+    this.nfoWriteArtworkUrls = newValue;
+    firePropertyChange("nfoWriteArtworkUrls", oldValue, newValue);
   }
 
   public Locale getNfoLanguage() {

@@ -61,6 +61,7 @@ public class MovieToMpMovingPicturesConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addCertification() {
+    // not used
   }
 
   /**

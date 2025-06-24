@@ -54,7 +54,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
 
   @Override
   protected void addTrailer() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(movie.getTrailer())) {
         if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {
@@ -139,7 +139,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
    * add the <fileinfo>xx</fileinfo> tag with mediainfo data - legacy XBMC format
    */
   protected void addFileinfo() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteFileinfo()) {
+    if (settings.isNfoWriteFileinfo()) {
       Element fileinfo = document.createElement("fileinfo");
       Element streamdetails = document.createElement("streamdetails");
 

@@ -31,7 +31,6 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.w3c.dom.Element;
@@ -93,14 +92,16 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addThumb() {
-    addThumb(MediaFileType.POSTER, "poster");
-    addThumb(MediaFileType.BANNER, "banner");
-    addThumb(MediaFileType.CLEARART, "clearart");
-    addThumb(MediaFileType.CLEARLOGO, "clearlogo");
-    addThumb(MediaFileType.DISC, "discart");
-    addThumb(MediaFileType.THUMB, "landscape");
-    addThumb(MediaFileType.KEYART, "keyart");
-    addThumb(MediaFileType.LOGO, "logo");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.POSTER, "poster");
+      addThumb(MediaFileType.BANNER, "banner");
+      addThumb(MediaFileType.CLEARART, "clearart");
+      addThumb(MediaFileType.CLEARLOGO, "clearlogo");
+      addThumb(MediaFileType.DISC, "discart");
+      addThumb(MediaFileType.THUMB, "landscape");
+      addThumb(MediaFileType.KEYART, "keyart");
+      addThumb(MediaFileType.LOGO, "logo");
+    }
   }
 
   protected void addThumb(MediaFileType type, String aspect) {
@@ -120,33 +121,35 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = movie.getArtworkUrl(MediaFileType.FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = movie.getArtworkUrl(MediaFileType.FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    // extrafanart
-    fanartUrls.addAll(movie.getExtraFanarts());
+      // extrafanart
+      fanartUrls.addAll(movie.getExtraFanarts());
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 
   @Override
   protected void addTrailer() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
 
       // only add a trailer if there is no physical trailer due to a bug in kodi
@@ -233,6 +236,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addVotes() {
+    // do nothing, votes are now in the ratings tag
   }
 
   /**

@@ -426,15 +426,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * we will write all supported artwork types here
    */
   protected void addThumb() {
-    addThumb(MediaFileType.POSTER, "poster");
-    addThumb(MediaFileType.BANNER, "banner");
-    addThumb(MediaFileType.CLEARART, "clearart");
-    addThumb(MediaFileType.CLEARLOGO, "clearlogo");
-    addThumb(MediaFileType.THUMB, "landscape");
-    addThumb(MediaFileType.KEYART, "keyart");
-    addThumb(MediaFileType.LOGO, "logo");
-    addThumb(MediaFileType.CHARACTERART, "characterart");
-    addThumb(MediaFileType.DISC, "discart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.POSTER, "poster");
+      addThumb(MediaFileType.BANNER, "banner");
+      addThumb(MediaFileType.CLEARART, "clearart");
+      addThumb(MediaFileType.CLEARLOGO, "clearlogo");
+      addThumb(MediaFileType.THUMB, "landscape");
+      addThumb(MediaFileType.KEYART, "keyart");
+      addThumb(MediaFileType.LOGO, "logo");
+      addThumb(MediaFileType.CHARACTERART, "characterart");
+      addThumb(MediaFileType.DISC, "discart");
+    }
   }
 
   private void addThumb(MediaFileType type, String aspect) {
@@ -467,15 +469,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season posters in multiple <thumb aspect="poster" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonPoster() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String posterUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_POSTER);
-      if (StringUtils.isNotBlank(posterUrl)) {
-        thumb.setAttribute("aspect", "poster");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(posterUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String posterUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_POSTER);
+        if (StringUtils.isNotBlank(posterUrl)) {
+          thumb.setAttribute("aspect", "poster");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(posterUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -484,15 +488,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season banners in multiple <thumb aspect="banner" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonBanner() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String bannerUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_BANNER);
-      if (StringUtils.isNotBlank(bannerUrl)) {
-        thumb.setAttribute("aspect", "banner");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(bannerUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String bannerUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_BANNER);
+        if (StringUtils.isNotBlank(bannerUrl)) {
+          thumb.setAttribute("aspect", "banner");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(bannerUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -501,15 +507,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season thumbs in multiple <thumb aspect="thumb" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonThumb() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String thumbUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_THUMB);
-      if (StringUtils.isNotBlank(thumbUrl)) {
-        thumb.setAttribute("aspect", "thumb");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(thumbUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String thumbUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_THUMB);
+        if (StringUtils.isNotBlank(thumbUrl)) {
+          thumb.setAttribute("aspect", "thumb");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(thumbUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -518,27 +526,29 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * the new fanart in the form <fanart><thumb>xxx</thumb></fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = tvShow.getArtworkUrl(MediaFileType.FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = tvShow.getArtworkUrl(MediaFileType.FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    // extrafanart
-    fanartUrls.addAll(tvShow.getExtraFanartUrls());
+      // extrafanart
+      fanartUrls.addAll(tvShow.getExtraFanartUrls());
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 
@@ -901,7 +911,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       actor.appendChild(role);
     }
 
-    if (StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
+    if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
       Element thumb = document.createElement("thumb");
       thumb.setTextContent(tvShowActor.getThumbUrl());
       actor.appendChild(thumb);

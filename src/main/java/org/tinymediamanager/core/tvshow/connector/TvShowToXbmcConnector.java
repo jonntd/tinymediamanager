@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.w3c.dom.Element;
 
@@ -59,7 +58,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
 
   @Override
   protected void addTrailer() {
-    if (TvShowModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
         if (mediaTrailer.getInNfo() && mediaTrailer.getUrl().startsWith("http")) {

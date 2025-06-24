@@ -48,6 +48,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
@@ -67,6 +68,8 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
   protected static final String   ORACLE_IS_STANDALONE = "http://www.oracle.com/xml/is-standalone";
 
   protected final TvShowSeason    tvShowSeason;
+  protected final TvShowSettings  settings;
+
   protected TvShowSeasonNfoParser parser               = null;
 
   protected Document              document;
@@ -74,6 +77,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
 
   protected TvShowSeasonGenericXmlConnector(TvShowSeason tvShowSeason) {
     this.tvShowSeason = tvShowSeason;
+    this.settings = TvShowModuleManager.getInstance().getSettings();
   }
 
   /**
@@ -289,9 +293,11 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    * we will write all supported artwork types here
    */
   protected void addThumb() {
-    addThumb(MediaFileType.SEASON_POSTER, "poster");
-    addThumb(MediaFileType.SEASON_BANNER, "banner");
-    addThumb(MediaFileType.SEASON_THUMB, "landscape");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.SEASON_POSTER, "poster");
+      addThumb(MediaFileType.SEASON_BANNER, "banner");
+      addThumb(MediaFileType.SEASON_THUMB, "landscape");
+    }
   }
 
   private void addThumb(MediaFileType type, String aspect) {
@@ -309,24 +315,26 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    * the new fanart in the form <fanart><thumb>xxx</thumb></fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 

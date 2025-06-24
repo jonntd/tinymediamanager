@@ -172,6 +172,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        nfoWriteLockdata                       = false;
   boolean                                        nfoWriteTrailer                        = true;
   boolean                                        nfoWriteFileinfo                       = true;
+  boolean                                        nfoWriteArtworkUrls                    = true;
 
   // renamer
   boolean                                        renameAfterScrape                      = false;
@@ -202,7 +203,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig           = new ArrayList<>();
   boolean                                        doNotOverwriteExistingData             = false;
   boolean                                        fetchAllRatings                        = false;
-  final List<RatingProvider.RatingSource> fetchRatingSources = new ArrayList<>();
+  final List<RatingProvider.RatingSource>        fetchRatingSources                     = new ArrayList<>();
 
   // artwork scraper
   final List<MediaLanguages>                     imageScraperLanguages                  = ObservableCollections.observableList(new ArrayList<>());
@@ -1834,6 +1835,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.nfoWriteFileinfo;
     this.nfoWriteFileinfo = newValue;
     firePropertyChange("nfoWriteFileinfo", oldValue, newValue);
+  }
+
+  public boolean isNfoWriteArtworkUrls() {
+    return nfoWriteArtworkUrls;
+  }
+
+  public void setNfoWriteArtworkUrls(boolean newValue) {
+    boolean oldValue = this.nfoWriteArtworkUrls;
+    this.nfoWriteArtworkUrls = newValue;
+    firePropertyChange("nfoWriteArtworkUrls", oldValue, newValue);
   }
 
   public boolean isWriteActorImages() {

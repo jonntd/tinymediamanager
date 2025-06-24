@@ -158,6 +158,12 @@ public class MovieSettingsDefaults {
     movieSettings.setCertificationStyle(CertificationStyle.LARGE);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);
+    movieSettings.setNfoWriteFileinfo(true);
+    movieSettings.setNfoWriteArtworkUrls(true);
+    movieSettings.setNfoWriteLockdata(false);
+    movieSettings.setNfoWriteTrailer(true);
+    movieSettings.setNfoWriteSingleStudio(false);
+    movieSettings.setNfoWriteDateAdded(true);
 
     movieSettings.firePropertyChange("preset", false, true);
   }
@@ -231,6 +237,12 @@ public class MovieSettingsDefaults {
     movieSettings.setCertificationStyle(CertificationStyle.LARGE);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);
+    movieSettings.setNfoWriteFileinfo(true);
+    movieSettings.setNfoWriteArtworkUrls(true);
+    movieSettings.setNfoWriteLockdata(false);
+    movieSettings.setNfoWriteTrailer(true);
+    movieSettings.setNfoWriteSingleStudio(false);
+    movieSettings.setNfoWriteDateAdded(true);
 
     movieSettings.firePropertyChange("preset", false, true);
   }
@@ -593,6 +605,7 @@ public class MovieSettingsDefaults {
     movieSettings.setCertificationStyle(CertificationStyle.SHORT);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);
+    movieSettings.setNfoWriteArtworkUrls(false);
 
     movieSettings.firePropertyChange("preset", false, true);
   }

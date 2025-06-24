@@ -481,12 +481,14 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
    * add the thumb in the form <thumb>xxx</thumb> tags
    */
   protected void addThumb(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
-    Element thumb = document.createElement("thumb");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element thumb = document.createElement("thumb");
 
-    String thumbUrl = episode.getArtworkUrl(MediaFileType.THUMB);
-    if (StringUtils.isNotBlank(thumbUrl)) {
-      thumb.setTextContent(thumbUrl);
-      root.appendChild(thumb);
+      String thumbUrl = episode.getArtworkUrl(MediaFileType.THUMB);
+      if (StringUtils.isNotBlank(thumbUrl)) {
+        thumb.setTextContent(thumbUrl);
+        root.appendChild(thumb);
+      }
     }
   }
 
@@ -835,7 +837,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
         actor.appendChild(role);
       }
 
-      if (StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
+      if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
         Element thumb = document.createElement("thumb");
         thumb.setTextContent(tvShowActor.getThumbUrl());
         actor.appendChild(thumb);

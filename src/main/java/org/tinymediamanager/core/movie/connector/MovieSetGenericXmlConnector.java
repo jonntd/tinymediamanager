@@ -372,18 +372,22 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
    * add the thumb (poster) url in the form <thumb>xxx</thumb>
    */
   protected void addThumb() {
-    Element thumb = document.createElement("thumb");
-    thumb.setTextContent(movieSet.getArtworkUrl(MediaFileType.POSTER));
-    root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element thumb = document.createElement("thumb");
+      thumb.setTextContent(movieSet.getArtworkUrl(MediaFileType.POSTER));
+      root.appendChild(thumb);
+    }
   }
 
   /**
    * add the fanart url in the form <fanart>xxx</fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
-    fanart.setTextContent(movieSet.getArtworkUrl(MediaFileType.FANART));
-    root.appendChild(fanart);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
+      fanart.setTextContent(movieSet.getArtworkUrl(MediaFileType.FANART));
+      root.appendChild(fanart);
+    }
   }
 
   /**

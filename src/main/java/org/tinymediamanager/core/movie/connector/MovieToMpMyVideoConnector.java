@@ -50,16 +50,18 @@ public class MovieToMpMyVideoConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    String fanarUrl = movie.getArtworkUrl(MediaFileType.FANART);
-    if (StringUtils.isNotBlank(fanarUrl)) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(fanarUrl);
-      fanart.appendChild(thumb);
+      String fanarUrl = movie.getArtworkUrl(MediaFileType.FANART);
+      if (StringUtils.isNotBlank(fanarUrl)) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(fanarUrl);
+        fanart.appendChild(thumb);
+      }
+
+      root.appendChild(fanart);
     }
-
-    root.appendChild(fanart);
   }
 
   /**

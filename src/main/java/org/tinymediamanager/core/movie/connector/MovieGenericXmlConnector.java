@@ -442,18 +442,22 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
    * add the thumb (poster) url in the form <thumb>xxx</thumb>
    */
   protected void addThumb() {
-    Element thumb = document.createElement("thumb");
-    thumb.setTextContent(movie.getArtworkUrl(MediaFileType.POSTER));
-    root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element thumb = document.createElement("thumb");
+      thumb.setTextContent(movie.getArtworkUrl(MediaFileType.POSTER));
+      root.appendChild(thumb);
+    }
   }
 
   /**
    * add the fanart url in the form <fanart>xxx</fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
-    fanart.setTextContent(movie.getArtworkUrl(MediaFileType.FANART));
-    root.appendChild(fanart);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
+      fanart.setTextContent(movie.getArtworkUrl(MediaFileType.FANART));
+      root.appendChild(fanart);
+    }
   }
 
   /**
@@ -893,7 +897,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         actor.appendChild(role);
       }
 
-      if (StringUtils.isNotBlank(movieActor.getThumbUrl())) {
+      if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(movieActor.getThumbUrl())) {
         Element thumb = document.createElement("thumb");
         thumb.setTextContent(movieActor.getThumbUrl());
         actor.appendChild(thumb);
@@ -928,7 +932,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         producer.appendChild(role);
       }
 
-      if (StringUtils.isNotBlank(movieProducer.getThumbUrl())) {
+      if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(movieProducer.getThumbUrl())) {
         Element thumb = document.createElement("thumb");
         thumb.setTextContent(movieProducer.getThumbUrl());
         producer.appendChild(thumb);
