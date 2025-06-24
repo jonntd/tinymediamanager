@@ -18,13 +18,14 @@ package org.tinymediamanager.core.tvshow.connector;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +47,7 @@ import org.tinymediamanager.core.MediaAiredStatus;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.entities.MediaGenres;
 import org.tinymediamanager.core.entities.MediaRating;
+import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tvshow.TvShowHelpers;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
@@ -1309,18 +1311,13 @@ public class TvShowNfoParser {
           pattern = Pattern.compile("plugin://plugin.video.hdtrailers_net/video/.*\\?/(.*)$");
           matcher = pattern.matcher(element.ownText());
           if (matcher.matches()) {
-            try {
-              trailer = URLDecoder.decode(matcher.group(1), "UTF-8");
-            }
-            catch (UnsupportedEncodingException ignored) {
-              // ignored
-            }
+            trailer = URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
           }
         }
       }
 
       // pure http link
-      if (StringUtils.isNotBlank(element.ownText()) && element.ownText().matches("https?://.*")) {
+      if (StringUtils.isNotBlank(element.ownText())) {
         trailer = element.ownText();
       }
     }
@@ -1574,6 +1571,17 @@ public class TvShowNfoParser {
 
     show.addToGenres(genres);
     show.addToTags(tags);
+
+    if (StringUtils.isNotBlank(trailer)) {
+      // only add new MT when not a local file
+      MediaTrailer mediaTrailer = new MediaTrailer();
+      mediaTrailer.setName("fromNFO");
+      mediaTrailer.setProvider("from NFO");
+      mediaTrailer.setQuality("unknown");
+      mediaTrailer.setUrl(trailer);
+      mediaTrailer.setInNfo(true);
+      show.addToTrailer(Collections.singletonList(mediaTrailer));
+    }
 
     show.setNote(userNote);
 

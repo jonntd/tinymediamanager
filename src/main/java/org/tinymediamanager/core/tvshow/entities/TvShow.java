@@ -273,12 +273,14 @@ public class TvShow extends MediaEntity implements IMediaInformation {
       episodeGroups.clear();
       seasonNames.clear();
       seasonOverviews.clear();
+      trailer.clear();
     }
 
     setGenres(other.genres);
     setActors(other.actors);
     setExtraFanartUrls(other.extraFanartUrls);
     setEpisodeGroups(other.episodeGroups);
+    setTrailers(other.trailer);
 
     for (var entry : other.seasonNames.entrySet()) {
       seasonNames.putIfAbsent(entry.getKey(), entry.getValue());

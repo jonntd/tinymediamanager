@@ -22,8 +22,8 @@ import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
@@ -1614,18 +1614,13 @@ public class MovieNfoParser {
           pattern = Pattern.compile("plugin://plugin.video.hdtrailers_net/video/.*\\?/(.*)$");
           matcher = pattern.matcher(element.ownText());
           if (matcher.matches()) {
-            try {
-              trailer = URLDecoder.decode(matcher.group(1), "UTF-8");
-            }
-            catch (UnsupportedEncodingException ignored) {
-              // just ignore
-            }
+            trailer = URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
           }
         }
       }
 
       // pure http link
-      if (StringUtils.isNotBlank(element.ownText()) && element.ownText().matches("https?://.*")) {
+      if (StringUtils.isNotBlank(element.ownText())) {
         trailer = element.ownText();
       }
 
@@ -1908,7 +1903,7 @@ public class MovieNfoParser {
     movie.addToGenres(genres);
 
     for (String trailerUrl : trailers) {
-      if (trailerUrl.startsWith("http")) {
+      if (StringUtils.isNotBlank(trailerUrl)) {
         // only add new MT when not a local file
         MediaTrailer trailer = new MediaTrailer();
         trailer.setName("fromNFO");
