@@ -53,6 +53,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.util.DateUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
@@ -86,6 +87,7 @@ public class TvShowNfoParser {
   public boolean                    watched             = false;
   public int                        playcount           = 0;
   public String                     userNote            = "";
+  public MediaEpisodeGroup          episodeGroup        = MediaEpisodeGroup.DEFAULT_AIRED;
 
   public Map<String, Object>        ids                 = new HashMap<>();
   public Map<String, Rating>        ratings             = new HashMap<>();
@@ -109,6 +111,7 @@ public class TvShowNfoParser {
   public List<String>               countries           = new ArrayList<>();
   public List<String>               tags                = new ArrayList<>();
   public List<Person>               actors              = new ArrayList<>();
+  public List<MediaEpisodeGroup>    episodeGroups       = new ArrayList<>();
 
   public List<String>               unsupportedElements = new ArrayList<>();
 
@@ -181,6 +184,7 @@ public class TvShowNfoParser {
     parseTag(TvShowNfoParser::parseEpisodeguide);
     parseTag(TvShowNfoParser::parseEnddate);
     parseTag(TvShowNfoParser::parseUserNote);
+    parseTag(TvShowNfoParser::parseEpisodeGroups);
 
     // MUST BE THE LAST ONE!
     parseTag(TvShowNfoParser::findUnsupportedElements);
@@ -1452,6 +1456,34 @@ public class TvShowNfoParser {
   }
 
   /**
+   * the episode groups are in the episode_group tag
+   */
+  private Void parseEpisodeGroups() {
+    supportedElements.add("episode_groups");
+
+    Element element = getSingleElement(root, "episode_groups");
+    if (element != null) {
+      for (Element group : element.children()) {
+        try {
+          MediaEpisodeGroup.EpisodeGroupType episodeGroupType = MediaEpisodeGroup.EpisodeGroupType.valueOf(group.attr("id"));
+          String episodeGroupName = group.attr("name");
+          MediaEpisodeGroup mediaEpisodeGroup = new MediaEpisodeGroup(episodeGroupType, episodeGroupName);
+
+          if (Boolean.parseBoolean(group.attr("active"))) {
+            episodeGroup = mediaEpisodeGroup;
+          }
+
+          episodeGroups.add(mediaEpisodeGroup);
+        }
+        catch (Exception ignored) {
+          // nothing to do
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * morph this instance to a TvShow object
    *
    * @return the TvShow object
@@ -1584,6 +1616,8 @@ public class TvShowNfoParser {
     }
 
     show.setNote(userNote);
+    show.setEpisodeGroups(episodeGroups);
+    show.setEpisodeGroup(episodeGroup);
 
     return show;
   }

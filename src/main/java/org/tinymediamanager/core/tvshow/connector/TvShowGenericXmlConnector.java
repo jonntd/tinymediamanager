@@ -63,6 +63,7 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowNfoNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -967,6 +968,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
     addUserNote();
+    addEpisodeGroups();
   }
 
   /**
@@ -976,6 +978,25 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(tvShow.getNote());
     root.appendChild(userNote);
+  }
+
+  /**
+   * add the episode group information in <episode_groups>xxx</episode_groups>
+   */
+  protected void addEpisodeGroups() {
+    Element episodeGroups = document.createElement("episode_groups");
+
+    for (MediaEpisodeGroup episodeGroup : tvShow.getEpisodeGroups()) {
+      Element group = document.createElement("group");
+      group.setAttribute("id", episodeGroup.getEpisodeGroupType().name());
+      group.setAttribute("name", episodeGroup.getName());
+      if (episodeGroup.equals(tvShow.getEpisodeGroup())) {
+        group.setAttribute("active", "true");
+      }
+      episodeGroups.appendChild(group);
+    }
+
+    root.appendChild(episodeGroups);
   }
 
   /**
