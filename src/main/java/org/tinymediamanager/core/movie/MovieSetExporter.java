@@ -42,6 +42,7 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.jmte.RegexpProcessor;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 
@@ -84,6 +85,8 @@ public class MovieSetExporter extends MediaEntityExporter {
 
     // register default renderers
     registerDefaultRenderers();
+
+    engine.registerAnnotationProcessor(new RegexpProcessor());
 
     // prepare export destination
     if (!Files.exists(exportDir)) {

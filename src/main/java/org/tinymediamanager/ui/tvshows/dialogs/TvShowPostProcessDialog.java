@@ -98,7 +98,6 @@ public class TvShowPostProcessDialog extends PostProcessDialog {
 
     TvShowModuleManager.getInstance().getSettings().forceSaveSettings();
 
-    firePropertyChange("postProcessTvShow", null, process);
     setVisible(false);
   }
 }

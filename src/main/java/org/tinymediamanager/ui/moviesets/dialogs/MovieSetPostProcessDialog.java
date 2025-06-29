@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.tinymediamanager.ui.movies.dialogs;
+package org.tinymediamanager.ui.moviesets.dialogs;
 
 import javax.swing.JOptionPane;
 
@@ -24,28 +24,27 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.ui.dialogs.PostProcessDialog;
 
 /**
- * the class {@link MoviePostProcessDialog} is used to maintain post process actions for movies
+ * the class {@link MovieSetPostProcessDialog} is used to maintain post process actions for movie sets
  *
- * @author Wolfgang Janes
+ * @author Manuel Laggner
  */
-public class MoviePostProcessDialog extends PostProcessDialog {
+public class MovieSetPostProcessDialog extends PostProcessDialog {
 
-  public MoviePostProcessDialog() {
+  public MovieSetPostProcessDialog() {
     super();
   }
 
   @Override
   public void save() {
     if (StringUtils.isBlank(tfProcessName.getText()) || (StringUtils.isBlank(tfCommand.getText()) && StringUtils.isBlank(tfPath.getText()))) {
-
-      JOptionPane.showMessageDialog(MoviePostProcessDialog.this, TmmResourceBundle.getString("message.missingitems"));
+      JOptionPane.showMessageDialog(MovieSetPostProcessDialog.this, TmmResourceBundle.getString("message.missingitems"));
       return;
     }
 
     if (process == null) {
       // create a new post-process
       process = new PostProcess();
-      MovieModuleManager.getInstance().getSettings().addPostProcess(process);
+      MovieModuleManager.getInstance().getSettings().addMovieSetPostProcess(process);
     }
 
     process.setName(tfProcessName.getText());

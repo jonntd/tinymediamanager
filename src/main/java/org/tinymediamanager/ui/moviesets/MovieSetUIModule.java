@@ -16,20 +16,30 @@
 package org.tinymediamanager.ui.moviesets;
 
 import java.awt.CardLayout;
+import java.util.ArrayList;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
+import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.core.PostProcess;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.MovieSetPostProcessExecutor;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
+import org.tinymediamanager.license.License;
+import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.ui.AbstractTmmUIModule;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.label.TmmMenuLabel;
@@ -243,12 +253,62 @@ public class MovieSetUIModule extends AbstractTmmUIModule {
     JMenu kodiRPCMenu = KodiRPCMenu.createMenuKodiMenuRightClickMovieSets();
     popupMenu.add(kodiRPCMenu);
 
+    JMenu postProcessingMenu = new JMenu(TmmResourceBundle.getString("Settings.postprocessing"));
+    postProcessingMenu.setIcon(IconManager.MENU);
+    popupMenu.add(postProcessingMenu);
+
     if (Globals.isDebug()) {
       final JMenu debugMenu = new JMenu("Debug");
       debugMenu.add(new DebugDumpMovieSetAction());
       popupMenu.addSeparator();
       popupMenu.add(debugMenu);
     }
+
+    // activate/deactivate menu items based on some status
+    popupMenu.addPopupMenuListener(new PopupMenuListener() {
+      @Override
+      public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+        if (StringUtils.isNotBlank(Settings.getInstance().getKodiHost())) {
+          kodiRPCMenu.setText(KodiRPC.getInstance().getVersion());
+          kodiRPCMenu.setEnabled(true);
+        }
+        else {
+          kodiRPCMenu.setText("Kodi");
+          kodiRPCMenu.setEnabled(false);
+        }
+
+        if (License.getInstance().isValidLicense() && StringUtils.isNotBlank(Settings.getInstance().getTraktAccessToken())) {
+          traktMenu.setEnabled(true);
+        }
+        else {
+          traktMenu.setEnabled(false);
+        }
+
+        // Post-processing
+        postProcessingMenu.removeAll();
+        for (PostProcess process : new ArrayList<>(MovieModuleManager.getInstance().getSettings().getMovieSetPostProcess())) {
+          JMenuItem menuItem = new JMenuItem(process.getName(), IconManager.APPLY);
+          menuItem.addActionListener(pp -> new MovieSetPostProcessExecutor(process).execute());
+          postProcessingMenu.add(menuItem);
+        }
+        if (postProcessingMenu.getItemCount() == 0) {
+          postProcessingMenu.setEnabled(false);
+        }
+        else {
+          postProcessingMenu.setEnabled(true);
+        }
+      }
+
+      @Override
+      public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+        // nothing to do
+      }
+
+      @Override
+      public void popupMenuCanceled(PopupMenuEvent e) {
+        // nothing to do
+      }
+    });
 
     treePanel.setPopupMenu(popupMenu);
 

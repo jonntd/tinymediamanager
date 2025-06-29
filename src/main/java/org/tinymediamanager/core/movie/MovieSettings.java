@@ -116,6 +116,7 @@ public final class MovieSettings extends AbstractSettings {
   static final String                       MOVIESET_CHECK_METADATA                = "movieSetCheckMetadata";
   static final String                       MOVIESET_CHECK_ARTWORK                 = "movieSetCheckArtwork";
   static final String                       POST_PROCESS                           = "postProcess";
+  static final String                       MOVIE_SET_POST_PROCESS                 = "movieSetPostProcess";
 
   final List<String>                        movieDataSources                       = ObservableCollections.observableList(new ArrayList<>());
   final List<MovieNfoNaming>                nfoFilenames                           = new ArrayList<>();
@@ -234,6 +235,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   sortableOriginalTitle                  = false;
   boolean                                   sortTitle                              = false;
   final List<PostProcess>                   postProcess                            = ObservableCollections.observableList(new ArrayList<>());
+  final List<PostProcess>                   movieSetPostProcess                    = ObservableCollections.observableList(new ArrayList<>());
 
   // ui
   final List<MediaFileType>                 showArtworkTypes                       = ObservableCollections.observableList(new ArrayList<>());
@@ -2082,6 +2084,26 @@ public final class MovieSettings extends AbstractSettings {
     postProcess.clear();
     postProcess.addAll(newValues);
     firePropertyChange(POST_PROCESS, null, postProcess);
+  }
+
+  public void addMovieSetPostProcess(PostProcess newProcess) {
+    movieSetPostProcess.add(newProcess);
+    firePropertyChange(MOVIE_SET_POST_PROCESS, null, movieSetPostProcess);
+  }
+
+  public void removeMovieSetPostProcess(PostProcess process) {
+    movieSetPostProcess.remove(process);
+    firePropertyChange(MOVIE_SET_POST_PROCESS, null, movieSetPostProcess);
+  }
+
+  public List<PostProcess> getMovieSetPostProcess() {
+    return movieSetPostProcess;
+  }
+
+  public void setMovieSetPostProcess(List<PostProcess> newValues) {
+    movieSetPostProcess.clear();
+    movieSetPostProcess.addAll(newValues);
+    firePropertyChange(MOVIE_SET_POST_PROCESS, null, movieSetPostProcess);
   }
 
   public boolean isResetNewFlagOnUds() {
