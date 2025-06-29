@@ -43,6 +43,7 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.jmte.RegexpProcessor;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 
@@ -85,6 +86,8 @@ public class TvShowExporter extends MediaEntityExporter {
 
     // register default renderers
     registerDefaultRenderers();
+
+    engine.registerAnnotationProcessor(new RegexpProcessor());
 
     // prepare export destination
     if (!Files.exists(exportDir)) {

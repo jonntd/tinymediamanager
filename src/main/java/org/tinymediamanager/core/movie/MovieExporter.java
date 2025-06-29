@@ -42,6 +42,7 @@ import org.tinymediamanager.core.MediaEntityExporter;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.jmte.RegexpProcessor;
 import org.tinymediamanager.core.movie.entities.Movie;
 
 import com.floreysoft.jmte.NamedRenderer;
@@ -83,6 +84,8 @@ public class MovieExporter extends MediaEntityExporter {
 
     // register default renderers
     registerDefaultRenderers();
+
+    engine.registerAnnotationProcessor(new RegexpProcessor());
 
     // prepare export destination
     if (!Files.exists(exportDir)) {
