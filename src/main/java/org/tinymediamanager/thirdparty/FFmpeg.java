@@ -18,7 +18,9 @@ package org.tinymediamanager.thirdparty;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -215,13 +217,14 @@ public class FFmpeg {
   public static boolean isAvailable() {
     FFmpegAddon fFmpegAddon = new FFmpegAddon();
     return (!Settings.getInstance().isUseInternalMediaFramework() && StringUtils.isNotBlank(Settings.getInstance().getMediaFramework())
-        || fFmpegAddon.isAvailable());
+        && Files.isExecutable(Paths.get(Settings.getInstance().getMediaFramework())) || fFmpegAddon.isAvailable());
   }
 
   public static String getFfmpegExecutable() throws IOException {
     FFmpegAddon fFmpegAddon = new FFmpegAddon();
 
-    if (!Settings.getInstance().isUseInternalMediaFramework() && StringUtils.isNotBlank(Settings.getInstance().getMediaFramework())) {
+    if (!Settings.getInstance().isUseInternalMediaFramework() && StringUtils.isNotBlank(Settings.getInstance().getMediaFramework())
+        && Files.isExecutable(Paths.get(Settings.getInstance().getMediaFramework()))) {
       // external FFmpeg chosen and filled
       return Settings.getInstance().getMediaFramework();
     }
