@@ -1,5 +1,6 @@
 Version 5.1.8
 =======================
+x [Movie sets] fixed sorting of movies in movie sets
 x [TV shows] fixed a performance regression when loading TV shows with many episodes #2977
 x [TV shows] fixed an error when downloading thumbs for episodes with no video files #2981
 x [TV shows] enhanced 4 digit episode numbers detection

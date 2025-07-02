@@ -23,6 +23,7 @@ import static org.tinymediamanager.core.Constants.TITLE_SORTABLE;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -764,17 +765,23 @@ public class MovieSet extends MediaEntity {
       }
 
       // sort with year if available
-      int result = 0;
-      if (o1.getYear() > 0 && o2.getYear() > 0) {
-        result = o1.getYear() - o2.getYear();
+      int year1 = o1.getYear();
+      if (year1 == 0 && o1.getReleaseDate() != null) {
+        year1 = o1.getReleaseDate().toInstant().atZone(ZoneId.of("UTC")).getYear();
       }
-      if (result != 0) {
-        return result;
+
+      int year2 = o2.getYear();
+      if (year2 == 0 && o2.getReleaseDate() != null) {
+        year2 = o2.getReleaseDate().toInstant().atZone(ZoneId.of("UTC")).getYear();
+      }
+
+      if (year1 > 0 && year2 > 0) {
+        return year1 - year2;
       }
 
       // sort with release date if available
       if (o1.getReleaseDate() != null && o2.getReleaseDate() != null) {
-        result = DATE_COMPARATOR.compare(o1.getReleaseDate(), o2.getReleaseDate());
+        int result = DATE_COMPARATOR.compare(o1.getReleaseDate(), o2.getReleaseDate());
         if (result != 0) {
           return result;
         }
