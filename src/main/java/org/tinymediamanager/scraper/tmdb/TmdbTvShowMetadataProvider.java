@@ -473,9 +473,9 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
     for (MediaMetadata md : episodesInRequestedLanguage.values()) {
       String scrapedTitle = md.getTitle(); // save for later
       int episode = md.getEpisodeNumber(AIRED).episode();
-      MediaMetadata fallback = localizedEpisodeData.get(fallbackLanguage).get(episode);
-      MediaMetadata original = localizedEpisodeData.get(originalLanguage).get(episode);
-      MediaMetadata english = localizedEpisodeData.get(englishLanguage).get(episode);
+      MediaMetadata fallback = localizedEpisodeData.getOrDefault(fallbackLanguage, Collections.emptyMap()).get(episode);
+      MediaMetadata original = localizedEpisodeData.getOrDefault(originalLanguage, Collections.emptyMap()).get(episode);
+      MediaMetadata english = localizedEpisodeData.getOrDefault(englishLanguage, Collections.emptyMap()).get(episode);
 
       // try to detect TMDBs auto translated, generic "episode X" titles... booo
       boolean generic = isGenericTitle(md.getTitle());
