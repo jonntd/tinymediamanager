@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.Test;
+import org.tinymediamanager.scraper.entities.MediaArtwork;
 
 public class ListUtilsTest {
 
@@ -126,5 +127,41 @@ public class ListUtilsTest {
     assertThat(ListUtils.getMiddle(evenList)).isEqualTo(3);
     assertThat(ListUtils.getMiddle(new ArrayList<Integer>())).isNull();
     assertThat(ListUtils.getMiddle((List<Integer>) null)).isNull();
+  }
+
+  @Test
+  public void sortSizeOrderByPreference() {
+    int preferred = 8;
+    List<Integer> sorted = MediaArtwork.sortSizeOrderByPreference(preferred);
+
+    assertThat(sorted).isNotEmpty();
+    assertThat(sorted.get(0)).isEqualTo(8);
+    assertThat(sorted.get(1)).isEqualTo(16);
+    assertThat(sorted.get(2)).isEqualTo(4);
+    assertThat(sorted.get(3)).isEqualTo(32);
+    assertThat(sorted.get(4)).isEqualTo(2);
+    assertThat(sorted.get(5)).isEqualTo(1);
+
+    preferred = 2;
+    sorted = MediaArtwork.sortSizeOrderByPreference(preferred);
+
+    assertThat(sorted).isNotEmpty();
+    assertThat(sorted.get(0)).isEqualTo(2);
+    assertThat(sorted.get(1)).isEqualTo(4);
+    assertThat(sorted.get(2)).isEqualTo(1);
+    assertThat(sorted.get(3)).isEqualTo(8);
+    assertThat(sorted.get(4)).isEqualTo(16);
+    assertThat(sorted.get(5)).isEqualTo(32);
+
+    preferred = 8;
+    sorted = MediaArtwork.sortSizeOrderByPreference(preferred);
+
+    assertThat(sorted).isNotEmpty();
+    assertThat(sorted.get(0)).isEqualTo(8);
+    assertThat(sorted.get(1)).isEqualTo(16);
+    assertThat(sorted.get(2)).isEqualTo(4);
+    assertThat(sorted.get(3)).isEqualTo(32);
+    assertThat(sorted.get(4)).isEqualTo(2);
+    assertThat(sorted.get(5)).isEqualTo(1);
   }
 }

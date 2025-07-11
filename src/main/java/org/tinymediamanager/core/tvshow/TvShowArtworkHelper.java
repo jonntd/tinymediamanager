@@ -381,11 +381,13 @@ public class TvShowArtworkHelper {
       }
     }
 
+    // sort the size order of the given artwork type to prioritize the desired size following by all other sizes "near" to the desired size -
+    // preferring the bigger one
+    List<Integer> sizeOrders = MediaArtwork.sortSizeOrderByPreference(sizeOrder);
+
     // do we want to take other resolution artwork? (non FFmpeg)
     if (sortedArtwork.isEmpty() && TvShowModuleManager.getInstance().getSettings().isImageScraperOtherResolutions()) {
-      int newOrder = MediaArtwork.MAX_IMAGE_SIZE_ORDER;
-      while (newOrder > 1) {
-        newOrder = newOrder / 2;
+      for (Integer newOrder : sizeOrders) {
         for (MediaLanguages language : languages) {
           // the right language and the right resolution
           for (MediaArtwork art : artworkForType.stream().filter(art -> art.getLanguage().equals(language.getLanguage())).toList()) {
@@ -401,11 +403,8 @@ public class TvShowArtworkHelper {
 
     // do we want to take other resolution artwork? (FFmpeg)
     if (sortedArtwork.isEmpty() && TvShowModuleManager.getInstance().getSettings().isImageScraperOtherResolutions()) {
-      int newOrder = MediaArtwork.MAX_IMAGE_SIZE_ORDER;
-      while (newOrder > 1) {
-        newOrder = newOrder / 2;
-
-        if (ffmpegArtwork != null) {
+      if (ffmpegArtwork != null) {
+        for (Integer newOrder : sizeOrders) {
           for (MediaArtwork.ImageSizeAndUrl imageSizeAndUrl : ffmpegArtwork.getImageSizes()) {
             if (imageSizeAndUrl.getSizeOrder() == newOrder && !sortedArtwork.contains(imageSizeAndUrl)) {
               sortedArtwork.add(imageSizeAndUrl);
@@ -422,10 +421,12 @@ public class TvShowArtworkHelper {
 
     // should we fall back to _any_ artwork?
     if (TvShowModuleManager.getInstance().getSettings().isImageScraperFallback()) {
-      for (MediaArtwork art : artworkForType) {
-        for (MediaArtwork.ImageSizeAndUrl imageSizeAndUrl : art.getImageSizes()) {
-          if (!sortedArtwork.contains(imageSizeAndUrl)) {
-            sortedArtwork.add(imageSizeAndUrl);
+      for (Integer newOrder : sizeOrders) {
+        for (MediaArtwork art : artworkForType) {
+          for (MediaArtwork.ImageSizeAndUrl imageSizeAndUrl : art.getImageSizes()) {
+            if (imageSizeAndUrl.getSizeOrder() == newOrder && !sortedArtwork.contains(imageSizeAndUrl)) {
+              sortedArtwork.add(imageSizeAndUrl);
+            }
           }
         }
       }
