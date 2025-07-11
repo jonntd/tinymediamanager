@@ -268,16 +268,16 @@ abstract class FanartTvMetadataProvider implements IMediaProvider {
     MOVIEDISC(1000, 1000, MediaArtworkType.DISC, FanartSizes.MEDIUM.getOrder()),
     MOVIEKEYART(1000, 1426, MediaArtworkType.KEYART, PosterSizes.LARGE.getOrder()),
     MOVIEPOSTER(1000, 1426, MediaArtworkType.POSTER, PosterSizes.LARGE.getOrder()),
-    MOVIETHUMB(1000, 562, MediaArtworkType.THUMB, ThumbSizes.MEDIUM.getOrder()),
+    MOVIETHUMB(1000, 562, MediaArtworkType.THUMB, ThumbSizes.BIG.getOrder()),
     SEASONBANNER(1000, 185, MediaArtworkType.SEASON_BANNER, FanartSizes.MEDIUM.getOrder()),
     SEASONPOSTER(1000, 1426, MediaArtworkType.SEASON_POSTER, MediaArtwork.PosterSizes.LARGE.getOrder()),
-    SEASONTHUMB(1000, 562, MediaArtworkType.SEASON_THUMB, ThumbSizes.MEDIUM.getOrder()),
+    SEASONTHUMB(1000, 562, MediaArtworkType.SEASON_THUMB, ThumbSizes.BIG.getOrder()),
     SEASONFANART(1000, 562, MediaArtworkType.SEASON_FANART, FanartSizes.MEDIUM.getOrder()), // just duplicate - there is no real type
     SHOWBACKGROUND(1920, 1080, MediaArtworkType.BACKGROUND, FanartSizes.LARGE.getOrder()),
     TVBANNER(1000, 185, MediaArtworkType.BANNER, FanartSizes.MEDIUM.getOrder()),
     TVKEYART(1000, 1426, MediaArtworkType.KEYART, PosterSizes.LARGE.getOrder()),
     TVPOSTER(1000, 1426, MediaArtworkType.POSTER, PosterSizes.LARGE.getOrder()),
-    TVTHUMB(500, 281, MediaArtworkType.THUMB, ThumbSizes.MEDIUM.getOrder());
+    TVTHUMB(1000, 562, MediaArtworkType.THUMB, ThumbSizes.BIG.getOrder());
 
     ImageType(int width, int height, MediaArtworkType type, int sizeOrder) {
       this.width = width;
@@ -286,9 +286,9 @@ abstract class FanartTvMetadataProvider implements IMediaProvider {
       this.sizeOrder = sizeOrder;
     }
 
-    int              width;
-    int              height;
-    MediaArtworkType type;
-    int              sizeOrder;
+    final int              width;
+    final int              height;
+    final MediaArtworkType type;
+    final int              sizeOrder;
   }
 }

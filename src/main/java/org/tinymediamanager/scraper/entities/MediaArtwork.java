@@ -176,8 +176,8 @@ public class MediaArtwork {
   public enum ThumbSizes {
     XLARGE(TmmResourceBundle.getString("Settings.image.xlarge"), 3840, 2160, 16),
     LARGE(TmmResourceBundle.getString("Settings.image.large"), 1920, 1080, 8),
-    BIG(TmmResourceBundle.getString("Settings.image.big"), 1280, 720, 4),
-    MEDIUM(TmmResourceBundle.getString("Settings.image.medium"), 960, 540, 2), // kodi preference
+    BIG(TmmResourceBundle.getString("Settings.image.big"), 1000, 562, 4),
+    MEDIUM(TmmResourceBundle.getString("Settings.image.medium"), 640, 360, 2), // kodi preference
     SMALL(TmmResourceBundle.getString("Settings.image.small"), 300, 168, 1);
 
     private final String text;
@@ -687,5 +687,47 @@ public class MediaArtwork {
     public String toString() {
       return width + "x" + height;
     }
+  }
+
+  /**
+   * Sorts the given list of indices by their distance to the preferred index, with the preferred index first. If two indices have the same distance,
+   * the larger number comes first.
+   *
+   * @param preferred
+   *          the preferred index
+   * @return a sorted list of indices
+   */
+  public static List<Integer> sortSizeOrderByPreference(int preferred) {
+    List<Integer> indices = new ArrayList<>();
+
+    int newOrder = MediaArtwork.MAX_IMAGE_SIZE_ORDER;
+    while (newOrder >= 1) {
+      indices.add(newOrder);
+      newOrder /= 2; // Halve the order for each step
+    }
+
+    int indexP = indices.indexOf(preferred);
+
+    return indices.stream().sorted((a, b) -> {
+      if (a == preferred) {
+        return -1;
+      }
+      if (b == preferred) {
+        return 1;
+      }
+
+      int indexA = indices.indexOf(a);
+      int indexB = indices.indexOf(b);
+
+      int distA = Math.abs(indexA - indexP);
+      int distB = Math.abs(indexB - indexP);
+
+      if (distA != distB) {
+        return Integer.compare(distA, distB);
+      }
+
+      // Bei gleichem Abstand kommt die größere Zahl zuerst
+      return Integer.compare(b, a);
+    }).toList();
   }
 }

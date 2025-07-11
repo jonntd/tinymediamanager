@@ -6,6 +6,8 @@ x [TV shows] fixed an error when downloading thumbs for episodes with no video f
 x [TV shows] enhanced 4 digit episode numbers detection
 x [TV shows] fixed importing of NFO files with episode groups #2962 #2850
   You may need to re-write TV show NFO files once to get the correct values inserted
+x [Movies/TV shows] aligned thumb artwork sizes to the ones offered by scrapers #2989
+  You may need to re-view your artwork preferences
 x [NFO] allow writing of non HTTP trailer URLs to the NFO #2962
 x [UI] improved loading speed of tree tables #2977
 x [IMDB] scale actor image size (as before) #2979

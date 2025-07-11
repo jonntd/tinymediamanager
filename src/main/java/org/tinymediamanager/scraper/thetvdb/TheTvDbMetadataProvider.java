@@ -565,10 +565,10 @@ abstract class TheTvDbMetadataProvider implements IMediaProvider {
         else if (width >= 1920) {
           sizeOrder = MediaArtwork.ThumbSizes.LARGE.getOrder();
         }
-        else if (width >= 1280) {
+        else if (width >= 1000) {
           sizeOrder = MediaArtwork.ThumbSizes.BIG.getOrder();
         }
-        else if (width >= 960) {
+        else if (width >= 640) {
           sizeOrder = MediaArtwork.ThumbSizes.MEDIUM.getOrder();
         }
         else {
