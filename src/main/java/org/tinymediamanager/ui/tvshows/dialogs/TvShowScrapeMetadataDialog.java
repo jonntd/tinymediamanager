@@ -111,7 +111,7 @@ public class TvShowScrapeMetadataDialog extends TmmDialog {
     cbArtworkScraper = new MediaScraperCheckComboBox(TvShowModuleManager.getInstance().getTvShowList().getAvailableArtworkScrapers());
     panelContent.add(cbArtworkScraper, "cell 1 2,growx");
 
-    if (!artworkOnly) {
+    if (!artworkOnly && tvShowMetadata) {
       JLabel lblTrailerScraper = new TmmLabel(TmmResourceBundle.getString("scraper.trailer"));
       panelContent.add(lblTrailerScraper, "cell 0 3,alignx right");
 
