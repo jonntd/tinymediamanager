@@ -60,6 +60,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
@@ -203,17 +204,23 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     };
   }
 
-  @Override
-  protected Comparator<MediaFile> getMediaFileComparator() {
-    return MEDIA_FILE_COMPARATOR;
-  }
-
   /**
    * Initialize after loading.
    */
   @Override
   public void initializeAfterLoading() {
     super.initializeAfterLoading();
+
+    // delete null values from the lists
+    genres.removeIf(Objects::isNull);
+    actors.removeIf(Objects::isNull);
+    extraFanartUrls.removeIf(StringUtils::isBlank);
+    episodeGroups.removeIf(Objects::isNull);
+    trailer.removeIf(Objects::isNull);
+
+    seasons.removeIf(Objects::isNull);
+    episodes.removeIf(Objects::isNull);
+    dummyEpisodes.removeIf(Objects::isNull);
 
     // load dummy episodes
     for (TvShowEpisode episode : dummyEpisodes) {
@@ -224,6 +231,11 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     for (TvShowEpisode episode : episodes) {
       episode.addPropertyChangeListener(propertyChangeListener);
     }
+  }
+
+  @Override
+  protected Comparator<MediaFile> getMediaFileComparator() {
+    return MEDIA_FILE_COMPARATOR;
   }
 
   /**

@@ -60,6 +60,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -237,6 +238,17 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     productionCompany = source.productionCompany;
     dummy = source.dummy;
     note = source.note;
+  }
+
+  @Override
+  public void initializeAfterLoading() {
+    super.initializeAfterLoading();
+
+    // delete null values from the lists
+    actors.removeIf(Objects::isNull);
+    directors.removeIf(Objects::isNull);
+    writers.removeIf(Objects::isNull);
+    episodeNumbers.removeIf(Objects::isNull);
   }
 
   /**

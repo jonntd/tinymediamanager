@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -167,6 +168,21 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   public abstract Date getReleaseDate();
 
   /**
+   * Initialize the {@link MediaEntity} after loading from database.
+   */
+  public void initializeAfterLoading() {
+    // delete null values from the lists
+    mediaFiles.removeIf(Objects::isNull);
+    tags.removeIf(Objects::isNull);
+
+    sortMediaFiles();
+
+    // remove empty tag, null values and case insensitive duplicates
+    Utils.removeEmptyStringsFromList(tags);
+    Utils.removeDuplicateStringFromCollectionIgnoreCase(tags);
+  }
+
+  /**
    * Overwrites all null/empty elements with "other" value (but might be empty also)<br>
    * For lists, check with 'contains' and add.<br>
    * Do NOT merge path, dateAdded, scraped, mediaFiles and other crucial properties!
@@ -227,17 +243,6 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
 
     setNote(StringUtils.isBlank(note) || force ? other.note : note);
-  }
-
-  /**
-   * Initialize after loading from database.
-   */
-  public void initializeAfterLoading() {
-    sortMediaFiles();
-
-    // remove empty tag, null values and case insensitive duplicates
-    Utils.removeEmptyStringsFromList(tags);
-    Utils.removeDuplicateStringFromCollectionIgnoreCase(tags);
   }
 
   protected void sortMediaFiles() {

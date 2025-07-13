@@ -213,6 +213,30 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
+   * Initialize after loading.
+   */
+  @Override
+  public void initializeAfterLoading() {
+    super.initializeAfterLoading();
+
+    // delete null values from the lists
+    genres.removeIf(Objects::isNull);
+    extraThumbs.removeIf(Objects::isNull);
+    extraFanarts.removeIf(Objects::isNull);
+    actors.removeIf(Objects::isNull);
+    producers.removeIf(Objects::isNull);
+    directors.removeIf(Objects::isNull);
+    writers.removeIf(Objects::isNull);
+    trailer.removeIf(Objects::isNull);
+    showlinks.removeIf(Objects::isNull);
+
+    // link with movie set
+    if (movieSetId != null) {
+      movieSet = MovieModuleManager.getInstance().getMovieList().lookupMovieSet(movieSetId);
+    }
+  }
+
+  /**
    * Overwrites all null/empty elements with "other" value (but might be also empty)<br>
    * For lists, check with 'contains' and add.<br>
    * Do NOT merge path, dateAdded, scraped, mediaFiles and other crucial properties!
@@ -440,19 +464,6 @@ public class Movie extends MediaEntity implements IMediaInformation {
       titleForUi += " (" + year + ")";
     }
     return titleForUi;
-  }
-
-  /**
-   * Initialize after loading.
-   */
-  @Override
-  public void initializeAfterLoading() {
-    super.initializeAfterLoading();
-
-    // link with movie set
-    if (movieSetId != null) {
-      movieSet = MovieModuleManager.getInstance().getMovieList().lookupMovieSet(movieSetId);
-    }
   }
 
   /**

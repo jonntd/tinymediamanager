@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -111,6 +112,10 @@ public class MovieSet extends MediaEntity {
   @Override
   public void initializeAfterLoading() {
     super.initializeAfterLoading();
+
+    // delete null values from the lists
+    movieIds.removeIf(Objects::isNull);
+    dummyMovies.removeIf(Objects::isNull);
 
     // link with movies
     for (UUID uuid : movieIds) {
