@@ -12,7 +12,7 @@ x [Movies/TV shows] enhanced artwork choosing algorithm to prefer similar artwor
 x [Movies/TV shows] cleanup of invalid/null values on startup
 x [NFO] allow writing of non HTTP trailer URLs to the NFO #2962
 x [UI] improved loading speed of tree tables #2977
-x [IMDB] scale actor image size (as before) #2979
+x [IMDB] scale actor image size (as before) and only scrape portrait ones #2979
 x [FFmpeg] check if the ffmpeg executable from the settings exists before using it #2986
 
 

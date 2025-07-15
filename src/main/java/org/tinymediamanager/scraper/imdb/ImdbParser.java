@@ -1294,7 +1294,10 @@ public abstract class ImdbParser {
                 if (url.endsWith("_V1_.jpg")) {
                   url = url.replace("_V1_.jpg", "_V1_QL75_UX300.jpg"); // scale to 300px
                 }
-                p.setThumbUrl(url);
+                if (imdbPerson.imageProps.imageModel.getHeight() > imdbPerson.imageProps.imageModel.getWidth()) {
+                  // only take portrait images
+                  p.setThumbUrl(url);
+                }
               }
               if (pt == Type.ACTOR && !isScrapeUncreditedActors() && cat.section.splitIndex > 0) {
                 // do not parse number out of refTagSuffix, just count...
