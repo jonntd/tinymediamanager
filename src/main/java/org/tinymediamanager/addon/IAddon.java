@@ -64,19 +64,19 @@ public interface IAddon {
 
     // 1. look in the user addon folder
     Path executable = Paths.get(Globals.CONTENT_FOLDER).resolve("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.exists(executable)) {
+    if (Files.isExecutable(executable)) {
       return executable.toString();
     }
 
     // 2. look in the shipped addon folder (legacy)
     executable = Paths.get(TmmOsUtils.getNativeFolderName()).resolve("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.exists(executable)) {
+    if (Files.isExecutable(executable)) {
       return executable.toString();
     }
 
     // 3. look in the addon folder in the tmm root (legacy)
     executable = Paths.get("addons").toAbsolutePath().resolve(executableFilename);
-    if (Files.exists(executable)) {
+    if (Files.isExecutable(executable)) {
       return executable.toString();
     }
 
@@ -87,7 +87,7 @@ public interface IAddon {
     for (String pathDir : pathDirs) {
       try {
         executable = Paths.get(pathDir, executableFilename).toAbsolutePath();
-        if (Files.exists(executable)) {
+        if (Files.isExecutable(executable)) {
           return executable.toString();
         }
       }

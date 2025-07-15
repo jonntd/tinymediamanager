@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
@@ -161,7 +162,12 @@ public class YtDlp {
   private static String getYtDlpExecutable() throws IOException {
     YtDlpAddon ytDlpAddon = new YtDlpAddon();
 
-    if (ytDlpAddon.isAvailable()) {
+    if (!Settings.getInstance().isUseInternalYtDlp() && StringUtils.isNotBlank(Settings.getInstance().getExternalYtDlpPath())
+        && Files.isExecutable(Paths.get(Settings.getInstance().getExternalYtDlpPath()))) {
+      // external yt-dlp chosen and filled
+      return Settings.getInstance().getExternalYtDlpPath();
+    }
+    else if (ytDlpAddon.isAvailable()) {
       return ytDlpAddon.getExecutablePath();
     }
     else {
