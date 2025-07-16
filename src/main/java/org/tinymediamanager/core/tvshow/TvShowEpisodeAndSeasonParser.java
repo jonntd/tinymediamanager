@@ -314,6 +314,12 @@ public class TvShowEpisodeAndSeasonParser {
     result = parseSeasonMultiEP2(result, basename + foldername);
     result = parseEpisodePattern(result, basename);
 
+    if (result.season == -1 && !StringUtils.isBlank(foldername)) {
+      // we couldn't find a season while using the long season pattern.
+      // But IF we have a foldername (in second run only) we can parse the short one here too
+      result = parseSeasonOnly(result, foldername);
+    }
+
     if (!result.episodes.isEmpty()) {
       return postClean(result);
     }
