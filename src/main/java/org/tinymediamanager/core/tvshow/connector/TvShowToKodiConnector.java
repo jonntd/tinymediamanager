@@ -29,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
@@ -155,7 +156,7 @@ public class TvShowToKodiConnector extends TvShowGenericXmlConnector {
   protected void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(tvShow.getTop250()));
-    Element set = getSingleElementByTag("ratings");
+    Element set = NfoUtils.getSingleElementByTag(document, "ratings");
     root.insertBefore(top250, set);
   }
 

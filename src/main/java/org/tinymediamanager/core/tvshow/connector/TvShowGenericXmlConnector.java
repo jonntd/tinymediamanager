@@ -36,9 +36,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -50,6 +47,7 @@ import org.tinymediamanager.core.DateField;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -65,8 +63,6 @@ import org.tinymediamanager.core.tvshow.filenaming.TvShowNfoNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -189,7 +185,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
 
         // serialize to string
         Writer out = new StringWriter();
-        getTransformer().transform(new DOMSource(document), new StreamResult(out));
+        NfoUtils.getTransformer().transform(new DOMSource(document), new StreamResult(out));
         String xml = out.toString().replaceAll("(?<!\r)\n", "\r\n"); // windows conform line endings
 
         Path f = tvShow.getPathNIO().resolve(nfoFilename);
@@ -931,7 +927,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       actor.appendChild(profile);
     }
 
-    addPersonIdsAsChildren(actor, tvShowActor);
+    NfoUtils.addPersonIdsAsChildren(actor, tvShowActor);
 
     root.appendChild(actor);
   }
@@ -999,51 +995,6 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   }
 
   /**
-   * get any single element by the tag name
-   *
-   * @param tag
-   *          the tag name
-   * @return an element or null
-   */
-  protected Element getSingleElementByTag(String tag) {
-    NodeList nodeList = document.getElementsByTagName(tag);
-    for (int i = 0; i < nodeList.getLength(); ++i) {
-      Node node = nodeList.item(i);
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-        return (Element) node;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * get the transformer for XML output
-   *
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
-  }
-
-  /**
    * try to detect the default scraper by the given ids
    * 
    * @return the scraper where the default should be set
@@ -1066,39 +1017,5 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
 
     // the first found as fallback
     return tvShow.getIds().keySet().stream().findFirst().orElse("");
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML children
-   *
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsChildren(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      Element id = document.createElement("tmdbid");
-      id.setTextContent(String.valueOf(tmdbId));
-      element.appendChild(id);
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      Element id = document.createElement("imdbid");
-      id.setTextContent(imdbId);
-      element.appendChild(id);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      Element id = document.createElement("tvdbid");
-      id.setTextContent(String.valueOf(tvdbId));
-      element.appendChild(id);
-    }
   }
 }

@@ -31,9 +31,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -43,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
@@ -54,8 +52,6 @@ import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 /**
  * this class is a general XML connector which suits as a base class for most xml based connectors
@@ -150,7 +146,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
 
         // serialize to string
         Writer out = new StringWriter();
-        getTransformer().transform(new DOMSource(document), new StreamResult(out));
+        NfoUtils.getTransformer().transform(new DOMSource(document), new StreamResult(out));
         String xml = out.toString().replaceAll("(?<!\r)\n", "\r\n"); // windows conform line endings
 
         Path f = tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename);
@@ -440,50 +436,5 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(tvShowSeason.getNote());
     root.appendChild(userNote);
-  }
-
-  /**
-   * get any single element by the tag name
-   *
-   * @param tag
-   *          the tag name
-   * @return an element or null
-   */
-  protected Element getSingleElementByTag(String tag) {
-    NodeList nodeList = document.getElementsByTagName(tag);
-    for (int i = 0; i < nodeList.getLength(); ++i) {
-      Node node = nodeList.item(i);
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-        return (Element) node;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * get the transformer for XML output
-   *
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
   }
 }

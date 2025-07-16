@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
@@ -245,7 +246,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
   protected void addEpbookmark() {
     Element epbookmark = document.createElement("epbookmark");
 
-    Element year = getSingleElementByTag("year");
+    Element year = NfoUtils.getSingleElementByTag(document, "year");
     if (parser != null) {
       epbookmark.setTextContent(parser.epbookmark);
     }
@@ -258,7 +259,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
   protected void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(movie.getTop250()));
-    Element set = getSingleElementByTag("set");
+    Element set = NfoUtils.getSingleElementByTag(document, "set");
     root.insertBefore(top250, set);
   }
 
@@ -269,7 +270,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
     Element status = document.createElement("status");
     Element code = document.createElement("code");
 
-    Element premiered = getSingleElementByTag("premiered");
+    Element premiered = NfoUtils.getSingleElementByTag(document, "premiered");
     if (parser != null) {
       status.setTextContent(parser.status);
       code.setTextContent(parser.code);

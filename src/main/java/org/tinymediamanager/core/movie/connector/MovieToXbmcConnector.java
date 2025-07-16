@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
@@ -96,7 +97,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   private void addEpbookmark() {
     Element epbookmark = document.createElement("epbookmark");
 
-    Element year = getSingleElementByTag("year");
+    Element year = NfoUtils.getSingleElementByTag(document, "year");
     if (year != null) {
       if (parser != null) {
         epbookmark.setTextContent(parser.epbookmark);
@@ -111,7 +112,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   private void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(movie.getTop250()));
-    Element set = getSingleElementByTag("set");
+    Element set = NfoUtils.getSingleElementByTag(document, "set");
     if (set != null) {
       root.insertBefore(top250, set);
     }
@@ -124,7 +125,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
     Element status = document.createElement("status");
     Element code = document.createElement("code");
 
-    Element premiered = getSingleElementByTag("premiered");
+    Element premiered = NfoUtils.getSingleElementByTag(document, "premiered");
     if (premiered != null) {
       if (parser != null) {
         status.setTextContent(parser.status);

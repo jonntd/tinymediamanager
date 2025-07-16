@@ -32,9 +32,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -42,10 +39,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.CertificationStyle;
-import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -65,8 +62,6 @@ import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 /**
  * this class is a general XML connector which suits as a base class for most xml based connectors
@@ -186,7 +181,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
 
         // serialize to string
         Writer out = new StringWriter();
-        getTransformer().transform(new DOMSource(document), new StreamResult(out));
+        NfoUtils.getTransformer().transform(new DOMSource(document), new StreamResult(out));
         String xml = out.toString().replaceAll("(?<!\r)\n", "\r\n"); // windows conform line endings
 
         Path f = movie.getPathNIO().resolve(nfoFilename);
@@ -510,7 +505,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
    * imdb should have default="true", but if no imdb ID is available, we must ensure that at least one entry has default="true"
    */
   protected void addIds() {
-    String defaultScraper = detectDefaultScraper();
+    String defaultScraper = NfoUtils.detectDefaultScraper(movie);
 
     for (Map.Entry<String, Object> entry : movie.getIds().entrySet()) {
       Element uniqueid = document.createElement("uniqueid");
@@ -614,48 +609,10 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       Element fileinfo = document.createElement("fileinfo");
       Element streamdetails = document.createElement("streamdetails");
 
-      MediaFile vid = movie.getMainVideoFile();
-      if (vid != null) {
+      MediaFile videoFile = movie.getMainVideoFile();
+      if (videoFile != MediaFile.EMPTY_MEDIAFILE) {
         {
-          Element video = document.createElement("video");
-
-          Element codec = document.createElement("codec");
-          // workaround for h265/hevc since Kodi just "knows" hevc
-          // https://forum.kodi.tv/showthread.php?tid=354886&pid=2955329#pid2955329
-          if ("h265".equalsIgnoreCase(vid.getVideoCodec())) {
-            codec.setTextContent("HEVC");
-          }
-          else {
-            codec.setTextContent(vid.getVideoCodec());
-          }
-          video.appendChild(codec);
-
-          Element aspect = document.createElement("aspect");
-          aspect.setTextContent(Float.toString(vid.getAspectRatio()));
-          video.appendChild(aspect);
-
-          Element width = document.createElement("width");
-          width.setTextContent(Integer.toString(vid.getVideoWidth()));
-          video.appendChild(width);
-
-          Element height = document.createElement("height");
-          height.setTextContent(Integer.toString(vid.getVideoHeight()));
-          video.appendChild(height);
-
-          if (movie.isVideoInHDR()) {
-            // basically a TMM string to Kodi skin mapping, but only one
-            Element hdr = document.createElement("hdrtype");
-            if (vid.getHdrFormat().contains("Dolby Vision")) {
-              hdr.setTextContent("dolbyvision");
-            }
-            else if (vid.getHdrFormat().contains("HLG")) {
-              hdr.setTextContent("hlg");
-            }
-            else if (vid.getHdrFormat().contains("HDR10")) {
-              hdr.setTextContent("hdr10");
-            }
-            video.appendChild(hdr);
-          }
+          Element video = NfoUtils.createStreamdetailsVideoTag(streamdetails, videoFile);
 
           // does not work reliable for disc style movies, MediaInfo and even Kodi write weird values in there
           if (!movie.isDisc() && !movie.getMainVideoFile().getExtension().equalsIgnoreCase("iso")) {
@@ -664,77 +621,29 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
             video.appendChild(durationinseconds);
           }
 
-          if (!vid.getVideo3DFormat().isEmpty()) {
-            Element stereomode = document.createElement("stereomode");
-            switch (vid.getVideo3DFormat()) {
-              // old style till TMM 5.1.4
-              case MediaFileHelper.VIDEO_3D_SBS:
-              case MediaFileHelper.VIDEO_3D_HSBS:
-                stereomode.setTextContent("left_right");
-                break;
-
-              case MediaFileHelper.VIDEO_3D_TAB:
-              case MediaFileHelper.VIDEO_3D_HTAB:
-                stereomode.setTextContent("top_bottom");
-                break;
-
-              default:
-                // new style as of TMM 5.1.5
-                stereomode.setTextContent(vid.getVideo3DFormat());
-                break;
-            }
-            video.appendChild(stereomode);
-          }
-
           streamdetails.appendChild(video);
         }
 
-        for (MediaFileAudioStream audioStream : vid.getAudioStreams()) {
-          Element audio = document.createElement("audio");
-
-          Element codec = document.createElement("codec");
-          codec.setTextContent(audioStream.getCodec().replaceAll("-", "_"));
-          audio.appendChild(codec);
-
-          Element language = document.createElement("language");
-          language.setTextContent(audioStream.getLanguage());
-          audio.appendChild(language);
-
-          Element channels = document.createElement("channels");
-          channels.setTextContent(Integer.toString(audioStream.getAudioChannels()));
-          audio.appendChild(channels);
-
+        for (MediaFileAudioStream audioStream : videoFile.getAudioStreams()) {
+          Element audio = NfoUtils.createStreamdetailsAudioTag(streamdetails, audioStream);
           streamdetails.appendChild(audio);
         }
 
         // also include external audio files if set
         if (settings.isIncludeExternalAudioStreams()) {
           for (MediaFile audioFile : movie.getMediaFiles(MediaFileType.AUDIO)) {
-            for (MediaFileAudioStream audioStream : vid.getAudioStreams()) {
-              Element audio = document.createElement("audio");
-
-              Element codec = document.createElement("codec");
-              codec.setTextContent(audioStream.getCodec());
-              audio.appendChild(codec);
-
-              Element language = document.createElement("language");
-              language.setTextContent(audioStream.getLanguage());
-              audio.appendChild(language);
-
-              Element channels = document.createElement("channels");
-              channels.setTextContent(Integer.toString(audioStream.getAudioChannels()));
-              audio.appendChild(channels);
-
+            for (MediaFileAudioStream audioStream : audioFile.getAudioStreams()) {
+              Element audio = NfoUtils.createStreamdetailsAudioTag(streamdetails, audioStream);
               streamdetails.appendChild(audio);
             }
           }
         }
 
-        for (MediaFileSubtitle sub : vid.getSubtitles()) {
+        for (MediaFileSubtitle sub : videoFile.getSubtitles()) {
           Element subtitle = document.createElement("subtitle");
 
           Element language = document.createElement("language");
-          language.setTextContent(sub.getLanguage());
+          language.setTextContent(LanguageUtils.parseLanguageFromString(sub.getLanguage()));
           subtitle.appendChild(language);
 
           streamdetails.appendChild(subtitle);
@@ -747,7 +656,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
           Element subtitle = document.createElement("subtitle");
 
           Element language = document.createElement("language");
-          language.setTextContent(sub.getLanguage());
+          language.setTextContent(LanguageUtils.parseLanguageFromString(sub.getLanguage()));
           subtitle.appendChild(language);
 
           streamdetails.appendChild(subtitle);
@@ -848,7 +757,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       element.setTextContent(writer.getName());
 
       // add ids
-      addPersonIdsAsAttributes(element, writer);
+      NfoUtils.addPersonIdsAsAttributes(element, writer);
 
       root.appendChild(element);
     }
@@ -863,7 +772,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       element.setTextContent(director.getName());
 
       // add ids
-      addPersonIdsAsAttributes(element, director);
+      NfoUtils.addPersonIdsAsAttributes(element, director);
 
       root.appendChild(element);
     }
@@ -909,7 +818,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
         actor.appendChild(profile);
       }
 
-      addPersonIdsAsChildren(actor, movieActor);
+      NfoUtils.addPersonIdsAsChildren(actor, movieActor);
 
       root.appendChild(actor);
     }
@@ -945,7 +854,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
       }
 
       // add ids
-      addPersonIdsAsAttributes(producer, movieProducer);
+      NfoUtils.addPersonIdsAsAttributes(producer, movieProducer);
 
       root.appendChild(producer);
     }
@@ -1074,132 +983,5 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     Element edition = document.createElement("edition");
     edition.setTextContent(movie.getEdition().name());
     root.appendChild(edition);
-  }
-
-  /**
-   * get any single element by the tag name
-   * 
-   * @param tag
-   *          the tag name
-   * @return an element or null
-   */
-  protected Element getSingleElementByTag(String tag) {
-    NodeList nodeList = document.getElementsByTagName(tag);
-    for (int i = 0; i < nodeList.getLength(); ++i) {
-      Node node = nodeList.item(i);
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-        return (Element) node;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * get the transformer for XML output
-   * 
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
-  }
-
-  /**
-   * try to detect the default scraper by the given ids
-   *
-   * @return the scraper where the default should be set
-   */
-  private String detectDefaultScraper() {
-    // IMDB first
-    if (movie.getIds().containsKey(MediaMetadata.IMDB)) {
-      return MediaMetadata.IMDB;
-    }
-
-    // TMDB second
-    if (movie.getIds().containsKey(MediaMetadata.TMDB)) {
-      return MediaMetadata.TMDB;
-    }
-
-    // the first found as fallback
-    return movie.getIds().keySet().stream().findFirst().orElse("");
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML attributes
-   * 
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsAttributes(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      element.setAttribute("tmdbid", String.valueOf(tmdbId));
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      element.setAttribute("imdbid", imdbId);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      element.setAttribute("tvdbid", String.valueOf(tvdbId));
-    }
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML children
-   *
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsChildren(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      Element id = document.createElement("tmdbid");
-      id.setTextContent(String.valueOf(tmdbId));
-      element.appendChild(id);
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      Element id = document.createElement("imdbid");
-      id.setTextContent(imdbId);
-      element.appendChild(id);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      Element id = document.createElement("tvdbid");
-      id.setTextContent(String.valueOf(tvdbId));
-      element.appendChild(id);
-    }
   }
 }

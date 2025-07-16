@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.w3c.dom.Element;
@@ -50,7 +51,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
   private void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(tvShow.getTop250()));
-    Element set = getSingleElementByTag("ratings");
+    Element set = NfoUtils.getSingleElementByTag(document, "ratings");
     if (set != null) {
       root.insertBefore(top250, set);
     }
