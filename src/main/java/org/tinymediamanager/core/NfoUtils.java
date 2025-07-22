@@ -225,7 +225,7 @@ public final class NfoUtils {
     return switch (codec.toLowerCase()) {
       case "ac3ex" -> "ac3";
       case "adpcm_ms" -> "pcm";
-      case "dts-es", "dts-96/24" -> "dts";
+      case "dts", "dts-es", "dts-96/24" -> "dca";
       case "truehd/atmos" -> "truehd_atmos";
       case "dtshd-hra" -> "dtshd_hra";
       case "dtshd-ma" -> "dtshd_ma";
