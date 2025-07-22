@@ -1073,7 +1073,15 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
                   episode.setOriginalFilename(vid.getFilename());
                 }
 
-                episode.addToMediaFiles(epFiles); // all found EP MFs
+                // add main video file
+                episode.addToMediaFiles(vid);
+
+                // and all other files (non VIDEO files and video files with a different basename)
+                for (MediaFile mediaFile : epFiles) {
+                  if (mediaFile.getType() != MediaFileType.VIDEO || (!mediaFile.getBasename().equals(vid.getBasename()))) {
+                    episode.addToMediaFiles(mediaFile);
+                  }
+                }
 
                 if (vid.isDiscFile()) {
                   episode.setDisc(true);
@@ -1304,7 +1312,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           // non-video MFs
           // ******************************
           for (TvShowEpisode episode : episodes) {
-            episode.addToMediaFiles(epFiles); // add all (dupes will be filtered)
+            for (MediaFile mf : epFiles) {
+              // add all other MFs to the episode which are not VIDEO files or VIDEO files with a different basename
+              if (mf.getType() != MediaFileType.VIDEO || (!mf.getBasename().equals(vid.getBasename()))) {
+                episode.addToMediaFiles(mf);
+              }
+            }
+
             episode.setDisc(vid.isDiscFile());
             if (episodes.size() > 1) {
               episode.setMultiEpisode(true);

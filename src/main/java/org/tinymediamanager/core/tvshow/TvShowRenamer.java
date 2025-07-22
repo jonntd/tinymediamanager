@@ -1691,6 +1691,22 @@ public class TvShowRenamer {
       return Integer.compare(ep1.getEpisode(), ep2.getEpisode());
     });
 
+    // where there are multiple episodes with the same season/episode, we just need to take the first one (multiple different video files sharing the
+    // same sidecar files)
+    TvShowEpisode firstEp = eps.get(0);
+    boolean singleSE = true;
+    for (int i = 1; i < eps.size(); i++) {
+      if (eps.get(i).getSeason() != firstEp.getSeason() || eps.get(i).getEpisode() != firstEp.getEpisode()) {
+        singleSE = false;
+        break;
+      }
+    }
+
+    if (singleSE) {
+      eps.clear();
+      eps.add(firstEp);
+    }
+
     String newFilename = "";
     // FIXME: check, where/when the stacking marker gets added, and WHICH (from which stacked video)
     if (StringUtils.isBlank(template)) {

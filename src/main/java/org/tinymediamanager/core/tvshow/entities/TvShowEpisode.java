@@ -1712,6 +1712,13 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     List<MediaFile> mediaFiles = getMediaFiles();
     for (MediaFile mf : mediaFiles) {
+      // only _physically_ delete media files when there is no other episode pointing to it
+      List<TvShowEpisode> episodes = TvShowList.getTvEpisodesByFile(tvShow, mf.getFile());
+      if (episodes.size() > 1) {
+        // this media file is used by other episodes, so we do not delete it
+        continue;
+      }
+
       if (!mf.deleteSafely(tvShow.getDataSource())) {
         result = false;
       }
