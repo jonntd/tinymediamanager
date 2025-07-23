@@ -1,3 +1,8 @@
+Version 5.1.9
+=======================
+x [MediaInfo] fixed parsing of .ISO files #2998
+
+
 Version 5.1.8
 =======================
 x [Movie sets] fixed sorting of movies in movie sets

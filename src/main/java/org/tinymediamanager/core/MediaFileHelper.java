@@ -1224,7 +1224,7 @@ public class MediaFileHelper {
       }
     }
 
-    return miFiles;
+    return detectRelevantFiles(miFiles);
   }
 
   static List<MediaInfoFile> parseIso9660(MediaFile mediaFile) {
