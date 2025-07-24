@@ -239,8 +239,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     // delete null values from the lists
     actors.removeIf(Objects::isNull);
-    directors.removeIf(Objects::isNull);
-    writers.removeIf(Objects::isNull);
+    crew.removeIf(Objects::isNull);
     episodeNumbers.removeIf(Objects::isNull);
   }
 

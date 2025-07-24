@@ -222,9 +222,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     extraThumbs.removeIf(Objects::isNull);
     extraFanarts.removeIf(Objects::isNull);
     actors.removeIf(Objects::isNull);
-    producers.removeIf(Objects::isNull);
-    directors.removeIf(Objects::isNull);
-    writers.removeIf(Objects::isNull);
+    crew.removeIf(Objects::isNull);
     trailer.removeIf(Objects::isNull);
     showlinks.removeIf(Objects::isNull);
 
