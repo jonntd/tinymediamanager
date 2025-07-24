@@ -18,6 +18,8 @@ package org.tinymediamanager.core;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.Globals;
 import org.tinymediamanager.core.entities.MediaEntity;
 
 /**
@@ -96,7 +99,16 @@ public abstract class PostProcessExecutor {
     }
 
     pb.redirectErrorStream(true);
-    pb.directory(mediaEntity.getPathNIO().toFile());
+
+    Path entityPath = mediaEntity.getPathNIO();
+    if (entityPath != null) {
+      // set the workdir to the entity folder
+      pb.directory(entityPath.toFile());
+    }
+    else {
+      // fallback: set to the content folder (to avoid writing to the signed tmm folder)
+      pb.directory(Paths.get(Globals.CONTENT_FOLDER).toFile());
+    }
 
     LOGGER.debug("Running command: {}", pb.command());
     final Process process = pb.start();
@@ -114,13 +126,13 @@ public abstract class PostProcessExecutor {
       int processValue = process.waitFor();
       String response = outputStream.toString(StandardCharsets.UTF_8);
       if (processValue != 0) {
-        LOGGER.warn("error at Script: '{}'", response);
-        throw new IOException("error running Script - code '" + processValue + "'");
+        LOGGER.error("Error running post-process script - '{}'", response);
+        throw new IOException("error running script - code '" + processValue + "'");
       }
       if (StringUtils.isNotBlank(response)) {
-        LOGGER.info(response);
+        LOGGER.debug(response);
       }
-      LOGGER.info("PostProcessing: END");
+      LOGGER.trace("PostProcessing: END");
     }
     finally {
       process.destroy();

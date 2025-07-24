@@ -100,7 +100,7 @@ public class ImdbMovieParser extends ImdbParser {
     }
 
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("not possible to scrape from IMDB - imdbId found");
+      LOGGER.debug("not possible to scrape from IMDB - imdbId found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
@@ -138,7 +138,7 @@ public class ImdbMovieParser extends ImdbParser {
       json = true;
     }
     catch (Exception e) {
-      LOGGER.warn("Could not get detailpage for id '{}' - '{}'", imdbId, e.getMessage());
+      LOGGER.debug("Could not get detailpage for id '{}' - '{}'", imdbId, e.getMessage());
     }
 
     if (json) {
@@ -178,7 +178,7 @@ public class ImdbMovieParser extends ImdbParser {
 
       }
       catch (Exception e) {
-        LOGGER.warn("Could not parse page: {}", e.getMessage());
+        LOGGER.debug("Could not parse page: {}", e.getMessage());
       }
     }
     else {
@@ -237,12 +237,12 @@ public class ImdbMovieParser extends ImdbParser {
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem while scraping: {}", e.getMessage());
+        LOGGER.debug("problem while scraping: {}", e.getMessage());
         throw new ScrapeException(e);
       }
 
       if (md.getIds().isEmpty()) {
-        LOGGER.warn("nothing found");
+        LOGGER.debug("nothing found");
         throw new NothingFoundException();
       }
     }

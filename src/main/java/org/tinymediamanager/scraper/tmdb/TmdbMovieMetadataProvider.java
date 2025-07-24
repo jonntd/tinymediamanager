@@ -15,7 +15,10 @@
  */
 package org.tinymediamanager.scraper.tmdb;
 
+import static org.tinymediamanager.core.entities.Person.Type.CAMERA;
+import static org.tinymediamanager.core.entities.Person.Type.COMPOSER;
 import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
+import static org.tinymediamanager.core.entities.Person.Type.EDITOR;
 import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 import static org.tinymediamanager.core.entities.Person.Type.WRITER;
 import static org.tinymediamanager.scraper.MediaMetadata.IMDB;
@@ -152,7 +155,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     String language = getRequestLanguage(options.getLanguage());
 
     // begin search
-    LOGGER.info("========= BEGIN TMDB Scraper Search for: {}", searchString);
+    LOGGER.debug("========= BEGIN TMDB Scraper Search for: {}", searchString);
 
     // 1. try with TMDBid
     if (tmdbId != 0) {
@@ -171,7 +174,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with TMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -190,7 +193,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with IMDB id", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -219,7 +222,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
 
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -238,7 +241,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         LOGGER.debug("found {} results with search string without year", results.size());
       }
       catch (Exception e) {
-        LOGGER.warn("problem getting data from tmdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data from tmdb: {}", e.getMessage());
         savedException = e;
       }
     }
@@ -295,7 +298,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
       throw new ScrapeException(e);
     }
 
-    LOGGER.info("found {} results ", movieSetsFound.size());
+    LOGGER.debug("found {} results ", movieSetsFound.size());
     return movieSetsFound;
   }
 
@@ -360,7 +363,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     }
 
     if (movie == null) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -397,52 +400,47 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     String language = getRequestLanguage(options.getLanguage());
 
     Collection collection = null;
+    Collection collectionEnglish = null;
 
     try {
-      collection = api.collectionService().summary(tmdbId, language).execute().body();
-      // if collection title/overview is not availbale, rescrape in the fallback language
-      if (collection != null && (StringUtils.isBlank(collection.overview) || StringUtils.isBlank(collection.name))
-          && Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("titleFallback"))) {
+      Response<Collection> collectionResponse = api.collectionService().summary(tmdbId, language).execute();
+      if (!collectionResponse.isSuccessful()) {
+        throw new HttpException(collectionResponse.code(), collectionResponse.message());
+      }
+
+      collection = collectionResponse.body();
+
+      // english collection texts
+      if (language.startsWith("en")) {
+        collectionEnglish = collection;
+      }
+      else {
+        try {
+          Response<Collection> response = api.collectionService().summary(tmdbId, "en").execute();
+          if (response.isSuccessful()) {
+            collectionEnglish = response.body();
+          }
+        }
+        catch (Exception e) {
+          LOGGER.debug("problem getting english collection data from tmdb - '{}'", e.getMessage());
+        }
+      }
+
+      // if collection title/overview is not available, rescrape in the fallback language
+      if (collection != null && (StringUtils.isAnyBlank(collection.name, collection.overview))
+          && getProviderInfo().getConfig().getValueAsBool("titleFallback")) {
 
         String fallbackLang = MediaLanguages.get(getProviderInfo().getConfig().getValue("titleFallbackLanguage")).name().replace("_", "-");
-        Collection collectionInFallbackLanguage = api.collectionService().summary(tmdbId, fallbackLang).execute().body();
-
-        if (collectionInFallbackLanguage != null) {
-          Collection collectionInDefaultLanguage = null;
-          if (StringUtils.isBlank(collectionInFallbackLanguage.name) || StringUtils.isBlank(collectionInFallbackLanguage.overview)) {
-            collectionInDefaultLanguage = api.collectionService().summary(tmdbId, null).execute().body();
-
-          }
+        Response<Collection> collectionFallbackResponse = api.collectionService().summary(tmdbId, fallbackLang).execute();
+        if (collectionFallbackResponse.isSuccessful()) {
+          Collection collectionInFallbackLanguage = collectionFallbackResponse.body();
 
           if (StringUtils.isBlank(collection.name) && StringUtils.isNotBlank(collectionInFallbackLanguage.name)) {
             collection.name = collectionInFallbackLanguage.name;
           }
-          else if (StringUtils.isBlank(collection.name) && collectionInDefaultLanguage != null
-              && StringUtils.isNotBlank(collectionInDefaultLanguage.name)) {
-            collection.name = collectionInDefaultLanguage.name;
-          }
 
           if (StringUtils.isBlank(collection.overview) && StringUtils.isNotBlank(collectionInFallbackLanguage.overview)) {
             collection.overview = collectionInFallbackLanguage.overview;
-          }
-          else if (StringUtils.isBlank(collection.overview) && collectionInDefaultLanguage != null
-              && StringUtils.isNotBlank(collectionInDefaultLanguage.overview)) {
-            collection.overview = collectionInDefaultLanguage.overview;
-          }
-
-          for (BaseMovie movie : collection.parts) {
-            for (BaseMovie fallbackMovie : collectionInFallbackLanguage.parts) {
-              if (movie.id.equals(fallbackMovie.id)) {
-                if (StringUtils.isBlank(movie.overview) && !StringUtils.isBlank(fallbackMovie.overview)) {
-                  movie.overview = fallbackMovie.overview;
-                }
-                if (movie.title.equals(movie.original_title) && !movie.original_language.equals(options.getLanguage().getLanguage())
-                    && !StringUtils.isBlank(fallbackMovie.title)) {
-                  movie.title = fallbackMovie.title;
-                }
-                break;
-              }
-            }
           }
         }
       }
@@ -458,6 +456,11 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
 
     md.setId(TMDB_SET, collection.id);
     md.setTitle(collection.name);
+
+    if (collectionEnglish != null) {
+      md.setEnglishTitle(collectionEnglish.name);
+    }
+
     md.setPlot(collection.overview);
 
     // Poster
@@ -490,7 +493,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         continue;
       }
 
-      // get the full meta data
+      // get the full metadata
       try {
         MovieSearchAndScrapeOptions movieSearchAndScrapeOptions = new MovieSearchAndScrapeOptions();
         movieSearchAndScrapeOptions.setTmdbId(MetadataUtil.unboxInteger(part.id));
@@ -524,7 +527,7 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         md.addSubItem(mdSubItem);
       }
       catch (Exception e) {
-        LOGGER.warn("could not get metadata for movie set movie - '{}'", e.getMessage());
+        LOGGER.debug("could not get metadata for movie set movie - '{}'", e.getMessage());
         // fall back to the provided data
 
         MediaMetadata mdSubItem = new MediaMetadata(getId());
@@ -780,6 +783,14 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     md.setId(getProviderInfo().getId(), movie.id);
     md.setTitle(movie.title);
     md.setOriginalTitle(movie.original_title);
+
+    String englishTitle = getValuesFromTranslation(movie.translations, MediaLanguages.en.toLocale())[0];
+    // if the original language of the movie is english, there may be no translation -> take the original title
+    if (StringUtils.isBlank(englishTitle) && "en".equals(movie.original_language)) {
+      englishTitle = movie.original_title;
+    }
+    md.setEnglishTitle(englishTitle);
+
     md.setPlot(movie.overview);
     md.setTagline(movie.tagline);
     md.setRuntime(movie.runtime);
@@ -908,11 +919,25 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         if ("Director".equals(crewMember.job)) {
           cm.setType(DIRECTOR);
         }
-        else if ("Writing".equals(crewMember.department)) {
+        else if ("Writing".equals(crewMember.department) && ("Screenplay".equals(crewMember.job))) {
+          // only take the screenplay writers, not the story writers
           cm.setType(WRITER);
         }
-        else if ("Production".equals(crewMember.department)) {
+        else if ("Production".equals(crewMember.department) && crewMember.job.contains("Producer")) {
+          // only take producers, not casting or similar jobs
           cm.setType(PRODUCER);
+        }
+        else if ("Editing".equals(crewMember.department) && ("Editor".equals(crewMember.job))) {
+          // only take the editors, not the assistant editors
+          cm.setType(EDITOR);
+        }
+        else if ("Sound".equals(crewMember.department) && ("Original Music Composer".equals(crewMember.job))) {
+          // only take the original music composers, not the sound designers
+          cm.setType(COMPOSER);
+        }
+        else if ("Camera".equals(crewMember.department) && ("Director of Photography".equals(crewMember.job))) {
+          // only take the directors of photography, not the camera operators
+          cm.setType(CAMERA);
         }
         else {
           continue;

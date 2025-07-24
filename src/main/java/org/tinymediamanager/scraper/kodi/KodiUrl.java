@@ -170,7 +170,7 @@ class KodiUrl {
   public String getTextContent() throws Exception {
     try (InputStream is = getInputStream()) {
       if (is == null) {
-        LOGGER.error("InputStream was NULL!!!");
+        LOGGER.debug("InputStream was NULL!!!");
         return "";
       }
 

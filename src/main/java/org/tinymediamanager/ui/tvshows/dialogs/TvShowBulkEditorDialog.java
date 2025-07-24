@@ -724,42 +724,36 @@ public class TvShowBulkEditorDialog extends TmmDialog {
             }
           });
 
-          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, new Person.Type[] { Person.Type.ACTOR });
           popupPanel.setContent(personEditorPanel);
           showModalPopupPanel(popupPanel);
         });
 
       }
       {
-        JButton btnAddDirectors = new JButton(TmmResourceBundle.getString("cast.director.add"));
+        JButton btnAddDirectors = new JButton(TmmResourceBundle.getString("cast.crew.add"));
         panelContent.add(btnAddDirectors, "cell 1 10");
         btnAddDirectors.addActionListener(e -> {
           // Open Director Dialog
-          Person person = new Person(Person.Type.DIRECTOR, TmmResourceBundle.getString("director.name.unknown"), "Director");
+          Person person = new Person(Person.Type.OTHER, "", "");
 
           ModalPopupPanel popupPanel = createModalPopupPanel();
-          popupPanel.setTitle(TmmResourceBundle.getString("cast.director.add"));
+          popupPanel.setTitle(TmmResourceBundle.getString("cast.crew.add"));
 
           popupPanel.setOnCloseHandler(() -> {
-            if (StringUtils.isNotBlank(person.getName()) && !person.getName().equals(TmmResourceBundle.getString("director.name.unknown"))) {
-              if (person.getRole().equals(TmmResourceBundle.getString("cast.role.unknown"))) {
-                person.setRole("");
-              }
-
+            if (StringUtils.isNotBlank(person.getName())) {
               episodesChanged = true;
 
               setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
               for (TvShowEpisode episode : tvShowEpisodesToEdit) {
-
-                List<Person> directors = new ArrayList<>();
-                directors.add(new Person(person)); // force copy constructor
-                episode.addToDirectors(directors);
+                episode.addToCrew(Collections.singletonList(new Person(person)));
               }
               setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
             }
           });
 
-          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person);
+          PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER,
+              Person.Type.PRODUCER, Person.Type.COMPOSER, Person.Type.EDITOR, Person.Type.CAMERA, Person.Type.OTHER });
           popupPanel.setContent(personEditorPanel);
           showModalPopupPanel(popupPanel);
         });

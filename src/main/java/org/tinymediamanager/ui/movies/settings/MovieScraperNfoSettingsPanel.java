@@ -77,6 +77,7 @@ class MovieScraperNfoSettingsPanel extends JPanel {
   private JCheckBox                            chckbxTrailer;
   private JCheckBox                            chckbxFileinfo;
   private JCheckBox                            chckbxDateAdded;
+  private JCheckBox                            chckbxArtworkUrls;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -195,7 +196,7 @@ class MovieScraperNfoSettingsPanel extends JPanel {
     {
       JPanel panelNfo = new JPanel();
       // 16lp ~ width of the
-      panelNfo.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][15lp!][][][][][][15lp!][][][][15lp!][][][]"));
+      panelNfo.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][15lp!][][][][15lp!][][][][15lp!][][][][][][]"));
 
       JLabel lblNfoT = new TmmLabel(TmmResourceBundle.getString("Settings.nfo"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelNfo, lblNfoT, true);
@@ -232,54 +233,57 @@ class MovieScraperNfoSettingsPanel extends JPanel {
         chckbxWriteCleanNfo = new JCheckBox(TmmResourceBundle.getString("Settings.writecleannfo"));
         panelNfo.add(chckbxWriteCleanNfo, "cell 1 3 2 1");
 
-        chckbxDateAdded = new JCheckBox(TmmResourceBundle.getString("Settings.nfo.dateadded"));
-        panelNfo.add(chckbxDateAdded, "cell 1 5 2 1");
-
-        JLabel lblNfoDatefield = new JLabel(TmmResourceBundle.getString("Settings.dateadded"));
-        panelNfo.add(lblNfoDatefield, "cell 2 6");
-
-        cbDatefield = new JComboBox(DateField.values());
-        panelNfo.add(cbDatefield, "cell 2 6");
-
         JLabel lblNfoLanguage = new JLabel(TmmResourceBundle.getString("Settings.nfolanguage"));
-        panelNfo.add(lblNfoLanguage, "cell 1 7 2 1");
+        panelNfo.add(lblNfoLanguage, "cell 1 5 2 1");
 
         cbNfoLanguage = new JComboBox(locales.toArray());
-        panelNfo.add(cbNfoLanguage, "cell 1 7 2 1");
+        panelNfo.add(cbNfoLanguage, "cell 1 5 2 1");
 
         JLabel lblNfoLanguageDesc = new JLabel(TmmResourceBundle.getString("Settings.nfolanguage.desc"));
-        panelNfo.add(lblNfoLanguageDesc, "cell 2 8");
+        panelNfo.add(lblNfoLanguageDesc, "cell 2 6");
 
         JLabel lblCertificationStyle = new JLabel(TmmResourceBundle.getString("Settings.certificationformat"));
-        panelNfo.add(lblCertificationStyle, "flowx,cell 1 9 2 1");
+        panelNfo.add(lblCertificationStyle, "flowx,cell 1 7 2 1");
 
         cbCertificationStyle = new JComboBox();
-        panelNfo.add(cbCertificationStyle, "cell 1 9 2 1,wmin 0");
+        panelNfo.add(cbCertificationStyle, "cell 1 7 2 1,wmin 0");
 
         chckbxCreateOutline = new JHintCheckBox(TmmResourceBundle.getString("Settings.createoutline"));
         chckbxCreateOutline.setToolTipText(TmmResourceBundle.getString("Settings.createoutline.hint"));
-        panelNfo.add(chckbxCreateOutline, "cell 1 11 2 1");
+        panelNfo.add(chckbxCreateOutline, "cell 1 9 2 1");
 
         chckbxOutlineFirstSentence = new JCheckBox(TmmResourceBundle.getString("Settings.outlinefirstsentence"));
-        panelNfo.add(chckbxOutlineFirstSentence, "cell 2 12");
+        panelNfo.add(chckbxOutlineFirstSentence, "cell 2 10");
 
         chckbxSingleStudio = new JCheckBox(TmmResourceBundle.getString("Settings.singlestudio"));
-        panelNfo.add(chckbxSingleStudio, "cell 1 13 2 1");
+        panelNfo.add(chckbxSingleStudio, "cell 1 11 2 1");
       }
-
       {
+        chckbxDateAdded = new JCheckBox(TmmResourceBundle.getString("Settings.nfo.dateadded"));
+        panelNfo.add(chckbxDateAdded, "cell 1 13 2 1");
+
+        JLabel lblNfoDatefield = new JLabel(TmmResourceBundle.getString("Settings.dateadded"));
+        panelNfo.add(lblNfoDatefield, "flowx,cell 2 14");
+
+        chckbxArtworkUrls = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.artworkurls"));
+        chckbxArtworkUrls.setToolTipText(TmmResourceBundle.getString("Settings.nfo.artworkurls.hint"));
+        panelNfo.add(chckbxArtworkUrls, "cell 1 15 2 1");
+
         chckbxTrailer = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.trailer"));
         chckbxTrailer.setToolTipText(TmmResourceBundle.getString("Settings.nfo.trailer.hint"));
-        panelNfo.add(chckbxTrailer, "cell 1 15 2 1");
+        panelNfo.add(chckbxTrailer, "cell 1 16 2 1");
 
         chckbxFileinfo = new JHintCheckBox(TmmResourceBundle.getString("Settings.nfo.fileinfo"));
         chckbxFileinfo.setToolTipText(TmmResourceBundle.getString("Settings.nfo.fileinfo.hint"));
-        panelNfo.add(chckbxFileinfo, "cell 1 16 2 1");
+        panelNfo.add(chckbxFileinfo, "cell 1 17 2 1");
 
         chckbxLockdata = new JHintCheckBox(TmmResourceBundle.getString("Settings.lockdata"));
         chckbxLockdata.setToolTipText(TmmResourceBundle.getString("Settings.lockdata.hint"));
-        panelNfo.add(chckbxLockdata, "cell 1 17 2 1");
+        panelNfo.add(chckbxLockdata, "cell 1 18 2 1");
       }
+
+      cbDatefield = new JComboBox(DateField.values());
+      panelNfo.add(cbDatefield, "cell 2 14");
     }
   }
 
@@ -387,5 +391,10 @@ class MovieScraperNfoSettingsPanel extends JPanel {
     AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_9, chckbxDateAdded,
         jCheckBoxBeanProperty);
     autoBinding_11.bind();
+    //
+    Property movieSettingsBeanProperty_10 = BeanProperty.create("nfoWriteArtworkUrls");
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_10, chckbxArtworkUrls,
+        jCheckBoxBeanProperty);
+    autoBinding_12.bind();
   }
 }

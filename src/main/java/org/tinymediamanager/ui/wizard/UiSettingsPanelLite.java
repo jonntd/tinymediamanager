@@ -182,7 +182,7 @@ class UiSettingsPanelLite extends JPanel {
       lblLight.setOriginalImage(IOUtils.toByteArray(is));
     }
     catch (Exception e) {
-      LOGGER.error("could not load image: {}", e.getMessage());
+      LOGGER.debug("could not load image: {}", e.getMessage());
     }
     add(lblLight, "cell 1 6, grow");
 
@@ -191,7 +191,7 @@ class UiSettingsPanelLite extends JPanel {
       lblDark.setOriginalImage(IOUtils.toByteArray(is));
     }
     catch (Exception e) {
-      LOGGER.error("could not load image: {}", e.getMessage());
+      LOGGER.debug("could not load image: {}", e.getMessage());
     }
     add(lblDark, "cell 2 6, grow");
 

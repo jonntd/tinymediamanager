@@ -51,15 +51,16 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
+    LOGGER.info("Changing data source for {} movies", moviesToChange.size());
+
     initThreadPool(1, "changeDataSource");
-    start();
 
     for (Movie movie : moviesToChange) {
       submitTask(new Worker(movie));
     }
     waitForCompletionOrCancel();
 
-    LOGGER.info("Done changing data sources");
+    LOGGER.info("Finished changing data sources - took {} ms", getRuntime());
   }
 
   @Override
@@ -76,12 +77,12 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
 
     @Override
     public void run() {
-      LOGGER.info("changing data source of movie '{}' to '{}'", movie.getTitle(), datasource);
-
       if (movie.getDataSource().equals(datasource)) {
-        LOGGER.warn("old and new data source is the same");
+        LOGGER.debug("old and new data source is the same");
         return;
       }
+
+      LOGGER.info("Changing data source of movie '{}' to '{}'", movie.getTitle(), datasource);
 
       Path destDir = Paths.get(datasource, Paths.get(movie.getDataSource()).relativize(movie.getPathNIO()).toString());
 
@@ -129,14 +130,15 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
           Utils.deleteEmptyDirectoryRecursive(srcDir);
         }
         else {
-          LOGGER.error("Could not move to destination '{}' - NOT changing datasource", destDir);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
+          LOGGER.error("Could not move movie '{}' to destination '{}' - NOT changing datasource", movie.getTitle(), destDir);
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
         }
       }
       catch (Exception e) {
-        LOGGER.error("error moving folder: ", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not move movie '{}' to destination '{}' ('{}') - NOT changing datasource", movie.getTitle(), destDir, e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -158,7 +160,7 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
           if (Files.exists(destFile)) {
             // well, better not to move
             LOGGER.error("Video file already exists! '{}' - NOT moving movie", destDir);
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove"));
             return;
           }
         }
@@ -182,8 +184,9 @@ public class MovieChangeDatasourceTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("error moving movie files: ", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove", new String[] { ":", e.getLocalizedMessage() }));
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, srcDir, "message.changedatasource.failedmove",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

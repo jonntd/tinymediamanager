@@ -262,7 +262,7 @@ public class ImageLoader {
         l.stateChanged(new ChangeEvent(this));
       }
       catch (Exception e) {
-        LOGGER.warn("failed to inform listener: {}", e.getMessage());
+        LOGGER.debug("failed to inform listener: {}", e.getMessage());
       }
     }
   }
@@ -567,17 +567,12 @@ public class ImageLoader {
 
     public void setProperties(Hashtable<?, ?> p) {
       try {
-        // TODO: one day integrate these
-        // it wouldn't be hard to extend BufferedImage
-        // and override the methods regarding
-        // "getProperty" if you need to.
-
         if (properties == null)
           properties = new Properties();
         properties.putAll(p);
       }
       catch (RuntimeException | Error e) {
-        LOGGER.warn("could not set properties: {}", e.getMessage());
+        LOGGER.debug("could not set properties: {}", e.getMessage());
         throw e;
       }
     }

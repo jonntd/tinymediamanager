@@ -15,12 +15,18 @@
  */
 package org.tinymediamanager.ui.moviesets;
 
-import java.beans.PropertyChangeListener;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_MOVIES;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_MOVIE_SETS;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import org.tinymediamanager.core.Constants;
+import javax.swing.SwingUtilities;
+
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -40,76 +46,50 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   private final TmmTreeNode                     root      = new TmmTreeNode(new Object(), this);
   private final TmmTreeTableFormat<TmmTreeNode> tableFormat;
 
-  private final PropertyChangeListener          movieSetPropertyChangeListener;
-  private final PropertyChangeListener          moviePropertyChangeListener;
-
   private final MovieList                       movieList = MovieModuleManager.getInstance().getMovieList();
 
   public MovieSetTreeDataProvider(TmmTreeTableFormat<TmmTreeNode> tableFormat) {
     this.tableFormat = tableFormat;
 
-    PropertyChangeListener movielistPropertyChangeListener = evt -> {
-      MovieSet movieSet;
-
-      switch (evt.getPropertyName()) {
-        case Constants.ADDED_MOVIE_SET:
-          movieSet = (MovieSet) evt.getNewValue();
-          addMovieSet(movieSet);
-          break;
-
-        case Constants.REMOVED_MOVIE_SET:
-          movieSet = (MovieSet) evt.getNewValue();
-          removeMovieSet(movieSet);
-          break;
-
-        default:
-          nodeChanged(evt.getSource());
-          break;
+    EventBus.registerListener(TOPIC_MOVIE_SETS, event -> {
+      if (event.sender() instanceof MovieSet movieSet) {
+        SwingUtilities.invokeLater(() -> processMovieSet(movieSet, event.eventType()));
       }
-    };
-    movieList.addPropertyChangeListener(movielistPropertyChangeListener);
-
-    movieSetPropertyChangeListener = evt -> {
-      Movie movie;
-
-      switch (evt.getPropertyName()) {
-        case Constants.ADDED_MOVIE:
-          movie = (Movie) evt.getNewValue();
-          addMovie(movie);
-          break;
-
-        case Constants.REMOVED_MOVIE:
-          movie = (Movie) evt.getNewValue();
-          removeMovie(movie);
-          break;
-
-        case "dummyMovies":
-          mixinDummyMovies((MovieSet) evt.getSource());
-          break;
-
-        default:
-          nodeChanged(evt.getSource());
-          break;
+    });
+    EventBus.registerListener(TOPIC_MOVIES, event -> {
+      if (event.sender() instanceof Movie movie) {
+        SwingUtilities.invokeLater(() -> nodeChanged(movie));
       }
-    };
-
-    moviePropertyChangeListener = evt -> {
-      switch (evt.getPropertyName()) {
-        default:
-          nodeChanged(evt.getSource());
-          break;
-      }
-    };
+    });
 
     setTreeComparator(new MovieSetTreeNodeComparator());
 
     MovieModuleManager.getInstance().getSettings().addPropertyChangeListener(evt -> {
       switch (evt.getPropertyName()) {
         case "displayMovieSetMissingMovies":
-          mixinDummyMovies();
+          mixinMovies();
           break;
       }
     });
+  }
+
+  private void processMovieSet(MovieSet movieSet, String eventType) {
+    // check if existing
+    TmmTreeNode movieSetNode = getNodeFromCache(movieSet);
+    if (movieSetNode != null) {
+      if (Event.TYPE_REMOVE.equals(eventType)) {
+        // movie set deleted
+        removeMovieSet(movieSet);
+      }
+      else {
+        // movie set updated
+        updateMovieSet(movieSet);
+      }
+    }
+    else {
+      // movie set added
+      addMovieSet(movieSet);
+    }
   }
 
   /**
@@ -149,37 +129,51 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   @Override
   public List<TmmTreeNode> getChildren(TmmTreeNode parent) {
     if (parent == root) {
-      ArrayList<TmmTreeNode> nodes = new ArrayList<>();
+      List<TmmTreeNode> nodes = new ArrayList<>();
       for (MovieSet movieSet : new ArrayList<>(movieList.getMovieSetList())) {
-        TmmTreeNode node = new MovieSetTreeNode(movieSet, this);
-        putNodeToCache(movieSet, node);
+        TmmTreeNode node = getOrCreateNode(movieSet);
         nodes.add(node);
-
-        // add a propertychangelistener for this movie set
-        movieSet.addPropertyChangeListener(movieSetPropertyChangeListener);
       }
       return nodes;
     }
-    else if (parent.getUserObject() instanceof MovieSet) {
-      MovieSet movieSet = (MovieSet) parent.getUserObject();
-      ArrayList<TmmTreeNode> nodes = new ArrayList<>();
+    else if (parent.getUserObject() instanceof MovieSet movieSet) {
+      List<TmmTreeNode> nodes = new ArrayList<>();
       for (Movie movie : movieSet.getMoviesForDisplay()) {
         if (movie.getMovieSet() == movieSet) {
-          // cross check if that movie is also in the movie set
-          TmmTreeNode node = new MovieTreeNode(movie, this);
-          putNodeToCache(movie, node);
+          // cross-check if that movie is also in the movie set
+          TmmTreeNode node = getOrCreateNode(movie);
           nodes.add(node);
         }
         else if (movie instanceof MovieSet.MovieSetMovie) {
           // also add dummy movies
-          TmmTreeNode node = new MovieTreeNode(movie, this);
-          putNodeToCache(movie, node);
+          TmmTreeNode node = getOrCreateNode(movie);
           nodes.add(node);
         }
       }
       return nodes;
     }
     return null;
+  }
+
+  private TmmTreeNode getOrCreateNode(MediaEntity entity) {
+    TmmTreeNode cachedNode = getNodeFromCache(entity);
+    if (cachedNode != null) {
+      return cachedNode;
+    }
+
+    if (entity instanceof MovieSet movieSet) {
+      TmmTreeNode node = new MovieSetTreeNode(movieSet, this);
+      putNodeToCache(movieSet, node);
+      return node;
+    }
+    else if (entity instanceof Movie movie) {
+      TmmTreeNode node = new MovieTreeNode(movie, this);
+      putNodeToCache(movie, node);
+      return node;
+    }
+    else {
+      throw new IllegalArgumentException();
+    }
   }
 
   @Override
@@ -199,9 +193,6 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     putNodeToCache(movieSet, node);
     firePropertyChange(NODE_INSERTED, null, node);
 
-    // and also add a propertychangelistener to react on changes inside the movie set
-    movieSet.addPropertyChangeListener(movieSetPropertyChangeListener);
-
     // and also add all existing movies
     for (Movie movie : movieSet.getMovies()) {
       addMovie(movie);
@@ -220,20 +211,31 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       removeNodeFromCache(movie);
     }
 
-    // remove the propertychangelistener from this movie set
-    movieSet.removePropertyChangeListener(movieSetPropertyChangeListener);
-
     firePropertyChange(NODE_REMOVED, null, cachedNode);
   }
 
-  private TmmTreeNode addMovie(Movie movie) {
+  private void updateMovieSet(MovieSet movieSet) {
+    TmmTreeNode movieSetTreeNode = getNodeFromCache(movieSet);
+    if (movieSetTreeNode == null) {
+      addMovieSet(movieSet);
+      return;
+    }
+
+    // mixin movies
+    mixinMovies(movieSet);
+
+    // change the movie set directly
+    nodeChanged(movieSet);
+  }
+
+  private void addMovie(Movie movie) {
     // check if this movie has already been added
     TmmTreeNode cachedNode = getNodeFromCache(movie);
     if (cachedNode != null) {
-      // cross check if the parent (movie set) has the same node
+      // cross-check if the parent (movie set) has the same node
       TmmTreeNode parent = getNodeFromCache(movie.getMovieSet());
       if (parent == cachedNode.getParent()) {
-        return cachedNode;
+        return;
       }
       else {
         removeNodeFromCache(movie);
@@ -244,11 +246,6 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     TmmTreeNode node = new MovieTreeNode(movie, this);
     putNodeToCache(movie, node);
     firePropertyChange(NODE_INSERTED, null, node);
-
-    // and also add a propertychangelistener to react on changes inside the movie
-    movie.addPropertyChangeListener(moviePropertyChangeListener);
-
-    return node;
   }
 
   private void removeMovie(Movie movie) {
@@ -257,19 +254,16 @@ public class MovieSetTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       return;
     }
 
-    // remove the propertychangelistener from this episode
-    movie.removePropertyChangeListener(moviePropertyChangeListener);
-
     firePropertyChange(NODE_REMOVED, null, cachedNode);
   }
 
-  private void mixinDummyMovies() {
+  private void mixinMovies() {
     for (MovieSet movieSet : movieList.getMovieSetList()) {
-      mixinDummyMovies(movieSet);
+      mixinMovies(movieSet);
     }
   }
 
-  private void mixinDummyMovies(MovieSet movieSet) {
+  private void mixinMovies(MovieSet movieSet) {
     TmmTreeNode movieSetNode = getNodeFromCache(movieSet);
     if (movieSetNode == null) {
       return;

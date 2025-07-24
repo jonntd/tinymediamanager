@@ -44,7 +44,7 @@ class Log4jBackstop implements Thread.UncaughtExceptionHandler {
     else if (ex instanceof OutOfMemoryError) {
       // delegate out of memory errors to the message history dialog
       LOGGER.debug("hit memory cap: {}", ex.getMessage());
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.oom.title", "tmm.oom", new String[] {}));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.oom.title", "tmm.oom", new String[] {}));
       if (!GraphicsEnvironment.isHeadless()) {
         StatusBarPanel.setOomDetected();
       }

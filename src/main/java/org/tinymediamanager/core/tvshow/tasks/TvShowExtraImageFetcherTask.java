@@ -75,8 +75,8 @@ public class TvShowExtraImageFetcherTask implements Runnable {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed: ", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.extraimage.threadcrashed"));
+      LOGGER.error("Could not download extra artwork for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.extraimage.threadcrashed"));
     }
   }
 
@@ -112,7 +112,7 @@ public class TvShowExtraImageFetcherTask implements Runnable {
         }
       }
       catch (IOException e) {
-        LOGGER.error("could not create extrafanarts folder: {}", e.getMessage());
+        LOGGER.error("Could not create extrafanarts folder for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
         return false;
       }
     }
@@ -148,7 +148,7 @@ public class TvShowExtraImageFetcherTask implements Runnable {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.warn("problem downloading extrafanart {} - {} ", urlAsString, e.getMessage());
+        LOGGER.warn("Problem downloading extrafanart for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
       }
     }
 

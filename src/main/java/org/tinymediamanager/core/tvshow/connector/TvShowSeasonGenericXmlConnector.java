@@ -31,9 +31,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -43,18 +40,18 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.filenaming.TvShowSeasonNfoNaming;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 /**
  * this class is a general XML connector which suits as a base class for most xml based connectors
@@ -67,6 +64,8 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
   protected static final String   ORACLE_IS_STANDALONE = "http://www.oracle.com/xml/is-standalone";
 
   protected final TvShowSeason    tvShowSeason;
+  protected final TvShowSettings  settings;
+
   protected TvShowSeasonNfoParser parser               = null;
 
   protected Document              document;
@@ -74,6 +73,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
 
   protected TvShowSeasonGenericXmlConnector(TvShowSeason tvShowSeason) {
     this.tvShowSeason = tvShowSeason;
+    this.settings = TvShowModuleManager.getInstance().getSettings();
   }
 
   /**
@@ -146,7 +146,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
 
         // serialize to string
         Writer out = new StringWriter();
-        getTransformer().transform(new DOMSource(document), new StreamResult(out));
+        NfoUtils.getTransformer().transform(new DOMSource(document), new StreamResult(out));
         String xml = out.toString().replaceAll("(?<!\r)\n", "\r\n"); // windows conform line endings
 
         Path f = tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename);
@@ -176,9 +176,10 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, tvShowSeason, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not write season NFO file '{}' - '{}'", tvShowSeason.getTvShow().getPathNIO().resolve(nfoFilename), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, tvShowSeason, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -288,9 +289,11 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    * we will write all supported artwork types here
    */
   protected void addThumb() {
-    addThumb(MediaFileType.SEASON_POSTER, "poster");
-    addThumb(MediaFileType.SEASON_BANNER, "banner");
-    addThumb(MediaFileType.SEASON_THUMB, "landscape");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.SEASON_POSTER, "poster");
+      addThumb(MediaFileType.SEASON_BANNER, "banner");
+      addThumb(MediaFileType.SEASON_THUMB, "landscape");
+    }
   }
 
   private void addThumb(MediaFileType type, String aspect) {
@@ -308,24 +311,26 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
    * the new fanart in the form <fanart><thumb>xxx</thumb></fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 
@@ -410,7 +415,7 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }
@@ -431,50 +436,5 @@ public abstract class TvShowSeasonGenericXmlConnector implements ITvShowSeasonCo
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(tvShowSeason.getNote());
     root.appendChild(userNote);
-  }
-
-  /**
-   * get any single element by the tag name
-   *
-   * @param tag
-   *          the tag name
-   * @return an element or null
-   */
-  protected Element getSingleElementByTag(String tag) {
-    NodeList nodeList = document.getElementsByTagName(tag);
-    for (int i = 0; i < nodeList.getLength(); ++i) {
-      Node node = nodeList.item(i);
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-        return (Element) node;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * get the transformer for XML output
-   *
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
   }
 }

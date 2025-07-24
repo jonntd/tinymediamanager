@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +37,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -44,53 +46,68 @@ import org.tinymediamanager.scraper.util.ParserUtils;
  */
 public class TvShowEpisodeAndSeasonParser {
 
-  private static final Logger  LOGGER            = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
+  private static final Logger  LOGGER              = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
 
   // foo.yyyy.mm.dd.*
-  private static final Pattern DATE_1            = Pattern.compile("([0-9]{4})[.-]([0-9]{2})[.-]([0-9]{2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern DATE_1              = Pattern.compile("([0-9]{4})[.-]([0-9]{2})[.-]([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
   // foo.mm.dd.yyyy.*
-  private static final Pattern DATE_2            = Pattern.compile("([0-9]{2})[.-]([0-9]{2})[.-]([0-9]{4})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern DATE_2              = Pattern.compile("([0-9]{2})[.-]([0-9]{2})[.-]([0-9]{4})", Pattern.CASE_INSENSITIVE);
 
-  // new parsing logic
-  public static final Pattern  SEASON_LONG       = Pattern.compile("(staffel|season|saison|series|temporada)[\\s_.-]?(\\d{1,4})",
-      Pattern.CASE_INSENSITIVE);
+  // old parsing logic
+  // public static final Pattern SEASON_LONG = Pattern.compile("(staffel|season|saison|series|temporada)[\\s_.-]?(\\d{1,4})",
+  // Pattern.CASE_INSENSITIVE);
+  //
+  // SAME WITH OUR TRANSLATIONS
+  // cat messages* | grep "metatag.season=" | cut -d "=" -f2
+  // lowercase, add "series"
+  public static final String[] SEASON_TRANSLATIONS = { "series", "season", "الموسم", "sezóna", "sæson", "staffel", "σεζόν", "temporada", "فصل",
+      "kausi", "saison", "sezona", "évad", "þáttaröð", "stagione", "시즌", "seizoen", "sesong", "sezon", "сезон", "сезона", "säsong", "சீசன்" };
+  public static final Pattern  SEASON_LONG;
+  static {
+    String regex = Arrays.stream(TvShowEpisodeAndSeasonParser.SEASON_TRANSLATIONS).collect(Collectors.joining("|"));
+    regex = "(" + regex + ")[\\s_.-]?(\\d{1,4})";
+    SEASON_LONG = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+  }
+
   // must start with a delimiter!
-  public static final Pattern  SEASON_ONLY       = Pattern.compile("[\\s_.-]s[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  public static final Pattern  EPISODE_ONLY      = Pattern.compile("[\\s_.-]ep?[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern EPISODE_PATTERN   = Pattern.compile("[epx_-]+(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern EPISODE_PATTERN_2 = Pattern.compile("(?:episode|ep)[\\. _-]*(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern ROMAN_PATTERN     = Pattern.compile("(part|pt)[\\._\\s]+([MDCLXVI]+)", Pattern.CASE_INSENSITIVE);
-  private static final Pattern SEASON_MULTI_EP   = Pattern.compile("s(\\d{1,4})[ _]?((?:([epx.-]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
-  private static final Pattern SEASON_MULTI_EP_2 = Pattern.compile("(\\d{1,4})(?=x)((?:([epx]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
-  private static final Pattern NUMBERS_2_PATTERN = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern NUMBERS_3_PATTERN = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
+  public static final Pattern  SEASON_ONLY        = Pattern.compile("[\\s_.-]s[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  public static final Pattern  EPISODE_ONLY       = Pattern.compile("[\\s_.-]ep?[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern EPISODE_PATTERN    = Pattern.compile("[epx_-]+(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern EPISODE_PATTERN_2  = Pattern.compile("(?:episode|ep)[\\. _-]*(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  // (1/6) with normal or unicode slash!
+  private static final Pattern EPISODE_PATTERN_NR = Pattern.compile("(\\d{1,2})[⧸/](\\d{1,2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern ROMAN_PATTERN      = Pattern.compile("(part|pt)[\\._\\s]+([MDCLXVI]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern SEASON_MULTI_EP    = Pattern.compile("s(\\d{1,4})[ _]?((?:([epx.-]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
+  private static final Pattern SEASON_MULTI_EP_2  = Pattern.compile("(\\d{1,4})(?=x)((?:([epx]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
+  private static final Pattern NUMBERS_2_PATTERN  = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern NUMBERS_3_PATTERN  = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
   // https://kodi.wiki/view/Anime - PREP should run before any default Kodi regex
-  private static final Pattern ANIME_PREPEND1    = Pattern.compile(
+  private static final Pattern ANIME_PREPEND1     = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND2    = Pattern.compile(
+  private static final Pattern ANIME_PREPEND2     = Pattern.compile(
       "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND3    = Pattern.compile(
+  private static final Pattern ANIME_PREPEND3     = Pattern.compile(
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND4    = Pattern.compile(
+  private static final Pattern ANIME_PREPEND4     = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND4_2  = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
+  private static final Pattern ANIME_PREPEND4_2   = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
 
-  private static final Pattern ANIME_APPEND1     = Pattern.compile(
+  private static final Pattern ANIME_APPEND1      = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND2     = Pattern.compile(
+  private static final Pattern ANIME_APPEND2      = Pattern.compile(
       "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*?$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND3     = Pattern.compile(
+  private static final Pattern ANIME_APPEND3      = Pattern.compile(
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND4     = Pattern.compile(
+  private static final Pattern ANIME_APPEND4      = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
 
@@ -113,8 +130,13 @@ public class TvShowEpisodeAndSeasonParser {
     // remove show name
     if (tvShowName != null && !tvShowName.isEmpty()) {
       // remove string like tvshow name (440, 24, ...)
-      basename = basename.replaceAll("(?i)^" + Pattern.quote(tvShowName) + "", "");
+      basename = basename.replaceAll("(?i)^[^ES]" + Pattern.quote(tvShowName), ""); // with our added space, but not prefixed with S/E
+      // "some fine show" would match with "some.fine-show"
+      String delimited = tvShowName.replaceAll("[ _.-]", "[ _.-]"); // replace all delimiters, with delimiters pattern ;)
+      basename = basename.replaceAll("(?i)^" + delimited, "");
     }
+
+    basename = StrgUtils.replaceUnicodeCharactersInverse(basename);
 
     basename = basename.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
     basename = basename.replaceFirst("[\\(\\[]\\d{4}[\\)\\]]", ""); // remove (xxxx) or [xxxx] as year
@@ -137,7 +159,7 @@ public class TvShowEpisodeAndSeasonParser {
     title = title.replaceAll("[epx_-]+(\\d{1,3})", "");
     title = title.replaceAll("episode[\\. _-]*(\\d{1,3})", "");
     title = title.replaceAll("(part|pt)[\\._\\s]+([MDCLXVI]+)", "");
-    title = title.replaceAll("(staffel|season|saison|series|temporada)[\\s_.-]*(\\d{1,4})", "");
+    title = title.replaceAll(SEASON_LONG.toString(), "");
     title = title.replaceAll("s(\\d{1,4})[ ]?((?:([epx_.-]+\\d{1,3})+))", "");
     title = title.replaceAll("(\\d{1,4})(?=x)((?:([epx]+\\d{1,3})+))", "");
 
@@ -291,6 +313,12 @@ public class TvShowEpisodeAndSeasonParser {
     result = parseSeasonMultiEP(result, basename + foldername);
     result = parseSeasonMultiEP2(result, basename + foldername);
     result = parseEpisodePattern(result, basename);
+
+    if (result.season == -1 && !StringUtils.isBlank(foldername)) {
+      // we couldn't find a season while using the long season pattern.
+      // But IF we have a foldername (in second run only) we can parse the short one here too
+      result = parseSeasonOnly(result, foldername);
+    }
 
     if (!result.episodes.isEmpty()) {
       return postClean(result);
@@ -535,6 +563,32 @@ public class TvShowEpisodeAndSeasonParser {
   private static EpisodeMatchingResult parseEpisodePattern(EpisodeMatchingResult result, String name) {
     Pattern regex;
     Matcher m;
+    // EpisodeNR-only parsing, when previous styles didn't find anything! (even with unicode slash / stacking style)
+    if (result.episodes.isEmpty()) {
+      regex = EPISODE_PATTERN_NR;
+      m = regex.matcher(name);
+      while (m.find()) {
+        int ep = 0;
+        try {
+          ep = Integer.parseInt(m.group(1));
+        }
+        catch (NumberFormatException nfe) {
+          // can not happen from regex since we only come here with a numeric chars
+        }
+        int max = 0;
+        try {
+          max = Integer.parseInt(m.group(2));
+        }
+        catch (NumberFormatException nfe) {
+          // can not happen from regex since we only come here with a numeric chars
+        }
+        if (ep > 0 && !result.episodes.contains(ep) && ep <= max) {
+          result.episodes.add(ep);
+          LOGGER.trace("add found EP '{}'", ep);
+        }
+      }
+    }
+
     // Episode-only parsing, when previous styles didn't find anything!
     if (result.episodes.isEmpty()) {
       regex = EPISODE_PATTERN_2;

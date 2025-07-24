@@ -94,10 +94,10 @@ public class MovieSetScrapeTask extends TmmThreadPool {
 
     @Override
     public void run() {
-      try {
-        MediaScraper mediaMetadataScraper = scrapeOptions.getMetadataScraper();
-        List<MediaScraper> artworkScrapers = scrapeOptions.getArtworkScrapers();
+      MediaScraper mediaMetadataScraper = scrapeOptions.getMetadataScraper();
+      List<MediaScraper> artworkScrapers = scrapeOptions.getArtworkScrapers();
 
+      try {
         MovieSetSearchAndScrapeOptions options = new MovieSetSearchAndScrapeOptions(scrapeOptions);
         options.setIds(movieSet.getIds());
 
@@ -119,8 +119,17 @@ public class MovieSetScrapeTask extends TmmThreadPool {
           movieSet.saveToDb();
         }
       }
+      catch (MissingIdException e) {
+        LOGGER.warn("Missing IDs for scraping movie set '{}' with '{}'", movieSet.getTitle(), mediaMetadataScraper.getId());
+      }
+      catch (ScrapeException e) {
+        LOGGER.error("Could not scrape movie set '{}' with '{}' - '{}'", movieSet.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.metadatamoviesetfailed",
+                new String[] { ":", e.getLocalizedMessage() }));
+      }
       catch (Exception e) {
-        LOGGER.error("getMetadata", e);
+        LOGGER.error("Unforeseen error in movie set scrape for '{}'", movieSet.getTitle(), e);
       }
     }
 
@@ -145,12 +154,16 @@ public class MovieSetScrapeTask extends TmmThreadPool {
           artwork.addAll(artworkProvider.getArtwork(options));
         }
         catch (MissingIdException ignored) {
-          // nothing to do
+          LOGGER.info("Missing IDs for scraping movie '{}' with '{}'", movieSet.getTitle(), scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not scrape movie set artwork of '{}' with '{}' - '{}'", movieSet.getTitle(), scraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.scrape.movieartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie set artwork scrape for '{}'", movieSet.getTitle(), e);
         }
       }
 

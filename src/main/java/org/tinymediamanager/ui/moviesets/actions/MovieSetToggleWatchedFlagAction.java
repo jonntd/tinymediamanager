@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.moviesets.actions;
 
 import java.awt.Cursor;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -40,7 +41,8 @@ import org.tinymediamanager.ui.moviesets.MovieSetUIModule;
 public class MovieSetToggleWatchedFlagAction extends TmmAction {
   public MovieSetToggleWatchedFlagAction() {
     putValue(NAME, TmmResourceBundle.getString("movie.togglewatchedflag"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override

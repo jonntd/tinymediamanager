@@ -57,6 +57,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowChangeSeasonArtworkAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowChangeToAbsoluteAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowCleanUpFilesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowClearImageCacheAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowCopyToAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDeleteAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadActorImagesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadMissingArtworkAction;
@@ -79,6 +80,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowRenamePreviewAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowResetNewFlagAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteEpisodeNfoAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteNfoAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowRewriteSeasonNfoAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeEpisodesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeMissingEpisodesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowScrapeNewItemsAction;
@@ -340,6 +342,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     editPopupMenu.add(createAndRegisterAction(TvShowToggleWatchedFlagAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowRewriteNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowReadNfoAction.class));
+    editPopupMenu.add(createAndRegisterAction(TvShowRewriteSeasonNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowRewriteEpisodeNfoAction.class));
     editPopupMenu.add(createAndRegisterAction(TvShowReadEpisodeNfoAction.class));
 
@@ -369,6 +372,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
 
     editPopupMenu.addSeparator();
     editPopupMenu.add(createAndRegisterAction(TvShowExportAction.class));
+    editPopupMenu.add(createAndRegisterAction(TvShowCopyToAction.class));
 
     // rename popup menu
     renamePopupMenu = new JPopupMenu(TmmResourceBundle.getString("Toolbar.rename"));
@@ -445,6 +449,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowChangeDatasourceAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowChangeSeasonArtworkAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteNfoAction.class));
+    enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteSeasonNfoAction.class));
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowRewriteEpisodeNfoAction.class));
     enhancededitPopupMenu.addSeparator();
     enhancededitPopupMenu.add(createAndRegisterAction(TvShowMediaInformationAction.class));
@@ -482,6 +487,7 @@ public class TvShowUIModule extends AbstractTmmUIModule {
 
     popupMenu.addSeparator();
     popupMenu.add(createAndRegisterAction(TvShowExportAction.class));
+    popupMenu.add(createAndRegisterAction(TvShowCopyToAction.class));
     popupMenu.add(createAndRegisterAction(TvShowOpenFolderAction.class));
 
     popupMenu.addSeparator();

@@ -323,7 +323,7 @@ public class ImageUtils {
         url = new Url(urlAsString);
       }
       catch (Exception e) {
-        LOGGER.error("downloading {} - {}", urlAsString, e.getMessage());
+        LOGGER.error("Error downloading '{}' - '{}'", urlAsString, e.getMessage());
         throw e;
       }
 
@@ -363,7 +363,7 @@ public class ImageUtils {
     }
     catch (AccessDeniedException e) {
       // propagate to UI by logging with error
-      LOGGER.error("ACCESS DENIED (download artwork) - '{}'", e.getMessage());
+      LOGGER.error("Error download artwork (ACCESS DENIED) - '{}'", e.getMessage());
       // re-throw
       throw e;
     }

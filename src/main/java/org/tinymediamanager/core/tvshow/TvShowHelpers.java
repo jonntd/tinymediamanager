@@ -36,7 +36,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
@@ -268,7 +268,7 @@ public class TvShowHelpers {
     try {
       Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(trailer.getUrl());
       if (matcher.matches()) {
-        YTDownloadTask task = new YTDownloadTask(trailer, TvShowModuleManager.getInstance().getSettings().getTrailerQuality(),
+        YtDownloadTask task = new YtDownloadTask(trailer, TvShowModuleManager.getInstance().getSettings().getTrailerQuality(),
             TvShowModuleManager.getInstance().getSettings().isUseYtDlp()) {
           @Override
           protected Path getDestinationWoExtension() {
@@ -299,9 +299,10 @@ public class TvShowHelpers {
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not start trailer download: {}", e.getMessage());
-      MessageManager.instance.pushMessage(
-          new Message(Message.MessageLevel.ERROR, tvshow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+      LOGGER.error("Could not start trailer download for '{}' - '{}'", tvshow.getTitle(), e.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(Message.MessageLevel.ERROR, tvshow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 

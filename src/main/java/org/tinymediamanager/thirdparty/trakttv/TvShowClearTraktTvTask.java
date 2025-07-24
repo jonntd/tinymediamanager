@@ -45,7 +45,7 @@ public class TvShowClearTraktTvTask extends TmmTask {
       traktTV.clearTraktTvShows();
     }
     catch (Exception e) {
-      LOGGER.error("Could not sync to trakt - '{}'", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
     }
   }
 }

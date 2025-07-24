@@ -23,8 +23,8 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.w3c.dom.Element;
 
@@ -51,7 +51,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
   private void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(tvShow.getTop250()));
-    Element set = getSingleElementByTag("ratings");
+    Element set = NfoUtils.getSingleElementByTag(document, "ratings");
     if (set != null) {
       root.insertBefore(top250, set);
     }
@@ -59,7 +59,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
 
   @Override
   protected void addTrailer() {
-    if (TvShowModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(tvShow.getTrailer())) {
         if (mediaTrailer.getInNfo()) {
@@ -88,7 +88,7 @@ public class TvShowToXbmcConnector extends TvShowGenericXmlConnector {
         return "plugin://plugin.video.hdtrailers_net/video/" + matcher.group(1) + "/" + URLEncoder.encode(trailer.getUrl(), "UTF-8");
       }
       catch (Exception e) {
-        LOGGER.error("failed to escape '{}'", trailer.getUrl());
+        LOGGER.debug("failed to escape '{}'", trailer.getUrl());
       }
     }
     // everything else is stored directly

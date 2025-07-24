@@ -105,7 +105,7 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Problem in HTTP logging detected: {}", e.getMessage());
+      LOGGER.debug("Problem in HTTP logging detected: {}", e.getMessage());
     }
 
     long startNs = System.nanoTime();
@@ -174,7 +174,7 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Problem in HTTP logging detected: {}", e.getMessage());
+      LOGGER.debug("Problem in HTTP logging detected: {}", e.getMessage());
     }
     finally {
       if (buffer != null) {
@@ -269,6 +269,7 @@ public class TmmHttpLoggingInterceptor implements Interceptor {
     return url.replaceAll("api_key=\\w+", "api_key=<API_KEY>")
         .replaceAll("api/\\d+\\w+", "api/<API_KEY>")
         .replaceAll("apikey=\\w+", "apikey=<API_KEY>")
+        .replaceAll("json\\/([124567890]|\\d\\d+)\\/", "json/<API_KEY>") // TSDB; ignore 3 as free key
         .replaceAll("client=\\w+", "client=<API_KEY>")
         .replaceAll("clientver=\\w+", "clientver=<API_KEY>");
   }

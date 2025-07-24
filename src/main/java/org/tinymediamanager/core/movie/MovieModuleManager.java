@@ -173,7 +173,7 @@ public final class MovieModuleManager implements ITmmModule {
       TmmHttpServer.getInstance().createContext("movie", new MovieCommandHandler());
     }
     catch (Exception e) {
-      LOGGER.warn("could not register movie API - '{}'", e.getMessage());
+      LOGGER.warn("Could not register movie API - '{}'", e.getMessage());
     }
   }
 
@@ -198,7 +198,7 @@ public final class MovieModuleManager implements ITmmModule {
       if (mvStore != null && !mvStore.isClosed()) {
         mvStore.close();
       }
-      LOGGER.error("Could not open database file: {}", e.getMessage());
+      LOGGER.error("Could not open database file '{}' - '{}'", databaseFile, e.getMessage());
     }
 
     try {
@@ -209,7 +209,7 @@ public final class MovieModuleManager implements ITmmModule {
       LOGGER.error("Could not move corrupted database to '{}' - '{}", MOVIE_DB + ".corrupted", e.getMessage());
     }
 
-    LOGGER.info("try to restore the database from the backups");
+    LOGGER.info("Try to restore the database from backups");
 
     // get backups
     List<Path> backups = Utils.listFiles(Paths.get(Globals.BACKUP_FOLDER));
@@ -232,6 +232,7 @@ public final class MovieModuleManager implements ITmmModule {
         Utils.unzipFile(backup, Paths.get("/", "data", MOVIE_DB), databaseFile);
         loadDatabase(databaseFile);
         startupMessages.add(TmmResourceBundle.getString("movie.loaddb.failed.restore"));
+        LOGGER.info("Restored database from backup: '{}'", backup);
 
         return;
       }
@@ -239,11 +240,11 @@ public final class MovieModuleManager implements ITmmModule {
         if (mvStore != null && !mvStore.isClosed()) {
           mvStore.close();
         }
-        LOGGER.error("Could not open database file from backup: {}", e.getMessage());
+        LOGGER.error("Could not open database file from backup - '{}'", e.getMessage());
       }
     }
 
-    LOGGER.info("starting over with an empty database file");
+    LOGGER.info("Starting over with an empty database file");
 
     try {
       Utils.deleteFileSafely(databaseFile);
@@ -251,7 +252,7 @@ public final class MovieModuleManager implements ITmmModule {
       startupMessages.add(TmmResourceBundle.getString("movie.loaddb.failed"));
     }
     catch (Exception e1) {
-      LOGGER.error("could not move old database file and create a new one: {}", e1.getMessage());
+      LOGGER.error("Could not move old database file and create a new one - '{}'", e1.getMessage());
     }
   }
 
@@ -268,7 +269,7 @@ public final class MovieModuleManager implements ITmmModule {
             return;
           }
 
-          LOGGER.error("database corruption detected - try to recover");
+          LOGGER.error("Database ({}) corruption detected - try to recover", databaseFile);
 
           // try to in-memory fix the DB
           mvStore.close();
@@ -405,7 +406,7 @@ public final class MovieModuleManager implements ITmmModule {
           }
         }
         catch (Exception e) {
-          LOGGER.warn("could not store '{}' - '{}'", entry.getValue().getClass().getName(), e.getMessage());
+          LOGGER.debug("could not store '{}' - '{}'", entry.getValue().getClass().getName(), e.getMessage());
         }
         finally {
           pendingChanges.remove(entry.getValue());
@@ -432,7 +433,7 @@ public final class MovieModuleManager implements ITmmModule {
   public void dump(Movie movie) {
     String d = getMovieJsonFromDB(movie);
     if (!d.isEmpty()) {
-      LOGGER.info("Dumping Movie: {}\n{}", movie.getDbId(), d);
+      LOGGER.debug("Dumping Movie: {}\n{}", movie.getDbId(), d);
     }
   }
 
@@ -445,7 +446,7 @@ public final class MovieModuleManager implements ITmmModule {
   public void dump(MovieSet movieSet) {
     String d = getMovieSetJsonFromDB(movieSet);
     if (!d.isEmpty()) {
-      LOGGER.info("Dumping MovieSet: {}\n{}", movieSet.getDbId(), d);
+      LOGGER.debug("Dumping MovieSet: {}\n{}", movieSet.getDbId(), d);
     }
   }
 
@@ -463,7 +464,7 @@ public final class MovieModuleManager implements ITmmModule {
       return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
     }
     catch (Exception e) {
-      LOGGER.error("Cannot parse JSON!", e);
+      LOGGER.debug("Cannot parse JSON!", e);
     }
     return "";
   }
@@ -482,7 +483,7 @@ public final class MovieModuleManager implements ITmmModule {
       return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
     }
     catch (Exception e) {
-      LOGGER.error("Cannot parse JSON!", e);
+      LOGGER.debug("Cannot parse JSON!", e);
     }
     return "";
   }

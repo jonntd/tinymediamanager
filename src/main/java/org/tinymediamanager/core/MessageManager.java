@@ -24,16 +24,23 @@ import java.util.List;
  * @author Manuel Laggner
  */
 public class MessageManager {
-  public static final MessageManager   instance;
+  private static MessageManager        instance = null;
 
   private final List<IMessageListener> listeners;
 
-  static {
+  public static void init() {
     instance = new MessageManager();
   }
 
   private MessageManager() {
     listeners = new ArrayList<>();
+  }
+
+  public static MessageManager getInstance() {
+    if (instance == null) {
+      init();
+    }
+    return instance;
   }
 
   /**

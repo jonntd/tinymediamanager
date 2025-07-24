@@ -95,7 +95,7 @@ public class FanartTvTvShowArtworkProvider extends FanartTvMetadataProvider impl
     }
 
     if (images == null) {
-      LOGGER.info("got no result");
+      LOGGER.debug("got no result");
       return returnArtwork;
     }
     if (!images.isSuccessful()) {
@@ -106,7 +106,7 @@ public class FanartTvTvShowArtworkProvider extends FanartTvMetadataProvider impl
       catch (IOException e) {
         // ignore
       }
-      LOGGER.warn("request was not successful: HTTP/{} - {}", images.code(), message);
+      LOGGER.debug("request was not successful: HTTP/{} - {}", images.code(), message);
       return returnArtwork;
     }
 

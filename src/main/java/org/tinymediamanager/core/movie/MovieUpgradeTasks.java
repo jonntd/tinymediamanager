@@ -114,6 +114,13 @@ public class MovieUpgradeTasks extends UpgradeTasks {
       module.setDbVersion(5005);
     }
 
+    if (module.getDbVersion() < 5201) {
+      // crew migration - just re-write the DB
+      movieList.getMovies().forEach(this::registerForSaving);
+
+      module.setDbVersion(5201);
+    }
+
     saveAll();
   }
 

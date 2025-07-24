@@ -197,8 +197,9 @@ class ExternalDevicesSettingsPanel extends JPanel {
             KodiRPC.getInstance().connect(c);
           }
           catch (Exception cex) {
-            LOGGER.error("Error connecting to Kodi instance! {}", cex.getMessage());
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
+            LOGGER.error("Error connecting to Kodi instance - '{}'", cex.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, "KodiRPC", "Could not connect to Kodi: " + cex.getMessage()));
           }
         });
         panelKodi.add(btnKodiConnect, "cell 3 0,growx");

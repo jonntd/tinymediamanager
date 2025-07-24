@@ -597,12 +597,16 @@ public class MediaFileHelper {
       // 720x576 (PAL) (handbrake sometimes encode it to a max of 776 x 592)
       return VIDEO_FORMAT_576P;
     }
-    else if (w <= blur(1024) && h <= blur(576)) { // Wide 576p 1024×576 16:9
-      return VIDEO_FORMAT_576P;
-    }
     else if (w <= blur(960) && h <= blur(544)) {
       // 960x540 (sometimes 544 which is multiple of 16)
       return VIDEO_FORMAT_540P;
+    }
+    else if (w <= blur(912) && h <= blur(384)) {
+      // ~960/400 down to 912x384 cropped 16:9
+      return VIDEO_FORMAT_540P;
+    }
+    else if (w <= blur(1024) && h <= blur(576)) { // Wide 576p 1024×576 16:9
+      return VIDEO_FORMAT_576P;
     }
     else if (w <= blur(1280) && h <= blur(720)) { // 720p Widescreen 16:9
       return VIDEO_FORMAT_720P;
@@ -906,7 +910,7 @@ public class MediaFileHelper {
           parseMediainfoSnapshot(mediaFile, mediaInfoFiles); // FIXME: only the first!
           // sanity check of invalid XMLs
           if (mediaInfoFiles.get(0).getSnapshot() == null || mediaInfoFiles.get(0).getSnapshot().isEmpty()) {
-            LOGGER.warn("Reading MediaInfoXML did not return something useful...");
+            LOGGER.debug("Reading MediaInfoXML did not return something useful...");
             mediaInfoFiles.clear();
           }
         }
@@ -1567,7 +1571,7 @@ public class MediaFileHelper {
       prefix = "VTS_" + String.format("%02d", main.getVtsn());
     }
     catch (IOException e) {
-      LOGGER.warn("Error parsing DVD: {} - Maybe just a MediaIfno XML?", ifomif.getFileAsPath(), e.getMessage());
+      LOGGER.warn("Error parsing DVD: '{}' - Maybe it is just a MediaInfo XML?", ifomif.getFileAsPath(), e.getMessage());
       // try our proven fallback
       // maybe we got the data from XML, so no real files here (but already with MI)
       // so we have to find the biggest VOB
@@ -1661,7 +1665,7 @@ public class MediaFileHelper {
           }
         }
         catch (Exception e) {
-          LOGGER.warn("Could not parse Bluray playlist file: {} - maybe a -mediainfo.xml?", mif.getFileAsPath(), e.getMessage());
+          LOGGER.warn("Could not parse Bluray playlist file: '{}' - Maybe it is just a MediaInfo XML?", mif.getFileAsPath(), e.getMessage());
         }
       }
     }
@@ -2553,7 +2557,7 @@ public class MediaFileHelper {
       mediaFile.setAspectRatio((float) mediaFile.getVideoWidth() * par / mediaFile.getVideoHeight());
     }
     catch (Exception e) {
-      LOGGER.warn("Could not parse AspectRatio '{}'", parString);
+      LOGGER.info("Could not parse AspectRatio from '{}' - '{}'", parString, e.getMessage());
     }
 
     mediaFile.setVideo3DFormat(parse3DFormat(mediaFile, miSnapshot));
@@ -2661,7 +2665,7 @@ public class MediaFileHelper {
       return scanner.next();
     }
     catch (Exception e) {
-      LOGGER.error("could not parse string {} with a Scanner: {}", string, e.getMessage());
+      LOGGER.debug("could not parse string {} with a Scanner: {}", string, e.getMessage());
     }
     return "";
   }
@@ -2671,7 +2675,7 @@ public class MediaFileHelper {
 
     if (miSnapshot == null) {
       // MI could not be opened
-      LOGGER.error("error getting MediaInfo for {}", mediaFile.getFilename());
+      LOGGER.error("Error getting MediaInfo for '{}'", mediaFile.getFilename());
       // set container format to do not trigger it again
       mediaFile.setContainerFormat(mediaFile.getExtension());
       return;
@@ -2879,7 +2883,7 @@ public class MediaFileHelper {
         }
       }
       else {
-        LOGGER.warn("3D detected, but correct impl could not be detected!");
+        LOGGER.debug("3D detected for '{}', but correct implementation could not be detected!", mediaFile.getFile());
         video3DFormat = VIDEO_3D;
       }
     }

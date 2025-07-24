@@ -1000,7 +1000,7 @@ public class TmmTreeTable extends TmmTable {
    * @param <E>
    *          the type of tree node
    */
-  private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel {
+  private class TmmTreeModelConnector<E extends TmmTreeNode> extends TmmTreeModel<E> {
 
     /**
      * Create a new instance of the TmmTreeModel for the given TmmTree and data provider

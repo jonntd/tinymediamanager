@@ -195,7 +195,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
     }
     catch (Exception e) {
       getLogger().error("saveSettings", e);
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
+      MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
     }
     finally {
       if (writer != null) {
@@ -204,7 +204,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
         }
         catch (Exception e) {
           getLogger().error("saveSettings", e);
-          MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.savesettingserror"));
         }
       }
     }
@@ -233,7 +233,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
         Files.createDirectories(cfgFolder);
       }
       catch (IOException e) {
-        LOGGER.warn("could not create config folder: {}", e.getMessage());
+        LOGGER.error("Could not create config folder '{}' - '{}'", e.getMessage());
       }
     }
 
@@ -253,9 +253,9 @@ public abstract class AbstractSettings extends AbstractModelObject {
     catch (Exception e) {
       if (!(e instanceof FileNotFoundException)) {
         // log only if there are other Exceptions than the FileNotFoundException
-        LOGGER.error("failed loading settings", e);
+        LOGGER.error("Failed loading settings - '{}'", e.getMessage());
       }
-      LOGGER.warn("could not load settings - creating default ones...");
+      LOGGER.warn("Could not load settings - creating default ones...");
 
       try {
         instance = clazz.getDeclaredConstructor().newInstance();
@@ -265,8 +265,8 @@ public abstract class AbstractSettings extends AbstractModelObject {
         instance.writeDefaultSettings();
       }
       catch (Throwable e2) {
-        LOGGER.error("getInstance", e2);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.loadsettingserror"));
+        LOGGER.debug("getInstance", e2);
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "tmm.settings", "message.config.loadsettingserror"));
       }
     }
 

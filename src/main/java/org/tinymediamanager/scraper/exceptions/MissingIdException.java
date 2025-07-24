@@ -16,6 +16,8 @@
 
 package org.tinymediamanager.scraper.exceptions;
 
+import java.util.ResourceBundle;
+
 /**
  * the class {@link MissingIdException} indicates that there was no matching ID for the scrape
  *
@@ -38,5 +40,20 @@ public class MissingIdException extends ScrapeException {
 
   public String[] getIds() {
     return ids;
+  }
+
+  @Override
+  public String getMessage() {
+    return "No ID available for scraping";
+  }
+
+  @Override
+  public String getLocalizedMessage() {
+    try {
+      return ResourceBundle.getBundle("messages").getString("missingid");
+    }
+    catch (Exception e) {
+      return getMessage();
+    }
   }
 }

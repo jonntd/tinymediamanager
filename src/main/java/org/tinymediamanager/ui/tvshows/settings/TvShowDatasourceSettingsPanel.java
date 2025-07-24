@@ -151,12 +151,19 @@ class TvShowDatasourceSettingsPanel extends JPanel {
     });
 
     btnRemoveSkipFolder.addActionListener(e -> {
-      int row = listSkipFolder.getSelectedIndex();
-      if (row != -1) { // nothing selected
-        String ingore = settings.getSkipFolder().get(row);
-        settings.removeSkipFolder(ingore);
-        panelIgnore.revalidate();
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listSkipFolder);
+
+      for (int indexRow : indexRows) {
+        try {
+          String skipFolder = settings.getSkipFolder().get(indexRow);
+          settings.removeSkipFolder(skipFolder);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
+
+      panelIgnore.revalidate();
     });
 
     btnAddBadWord.addActionListener(e -> {
@@ -174,10 +181,16 @@ class TvShowDatasourceSettingsPanel extends JPanel {
     });
 
     btnRemoveBadWord.addActionListener(arg0 -> {
-      int row = listBadWords.getSelectedIndex();
-      if (row != -1) {
-        String badWord = TvShowModuleManager.getInstance().getSettings().getBadWord().get(row);
-        TvShowModuleManager.getInstance().getSettings().removeBadWord(badWord);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listBadWords);
+
+      for (int indexRow : indexRows) {
+        try {
+          String badWord = settings.getBadWord().get(indexRow);
+          settings.removeBadWord(badWord);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
 

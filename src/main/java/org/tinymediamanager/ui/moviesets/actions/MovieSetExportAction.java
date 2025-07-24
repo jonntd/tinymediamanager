@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.ui.moviesets.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -55,7 +56,8 @@ public class MovieSetExportAction extends TmmAction {
     putValue(LARGE_ICON_KEY, IconManager.EXPORT);
     putValue(SMALL_ICON, IconManager.EXPORT);
     putValue(NAME, TmmResourceBundle.getString("movieset.export"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_X, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override
@@ -97,7 +99,7 @@ public class MovieSetExportAction extends TmmAction {
           TmmTaskManager.getInstance().addMainTask(new ExportTask(TmmResourceBundle.getString("movieset.export"), exporter, movieSets, exportPath));
         }
         catch (Exception e) {
-          LOGGER.error("Error exporting movie sets: ", e);
+          LOGGER.error("Error exporting movie sets - '{}'", e.getMessage());
         }
         setVisible(false);
       }

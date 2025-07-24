@@ -318,11 +318,15 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
           options.setLanguage(language);
           searchResults.addAll(subtitleProvider.search(options));
         }
-        catch (MissingIdException ignored) {
-          LOGGER.debug("missing id for scraper {}", scraper.getId());
+        catch (MissingIdException e) {
+          LOGGER.info("Missing IDs for scraping movie trailers of '{}' with '{}'", movieToScrape.getTitle(), scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getSubtitles", e);
+          LOGGER.error("Could not scrape movie subtitles of '{}' with '{}' - '{}'", movieToScrape.getTitle(), scraper.getId(), e.getMessage());
+          message = e.getMessage();
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie subtitle scrape for '{}'", movieToScrape.getTitle(), e);
           message = e.getMessage();
         }
       }

@@ -34,8 +34,10 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
@@ -54,6 +56,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -63,6 +66,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -299,11 +303,12 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
-        panelSearchDetail.setLayout(new MigLayout("", "[150lp:15%:25%,grow][300lp:500lp,grow]", "[][][150lp:300lp,grow][]"));
+        panelSearchDetail
+            .setLayout(new MigLayout("", "[150lp:15%:25%,grow][15lp!][300lp:500lp,grow]", "[][][15lp!][150lp:25%:50%,grow][100lp:25%:35%,grow]"));
         {
           lblTtitle = new JLabel("");
           TmmFontHelper.changeFont(lblTtitle, 1.166, Font.BOLD);
-          panelSearchDetail.add(lblTtitle, "cell 1 0,wmin 0");
+          panelSearchDetail.add(lblTtitle, "cell 2 0,wmin 0");
         }
         {
           lblTvShowPoster = new ImageLabel(false);
@@ -312,11 +317,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         }
         {
           lblOriginalTitle = new JLabel("");
-          panelSearchDetail.add(lblOriginalTitle, "cell 1 1,wmin 0");
+          panelSearchDetail.add(lblOriginalTitle, "cell 2 1,wmin 0");
         }
         {
           JScrollPane scrollPane = new NoBorderScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 1 2,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 3,grow");
 
           taOverview = new ReadOnlyTextArea();
           scrollPane.setViewportView(taOverview);
@@ -342,7 +347,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           btnCompareEpisodeGroup.setVisible(false);
           panelEpisodeGroup.add(btnCompareEpisodeGroup);
 
-          panelSearchDetail.add(panelEpisodeGroup, "cell 1 3,aligny bottom");
+          panelSearchDetail.add(panelEpisodeGroup, "cell 2 4,aligny bottom");
         }
       }
     }
@@ -426,7 +431,9 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         okButton.setActionCommand("OK");
         okButton.setIcon(IconManager.APPLY_INV);
         okButton.addActionListener(this);
-        addDefaultButton(okButton);
+        getRootPane().registerKeyboardAction(this, "OK",
+            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        addButton(okButton);
       }
     }
 
@@ -513,7 +520,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
           }
         }
         catch (Exception ex) {
-          LOGGER.warn(ex.getMessage());
+          LOGGER.debug("scraping", ex);
         }
       }
     });
@@ -541,7 +548,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         if (model != TvShowChooserModel.emptyResult) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.threadcrashed"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "TvShowChooser", "message.scrape.threadcrashed"));
             return;
           }
 
@@ -616,7 +623,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
                 ratingMediaMetadata.setIds(md.getIds());
 
                 ratingMediaMetadata.setRatings(ratingsFromMd);
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                    TvShowModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.TV_SHOW))) {
                   if (!ratingMediaMetadata.getRatings().contains(rating)) {
                     ratingMediaMetadata.addRating(rating);
                   }

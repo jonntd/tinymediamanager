@@ -28,13 +28,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.EmptyHashMap;
 import org.tinymediamanager.core.IPrintable;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * The Class Actor. This class represents actors/cast
@@ -42,8 +45,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author Manuel Laggner
  */
 public class Person extends AbstractModelObject implements IPrintable {
-  public static final String ACTOR_DIR    = ".actors";
-  public static final String PRODUCER_DIR = ".producers";
+  public static final String ACTOR_DIR = ".actors";
 
   public enum Type {
     ACTOR,
@@ -51,7 +53,21 @@ public class Person extends AbstractModelObject implements IPrintable {
     WRITER,
     PRODUCER,
     GUEST, // guest actor on episode level
-    OTHER
+    COMPOSER,
+    EDITOR,
+    CAMERA,
+    OTHER;
+
+    @Override
+    public String toString() {
+      try {
+        return TmmResourceBundle.getString("Person." + name());
+      }
+      catch (Exception ignored) {
+        // fallback
+        return this.name();
+      }
+    }
   }
 
   @JsonProperty
@@ -65,6 +81,7 @@ public class Person extends AbstractModelObject implements IPrintable {
   @JsonProperty
   private String              profileUrl = "";
   @JsonProperty
+  @JsonDeserialize(as = EmptyHashMap.class)
   private Map<String, Object> ids        = null;
 
   /**
@@ -178,7 +195,7 @@ public class Person extends AbstractModelObject implements IPrintable {
 
     // remove ID, if empty/0/null
     // if we only skipped it, the existing entry will stay although someone changed it to empty.
-    String v = StringUtils.strip(String.valueOf(value));
+    String v = String.valueOf(value).strip();
     if ("".equals(v) || "0".equals(v) || "null".equals(v)) {
       ids.remove(key);
     }

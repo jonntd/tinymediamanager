@@ -70,7 +70,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
         MovieMeterMovieMetadataProvider.class.getResource("/org/tinymediamanager/scraper/moviemeter_nl.png"));
 
     // configure/load settings
-    info.getConfig().addText("apiKey", "", true);
+    info.getConfig().addText(MediaProviderInfo.API_KEY, "", true);
     info.getConfig().addBoolean("scrapeLanguageNames", true);
     info.getConfig().load();
 
@@ -98,7 +98,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
         api = new MovieMeter();
       }
       catch (Exception e) {
-        LOGGER.error("MoviemeterMetadataProvider", e);
+        LOGGER.debug("MoviemeterMetadataProvider", e);
         throw new ScrapeException(e);
       }
     }
@@ -144,7 +144,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
     String imdbId = options.getImdbId();
 
     if (!MediaIdUtil.isValidImdbId(imdbId) && mmId == 0) {
-      LOGGER.warn("not possible to scrape from Moviemeter.bl - no mmId/imdbId found");
+      LOGGER.debug("not possible to scrape from Moviemeter.nl - no mmId/imdbId found");
       throw new MissingIdException(MediaMetadata.IMDB, providerInfo.getId());
     }
 
@@ -158,7 +158,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
           fd = api.getFilmService().getMovieInfo(mmId).execute().body();
         }
         catch (Exception e) {
-          LOGGER.warn("Error getting movie via MovieMeter id: {}", e.getMessage());
+          LOGGER.debug("Error getting movie via MovieMeter id: {}", e.getMessage());
           savedException = e;
         }
       }
@@ -168,7 +168,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
           fd = api.getFilmService().getMovieInfoByImdbId(imdbId).execute().body();
         }
         catch (Exception e) {
-          LOGGER.warn("Error getting movie via IMDB id: {}", e.getMessage());
+          LOGGER.debug("Error getting movie via IMDB id: {}", e.getMessage());
           savedException = e;
         }
       }
@@ -180,7 +180,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
     }
 
     if (fd == null) {
-      LOGGER.warn("did not find anything");
+      LOGGER.debug("did not find anything");
       throw new NothingFoundException();
     }
 
@@ -281,7 +281,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
           LOGGER.debug("found result with IMDB id");
         }
         catch (Exception e) {
-          LOGGER.warn("Error searching by IMDB id: {}", e.getMessage());
+          LOGGER.debug("Error searching by IMDB id: {}", e.getMessage());
           savedException = e;
         }
       }
@@ -296,7 +296,7 @@ public class MovieMeterMovieMetadataProvider implements IMovieMetadataProvider, 
           LOGGER.debug("found {} results", moviesFound.size());
         }
         catch (Exception e) {
-          LOGGER.warn("Error searching: {}", e.getMessage());
+          LOGGER.debug("Error searching: {}", e.getMessage());
           savedException = e;
         }
       }

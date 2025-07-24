@@ -33,7 +33,7 @@ import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.imdb.ImdbMovieTrailerProvider;
@@ -191,7 +191,7 @@ public class MovieHelpers {
     try {
       Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(trailer.getUrl());
       if (matcher.matches()) {
-        YTDownloadTask task = new YTDownloadTask(trailer, MovieModuleManager.getInstance().getSettings().getTrailerQuality(),
+        YtDownloadTask task = new YtDownloadTask(trailer, MovieModuleManager.getInstance().getSettings().getTrailerQuality(),
             MovieModuleManager.getInstance().getSettings().isUseYtDlp()) {
           @Override
           protected Path getDestinationWoExtension() {
@@ -221,8 +221,8 @@ public class MovieHelpers {
       }
     }
     catch (Exception e) {
-      LOGGER.error("could not start trailer download: {}", e.getMessage());
-      MessageManager.instance
+      LOGGER.error("Could not start trailer download - '{}'", e.getMessage());
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, movie, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
     }
   }

@@ -59,7 +59,7 @@ class KodiScraperParser {
       xml = parser.parse(stream);
     }
     catch (SAXException e) {
-      LOGGER.warn("Error parsing " + scraperFile + " - trying fallback");
+      LOGGER.debug("Error parsing " + scraperFile + " - trying fallback");
       // eg FilmAffinity.com scraper
       // replace all known entities with their unicode notation
       // this fixes the "entity 'Iacute' was referenced, but not declared" parsing problems, since we do not have to add doctype entity declarations
@@ -133,7 +133,7 @@ class KodiScraperParser {
           regexp.setExpression(exp);
         }
         catch (Exception e) {
-          LOGGER.warn("unparseable expression! " + container);
+          LOGGER.debug("unparseable expression! " + container);
           // happens here (kino.de) - the last empty expression.
           // maybe no RegExp around?
           //
@@ -208,7 +208,7 @@ class KodiScraperParser {
             }
           }
           catch (Exception e) {
-            LOGGER.error("problem parsing scraper function", e);
+            LOGGER.debug("problem parsing scraper function", e);
           }
         }
       }

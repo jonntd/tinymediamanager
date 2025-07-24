@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -50,8 +49,8 @@ import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.scraper.http.StreamingUrl;
 import org.tinymediamanager.scraper.http.Url;
-import org.tinymediamanager.thirdparty.yt.YTDownloader;
 import org.tinymediamanager.thirdparty.yt.YtDlp;
+import org.tinymediamanager.thirdparty.yt.YtDownloader;
 
 import com.github.kiulian.downloader.downloader.request.RequestVideoInfo;
 import com.github.kiulian.downloader.downloader.response.Response;
@@ -69,9 +68,9 @@ import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
  *
  * @author Wolfgang Janes
  */
-public abstract class YTDownloadTask extends TmmTask {
+public abstract class YtDownloadTask extends TmmTask {
 
-  private static final Logger  LOGGER            = LoggerFactory.getLogger(YTDownloadTask.class);
+  private static final Logger  LOGGER            = LoggerFactory.getLogger(YtDownloadTask.class);
   private static final int     MAX_CHUNK_SIZE    = 10 * 1024 * 1024;                             // 8M
 
   private final MediaTrailer   mediaTrailer;
@@ -87,7 +86,7 @@ public abstract class YTDownloadTask extends TmmTask {
   private long                 bytesDonePrevious = 0;
   private double               speed             = 0;
 
-  protected YTDownloadTask(MediaTrailer mediaTrailer, TrailerQuality desiredQuality, boolean useYtDlp) {
+  protected YtDownloadTask(MediaTrailer mediaTrailer, TrailerQuality desiredQuality, boolean useYtDlp) {
     super(TmmResourceBundle.getString("trailer.download") + " - " + mediaTrailer.getName(), 100, TaskType.BACKGROUND_TASK);
     this.mediaTrailer = mediaTrailer;
     this.desiredQuality = desiredQuality;
@@ -117,12 +116,10 @@ public abstract class YTDownloadTask extends TmmTask {
     }
 
     try {
-      String id = "";
+      YtDownloader downloader = YtDownloader.getInstance();
+
       // get the youtube id
-      Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(mediaTrailer.getUrl());
-      if (matcher.matches()) {
-        id = matcher.group(5);
-      }
+      String id = downloader.extractYoutubeId(mediaTrailer.getUrl());
 
       if (StringUtils.isBlank(id)) {
         LOGGER.debug("Could not download trailer: no id {}", mediaTrailer);
@@ -134,7 +131,6 @@ public abstract class YTDownloadTask extends TmmTask {
         return;
       }
 
-      YTDownloader downloader = new YTDownloader();
       Response<VideoInfo> videoInfo = downloader.getVideoInfo(new RequestVideoInfo(id));
       if (!videoInfo.ok()) {
         if (videoInfo.error() != null) {
@@ -173,10 +169,11 @@ public abstract class YTDownloadTask extends TmmTask {
       }
     }
     catch (Exception | Error e) { // Error due to some AssertionErrors which may be thrown by the mp4parser
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.downloadfailed",
-          new String[] { getMediaEntityToAdd().getTitle() }));
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.downloadfailed",
+              new String[] { getMediaEntityToAdd().getTitle() }));
       setState(TaskState.FAILED);
-      LOGGER.error("download of Trailer {} failed", mediaTrailer.getUrl());
+      LOGGER.error("Download of Trailer '{}' failed - '{}'", mediaTrailer.getUrl(), e.getMessage());
       LOGGER.debug("trailer download - '{}'", e.getMessage());
     }
   }
@@ -448,9 +445,10 @@ public abstract class YTDownloadTask extends TmmTask {
     MediaEntity mediaEntity = getMediaEntityToAdd();
 
     if (videoFormat == null || audioFormat == null) {
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.unsupported",
-          new String[] { mediaEntity.getTitle() }));
-      LOGGER.error("Could not download movieTrailer for {}", mediaEntity.getTitle());
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, "Youtube trailer downloader", "message.trailer.unsupported",
+              new String[] { mediaEntity.getTitle() }));
+      LOGGER.error("Could not download movie trailer for '{}' - no streams found", mediaEntity.getTitle());
       setState(TaskState.FAILED);
       return;
     }
@@ -464,7 +462,7 @@ public abstract class YTDownloadTask extends TmmTask {
         return download(videoFormat);
       }
       catch (Exception e) {
-        LOGGER.error("Could not download video stream: {}", e.getMessage());
+        LOGGER.error("Could not download video stream of trailer for '{}' - '{}'", mediaEntity.getTitle(), e.getMessage());
         setState(TaskState.FAILED);
         return null;
       }
@@ -476,7 +474,7 @@ public abstract class YTDownloadTask extends TmmTask {
         return download(audioFormat);
       }
       catch (Exception e) {
-        LOGGER.error("Could not download audio stream: {}", e.getMessage());
+        LOGGER.error("Could not download audio stream of trailer for '{}' - '{}'", mediaEntity.getTitle(), e.getMessage());
         setState(TaskState.FAILED);
         return null;
       }
@@ -594,7 +592,7 @@ public abstract class YTDownloadTask extends TmmTask {
           while ((count = bis.read(buffer, 0, buffer.length)) != -1) {
             if (cancel) {
               Thread.currentThread().interrupt();
-              LOGGER.info("download of {} aborted", url);
+              LOGGER.debug("download of {} aborted", url);
               return null;
             }
 
@@ -609,7 +607,7 @@ public abstract class YTDownloadTask extends TmmTask {
     }
     catch (AccessDeniedException e) {
       // propagate to UI by logging with error
-      LOGGER.error("ACCESS DENIED (writing trailer) - '{}'", e.getMessage());
+      LOGGER.error("ACCESS DENIED (writing trailer) for '{}' - '{}'", outputFile, e.getMessage());
       // re-throw
       throw e;
     }

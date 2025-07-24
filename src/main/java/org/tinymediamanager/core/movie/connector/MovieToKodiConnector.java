@@ -28,10 +28,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
-import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.w3c.dom.Element;
@@ -93,14 +93,16 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addThumb() {
-    addThumb(MediaFileType.POSTER, "poster");
-    addThumb(MediaFileType.BANNER, "banner");
-    addThumb(MediaFileType.CLEARART, "clearart");
-    addThumb(MediaFileType.CLEARLOGO, "clearlogo");
-    addThumb(MediaFileType.DISC, "discart");
-    addThumb(MediaFileType.THUMB, "landscape");
-    addThumb(MediaFileType.KEYART, "keyart");
-    addThumb(MediaFileType.LOGO, "logo");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.POSTER, "poster");
+      addThumb(MediaFileType.BANNER, "banner");
+      addThumb(MediaFileType.CLEARART, "clearart");
+      addThumb(MediaFileType.CLEARLOGO, "clearlogo");
+      addThumb(MediaFileType.DISC, "discart");
+      addThumb(MediaFileType.THUMB, "landscape");
+      addThumb(MediaFileType.KEYART, "keyart");
+      addThumb(MediaFileType.LOGO, "logo");
+    }
   }
 
   protected void addThumb(MediaFileType type, String aspect) {
@@ -120,33 +122,35 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = movie.getArtworkUrl(MediaFileType.FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = movie.getArtworkUrl(MediaFileType.FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    // extrafanart
-    fanartUrls.addAll(movie.getExtraFanarts());
+      // extrafanart
+      fanartUrls.addAll(movie.getExtraFanarts());
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 
   @Override
   protected void addTrailer() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
 
       for (MediaTrailer mediaTrailer : new ArrayList<>(movie.getTrailer())) {
@@ -234,6 +238,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
    */
   @Override
   protected void addVotes() {
+    // do nothing, votes are now in the ratings tag
   }
 
   /**
@@ -242,7 +247,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
   protected void addEpbookmark() {
     Element epbookmark = document.createElement("epbookmark");
 
-    Element year = getSingleElementByTag("year");
+    Element year = NfoUtils.getSingleElementByTag(document, "year");
     if (parser != null) {
       epbookmark.setTextContent(parser.epbookmark);
     }
@@ -255,7 +260,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
   protected void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(movie.getTop250()));
-    Element set = getSingleElementByTag("set");
+    Element set = NfoUtils.getSingleElementByTag(document, "set");
     root.insertBefore(top250, set);
   }
 
@@ -266,7 +271,7 @@ public class MovieToKodiConnector extends MovieGenericXmlConnector {
     Element status = document.createElement("status");
     Element code = document.createElement("code");
 
-    Element premiered = getSingleElementByTag("premiered");
+    Element premiered = NfoUtils.getSingleElementByTag(document, "premiered");
     if (parser != null) {
       status.setTextContent(parser.status);
       code.setTextContent(parser.code);

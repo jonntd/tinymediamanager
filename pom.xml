@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.tinymediamanager</groupId>
     <artifactId>tinyMediaManager</artifactId>
-    <version>5.1.8-SNAPSHOT</version>
+    <version>5.2.0-SNAPSHOT</version>
     <name>tinyMediaManager</name>
     <description>a media management tool written in Java</description>
     <url>https://www.tinymediamanager.org/</url>
@@ -85,9 +85,9 @@
         <okhttp.version>4.12.0</okhttp.version>
         <slf4j.version>2.0.9</slf4j.version>
         <release.version>2.5.3</release.version>
-        <jre.version>21.0.6-b872-1</jre.version>
-        <launcher.version>5.0.8</launcher.version>
-        <flatlaf.version>3.6</flatlaf.version>
+        <jre.version>21.0.7-b1038</jre.version>
+        <launcher.version>5.0.11</launcher.version>
+        <flatlaf.version>3.6.1</flatlaf.version>
         <jackson.version>2.15.2</jackson.version>
         <sonar.java.source>17</sonar.java.source>
     </properties>
@@ -95,7 +95,7 @@
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>license</artifactId>
-            <version>2.1.23</version>
+            <version>5.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -120,7 +120,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.11</version>
+            <version>1.5.13</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -135,7 +135,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.13.0</version>
+            <version>2.14.0</version>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -315,7 +315,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.24.0</version>
+            <version>1.26.0</version>
         </dependency>
         <dependency>
             <groupId>org.brotli</groupId>
@@ -335,7 +335,7 @@
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>yt</artifactId>
-            <version>3.2.7-tmm2</version>
+            <version>3.3.1-tmm3</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -498,6 +498,34 @@
                         </archive>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.6.0</version>
+                    <configuration>
+                        <artifactSet>
+                            <includes>
+                                <include>org.tinymediamanager:yt</include>
+                                <include>org.tinymediamanager:kodi-json-rpc</include>
+                                <include>org.tinymediamanager:libdvd</include>
+                                <include>org.tinymediamanager:libbluray</include>
+                                <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
+                                <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
+                            </includes>
+                        </artifactSet>
+                        <extraJars>${maven.shade.extra}</extraJars>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -628,6 +656,29 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${jar.version}</version>
+                <executions>
+                    <execution>
+                        <!-- move default-jar to another phase -->
+                        <id>default-jar</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- embed tmm created/modified dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -825,6 +876,10 @@
                                 <configuration>
                                     <includeScope>runtime</includeScope>
                                     <stripVersion>true</stripVersion>
+                                    <!-- exclude shaded dependencies -->
+                                    <excludeArtifactIds>
+                                        yt,kodi-json-rpc,libdvd,libbluray,loop-fs-iso-impl,loop-fs-udf-impl
+                                    </excludeArtifactIds>
                                 </configuration>
                             </execution>
                             <execution>

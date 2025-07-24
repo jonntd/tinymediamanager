@@ -30,6 +30,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
@@ -85,12 +86,12 @@ class UiSettingsPanel extends JPanel {
   private JLabel                     lblThemeHint;
   private JCheckBox                  chckbxShowMemory;
   private JComboBox                  cbDatefield;
-  private JCheckBox                  chckbxFileSizeH;
-  private JCheckBox                  chckbxFileSizeM;
-  private JCheckBox                  chckbxFileSizeCalculationMB;
-  private JCheckBox                  chckbxFileSizeCalculationMiB;
-  private JCheckBox                  chckbxImageChooserLastFolder;
-  private JCheckBox                  chckbxImageChooserEntityFolder;
+  private JRadioButton               rbFileSizeH;
+  private JRadioButton               rbFileSizeM;
+  private JRadioButton               rbFileSizeCalculationMB;
+  private JRadioButton               rbFileSizeCalculationMiB;
+  private JRadioButton               rbImageChooserLastFolder;
+  private JRadioButton               rbImageChooserEntityFolder;
   private JSpinner                   spUpdateInterval;
   private JCheckBox                  chckbxAutomaticUpdates;
   private JLabel                     lblUpdateHint;
@@ -150,9 +151,10 @@ class UiSettingsPanel extends JPanel {
         TmmUIHelper.browseUrl(lblLinkTranslate.getText());
       }
       catch (Exception e) {
-        LOGGER.error(e.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, lblLinkTranslate.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-2$
+        LOGGER.error("Could not open '{}' in browser - '{}'", lblLinkTranslate.getText(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, lblLinkTranslate.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));//$NON-NLS-2$
       }
     });
 
@@ -186,46 +188,46 @@ class UiSettingsPanel extends JPanel {
     });
 
     ButtonGroup buttonGroup = new ButtonGroup();
-    buttonGroup.add(chckbxImageChooserLastFolder);
-    buttonGroup.add(chckbxImageChooserEntityFolder);
+    buttonGroup.add(rbImageChooserLastFolder);
+    buttonGroup.add(rbImageChooserEntityFolder);
 
     if (settings.isImageChooserUseEntityFolder()) {
-      chckbxImageChooserEntityFolder.setSelected(true);
+      rbImageChooserEntityFolder.setSelected(true);
     }
     else {
-      chckbxImageChooserLastFolder.setSelected(true);
+      rbImageChooserLastFolder.setSelected(true);
     }
 
-    chckbxImageChooserLastFolder.addActionListener(actionListener);
-    chckbxImageChooserEntityFolder.addActionListener(actionListener);
+    rbImageChooserLastFolder.addActionListener(actionListener);
+    rbImageChooserEntityFolder.addActionListener(actionListener);
 
     buttonGroup = new ButtonGroup();
-    buttonGroup.add(chckbxFileSizeH);
-    buttonGroup.add(chckbxFileSizeM);
+    buttonGroup.add(rbFileSizeH);
+    buttonGroup.add(rbFileSizeM);
 
     if (settings.isFileSizeDisplayHumanReadable()) {
-      chckbxFileSizeH.setSelected(true);
+      rbFileSizeH.setSelected(true);
     }
     else {
-      chckbxFileSizeM.setSelected(true);
+      rbFileSizeM.setSelected(true);
     }
 
-    chckbxFileSizeH.addActionListener(actionListener);
-    chckbxFileSizeM.addActionListener(actionListener);
+    rbFileSizeH.addActionListener(actionListener);
+    rbFileSizeM.addActionListener(actionListener);
 
     buttonGroup = new ButtonGroup();
-    buttonGroup.add(chckbxFileSizeCalculationMB);
-    buttonGroup.add(chckbxFileSizeCalculationMiB);
+    buttonGroup.add(rbFileSizeCalculationMB);
+    buttonGroup.add(rbFileSizeCalculationMiB);
 
     if (settings.isFileSizeBase10()) {
-      chckbxFileSizeCalculationMB.setSelected(true);
+      rbFileSizeCalculationMB.setSelected(true);
     }
     else {
-      chckbxFileSizeCalculationMiB.setSelected(true);
+      rbFileSizeCalculationMiB.setSelected(true);
     }
 
-    chckbxFileSizeCalculationMB.addActionListener(actionListener);
-    chckbxFileSizeCalculationMiB.addActionListener(actionListener);
+    rbFileSizeCalculationMB.addActionListener(actionListener);
+    rbFileSizeCalculationMiB.addActionListener(actionListener);
 
     if (!chckbxAutomaticUpdates.isSelected()) {
       lblUpdateHint.setText(TmmResourceBundle.getString("Settings.updatecheck.hint"));
@@ -318,31 +320,31 @@ class UiSettingsPanel extends JPanel {
         JLabel lblFileSizeFormula = new JLabel(TmmResourceBundle.getString("Settings.filesize.formula"));
         panelMisc.add(lblFileSizeFormula, "cell 1 3 2 1");
 
-        chckbxFileSizeCalculationMB = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.1000"));
-        panelMisc.add(chckbxFileSizeCalculationMB, "cell 2 4");
+        rbFileSizeCalculationMB = new JRadioButton(TmmResourceBundle.getString("Settings.filesize.1000"));
+        panelMisc.add(rbFileSizeCalculationMB, "cell 2 4");
 
-        chckbxFileSizeCalculationMiB = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.1024"));
-        panelMisc.add(chckbxFileSizeCalculationMiB, "cell 2 5");
+        rbFileSizeCalculationMiB = new JRadioButton(TmmResourceBundle.getString("Settings.filesize.1024"));
+        panelMisc.add(rbFileSizeCalculationMiB, "cell 2 5");
       }
       {
         JLabel lblFileSizeT = new JLabel(TmmResourceBundle.getString("Settings.filesize"));
         panelMisc.add(lblFileSizeT, "cell 1 7 2 1");
 
-        chckbxFileSizeH = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.human"));
-        panelMisc.add(chckbxFileSizeH, "cell 2 8");
+        rbFileSizeH = new JRadioButton(TmmResourceBundle.getString("Settings.filesize.human"));
+        panelMisc.add(rbFileSizeH, "cell 2 8");
 
-        chckbxFileSizeM = new JCheckBox(TmmResourceBundle.getString("Settings.filesize.megabyte"));
-        panelMisc.add(chckbxFileSizeM, "cell 2 9");
+        rbFileSizeM = new JRadioButton(TmmResourceBundle.getString("Settings.filesize.megabyte"));
+        panelMisc.add(rbFileSizeM, "cell 2 9");
       }
       {
         JLabel lblImageChooserDefaultFolderT = new JLabel(TmmResourceBundle.getString("Settings.imagechooser.folder"));
         panelMisc.add(lblImageChooserDefaultFolderT, "cell 1 11 2 1");
 
-        chckbxImageChooserLastFolder = new JCheckBox(TmmResourceBundle.getString("Settings.imagechooser.last"));
-        panelMisc.add(chckbxImageChooserLastFolder, "cell 2 12");
+        rbImageChooserLastFolder = new JRadioButton(TmmResourceBundle.getString("Settings.imagechooser.last"));
+        panelMisc.add(rbImageChooserLastFolder, "cell 2 12");
 
-        chckbxImageChooserEntityFolder = new JCheckBox(TmmResourceBundle.getString("Settings.imagechooser.entity"));
-        panelMisc.add(chckbxImageChooserEntityFolder, "cell 2 13");
+        rbImageChooserEntityFolder = new JRadioButton(TmmResourceBundle.getString("Settings.imagechooser.entity"));
+        panelMisc.add(rbImageChooserEntityFolder, "cell 2 13");
       }
       {
         chckbxStoreWindowPreferences = new JCheckBox(TmmResourceBundle.getString("Settings.storewindowpreferences"));
@@ -424,13 +426,13 @@ class UiSettingsPanel extends JPanel {
     }
 
     // image chooser folder
-    settings.setImageChooserUseEntityFolder(chckbxImageChooserEntityFolder.isSelected());
+    settings.setImageChooserUseEntityFolder(rbImageChooserEntityFolder.isSelected());
 
     // file size calculation
-    settings.setFileSizeBase10(chckbxFileSizeCalculationMB.isSelected());
+    settings.setFileSizeBase10(rbFileSizeCalculationMB.isSelected());
 
     // file size display
-    settings.setFileSizeDisplayHumanReadable(chckbxFileSizeH.isSelected());
+    settings.setFileSizeDisplayHumanReadable(rbFileSizeH.isSelected());
 
     // update
     if (chckbxAutomaticUpdates.isSelected()) {

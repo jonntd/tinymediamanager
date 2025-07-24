@@ -19,7 +19,7 @@ import static org.tinymediamanager.core.Constants.ACTORS;
 import static org.tinymediamanager.core.Constants.ACTORS_AS_STRING;
 import static org.tinymediamanager.core.Constants.CERTIFICATION;
 import static org.tinymediamanager.core.Constants.COUNTRY;
-import static org.tinymediamanager.core.Constants.DIRECTORS;
+import static org.tinymediamanager.core.Constants.CREW;
 import static org.tinymediamanager.core.Constants.DIRECTORS_AS_STRING;
 import static org.tinymediamanager.core.Constants.EDITION;
 import static org.tinymediamanager.core.Constants.EDITION_AS_STRING;
@@ -29,7 +29,6 @@ import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
 import static org.tinymediamanager.core.Constants.MEDIA_SOURCE;
 import static org.tinymediamanager.core.Constants.MOVIESET;
 import static org.tinymediamanager.core.Constants.MOVIESET_TITLE;
-import static org.tinymediamanager.core.Constants.PRODUCERS;
 import static org.tinymediamanager.core.Constants.PRODUCERS_AS_STRING;
 import static org.tinymediamanager.core.Constants.RELEASE_DATE;
 import static org.tinymediamanager.core.Constants.RELEASE_DATE_AS_STRING;
@@ -42,7 +41,6 @@ import static org.tinymediamanager.core.Constants.TOP250;
 import static org.tinymediamanager.core.Constants.TRAILER;
 import static org.tinymediamanager.core.Constants.VIDEO_IN_3D;
 import static org.tinymediamanager.core.Constants.WATCHED;
-import static org.tinymediamanager.core.Constants.WRITERS;
 import static org.tinymediamanager.core.Constants.WRITERS_AS_STRING;
 import static org.tinymediamanager.core.Utils.returnOneWhenFilled;
 
@@ -75,6 +73,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.UpgradeTasks;
 import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
@@ -124,6 +123,7 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -139,6 +139,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
   private static final Comparator<MediaFile>    MEDIA_FILE_COMPARATOR      = new MovieMediaFileComparator();
   private static final Comparator<MediaTrailer> TRAILER_QUALITY_COMPARATOR = new MediaTrailer.QualityComparator();
 
+  @JsonProperty
+  private String                                englishTitle               = "";
   @JsonProperty
   private String                                sortTitle                  = "";
   @JsonProperty
@@ -189,11 +191,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
   @JsonProperty
   private final List<Person>                    actors                     = new CopyOnWriteArrayList<>();
   @JsonProperty
-  private final List<Person>                    producers                  = new CopyOnWriteArrayList<>();
-  @JsonProperty
-  private final List<Person>                    directors                  = new CopyOnWriteArrayList<>();
-  @JsonProperty
-  private final List<Person>                    writers                    = new CopyOnWriteArrayList<>();
+  private final List<Person>                    crew                       = new CopyOnWriteArrayList<>();
   @JsonProperty
   private final List<MediaTrailer>              trailer                    = new CopyOnWriteArrayList<>();
   @JsonProperty
@@ -265,6 +263,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
     super.merge(other, force);
 
+    setEnglishTitle(StringUtils.isEmpty(englishTitle) || force ? other.englishTitle : englishTitle);
     setSortTitle(StringUtils.isEmpty(sortTitle) || force ? other.sortTitle : sortTitle);
     setTagline(StringUtils.isEmpty(tagline) || force ? other.tagline : tagline);
     setSpokenLanguages(StringUtils.isEmpty(spokenLanguages) || force ? other.spokenLanguages : spokenLanguages);
@@ -284,9 +283,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
     if (force) {
       genres.clear();
       actors.clear();
-      producers.clear();
-      directors.clear();
-      writers.clear();
+      crew.clear();
       trailer.clear();
       extraFanarts.clear();
       extraThumbs.clear();
@@ -294,9 +291,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
     setGenres(other.genres);
     setActors(other.actors);
-    setProducers(other.producers);
-    setDirectors(other.directors);
-    setWriters(other.writers);
+    setCrew(other.crew);
     setShowlinks(other.showlinks);
     setExtraFanarts(other.extraFanarts);
     setExtraThumbs(other.extraThumbs);
@@ -336,12 +331,31 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     score = score + returnOneWhenFilled(actors);
-    score = score + returnOneWhenFilled(directors);
-    score = score + returnOneWhenFilled(writers);
-    score = score + returnOneWhenFilled(producers);
+    score = score + returnOneWhenFilled(crew);
     score = score + returnOneWhenFilled(trailer);
 
     return score;
+  }
+
+  /**
+   * Gets the title in English.
+   * 
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   * 
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   /**
@@ -361,7 +375,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public void setSortTitle(String newValue) {
     String oldValue = this.sortTitle;
-    this.sortTitle = newValue;
+    this.sortTitle = StrgUtils.strip(newValue);
     firePropertyChange(SORT_TITLE, oldValue, newValue);
   }
 
@@ -651,9 +665,12 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the runtime
    */
   public int getRuntime() {
-    int runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
-    if (MovieModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo() && runtimeFromMi > 0) {
-      return runtimeFromMi;
+    int runtimeFromMi = 0;
+    if (MovieModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+      runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
+      if (runtimeFromMi > 0) {
+        return runtimeFromMi;
+      }
     }
     return runtime == 0 ? runtimeFromMi : runtime;
   }
@@ -756,14 +773,9 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return;
     }
 
-    if (metadata == null) {
-      LOGGER.error("metadata was null");
-      return;
-    }
-
     // check if metadata has at least an id (aka it is not empty)
-    if (metadata.getIds().isEmpty()) {
-      LOGGER.warn("wanted to save empty metadata for {}", getTitle());
+    if (metadata == null || metadata.getIds().isEmpty()) {
+      LOGGER.warn("Wanted to save empty metadata for movie '{}'", getTitle());
       return;
     }
 
@@ -821,7 +833,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
+    if (config.contains(MovieScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (settings.getCapitalWordsInTitles()) {
         setOriginalTitle(StrgUtils.capitalize(metadata.getOriginalTitle()));
@@ -831,19 +844,33 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
+    if (config.contains(MovieScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
+      // Capitalize first letter of original title if setting is set!
+      if (settings.getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
+      }
+    }
+
+    if (config.contains(MovieScraperMetadataConfig.TAGLINE) && StringUtils.isNotBlank(metadata.getTagline())
+        && (overwriteExistingItems || StringUtils.isBlank(getTagline()))) {
       setTagline(metadata.getTagline());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.PLOT) && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
+    if (config.contains(MovieScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.YEAR) && (overwriteExistingItems || getYear() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.YEAR) && metadata.getYear() > 0 && (overwriteExistingItems || getYear() <= 0)) {
       setYear(metadata.getYear());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && (overwriteExistingItems || getReleaseDate() == null)) {
+    if (config.contains(MovieScraperMetadataConfig.RELEASE_DATE) && metadata.getReleaseDate() != null
+        && (overwriteExistingItems || getReleaseDate() == null)) {
       setReleaseDate(metadata.getReleaseDate());
     }
 
@@ -867,20 +894,22 @@ public class Movie extends MediaEntity implements IMediaInformation {
       setRatings(newRatings);
     }
 
-    if (config.contains(MovieScraperMetadataConfig.TOP250) && (overwriteExistingItems || getTop250() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.TOP250) && metadata.getTop250() > 0 && (overwriteExistingItems || getTop250() <= 0)) {
       setTop250(metadata.getTop250());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(MovieScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
-    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && (overwriteExistingItems || StringUtils.isBlank(getSpokenLanguages()))) {
+    if (config.contains(MovieScraperMetadataConfig.SPOKEN_LANGUAGES) && !metadata.getSpokenLanguages().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getSpokenLanguages()))) {
       setSpokenLanguages(StringUtils.join(metadata.getSpokenLanguages(), ", "));
     }
 
     // country
-    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
+    if (config.contains(MovieScraperMetadataConfig.COUNTRY) && !metadata.getCountries().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getCountry()))) {
       setCountry(StringUtils.join(metadata.getCountries(), ", "));
     }
 
@@ -912,7 +941,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
     }
 
     // studio
-    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
+    if (config.contains(MovieScraperMetadataConfig.PRODUCTION_COMPANY) && !metadata.getProductionCompanies().isEmpty()
+        && (overwriteExistingItems || StringUtils.isBlank(getProductionCompany()))) {
       setProductionCompany(StringUtils.join(metadata.getProductionCompanies(), ", "));
     }
 
@@ -925,23 +955,14 @@ public class Movie extends MediaEntity implements IMediaInformation {
       }
       setActors(metadata.getCastMembers(Person.Type.ACTOR));
     }
-    if (config.contains(MovieScraperMetadataConfig.DIRECTORS)) {
+    if (config.contains(MovieScraperMetadataConfig.CREW)) {
       if (!matchFound || overwriteExistingItems) {
-        directors.clear();
+        crew.clear();
       }
-      setDirectors(metadata.getCastMembers(Person.Type.DIRECTOR));
-    }
-    if (config.contains(MovieScraperMetadataConfig.WRITERS)) {
-      if (!matchFound || overwriteExistingItems) {
-        writers.clear();
-      }
-      setWriters(metadata.getCastMembers(Person.Type.WRITER));
-    }
-    if (config.contains(MovieScraperMetadataConfig.PRODUCERS)) {
-      if (!matchFound || overwriteExistingItems) {
-        producers.clear();
-      }
-      setProducers(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.DIRECTOR));
+      setCrew(metadata.getCastMembers(Person.Type.WRITER));
+      setCrew(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.OTHER));
     }
 
     // genres
@@ -1180,7 +1201,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public void setTagline(String newValue) {
     String oldValue = this.tagline;
-    this.tagline = newValue;
+    this.tagline = StrgUtils.strip(newValue);
     firePropertyChange("tagline", oldValue, newValue);
   }
 
@@ -1339,7 +1360,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public void writeNFO() {
     if (MovieModuleManager.getInstance().getSettings().getNfoFilenames().isEmpty()) {
-      LOGGER.info("Not writing any NFO file, because NFO filename preferences were empty...");
+      LOGGER.debug("Not writing any NFO file, because NFO filename preferences were empty...");
       return;
     }
 
@@ -1387,13 +1408,8 @@ public class Movie extends MediaEntity implements IMediaInformation {
       nfonames = MovieModuleManager.getInstance().getSettings().getNfoFilenames();
     }
 
-    try {
-      connector.write(nfonames);
-      firePropertyChange(HAS_NFO_FILE, false, true);
-    }
-    catch (Exception e) {
-      LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-    }
+    connector.write(nfonames);
+    firePropertyChange(HAS_NFO_FILE, false, true);
   }
 
   /**
@@ -1762,7 +1778,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
   public void setSpokenLanguages(String newValue) {
     String oldValue = this.spokenLanguages;
-    this.spokenLanguages = newValue;
+    this.spokenLanguages = StrgUtils.strip(newValue);
     firePropertyChange(SPOKEN_LANGUAGES, oldValue, newValue);
 
     localizedSpokenLanguages = "";
@@ -1795,7 +1811,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
   public void setCountry(String newValue) {
     String oldValue = this.country;
-    this.country = newValue;
+    this.country = StrgUtils.strip(newValue);
     firePropertyChange(COUNTRY, oldValue, newValue);
   }
 
@@ -2116,14 +2132,14 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * set the actors. This will do a two way sync of the list to be added and the given list, to do not re-add existing actors (better for binding)
+   * set the actors. This will do a two-way sync of the list to be added and the given list, to do not re-add existing actors (better for binding)
    *
    * @param newActors
    *          the new actors to be set
    */
   @JsonSetter
   public void setActors(List<Person> newActors) {
-    // two way sync of actors
+    // two-way sync of actors
     mergePersons(actors, newActors);
     firePropertyChange(ACTORS, null, getActors());
     firePropertyChange(ACTORS_AS_STRING, null, getActorsAsString());
@@ -2135,7 +2151,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the actors
    */
   public List<Person> getActors() {
-    return this.actors;
+    return actors;
   }
 
   /**
@@ -2152,20 +2168,22 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * adds the given producers
+   * adds the given crew members
    *
-   * @param newProducers
-   *          a {@link Collection} of all producers to be added
+   * @param newCrew
+   *          a {@link Collection} of all crew members to be added
    */
-  public void addToProducers(Collection<Person> newProducers) {
+  public void addToCrew(Collection<Person> newCrew) {
     Set<Person> newItems = new LinkedHashSet<>();
 
     // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newProducers)) {
-      if (person == null || producers.contains(person)) {
+    for (Person person : ListUtils.nullSafe(newCrew)) {
+      if (person == null || crew.contains(person)) {
         continue;
       }
-      if (person.getType() != Person.Type.PRODUCER) {
+
+      // add all but not actors
+      if (person.getType() == Person.Type.ACTOR) {
         return;
       }
 
@@ -2176,33 +2194,48 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return;
     }
 
-    producers.addAll(newItems);
-    firePropertyChange(PRODUCERS, null, getProducers());
+    crew.addAll(newItems);
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * remove all producers
+   * remove all crew members
    */
-  public void removeProducers() {
-    producers.clear();
-    firePropertyChange(PRODUCERS, null, getProducers());
+  public void removeCrew() {
+    crew.clear();
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * set the producers. This will do a two-way sync of the list to be added and the given list, to do not re-add existing producers (better for
+   * set the crew members. This will do a two-way sync of the list to be added and the given list, to do not re-add existing actors (better for
    * binding)
    *
-   * @param newProducers
-   *          the new producers to be set
+   * @param newCrew
+   *          the new crew to be set
    */
   @JsonSetter
-  public void setProducers(List<Person> newProducers) {
-    // two way sync of producers
-    mergePersons(producers, newProducers);
-    firePropertyChange(PRODUCERS, null, getProducers());
+  public void setCrew(List<Person> newCrew) {
+    // two-way sync of crew members
+    mergePersons(crew, newCrew);
+    firePropertyChange(CREW, null, getCrew());
     firePropertyChange(PRODUCERS_AS_STRING, null, getProducersAsString());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
+  }
+
+  /**
+   * get the crew members
+   *
+   * @return the crew members
+   */
+  public List<Person> getCrew() {
+    return crew;
   }
 
   /**
@@ -2211,7 +2244,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the producers
    */
   public List<Person> getProducers() {
-    return this.producers;
+    return crew.stream().filter(person -> person.getType() == Person.Type.PRODUCER).toList();
   }
 
   /**
@@ -2221,64 +2254,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getProducersAsString() {
     List<String> producerNames = new ArrayList<>();
-    for (Person producer : producers) {
+    for (Person producer : getProducers()) {
       producerNames.add(producer.getName());
     }
     return StringUtils.join(producerNames, ", ");
-  }
-
-  /**
-   * add the given list of directors
-   *
-   * @param newDirectors
-   *          a {@link Collection} of directors to be added
-   */
-  public void addToDirectors(Collection<Person> newDirectors) {
-    Set<Person> newItems = new LinkedHashSet<>();
-
-    // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newDirectors)) {
-      if (person == null || directors.contains(person)) {
-        continue;
-      }
-      if (person.getType() != Person.Type.DIRECTOR) {
-        return;
-      }
-
-      newItems.add(person);
-    }
-
-    if (newItems.isEmpty()) {
-      return;
-    }
-
-    directors.addAll(newItems);
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
-  }
-
-  /**
-   * remove all directors.
-   */
-  public void removeDirectors() {
-    directors.clear();
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
-  }
-
-  /**
-   * Sets the directors.
-   *
-   * @param newDirectors
-   *          the new directors
-   */
-  @JsonSetter
-  public void setDirectors(List<Person> newDirectors) {
-    // two way sync of directors
-    mergePersons(directors, newDirectors);
-
-    firePropertyChange(DIRECTORS, null, directors);
-    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
   }
 
   /**
@@ -2287,7 +2266,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the directors
    */
   public List<Person> getDirectors() {
-    return directors;
+    return crew.stream().filter(person -> person.getType() == Person.Type.DIRECTOR).toList();
   }
 
   /**
@@ -2297,64 +2276,10 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getDirectorsAsString() {
     List<String> directorNames = new ArrayList<>();
-    for (Person director : directors) {
+    for (Person director : getDirectors()) {
       directorNames.add(director.getName());
     }
     return StringUtils.join(directorNames, ", ");
-  }
-
-  /**
-   * add the given writers
-   *
-   * @param newWriters
-   *          a {@link Collection} of the writers to be added
-   */
-  public void addToWriters(Collection<Person> newWriters) {
-    Set<Person> newItems = new LinkedHashSet<>();
-
-    // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newWriters)) {
-      if (person == null || writers.contains(person)) {
-        continue;
-      }
-      if (person.getType() != Person.Type.WRITER) {
-        return;
-      }
-
-      newItems.add(person);
-    }
-
-    if (newItems.isEmpty()) {
-      return;
-    }
-
-    writers.addAll(newItems);
-    firePropertyChange(WRITERS, null, getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
-  }
-
-  /**
-   * remove all writers.
-   */
-  public void removeWriters() {
-    writers.clear();
-    firePropertyChange(WRITERS, null, getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
-  }
-
-  /**
-   * Sets the writers.
-   *
-   * @param newWriters
-   *          the new writers
-   */
-  @JsonSetter
-  public void setWriters(List<Person> newWriters) {
-    // two way sync of writers
-    mergePersons(writers, newWriters);
-
-    firePropertyChange(WRITERS, null, this.getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
@@ -2363,7 +2288,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    * @return the writers
    */
   public List<Person> getWriters() {
-    return writers;
+    return crew.stream().filter(person -> person.getType() == Person.Type.WRITER).toList();
   }
 
   /**
@@ -2373,7 +2298,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
    */
   public String getWritersAsString() {
     List<String> writerNames = new ArrayList<>();
-    for (Person writer : writers) {
+    for (Person writer : getWriters()) {
       writerNames.add(writer.getName());
     }
     return StringUtils.join(writerNames, ", ");
@@ -2489,7 +2414,7 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return vid;
     }
 
-    LOGGER.warn("Movie without video file? {} | {}", getPathNIO(), getTitle());
+    LOGGER.debug("Movie without video file? {} | {}", getPathNIO(), getTitle());
     // cannot happen - movie MUST always have a video file
     return MediaFile.EMPTY_MEDIAFILE;
   }
@@ -2927,105 +2852,40 @@ public class Movie extends MediaEntity implements IMediaInformation {
 
   public Object getValueForMetadata(MovieScraperMetadataConfig metadataConfig) {
 
-    switch (metadataConfig) {
-      case ID:
-        return getIds();
+    return switch (metadataConfig) {
+      case ID -> getIds();
+      case TITLE -> getTitle();
+      case ORIGINAL_TITLE -> getOriginalTitle();
+      case ENGLISH_TITLE -> getEnglishTitle();
+      case TAGLINE -> getTagline();
+      case PLOT -> getPlot();
+      case YEAR -> getYear();
+      case RELEASE_DATE -> getReleaseDate();
+      case RATING -> getRatings();
+      case TOP250 -> getTop250();
+      case RUNTIME -> getRuntime();
+      case CERTIFICATION -> getCertification();
+      case GENRES -> getGenres();
+      case SPOKEN_LANGUAGES -> getSpokenLanguages();
+      case COUNTRY -> getCountry();
+      case PRODUCTION_COMPANY -> getProductionCompany();
+      case TAGS -> getTags();
+      case COLLECTION -> getMovieSet();
+      case TRAILER -> getTrailer();
+      case ACTORS -> getActors();
+      case CREW -> getCrew();
+      case POSTER -> getMediaFiles(MediaFileType.POSTER);
+      case FANART -> getMediaFiles(MediaFileType.FANART);
+      case BANNER -> getMediaFiles(MediaFileType.BANNER);
+      case CLEARART -> getMediaFiles(MediaFileType.CLEARART);
+      case THUMB -> getMediaFiles(MediaFileType.THUMB);
+      case CLEARLOGO -> getMediaFiles(MediaFileType.CLEARLOGO);
+      case DISCART -> getMediaFiles(MediaFileType.DISC);
+      case KEYART -> getMediaFiles(MediaFileType.KEYART);
+      case EXTRAFANART -> getMediaFiles(MediaFileType.EXTRAFANART);
+      case EXTRATHUMB -> getMediaFiles(MediaFileType.EXTRATHUMB);
+    };
 
-      case TITLE:
-        return getTitle();
-
-      case ORIGINAL_TITLE:
-        return getOriginalTitle();
-
-      case TAGLINE:
-        return getTagline();
-
-      case PLOT:
-        return getPlot();
-
-      case YEAR:
-        return getYear();
-
-      case RELEASE_DATE:
-        return getReleaseDate();
-
-      case RATING:
-        return getRatings();
-
-      case TOP250:
-        return getTop250();
-
-      case RUNTIME:
-        return getRuntime();
-
-      case CERTIFICATION:
-        return getCertification();
-
-      case GENRES:
-        return getGenres();
-
-      case SPOKEN_LANGUAGES:
-        return getSpokenLanguages();
-
-      case COUNTRY:
-        return getCountry();
-
-      case PRODUCTION_COMPANY:
-        return getProductionCompany();
-
-      case TAGS:
-        return getTags();
-
-      case COLLECTION:
-        return getMovieSet();
-
-      case TRAILER:
-        return getTrailer();
-
-      case ACTORS:
-        return getActors();
-
-      case PRODUCERS:
-        return getProducers();
-
-      case DIRECTORS:
-        return getDirectors();
-
-      case WRITERS:
-        return getWriters();
-
-      case POSTER:
-        return getMediaFiles(MediaFileType.POSTER);
-
-      case FANART:
-        return getMediaFiles(MediaFileType.FANART);
-
-      case BANNER:
-        return getMediaFiles(MediaFileType.BANNER);
-
-      case CLEARART:
-        return getMediaFiles(MediaFileType.CLEARART);
-
-      case THUMB:
-        return getMediaFiles(MediaFileType.THUMB);
-
-      case LOGO, CLEARLOGO: // LOGO = legacy
-        return getMediaFiles(MediaFileType.CLEARLOGO);
-
-      case DISCART:
-        return getMediaFiles(MediaFileType.DISC);
-
-      case KEYART:
-        return getMediaFiles(MediaFileType.KEYART);
-
-      case EXTRAFANART:
-        return getMediaFiles(MediaFileType.EXTRAFANART);
-
-      case EXTRATHUMB:
-        return getMediaFiles(MediaFileType.EXTRATHUMB);
-    }
-
-    return null;
   }
 
   @Override
@@ -3044,5 +2904,36 @@ public class Movie extends MediaEntity implements IMediaInformation {
   @Override
   public int hashCode() {
     return Objects.hash(path, getMainFile().getFile());
+  }
+
+  /**
+   * used to migrate values to their new location
+   *
+   * @param property
+   *          the property/value name
+   * @param value
+   *          the value itself
+   */
+  @JsonAnySetter
+  public void setUnknownFields(String property, Object value) {
+    if (value == null) {
+      return;
+    }
+
+    // migrate old properties
+    switch (property) {
+      // producers, writers and directors get merged into a unified crew list
+      case "producers", "writers", "directors" -> {
+        if (value instanceof List<?> crewList) {
+          for (Person person : UpgradeTasks.upgradeCrew(crewList)) {
+            if (!crew.contains(person)) {
+              crew.add(person);
+            }
+          }
+          // sort once
+          crew.sort(Comparator.comparingInt(o -> o.getType().ordinal()));
+        }
+      }
+    }
   }
 }

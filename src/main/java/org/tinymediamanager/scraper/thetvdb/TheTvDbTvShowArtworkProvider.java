@@ -97,7 +97,7 @@ public class TheTvDbTvShowArtworkProvider extends TheTvDbArtworkProvider impleme
       }
     }
     catch (Exception e) {
-      LOGGER.error("failed to get artwork: {}", e.getMessage());
+      LOGGER.debug("failed to get artwork: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 

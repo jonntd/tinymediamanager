@@ -112,7 +112,7 @@ public class TvShowSeasonNfoParser {
       function.apply(this);
     }
     catch (Exception e) {
-      LOGGER.warn("problem parsing tag (line {}): {}", e.getStackTrace()[0].getLineNumber(), e.getMessage());
+      LOGGER.debug("problem parsing tag (line {}): {}", e.getStackTrace()[0].getLineNumber(), e.getMessage());
     }
 
     return null;

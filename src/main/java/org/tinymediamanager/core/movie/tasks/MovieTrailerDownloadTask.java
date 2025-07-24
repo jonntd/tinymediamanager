@@ -36,7 +36,7 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 import org.tinymediamanager.core.threading.TmmTask;
 
 /**
@@ -99,12 +99,13 @@ public class MovieTrailerDownloadTask extends TmmTask {
     trailers.addAll(movie.getTrailer());
 
     if (trailers.isEmpty()) {
-      LOGGER.warn("no trailers for '{}' available", movie.getTitle());
+      LOGGER.info("No trailers available for '{}'", movie.getTitle());
       return;
     }
 
     // now try to download the trailers until we get one ;)
-    LOGGER.info("downloading trailer for '{}'", movie.getTitle());
+    LOGGER.info("Downloading trailer for '{}'", movie.getTitle());
+
     for (MediaTrailer trailer : trailers) {
       String url = trailer.getUrl();
 
@@ -118,7 +119,7 @@ public class MovieTrailerDownloadTask extends TmmTask {
 
         Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(url);
         if (matcher.matches()) {
-          task = new YTDownloadTask(trailer, desiredQuality, MovieModuleManager.getInstance().getSettings().isUseYtDlp()) {
+          task = new YtDownloadTask(trailer, desiredQuality, MovieModuleManager.getInstance().getSettings().isUseYtDlp()) {
             @Override
             protected Path getDestinationWoExtension() {
               return getDestination();
@@ -167,6 +168,8 @@ public class MovieTrailerDownloadTask extends TmmTask {
         LOGGER.debug("could download trailer - {}", e.getMessage());
       }
     }
+
+    LOGGER.info("Finished downloading trailer - took {} ms", getRuntime());
   }
 
   @Override
@@ -178,7 +181,7 @@ public class MovieTrailerDownloadTask extends TmmTask {
   }
 
   protected Path getDestination() {
-    // hmm.. at the moment we can only download ONE trailer, so both patterns won't work
+    // hmm... at the moment we can only download ONE trailer, so both patterns won't work
     // just take the first one (or the default if there is no entry whyever)
     String filename;
     if (!trailernames.isEmpty()) {

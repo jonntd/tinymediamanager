@@ -85,10 +85,16 @@ class FileTypesSettingsPanel extends JPanel {
       }
     });
     btnRemoveVideoFiletype.addActionListener(arg0 -> {
-      int row = listVideoFiletypes.getSelectedIndex();
-      if (row != -1) {
-        String prefix = Settings.getInstance().getVideoFileType().get(row);
-        Settings.getInstance().removeVideoFileType(prefix);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listVideoFiletypes);
+
+      for (int indexRow : indexRows) {
+        try {
+          String videoFileType = settings.getVideoFileType().get(indexRow);
+          settings.removeVideoFileType(videoFileType);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
     btnAddSubtitleFiletype.addActionListener(e -> {
@@ -98,10 +104,16 @@ class FileTypesSettingsPanel extends JPanel {
       }
     });
     btnRemoveSubtitleFiletype.addActionListener(arg0 -> {
-      int row = listSubtitleFiletypes.getSelectedIndex();
-      if (row != -1) {
-        String prefix = Settings.getInstance().getSubtitleFileType().get(row);
-        Settings.getInstance().removeSubtitleFileType(prefix);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listSubtitleFiletypes);
+
+      for (int indexRow : indexRows) {
+        try {
+          String subtitleFileType = settings.getSubtitleFileType().get(indexRow);
+          settings.removeSubtitleFileType(subtitleFileType);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
     btnAddAudioFiletype.addActionListener(e -> {
@@ -111,10 +123,16 @@ class FileTypesSettingsPanel extends JPanel {
       }
     });
     btnRemoveAudioFiletype.addActionListener(arg0 -> {
-      int row = listAudioFiletypes.getSelectedIndex();
-      if (row != -1) {
-        String prefix = Settings.getInstance().getAudioFileType().get(row);
-        Settings.getInstance().removeAudioFileType(prefix);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listAudioFiletypes);
+
+      for (int indexRow : indexRows) {
+        try {
+          String audioFileType = settings.getAudioFileType().get(indexRow);
+          settings.removeAudioFileType(audioFileType);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
     btnAddCleanupFiletype.addActionListener(e -> {
@@ -131,10 +149,16 @@ class FileTypesSettingsPanel extends JPanel {
       }
     });
     btnRemoveCleanupFiletype.addActionListener(arg0 -> {
-      int row = listCleanupFiletypes.getSelectedIndex();
-      if (row != -1) {
-        String prefix = Settings.getInstance().getCleanupFileType().get(row);
-        Settings.getInstance().removeCleanupFileType(prefix);
+      int[] indexRows = TmmUIHelper.getSelectedRowsAsModelRows(listCleanupFiletypes);
+
+      for (int indexRow : indexRows) {
+        try {
+          String cleanupFileType = settings.getCleanupFileType().get(indexRow);
+          settings.removeCleanupFileType(cleanupFileType);
+        }
+        catch (Exception ex) {
+          // do nothing
+        }
       }
     });
   }
@@ -251,7 +275,7 @@ class FileTypesSettingsPanel extends JPanel {
           TmmUIHelper.browseUrl(url);
         }
         catch (Exception e1) {
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
         }
       });

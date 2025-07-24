@@ -44,6 +44,7 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
@@ -260,13 +261,23 @@ public class TvShowMissingEpisodeListDialog extends TmmDialog {
         return ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getEpisodeList(options);
       }
       catch (MissingIdException e) {
-        LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+        LOGGER.warn("Missing IDs for scraping TV show '{}' with '{}'", tvShow.getTitle(), mediaScraper.getId());
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+      }
+      catch (NothingFoundException e) {
+        LOGGER.debug("nothing found");
       }
       catch (ScrapeException e) {
-        LOGGER.error("getMetadata", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadataepisodefailed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape TV show '{}' with '{}' - '{}'", tvShow.getTitle(), mediaScraper.getId(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadataepisodefailed",
+                new String[] { ":", e.getLocalizedMessage() }));
+      }
+      catch (Exception e) {
+        LOGGER.error("Unforeseen error while scraping TV show '{}' with '{}'", tvShow.getTitle(), mediaScraper.getId(), e);
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
       return null;
     }
@@ -278,7 +289,7 @@ public class TvShowMissingEpisodeListDialog extends TmmDialog {
 
       for (TvShow tvshow : tvShows) {
         if (tvshow.getIds().isEmpty()) {
-          LOGGER.info("we cannot scrape (no ID): {}", tvshow.getTitle());
+          LOGGER.info("Cannot get episode list (no ID available) for '{}'", tvshow.getTitle());
           continue;
         }
 

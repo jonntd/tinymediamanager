@@ -199,8 +199,8 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + nfoPath + "'", e);
-        MessageManager.instance
+        LOGGER.error("Could not write movie set NFO file '{}' - '{}'", nfoPath, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, movieSet, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
@@ -372,18 +372,22 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
    * add the thumb (poster) url in the form <thumb>xxx</thumb>
    */
   protected void addThumb() {
-    Element thumb = document.createElement("thumb");
-    thumb.setTextContent(movieSet.getArtworkUrl(MediaFileType.POSTER));
-    root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element thumb = document.createElement("thumb");
+      thumb.setTextContent(movieSet.getArtworkUrl(MediaFileType.POSTER));
+      root.appendChild(thumb);
+    }
   }
 
   /**
    * add the fanart url in the form <fanart>xxx</fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
-    fanart.setTextContent(movieSet.getArtworkUrl(MediaFileType.FANART));
-    root.appendChild(fanart);
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
+      fanart.setTextContent(movieSet.getArtworkUrl(MediaFileType.FANART));
+      root.appendChild(fanart);
+    }
   }
 
   /**
@@ -510,18 +514,19 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }
   }
 
   /**
-   * add the missing meta data for tinyMediaManager to this NFO
+   * add the missing metadata for tinyMediaManager to this NFO
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
     addUserNote();
+    addEnglishTitle();
   }
 
   /**
@@ -531,6 +536,15 @@ public abstract class MovieSetGenericXmlConnector implements IMovieSetConnector 
     Element userNote = document.createElement("user_note");
     userNote.setTextContent(movieSet.getNote());
     root.appendChild(userNote);
+  }
+
+  /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle() {
+    Element englishTitle = document.createElement("english_title");
+    englishTitle.setTextContent(movieSet.getEnglishTitle());
+    root.appendChild(englishTitle);
   }
 
   /**

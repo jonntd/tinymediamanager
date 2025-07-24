@@ -1,205 +1,31 @@
-Version 5.1.9
+Version 5.2.0
 =======================
++ [Movies, Movie sets, TV shows] completely reworked internal eventing to improve performance
++ [Movies, Movie sets, TV shows] fetching "English/International title" from supported scrapers for being used in NFO/renaming
++ [Movies, TV shows] refactored crew management - merged directors, producers, writers, and others into a unified list
++ [Movies, TV shows] enhanced renamer preview
++ [Movies, TV shows] added new setting options to specify which ratings should be fetched while scraping
++ [Movies, TV shows] added an action to copy movies and TV shows to external folders #2731
++ [Movies, TV shows] added a Kodi conform mapping of mediainfo values for the NFO export #2473 #2940 #2991
+  ATTENTION: You need to re-write your NFO files to get the new values
++ [Movie sets] added a column to display the amount of missing movies in a set #2915
++ [Movie sets] added the post processing framework to movie sets too #2901
++ [TV shows] added an action to force re-writing of season NFO files #2654
++ [Renamer] added an optional Unicode replacement for forbidden filesystem characters
++ [macOS] changed hotkey modifier to comply with macOS standards
++ [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
++ [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
++ [UI] created an "Activity log" to track all tasks and their results/messages #2914
+x [Movies, TV shows] added a NFO option to suppress writing of artwork URLs #2982 #2518
+  ATTENTION: Jellyfin users should revisit their NFO settings
+x [TV shows] fixed scraping multiple trailers
+x [TV shows] fixed a problem when exchanging the video file of a TV show episode #2963
+x [Renamer] fixed using ${originalFilename} in the renamer filename pattern #2966
+x [Scraper] do not overwrite existing fields with empty values #2947
+x [UI] some UI fixes
+x [UI] increased quality level of the scaling algorithm for better image quality
+x [UI] re-layout all visible dialogs when changing the font size #2970
+x [UI] fixed filtering on season artwork #2957
+x [Mediainfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998
-
-
-Version 5.1.8
-=======================
-x [Movie sets] fixed sorting of movies in movie sets
-x [TV shows] fixed a performance regression when loading TV shows with many episodes #2977
-x [TV shows] fixed an error when downloading thumbs for episodes with no video files #2981
-x [TV shows] enhanced 4 digit episode numbers detection
-x [TV shows] fixed importing of NFO files with episode groups #2962 #2850
-  You may need to re-write TV show NFO files once to get the correct values inserted
-x [Movies/TV shows] aligned thumb artwork sizes to the ones offered by scrapers #2989
-  You may need to re-view your artwork preferences
-x [Movies/TV shows] enhanced artwork choosing algorithm to prefer similar artwork sizes in the fallback
-x [Movies/TV shows] cleanup of invalid/null values on startup
-x [NFO] allow writing of non HTTP trailer URLs to the NFO #2962
-x [UI] improved loading speed of tree tables #2977
-x [IMDB] scale actor image size (as before) and only scrape portrait ones #2979
-x [FFmpeg] check if the ffmpeg executable from the settings exists before using it #2986
-
-
-Version 5.1.7
-=======================
-x [Movies/TV shows] fixed rendering of file names with JMTE
-x [Movies/TV shows] fixed changing filters in the renamer preview #2965
-x [TV shows] added an option to activate scraping of episode thumbs from all scrapers #2941
-x [TV shows] prevent hiding of the first table column #2959
-x [TV shows] fixed resolving missing episodes #2967
-x [IMDB] rule out some weird posters on scrape #2949
-x [IMDB] update due to site changes
-x [UI] fixed an issue with maximized dialogs on Linux
-x [Anime] again tweak some regex #2945 #2946 #2950
-x [Scraping] better remove year from title for search
-x [Scraping] fetch artwork sources in parallel
-x [Jellyfin] write correct collection id in NFO #2973
-
-
-Version 5.1.6
-=======================
-+ [TV shows] also support downloading of season fanarts #2920
-+ [Template] add new export templates (thx u/Renato-66)
-x [Movies] fixed deleting TV show links #2931
-x [Movies/TV shows] improved downloading missing artwork
-x [TV shows] fixed season artwork display #2912
-x [TV shows] do not show "do not overwrite" when downloading missing artwork
-x [Import] improve detection of well known scraper IDs from file/foldernames #2926
-x [Anime] again tweak some regex for multi-episode matching #2936
-x [FlatLaf] upgraded to version 3.6
-x [MediaInfo] upgraded to 25.04
-x [Logs] reduced maximum file size for startup.log
-
-
-Version 5.1.5
-=======================
-+ [Movies/TV shows] added an option to suppress writing of <dateadded> to the NFO #2893
-+ [Movies/TV shows] added an option to skip the ".nomedia" check on update data sources #2211
-+ [TV shows] added runtime for episodes too
-+ [TV shows] enabled using runtime from mediainfo instead of scraped one #2838
-x [Movies] do not overwrite extrafanarts when running downloading missing artwork
-x [Movies/TV shows] enhanced loading of changed artwork in the information panels #2750 #2836
-x [Movies/TV shows] store lastplayed date from NFO/Trakt.tv in the database and use it at NFO writing #2873
-x [TV shows] do not get episode images from all scrapers
-x [TV shows] enabled handling of multiple trailers in the renamer #2287
-x [TV shows] do not write the season title into <sorttitle> of the NFO #2911
-x [UI] fix AniDB clickable episode links #2889
-x [UI] store window locations for the new message dialog
-x [UI] Better express, what the username of OpenSubtitles should be (and what not)
-x [UI] show generated CRC32 in GUI #913
-x [UI] re-added changing seasons in the TV show bulk editor - but just for the main episode group of the TV show itself #2856
-x [UI] added META + ENTER as an alternative on macOS to close editor dialogs
-x [UI] able to expand TvShow tree only to seasons (w/o episodes) #2908 
-x [MediaInfo] better parse all known 3D variants #2896
-x [MediaInfo] upgraded to 25.03
-x [TVDB] also scrape clearart/clearlogo
-x [Anime] tweak some regex for multi-episode matching (u/mihawk90)
-x [TvMaze] better episode matching and specials handling #2906
-
-
-Version 5.1.4
-=======================
-x [TMDB] fix web link to episode #2875
-x [Movies/TV shows] fixed starting of sub-tasks in the chooser #2876
-x [TV shows] also process season NFOs when triggering read/write TV show NFO actions #2849
-x [UI] reworked message dialog for long texts/messages
-x [UI] use clearer messages when deleting movies/TV shows
-x [UI] removed changing seasons from TV show bulk editor, because this will not work with episode groups anymore #2856
-x [Scrapers] fixed calling MDBList API #2877
-
-
-Version 5.1.3
-=======================
-+ [UI] added more clickable IDs #2840
-+ [UI] added some more default/forced checkboxes to mediaInfo streams #2675
-x [Movies/TV shows] reworked task queueing to avoid concurrency problems #2864
-x [Movies/TV shows] migrated old legacy IDs to prevent duplicated IDs
-x [Movies] re-enabled getting artwork from FFmpeg using the automatic scraper #2866
-x [TV shows] added new season poster file naming scheme "<season_folder>/seasonXX.ext" #2817
-x [UI] fixed focus handling in the image chooser #2869
-x [MdbList] fix getting ratings due to changed API
-x [Scrapers] fix scraping with "best match" - didn't find anything (thx u/BadLuckFistFuck666)
-x [source] recognize SDTV as TV MediaSource (thx u/Gullible_Eagle4280)
-
-
-Version 5.1.2
-=======================
-+ [yt-dlp] added support for passing cookies into yt-dlp #2841
-  You can extract your cookies from a browser and pass them to yt-dlp. More infos at #2841 and on our homepage
-+ [Exporter] the copyArtwork renderer will fall back to the image cache if the original image is not available
-+ [Java] updated/change the Java runtime to Jetbrains JBR 21.0.6
-+ [UI] added an option to specify how file sizes are calculated (MB vs. MiB/GB vs. GiB) #2675
-x [TV shows] fixed saving of episodes in the TV show/episode bulk editor #2857
-x [UI] removed Inter font from deployment #2842 #2852 #2854
-  You can install the font system wide if you still want to use it
-x [UI] many enhancements to focus-management and focus traversal #2829
-x [UI] added hotkey CTRL+SHIFT+E to edit current selected row in an editable table #2829
-x [UI] always show the buy license link inside the UnlockDialog #2834
-x [UI] enhanced notifications for OutOfMemoryErrors #2845
-x [UI] enabled deletion of multiple table entries #2829
-x [UI] open movie/movie set/TV show editor by pressing enter !498 (thx to @acdvorak)
-x [UI] fixed layout of the movie set filter dialog #2859
-x [MediaInfo] upgraded to 24.12
-x [FFmpeg] fixed occasional crashes in automatic choosing of generated artwork
-x [IMDB] fix scraping with "best match" - didn't find anything
-x [Trakt.tv] Free users get quite limited now - expose more errors to GUI #2844
-x [TMDB] allow multiple ABSOLUTE episode groups
-x [MediaInfo] XML cache file gets removed on other video updates #2855
-
-
-Version 5.1.1
-=======================
-+ [Tools] added enhanced management of external tools like FFmpeg/yt-dlp:
-  these tools are now decoupled of tinyMediaManager itself which offers the benefit of earlier updates
-+ [UI] added drag and drop for artwork files (thx @acdvorak)
-  You can now drag and drop artwork files from the file explorer directly into the editors/image chooser
-x [TV shows] improved subtitle search
-x [Movies/TV shows] always write playcount = 0 to the NFO when the movie/episode is not watched
-x [Movies/TV shows] prevent stuck threads on scrape errors #2824
-x [Movies/TV shows] enabled writing of <fileinfo> in all NFO formats (can be deactivated in the settings)
-x [OFDB] refactor/reactivate german scraper
-x [TVDB] fixed scraping of episode original title #2810
-x [TVDB] fixed scraping of more alternative episode groups #2820
-x [TVDB] fixed translations for alternative orderings #2811
-x [TVDB] register as trailer provider
-x [IMDB] refactor search; use fallback search
-x [hd-trailers] invalidate most links, since all outdated
-x [UI] fixed adding of new genres/tags via [+] button
-x [UI] fixed updating the TV show tree when changing an episode to uncategorized
-x [UI] do not remove scraping presets for episode thumbs #2807
-x [FFmpeg] avoid crash when only 1 artwork is generated #2832
-x [Scrapers] strip whitespaces from scraper config values (especially usernames, passwords, API keys)
-x [Scrapers] parse crew job/role information
-x [UDS] ignore AKA titles if found #2816
-x [Renamer] also normalize apostrophes when ASCII replacement is used #2799
-x [Unwanted files] prevent removing the whole entity by using weird regular expressions
-
-
-Version 5.1
-=======================
-+ [Experimental] undo renaming: you can now undo the last renamer run
-+ [Movies] added a filter for trailer formats #2708
-+ [Movies] display director in the movie information panel too
-+ [Movies] added Open Matte as edition
-+ [Movies/TV shows] added an enhanced JMTE helper
-+ [Movies/TV shows] added an action to calculate CRC32 checksums for video files #913
-+ [Movies/TV shows] added an option to prevent writing of trailer and fileinfo to the NFO
-+ [Movie sets] added sorttitle for exporting into the NFO files #2742
-+ [TV shows] show some unique video/audio data on seasons/TV show level when unique over all episodes #2755
-+ [TV shows] added user notes for seasons too #2784
-+ [Certifications] added support for a lot of certifications
-+ [UI] reworked focus traversal in editors #2488
-+ [UI] enabled removing of dummy episodes #2746
-+ [Trakt.tv] able to remove only selected entries from Trakt
-+ [Windows] switched to a newer library for showing file/folder picking dialogs #2772
-+ [MediaInfo] able to read MediaInfo from dereferenced STRM files !492
-x [Movies/TV shows] do not overwrite metadata of unscraped movies/TV shows/episodes #2770
-x [TV shows] fixed editing of episode numbers
-x [TV shows] read mediainfo data for season artwork #2570
-x [TV shows] fixed writing of ratings in NFO #2764
-x [TV shows] also export locked TV shows #2783
-x [TV shows] further tweak episode detection pattern #2785
-x [TV shows] fixed missing external subtitles for multi episode files #2792
-x [TV shows] fixed displaying of season files in renamer preview
-x [UDS/Scraper/JMTE] reworked title case converter
-x [UI] restructured settings dialog
-x [UI] reworked image chooser
-x [UI] reworked manual selection of images while scraping
-x [UI] also normalize episode titles in the TV show search #2745
-x [UI] fixed display of missing specials #2751
-x [UI] fixed shortcut for downloading TV show trailers #2774
-x [UI] enabled mouse click on the whole lightbox area to close the image
-x [JMTE] fixed corner cases for title case converter 
-x [TMDB] try to avoid generic episode titles #2737
-x [IMDB] better parse images, ignore some uncommon types
-x [IMDB] refactor search yet again
-x [TVDB] fix fallback language scraping #2757
-x [Trakt.tv] do not sync locked entities #2684
-x [FFmpeg] enhanced still creation for anamorphic videos #2747
-x [FFmpeg] enabled creation of HDR -> SDR stills #2495
-x [OpenSubtitles] use vip server for VIP users #2756
-x [KodiRPC] rework mapping of TMM<>Kodi videos
-x [YT-DLP] self updating and adhere SSL ignores
-x [PostProcessing] add double quoting for windows #2748
-x [HDR] do not add HDR10 when already being HDR10+ #2680
+x [Trailer] activated yt-dlp as a default trailer downloader

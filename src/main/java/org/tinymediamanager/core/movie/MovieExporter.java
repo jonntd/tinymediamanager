@@ -42,6 +42,7 @@ import org.tinymediamanager.core.MediaEntityExporter;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.jmte.RegexpProcessor;
 import org.tinymediamanager.core.movie.entities.Movie;
 
 import com.floreysoft.jmte.NamedRenderer;
@@ -71,7 +72,7 @@ public class MovieExporter extends MediaEntityExporter {
    */
   @Override
   public <T extends MediaEntity> void export(List<T> moviesToExport, Path exportDir) throws Exception {
-    LOGGER.info("preparing movie export; using {}", properties.getProperty("name"));
+    LOGGER.debug("preparing movie export; using {}", properties.getProperty("name"));
 
     if (cancel) {
       return;
@@ -83,6 +84,8 @@ public class MovieExporter extends MediaEntityExporter {
 
     // register default renderers
     registerDefaultRenderers();
+
+    engine.registerAnnotationProcessor(new RegexpProcessor());
 
     // prepare export destination
     if (!Files.exists(exportDir)) {
@@ -99,7 +102,7 @@ public class MovieExporter extends MediaEntityExporter {
     }
 
     // create list
-    LOGGER.info("generating movie list");
+    LOGGER.debug("generating movie list");
     Utils.deleteFileSafely(listExportFile);
 
     Map<String, Object> root = new HashMap<>();
@@ -108,7 +111,7 @@ public class MovieExporter extends MediaEntityExporter {
     String output = engine.transform(listTemplate, root);
 
     Utils.writeStringToFile(listExportFile, output);
-    LOGGER.info("movie list generated: {}", listExportFile);
+    LOGGER.debug("movie list generated: {}", listExportFile);
 
     // create details for
     if (StringUtils.isNotBlank(detailTemplate)) {
@@ -142,7 +145,7 @@ public class MovieExporter extends MediaEntityExporter {
 
       }
 
-      LOGGER.info("movie detail pages generated: {}", exportDir);
+      LOGGER.debug("movie detail pages generated: {}", exportDir);
     }
 
     if (cancel) {
@@ -164,7 +167,7 @@ public class MovieExporter extends MediaEntityExporter {
       }
     }
     catch (IOException ex) {
-      LOGGER.error("could not copy resources: ", ex);
+      LOGGER.warn("Could not copy resources while exporting - '{}'", ex.getMessage());
     }
   }
 
@@ -339,7 +342,7 @@ public class MovieExporter extends MediaEntityExporter {
           }
         }
         catch (Exception e) {
-          LOGGER.error("could not copy artwork file: ", e);
+          LOGGER.warn("Could not copy artwork file - '{}'", e.getMessage());
           if (StringUtils.isNotBlank((String) parameters.get("default"))) {
             return (String) parameters.get("default");
           }

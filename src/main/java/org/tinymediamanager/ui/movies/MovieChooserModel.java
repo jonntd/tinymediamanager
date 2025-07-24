@@ -16,8 +16,6 @@
 package org.tinymediamanager.ui.movies;
 
 import static org.tinymediamanager.core.entities.Person.Type.ACTOR;
-import static org.tinymediamanager.core.entities.Person.Type.DIRECTOR;
-import static org.tinymediamanager.core.entities.Person.Type.PRODUCER;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +30,6 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.movie.MovieModuleManager;
@@ -53,6 +50,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
+import org.tinymediamanager.scraper.exceptions.NothingFoundException;
 import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.IMovieArtworkProvider;
 import org.tinymediamanager.scraper.interfaces.IMovieMetadataProvider;
@@ -238,11 +236,13 @@ public class MovieChooserModel extends AbstractModelObject {
       options.setReleaseDateCountry(MovieModuleManager.getInstance().getSettings().getReleaseDateCountry());
       options.setIds(result.getIds());
 
-      LOGGER.info("=====================================================");
-      LOGGER.info("Scrape movie metadata with scraper: '{}' - '{}'", metadataProvider.getMediaProvider().getProviderInfo().getId(),
+      LOGGER.info("Scraping movie '{}' with '{}'", movieToScrape.getTitle(), metadataProvider.getMediaProvider().getProviderInfo().getId());
+
+      LOGGER.debug("=====================================================");
+      LOGGER.debug("Scrape movie metadata with scraper: '{}' - '{}'", metadataProvider.getMediaProvider().getProviderInfo().getId(),
           metadataProvider.getMediaProvider().getProviderInfo().getVersion());
-      LOGGER.info("{}", options);
-      LOGGER.info("=====================================================");
+      LOGGER.debug("{}", options);
+      LOGGER.debug("=====================================================");
       try {
         metadata = ((IMovieMetadataProvider) metadataProvider.getMediaProvider()).getMetadata(options);
 
@@ -258,19 +258,23 @@ public class MovieChooserModel extends AbstractModelObject {
         MediaIdUtil.injectMissingIds(metadata.getIds(), MediaType.MOVIE);
       }
       catch (MissingIdException e) {
-        LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "scraper.error.missingid"));
+        LOGGER.warn("Missing IDs for scraping movie '{}' with '{}'", movieToScrape.getTitle(), metadataProvider.getId());
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "scraper.error.missingid"));
+        return;
+      }
+      catch (NothingFoundException e) {
+        LOGGER.debug("nothing found");
         return;
       }
       catch (ScrapeException e) {
-        LOGGER.error("searchMovieFallback", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape movie '{}' with '{}' - '{}'", movieToScrape.getTitle(), metadataProvider.getId(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
         return;
       }
       catch (Exception e) {
-        LOGGER.error("unforeseen error: ", e);
-        return;
+        LOGGER.error("Unforeseen error in movie scrape for '{}'", movieToScrape.getTitle(), e);
       }
 
       if (StringUtils.isNotBlank(metadata.getTitle())) {
@@ -280,29 +284,29 @@ public class MovieChooserModel extends AbstractModelObject {
       setOriginalTitle(metadata.getOriginalTitle());
 
       List<Person> cast = new ArrayList<>();
-      int i = 0;
-      for (Person castMember : metadata.getCastMembers(DIRECTOR)) {
-        cast.add(new Person(castMember));
 
-        // display at max 2 directors
-        if (++i >= 2) {
-          break;
+      // crew - add at max 2 of each type
+      for (Person.Type type : Person.Type.values()) {
+        if (type == ACTOR) {
+          continue;
+        }
+
+        int i = 0;
+        for (Person castMember : metadata.getCastMembers(type)) {
+          cast.add(new Person(castMember));
+
+          // display at max 2 directors
+          if (++i >= 2) {
+            break;
+          }
         }
       }
 
-      i = 0;
-      for (Person castMember : metadata.getCastMembers(PRODUCER)) {
-        cast.add(new Person(castMember));
-
-        // display at max 2 producers
-        if (++i >= 2) {
-          break;
-        }
-      }
-
+      // actors - add all
       for (Person castMember : metadata.getCastMembers(ACTOR)) {
         cast.add(new Person(castMember));
       }
+
       setCastMembers(cast);
       setOverview(metadata.getPlot());
       setTagline(metadata.getTagline());
@@ -314,9 +318,10 @@ public class MovieChooserModel extends AbstractModelObject {
       setScraped(true);
     }
     catch (Exception e) {
-      LOGGER.error("scrapeMedia", e);
-      MessageManager.instance.pushMessage(
-          new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+      LOGGER.error("Unforeseen error in movie scrape for '{}'", movieToScrape.getTitle(), e);
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
 
@@ -394,9 +399,7 @@ public class MovieChooserModel extends AbstractModelObject {
     options.setMetadata(metadata);
     options.setIds(metadata.getIds());
     if (movieToScrape.isStacked()) {
-      ArrayList<MediaFile> mfs = new ArrayList<>();
-      mfs.addAll(movieToScrape.getMediaFiles(MediaFileType.VIDEO));
-      options.setId("mediaFile", mfs);
+      options.setId("mediaFile", new ArrayList<>(movieToScrape.getMediaFiles(MediaFileType.VIDEO)));
     }
     else {
       options.setId("mediaFile", movieToScrape.getMainFile());
@@ -413,15 +416,19 @@ public class MovieChooserModel extends AbstractModelObject {
         artwork.addAll(artworkProvider.getArtwork(options));
       }
       catch (MissingIdException e) {
-        LOGGER.debug("no id found for scraper {}", artworkScraper.getMediaProvider().getProviderInfo().getId());
+        LOGGER.info("Missing IDs for scraping movie artwork of '{}' with '{}'", movieToScrape.getTitle(), artworkScraper.getId());
       }
       catch (ScrapeException e) {
-        LOGGER.error("getArtwork", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape movie artwork of '{}' with '{}' - '{}'", movieToScrape.getTitle(), artworkScraper.getId(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
       catch (Error e) {
-        LOGGER.debug("uncaught error", e);
+        LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movieToScrape.getTitle(), e);
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, movieToScrape, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
       }
       finally {
         lock.writeLock().unlock();
@@ -483,6 +490,7 @@ public class MovieChooserModel extends AbstractModelObject {
         return;
       }
 
+      ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
       List<MediaTrailer> trailer = new ArrayList<>();
 
       TrailerSearchAndScrapeOptions options = new TrailerSearchAndScrapeOptions(MediaType.MOVIE);
@@ -491,20 +499,28 @@ public class MovieChooserModel extends AbstractModelObject {
       options.setLanguage(language);
 
       // scrape trailers
-      for (MediaScraper trailerScraper : trailerScrapers) {
+      trailerScrapers.parallelStream().forEach(trailerScraper -> {
+        IMovieTrailerProvider trailerProvider = (IMovieTrailerProvider) trailerScraper.getMediaProvider();
         try {
-          IMovieTrailerProvider trailerProvider = (IMovieTrailerProvider) trailerScraper.getMediaProvider();
+          lock.writeLock().lock();
           trailer.addAll(trailerProvider.getTrailers(options));
         }
         catch (MissingIdException ignored) {
-          LOGGER.debug("no id found for scraper {}", trailerScraper.getMediaProvider().getProviderInfo().getId());
+          LOGGER.info("Missing IDs for scraping movie trailers of '{}' with '{}'", movieToScrape.getTitle(), trailerScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getTrailers {}", e.getMessage());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not scrape movie trailers of '{}' with '{}' - '{}'", movieToScrape.getTitle(), trailerScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
         }
-      }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie trailer scrape for '{}'", movieToScrape.getTitle(), e);
+        }
+        finally {
+          lock.writeLock().unlock();
+        }
+      });
 
       movieToScrape.setTrailers(trailer);
       movieToScrape.saveToDb();

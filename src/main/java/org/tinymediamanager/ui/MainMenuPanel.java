@@ -63,7 +63,6 @@ import org.tinymediamanager.ui.actions.DocsAction;
 import org.tinymediamanager.ui.actions.ExportAnalysisDataAction;
 import org.tinymediamanager.ui.actions.ExportLogAction;
 import org.tinymediamanager.ui.actions.FaqAction;
-import org.tinymediamanager.ui.actions.FeedbackAction;
 import org.tinymediamanager.ui.actions.ForumAction;
 import org.tinymediamanager.ui.actions.HomepageAction;
 import org.tinymediamanager.ui.actions.ImportV4DataAction;
@@ -71,8 +70,8 @@ import org.tinymediamanager.ui.actions.RebuildImageCacheAction;
 import org.tinymediamanager.ui.actions.ShowChangelogAction;
 import org.tinymediamanager.ui.actions.UnlockAction;
 import org.tinymediamanager.ui.components.toolbar.ToolbarButton;
+import org.tinymediamanager.ui.dialogs.ActivityLogDialog;
 import org.tinymediamanager.ui.dialogs.FullLogDialog;
-import org.tinymediamanager.ui.dialogs.LogDialog;
 import org.tinymediamanager.ui.dialogs.MessageHistoryDialog;
 import org.tinymediamanager.ui.dialogs.SettingsDialog;
 import org.tinymediamanager.ui.movies.MovieUIModule;
@@ -167,10 +166,10 @@ public class MainMenuPanel extends JPanel {
 
     menu.addSeparator();
 
-    JMenuItem tmmLogs = new JMenuItem(TmmResourceBundle.getString("tmm.errorlogs"));
+    JMenuItem tmmLogs = new JMenuItem(TmmResourceBundle.getString("tmm.activitylog"));
     menu.add(tmmLogs);
     tmmLogs.addActionListener(arg0 -> {
-      JDialog logDialog = new LogDialog();
+      JDialog logDialog = new ActivityLogDialog();
       logDialog.setLocationRelativeTo(MainWindow.getInstance());
       logDialog.setVisible(true);
     });
@@ -290,7 +289,7 @@ public class MainMenuPanel extends JPanel {
       trace.addActionListener(arg0 -> {
         System.setProperty("tmm.consoleloglevel", "TRACE");
         TinyMediaManager.setConsoleLogLevel();
-        MessageManager.instance.pushMessage(new Message("Trace levels set!", "Test"));
+        MessageManager.getInstance().pushMessage(new Message("Trace levels set!", "Test"));
         LOGGER.trace("if you see that, we're now on TRACE logging level ;)");
       });
       debugMenu.add(trace);
@@ -339,7 +338,6 @@ public class MainMenuPanel extends JPanel {
     menu.addSeparator();
 
     menu.add(new BugReportAction());
-    menu.add(new FeedbackAction());
 
     menu.addSeparator();
     if (!License.getInstance().isValidLicense()) {

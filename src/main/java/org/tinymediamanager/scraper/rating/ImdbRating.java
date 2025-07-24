@@ -78,7 +78,7 @@ class ImdbRating {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not read the MVstore - '{}'", e.getMessage());
+      LOGGER.debug("could not read the MVstore - '{}'", e.getMessage());
       Utils.deleteFileSafely(Paths.get(Globals.CACHE_FOLDER, IMDB_DB));
       shutdown();
     }
@@ -127,7 +127,7 @@ class ImdbRating {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.warn("could not create IMDB ratings database - '{}'", e.getMessage());
+      LOGGER.warn("Could not create IMDB ratings database - '{}'", e.getMessage());
       Utils.deleteFileSafely(Paths.get(Globals.CACHE_FOLDER, IMDB_DB));
       shutdown();
     }
@@ -141,7 +141,7 @@ class ImdbRating {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("could not close MVstore - deleting the cache");
+      LOGGER.debug("could not close MVstore - deleting the cache");
       Utils.deleteFileSafely(Paths.get(Globals.CACHE_FOLDER, IMDB_DB));
     }
     finally {

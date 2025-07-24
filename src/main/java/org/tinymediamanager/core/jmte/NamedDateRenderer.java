@@ -39,23 +39,24 @@ public class NamedDateRenderer implements NamedRenderer {
   private static final String DEFAULT_PATTERN = "dd.MM.yyyy HH:mm:ss Z";
 
   private Date convert(Object o, DateFormat dateFormat) {
-    if (o instanceof Date) {
-      return (Date) o;
+    if (o instanceof Date date) {
+      return date;
     }
-    else if (o instanceof Number) {
-      long longValue = ((Number) o).longValue();
+    else if (o instanceof Number number) {
+      long longValue = number.longValue();
       return new Date(longValue);
     }
-    else if (o instanceof String) {
+    else if (o instanceof String string) {
       try {
         try {
-          return dateFormat.parse((String) o);
+          return dateFormat.parse(string);
         }
         catch (java.text.ParseException e) {
-          LOGGER.warn("cannot convert date format", e);
+          LOGGER.debug("cannot convert date format", e);
         }
       }
       catch (ParseException ignored) {
+        // ignore
       }
     }
     return null;
@@ -82,6 +83,7 @@ public class NamedDateRenderer implements NamedRenderer {
       }
     }
     catch (IllegalArgumentException | NullPointerException ignored) {
+      // ignore
     }
     return null;
   }

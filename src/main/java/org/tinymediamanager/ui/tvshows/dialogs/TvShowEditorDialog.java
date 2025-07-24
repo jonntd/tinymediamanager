@@ -29,10 +29,10 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
+import java.awt.Toolkit;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -70,7 +70,6 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BindingGroup;
 import org.jdesktop.observablecollections.ObservableCollections;
@@ -116,13 +115,13 @@ import org.tinymediamanager.ui.components.datepicker.YearSpinner;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
-import org.tinymediamanager.ui.components.panel.PersonTable;
 import org.tinymediamanager.ui.components.tabbedpane.TmmTabbedPane;
 import org.tinymediamanager.ui.components.table.MediaIdTable;
 import org.tinymediamanager.ui.components.table.MediaIdTable.MediaId;
 import org.tinymediamanager.ui.components.table.MediaRatingTable;
 import org.tinymediamanager.ui.components.table.MediaTrailerTable;
 import org.tinymediamanager.ui.components.table.MouseKeyboardSortingStrategy;
+import org.tinymediamanager.ui.components.table.PersonTable;
 import org.tinymediamanager.ui.components.table.TmmEditorTable;
 import org.tinymediamanager.ui.components.table.TmmTable;
 import org.tinymediamanager.ui.components.table.TmmTableFormat;
@@ -156,8 +155,11 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
   private final TvShow                             tvShowToEdit;
   private final TvShowList                         tvShowList          = TvShowModuleManager.getInstance().getTvShowList();
+
   private final JTabbedPane                        tabbedPane          = new TmmTabbedPane();
   private final EventList<Person>                  actors;
+  private final EventList<Person>                  crew;
+
   private final List<MediaGenres>                  genres              = ObservableCollections.observableList(new ArrayList<>());
   private final EventList<MediaId>                 ids;
   private final EventList<MediaRatingTable.Rating> ratings;
@@ -174,6 +176,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
   private YearSpinner                              spYear;
   private JTextArea                                taPlot;
   private PersonTable                              tableActors;
+  private PersonTable                              tableCrew;
   private ImageLabel                               lblPoster;
   private ImageLabel                               lblFanart;
   private ImageLabel                               lblBanner;
@@ -212,6 +215,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
   private TmmTable                                 tableIds;
   private TmmTable                                 tableRatings;
   private JTextArea                                tfOriginalTitle;
+  private JTextArea                                tfEnglishTitle;
   private JTextArea                                tfCountry;
   private JTextField                               tfCharacterart;
   private JTextField                               tfKeyart;
@@ -242,6 +246,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     // creation of lists
     actors = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
+    crew = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(Person.class));
     episodes = new SortedList<>(
         new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(EpisodeEditorContainer.class)));
     trailers = new ObservableElementList<>(GlazedLists.threadSafeList(new BasicEventList<>()), GlazedLists.beanConnector(MediaTrailer.class));
@@ -252,6 +257,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
     {
       tfTitle.setText(tvShow.getTitle());
       tfOriginalTitle.setText(tvShow.getOriginalTitle());
+      tfEnglishTitle.setText(tvShow.getEnglishTitle());
       tfSorttitle.setText(tvShow.getSortTitle());
       taPlot.setText(tvShow.getPlot());
       lblPoster.setImagePath(tvShow.getArtworkFilename(MediaFileType.POSTER));
@@ -434,7 +440,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       JPanel details1Panel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details"), details1Panel);
       details1Panel.setLayout(new MigLayout("", "[][grow][50lp:75lp][][60lp:75lp][100lp:n][][25lp:n][200lp:250lp,grow]",
-          "[][][][75lp:25%:25%,grow][][][pref!][][][][75lp:20%:20%,grow][50lp:50lp:100lp,grow 50]"));
+          "[][][][][75lp:25%:25%,grow][][][pref!][][][][75lp:20%:20%,grow][50lp:50lp:100lp,grow 50]"));
 
       {
         JLabel lblTitle = new TmmLabel(TmmResourceBundle.getString("metatag.title"));
@@ -473,7 +479,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         });
         details1Panel.add(btnDeletePoster, "cell 8 0");
 
-        details1Panel.add(lblPoster, "cell 8 1 1 6, grow");
+        details1Panel.add(lblPoster, "cell 8 1 1 7,grow");
         lblPoster.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE,
             e -> setImageSizeAndCreateLink(lblPosterSize, lblPoster, btnDeletePoster, MediaFileType.POSTER));
       }
@@ -485,18 +491,25 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details1Panel.add(tfOriginalTitle, "cell 1 1 6 1,growx");
       }
       {
+        JLabel lblTitleEnglish = new TmmLabel(TmmResourceBundle.getString("metatag.title.english"));
+        details1Panel.add(lblTitleEnglish, "cell 0 2,alignx right");
+
+        tfEnglishTitle = new TmmRoundTextArea();
+        details1Panel.add(tfEnglishTitle, "cell 1 2 6 1,growx");
+      }
+      {
         JLabel lblSortTitle = new TmmLabel(TmmResourceBundle.getString("metatag.sorttitle"));
-        details1Panel.add(lblSortTitle, "cell 0 2,alignx right");
+        details1Panel.add(lblSortTitle, "cell 0 3,alignx right");
 
         tfSorttitle = new TmmRoundTextArea();
-        details1Panel.add(tfSorttitle, "cell 1 2 6 1,growx");
+        details1Panel.add(tfSorttitle, "cell 1 3 6 1,growx");
       }
       {
         JLabel lblPlot = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
-        details1Panel.add(lblPlot, "cell 0 3,alignx right,aligny top");
+        details1Panel.add(lblPlot, "cell 0 4,alignx right,aligny top");
 
         JScrollPane scrollPanePlot = new JScrollPane();
-        details1Panel.add(scrollPanePlot, "cell 1 3 6 1,grow");
+        details1Panel.add(scrollPanePlot, "cell 1 4 6 1,grow");
 
         taPlot = new JTextArea();
         taPlot.setLineWrap(true);
@@ -508,80 +521,80 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       }
       {
         JLabel lblYear = new TmmLabel(TmmResourceBundle.getString("metatag.year"));
-        details1Panel.add(lblYear, "cell 0 4,alignx right");
+        details1Panel.add(lblYear, "cell 0 5,alignx right");
 
         spYear = new YearSpinner();
-        details1Panel.add(spYear, "cell 1 4,growx");
+        details1Panel.add(spYear, "cell 1 5,growx");
       }
       {
         JLabel lblpremiered = new TmmLabel(TmmResourceBundle.getString("metatag.premiered"));
-        details1Panel.add(lblpremiered, "cell 3 4,alignx right");
+        details1Panel.add(lblpremiered, "cell 3 5,alignx right");
 
         dpPremiered = new DatePicker(tvShowToEdit.getFirstAired());
-        details1Panel.add(dpPremiered, "cell 4 4 2 1,growx");
+        details1Panel.add(dpPremiered, "cell 4 5 2 1,growx");
       }
       {
         JLabel lblStudio = new TmmLabel(TmmResourceBundle.getString("metatag.studio"));
-        details1Panel.add(lblStudio, "cell 0 5,alignx right");
+        details1Panel.add(lblStudio, "cell 0 6,alignx right");
 
         tfStudio = new TmmRoundTextArea();
-        details1Panel.add(tfStudio, "cell 1 5 6 1,growx");
+        details1Panel.add(tfStudio, "cell 1 6 6 1,growx");
       }
       {
         JLabel lblCountryT = new TmmLabel(TmmResourceBundle.getString("metatag.country"));
-        details1Panel.add(lblCountryT, "cell 0 6,alignx trailing");
+        details1Panel.add(lblCountryT, "cell 0 7,alignx trailing");
 
         tfCountry = new TmmRoundTextArea();
-        details1Panel.add(tfCountry, "cell 1 6 6 1,growx");
+        details1Panel.add(tfCountry, "cell 1 7 6 1,growx");
       }
       {
         JLabel lblRuntime = new TmmLabel(TmmResourceBundle.getString("metatag.runtime"));
-        details1Panel.add(lblRuntime, "cell 0 7,alignx right");
+        details1Panel.add(lblRuntime, "cell 0 8,alignx right");
 
         spRuntime = new JSpinner();
-        details1Panel.add(spRuntime, "flowx,cell 1 7,growx");
+        details1Panel.add(spRuntime, "flowx,cell 1 8,growx");
 
         JLabel lblMin = new TmmLabel(TmmResourceBundle.getString("metatag.minutes"));
-        details1Panel.add(lblMin, "cell 1 7");
+        details1Panel.add(lblMin, "cell 1 8");
       }
       {
         JLabel lblStatus = new TmmLabel(TmmResourceBundle.getString("metatag.status"));
-        details1Panel.add(lblStatus, "cell 3 7,alignx right");
+        details1Panel.add(lblStatus, "cell 3 8,alignx right");
 
         cbStatus = new JComboBox(MediaAiredStatus.values());
-        details1Panel.add(cbStatus, "cell 4 7,growx");
+        details1Panel.add(cbStatus, "cell 4 8,growx");
       }
       {
         JLabel lblCertification = new TmmLabel(TmmResourceBundle.getString("metatag.certification"));
-        details1Panel.add(lblCertification, "cell 0 8,alignx right");
+        details1Panel.add(lblCertification, "cell 0 9,alignx right");
 
         cbCertification = new JComboBox();
-        details1Panel.add(cbCertification, "cell 1 8,growx");
+        details1Panel.add(cbCertification, "cell 1 9,growx");
       }
       {
         JLabel lblRating = new TmmLabel(TmmResourceBundle.getString("metatag.userrating"));
-        details1Panel.add(lblRating, "cell 0 9,alignx right");
+        details1Panel.add(lblRating, "cell 0 10,alignx right");
 
         spRating = new JSpinner();
-        details1Panel.add(spRating, "cell 1 9,growx");
+        details1Panel.add(spRating, "cell 1 10,growx");
 
         JLabel lblUserRatingHint = new JLabel(IconManager.HINT);
         lblUserRatingHint.setToolTipText(TmmResourceBundle.getString("edit.userrating.hint"));
-        details1Panel.add(lblUserRatingHint, "cell 2 9");
+        details1Panel.add(lblUserRatingHint, "cell 2 10");
       }
       {
         JLabel lblTop = new TmmLabel(TmmResourceBundle.getString("metatag.top250"));
-        details1Panel.add(lblTop, "cell 3 9,alignx right");
+        details1Panel.add(lblTop, "cell 3 10,alignx right");
 
         spTop250 = new JSpinner();
-        details1Panel.add(spTop250, "cell 4 9,growx");
+        details1Panel.add(spTop250, "cell 4 10,growx");
       }
       {
         JLabel lblRatingsT = new TmmLabel(TmmResourceBundle.getString("metatag.ratings"));
-        details1Panel.add(lblRatingsT, "flowy,cell 0 10,alignx right,aligny top");
+        details1Panel.add(lblRatingsT, "flowy,cell 0 11,alignx right,aligny top");
 
         JScrollPane scrollPaneRatings = new JScrollPane();
-        details1Panel.add(scrollPaneRatings, "cell 1 10 4 1,grow");
+        details1Panel.add(scrollPaneRatings, "cell 1 11 4 1,grow");
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
@@ -607,10 +620,10 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
             updateArtworkUrl(lblFanart, tfFanart);
           }
         });
-        details1Panel.add(new TmmLabel(TmmResourceBundle.getString("mediafiletype.fanart")), "cell 8 8");
+        details1Panel.add(new TmmLabel(TmmResourceBundle.getString("mediafiletype.fanart")), "cell 8 9");
 
         LinkLabel lblFanartSize = new LinkLabel();
-        details1Panel.add(lblFanartSize, "cell 8 8");
+        details1Panel.add(lblFanartSize, "cell 8 9");
 
         JButton btnDeleteFanart = new FlatButton(IconManager.DELETE_GRAY);
         btnDeleteFanart.setToolTipText(TmmResourceBundle.getString("Button.deleteartwork.desc"));
@@ -618,26 +631,26 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           lblFanart.clearImage();
           tfFanart.setText("");
         });
-        details1Panel.add(btnDeleteFanart, "cell 8 8");
+        details1Panel.add(btnDeleteFanart, "cell 8 9");
 
-        details1Panel.add(lblFanart, "cell 8 9 1 4,grow");
+        details1Panel.add(lblFanart, "cell 8 10 1 4,grow");
         lblFanart.addPropertyChangeListener(ORIGINAL_IMAGE_SIZE, e ->
 
         setImageSizeAndCreateLink(lblFanartSize, lblFanart, btnDeleteFanart, MediaFileType.FANART));
       }
 
       JButton btnAddRating = new SquareIconButton(new AddRatingAction());
-      details1Panel.add(btnAddRating, "cell 0 10,alignx right,aligny top");
+      details1Panel.add(btnAddRating, "cell 0 11,alignx right,aligny top");
 
       JButton btnRemoveRating = new SquareIconButton(new RemoveRatingAction());
-      details1Panel.add(btnRemoveRating, "cell 0 10,alignx right,aligny top");
+      details1Panel.add(btnRemoveRating, "cell 0 11,alignx right,aligny top");
 
       {
         JLabel lblNoteT = new TmmLabel(TmmResourceBundle.getString("metatag.note"));
-        details1Panel.add(lblNoteT, "cell 0 11,alignx right,aligny top");
+        details1Panel.add(lblNoteT, "cell 0 12,alignx right,aligny top");
 
         JScrollPane scrollPane = new JScrollPane();
-        details1Panel.add(scrollPane, "cell 1 11 6 1,grow,wmin 0");
+        details1Panel.add(scrollPane, "cell 1 12 6 1,wmin 0,grow");
 
         taNote = new JTextArea();
         taNote.setLineWrap(true);
@@ -659,51 +672,27 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       details2Panel
           .setLayout(new MigLayout("", "[][150lp:400lp,grow][20lp:n][][150lp:300lp,grow]", "[][100lp:150lp,grow][20lp:n][100lp:150lp,grow][][grow]"));
       {
-        JLabel lblActors = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
-        details2Panel.add(lblActors, "flowy,cell 0 0 1 2,alignx right,aligny top");
-
-        tableActors = new PersonTable(actors);
-        tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
-        tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
-
-        JScrollPane scrollPaneActors = new JScrollPane();
-        tableActors.configureScrollPane(scrollPaneActors);
-        details2Panel.add(scrollPaneActors, "cell 1 0 1 2,grow");
-
-        JButton btnAddActor = new SquareIconButton(new AddActorAction());
-        details2Panel.add(btnAddActor, "cell 0 0,alignx right");
-
-        JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction()); // $NON-NLS-1$
-        details2Panel.add(btnRemoveActor, "cell 0 0,alignx right,aligny top");
-
-        JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
-        details2Panel.add(btnMoveActorUp, "cell 0 0,alignx right");
-
-        JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
-        details2Panel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
-      }
-      {
         JLabel lblDateAdded = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
-        details2Panel.add(lblDateAdded, "cell 3 0,alignx right");
+        details2Panel.add(lblDateAdded, "cell 0 0,alignx right");
 
         spDateAdded = new JSpinner(new SpinnerDateModel());
-        details2Panel.add(spDateAdded, "cell 4 0");
+        details2Panel.add(spDateAdded, "cell 1 0");
       }
       {
         JLabel lblIds = new TmmLabel("Ids");
-        details2Panel.add(lblIds, "flowy,cell 3 1,alignx right,aligny top");
+        details2Panel.add(lblIds, "flowy,cell 3 0 1 2,alignx right,aligny top");
 
         tableIds = new MediaIdTable(ids);
 
         JScrollPane scrollPaneIds = new JScrollPane();
         tableIds.configureScrollPane(scrollPaneIds);
-        details2Panel.add(scrollPaneIds, "cell 4 1,grow");
+        details2Panel.add(scrollPaneIds, "cell 3 0 1 2,grow");
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
-        details2Panel.add(btnAddId, "cell 3 1,alignx right");
+        details2Panel.add(btnAddId, "cell 3 0 1 2,alignx right");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
-        details2Panel.add(btnRemoveId, "cell 3 1,alignx right,aligny top");
+        details2Panel.add(btnRemoveId, "cell 3 0 1 2,alignx right,aligny top");
       }
       {
         JLabel lblGenres = new TmmLabel(TmmResourceBundle.getString("metatag.genre"));
@@ -761,6 +750,68 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbTags.getActionMap().put(enterAction, new AddTagAction());
         details2Panel.add(cbTags, "cell 4 4,growx");
+      }
+    }
+
+    /**********************************************************************************
+     * CrewPanel
+     **********************************************************************************/
+    {
+      JPanel crewPanel = new JPanel();
+      tabbedPane.addTab(TmmResourceBundle.getString("movie.edit.castandcrew"), null, crewPanel, null);
+      crewPanel.setLayout(new MigLayout("", "[][150lp:300lp,grow][20lp:n][][150lp:300lp,grow]", "[200lp:400lp,grow]"));
+      {
+        JLabel lblActorsT = new TmmLabel(TmmResourceBundle.getString("metatag.actors"));
+        crewPanel.add(lblActorsT, "flowy,cell 0 0,alignx right,aligny top");
+
+        tableActors = new PersonTable(actors);
+        tableActors.setAddTitle(TmmResourceBundle.getString("cast.actor.add"));
+        tableActors.setEditTitle(TmmResourceBundle.getString("cast.actor.edit"));
+        tableActors.setAllowedEditorTypes(new Person.Type[] { Person.Type.ACTOR });
+
+        JScrollPane scrollPane = new JScrollPane();
+        tableActors.configureScrollPane(scrollPane);
+        crewPanel.add(scrollPane, "cell 1 0,grow");
+      }
+      {
+        JButton btnAddActor = new SquareIconButton(new AddActorAction());
+        crewPanel.add(btnAddActor, "cell 0 0,alignx right");
+
+        JButton btnRemoveActor = new SquareIconButton(new RemoveActorAction());
+        crewPanel.add(btnRemoveActor, "cell 0 0,alignx right");
+
+        JButton btnMoveActorUp = new SquareIconButton(new MoveActorUpAction());
+        crewPanel.add(btnMoveActorUp, "cell 0 0,alignx right");
+
+        JButton btnMoveActorDown = new SquareIconButton(new MoveActorDownAction());
+        crewPanel.add(btnMoveActorDown, "cell 0 0,alignx right,aligny top");
+      }
+      {
+        JLabel lblCrewT = new TmmLabel(TmmResourceBundle.getString("metatag.crew"));
+        crewPanel.add(lblCrewT, "flowy,cell 3 0,alignx right,aligny top");
+
+        tableCrew = new PersonTable(crew);
+        tableCrew.setAddTitle(TmmResourceBundle.getString("cast.crew.add"));
+        tableCrew.setEditTitle(TmmResourceBundle.getString("cast.crew.edit"));
+        tableCrew.setAllowedEditorTypes(new Person.Type[] { Person.Type.DIRECTOR, Person.Type.WRITER, Person.Type.PRODUCER, Person.Type.COMPOSER,
+            Person.Type.EDITOR, Person.Type.CAMERA, Person.Type.OTHER });
+
+        JScrollPane scrollPane = new JScrollPane();
+        tableCrew.configureScrollPane(scrollPane);
+        crewPanel.add(scrollPane, "cell 4 0,grow");
+      }
+      {
+        JButton btnAddCrew = new SquareIconButton(new AddCrewAction());
+        crewPanel.add(btnAddCrew, "cell 3 0,alignx right");
+
+        JButton btnRemoveCrew = new SquareIconButton(new RemoveCrewAction());
+        crewPanel.add(btnRemoveCrew, "cell 3 0,alignx right");
+
+        JButton btnMoveCrewUp = new SquareIconButton(new MoveCrewUpAction());
+        crewPanel.add(btnMoveCrewUp, "cell 3 0,alignx right");
+
+        JButton btnMoveCrewDown = new SquareIconButton(new MoveCrewDownAction());
+        crewPanel.add(btnMoveCrewDown, "cell 3 0,alignx right,aligny top");
       }
     }
 
@@ -1156,14 +1207,10 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       addButton(cancelButton);
 
       JButton okButton = new JButton(new OKAction());
-      getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
-          JComponent.WHEN_IN_FOCUSED_WINDOW);
-      getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK),
-          JComponent.WHEN_IN_FOCUSED_WINDOW);
-      if (SystemUtils.IS_OS_MAC) {
-        getRootPane().registerKeyboardAction(new OKAction(), KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.META_DOWN_MASK),
-            JComponent.WHEN_IN_FOCUSED_WINDOW);
-      }
+      getRootPane().registerKeyboardAction(new OKAction(),
+          KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
+      getRootPane().registerKeyboardAction(new OKAction(),
+          KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
       addButton(okButton);
     }
 
@@ -1205,6 +1252,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
       tvShowToEdit.setTitle(tfTitle.getText());
       tvShowToEdit.setOriginalTitle(tfOriginalTitle.getText());
+      tvShowToEdit.setEnglishTitle(tfEnglishTitle.getText());
       tvShowToEdit.setSortTitle(tfSorttitle.getText());
       tvShowToEdit.setYear((Integer) spYear.getValue());
       tvShowToEdit.setPlot(taPlot.getText());
@@ -1276,6 +1324,9 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
       tvShowToEdit.removeActors();
       tvShowToEdit.setActors(actors);
+
+      tvShowToEdit.removeCrew();
+      tvShowToEdit.setCrew(crew);
 
       tvShowToEdit.removeAllTags();
       tvShowToEdit.setTags(tags);
@@ -1468,7 +1519,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      tableActors.addPerson(Person.Type.ACTOR);
+      tableActors.addPerson();
     }
   }
 
@@ -1512,6 +1563,62 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       if (row < actors.size() - 1) {
         Collections.rotate(actors.subList(row, row + 2), -1);
         tableActors.getSelectionModel().setSelectionInterval(row + 1, row + 1);
+      }
+    }
+  }
+
+  private class AddCrewAction extends AbstractAction {
+    public AddCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.add"));
+      putValue(SMALL_ICON, IconManager.ADD_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      tableCrew.addPerson();
+    }
+  }
+
+  private class RemoveCrewAction extends AbstractAction {
+    public RemoveCrewAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("cast.crew.remove"));
+      putValue(SMALL_ICON, IconManager.REMOVE_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      crew.removeAll(tableCrew.getSelectedPersons());
+    }
+  }
+
+  private class MoveCrewUpAction extends AbstractAction {
+    public MoveCrewUpAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewup"));
+      putValue(SMALL_ICON, IconManager.ARROW_UP_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      int row = tableCrew.getSelectedRow();
+      if (row > 0) {
+        Collections.rotate(crew.subList(row - 1, row + 1), 1);
+        tableCrew.getSelectionModel().setSelectionInterval(row - 1, row - 1);
+      }
+    }
+  }
+
+  private class MoveCrewDownAction extends AbstractAction {
+    public MoveCrewDownAction() {
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.edit.movecrewdown"));
+      putValue(SMALL_ICON, IconManager.ARROW_DOWN_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      int row = tableCrew.getSelectedRow();
+      if (row < crew.size() - 1) {
+        Collections.rotate(crew.subList(row, row + 2), -1);
+        tableCrew.getSelectionModel().setSelectionInterval(row + 1, row + 1);
       }
     }
   }
@@ -1979,7 +2086,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
           TmmUIHelper.browseUrl(url);
         }
         catch (Exception ex) {
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
         }
       }

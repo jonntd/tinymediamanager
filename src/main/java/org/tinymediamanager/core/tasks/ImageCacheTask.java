@@ -54,7 +54,7 @@ public class ImageCacheTask implements Runnable {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.warn("failed to cache file: {} - {}", mediaFile.getFile(), e.getMessage());
+      LOGGER.warn("Failed to cache file: '{}' - '{}'", mediaFile.getFile(), e.getMessage());
     }
   }
 }

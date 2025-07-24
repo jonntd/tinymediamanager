@@ -28,14 +28,10 @@ import static org.tinymediamanager.core.Constants.HAS_NFO_FILE;
 import static org.tinymediamanager.core.Constants.MEDIA_SOURCE;
 import static org.tinymediamanager.core.Constants.RUNTIME;
 import static org.tinymediamanager.core.Constants.SEASON;
-import static org.tinymediamanager.core.Constants.SEASON_BANNER;
-import static org.tinymediamanager.core.Constants.SEASON_POSTER;
-import static org.tinymediamanager.core.Constants.SEASON_THUMB;
 import static org.tinymediamanager.core.Constants.TITLE_FOR_UI;
 import static org.tinymediamanager.core.Constants.TITLE_SORTABLE;
 import static org.tinymediamanager.core.Constants.TV_SHOW;
 import static org.tinymediamanager.core.Constants.WATCHED;
-import static org.tinymediamanager.core.Constants.WRITERS;
 import static org.tinymediamanager.core.Constants.WRITERS_AS_STRING;
 import static org.tinymediamanager.core.Utils.returnOneWhenFilled;
 import static org.tinymediamanager.scraper.entities.MediaEpisodeGroup.EpisodeGroupType.ABSOLUTE;
@@ -70,6 +66,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tinymediamanager.UpgradeTasks;
 import org.tinymediamanager.core.IMediaInformation;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
@@ -120,6 +117,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   private static final Comparator<MediaFile> MEDIA_FILE_COMPARATOR = new TvShowMediaFileComparator();
 
   @JsonProperty
+  private String                             englishTitle          = "";
+  @JsonProperty
   private final List<MediaEpisodeNumber>     episodeNumbers        = new CopyOnWriteArrayList<>();
   @JsonProperty
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
@@ -148,9 +147,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   @JsonProperty
   private final List<Person>                 actors                = new CopyOnWriteArrayList<>();
   @JsonProperty
-  private final List<Person>                 directors             = new CopyOnWriteArrayList<>();
-  @JsonProperty
-  private final List<Person>                 writers               = new CopyOnWriteArrayList<>();
+  private final List<Person>                 crew                  = new CopyOnWriteArrayList<>();
 
   private TvShow                             tvShow                = null;
   private String                             titleSortable         = "";
@@ -161,11 +158,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   // LEGACY
   @JsonIgnore
   public Map<String, Object>                 additionalProperties  = new HashMap<>();
-
-  @JsonAnySetter
-  public void setAdditionalProperty(String name, Object value) {
-    this.additionalProperties.put(name, value);
-  }
 
   /**
    * Instantiates a new tv show episode. To initialize the propertychangesupport after loading
@@ -196,6 +188,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     path = source.path;
     title = source.title;
     originalTitle = source.originalTitle;
+    englishTitle = source.englishTitle;
     year = source.year;
     plot = source.plot;
 
@@ -207,6 +200,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     edition = source.edition;
     runtime = source.runtime;
 
+    mainEpisodeNumber = source.mainEpisodeNumber;
     episodeNumbers.addAll(source.episodeNumbers);
 
     if (source.firstAired != null) {
@@ -224,15 +218,14 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     for (Person actor : source.getActors()) {
       actors.add(new Person(actor));
     }
-    for (Person director : source.getDirectors()) {
-      directors.add(new Person(director));
+    for (Person director : source.getCrew()) {
+      crew.add(new Person(director));
     }
-    for (Person writer : source.getWriters()) {
-      writers.add(new Person(writer));
-    }
+
     for (MediaRating mediaRating : source.getRatings().values()) {
       ratings.put(mediaRating.getId(), new MediaRating(mediaRating));
     }
+
     tags.addAll(source.tags);
     originalFilename = source.originalFilename;
     productionCompany = source.productionCompany;
@@ -280,6 +273,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     }
     super.merge(other, force);
 
+    setEnglishTitle(StringUtils.isBlank(englishTitle) || force ? other.englishTitle : englishTitle);
     setFirstAired(firstAired == null || force ? other.firstAired : firstAired);
     setWatched(!watched || force ? other.watched : watched);
     setPlaycount(playcount == 0 || force ? other.playcount : playcount);
@@ -290,13 +284,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     if (force) {
       actors.clear();
-      directors.clear();
-      writers.clear();
+      crew.clear();
     }
 
     setActors(other.actors);
-    setDirectors(other.directors);
-    setWriters(other.writers);
+    setCrew(other.crew);
 
     episodeNumbers.clear();
     episodeNumbers.addAll(other.episodeNumbers);
@@ -355,6 +347,27 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   public void clearTitleSortable() {
     titleSortable = "";
+  }
+
+  /**
+   * Gets the title in English.
+   *
+   * @return the title in English
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Sets the title in English.
+   *
+   * @param newValue
+   *          the new title in English
+   */
+  public void setEnglishTitle(String newValue) {
+    String oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
   public Date getFirstAired() {
@@ -672,6 +685,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
         firePropertyChange(EPISODE, 0, -1);
         firePropertyChange(SEASON, 0, -1);
         firePropertyChange(TITLE_FOR_UI, -1, episode.episode());
+
+        // inform the TV show about the change
+        if (tvShow != null) {
+          tvShow.updateSeasonForEpisode(this);
+        }
+
         return;
       }
     }
@@ -714,6 +733,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       firePropertyChange(EPISODE, Integer.MIN_VALUE, episode.episode());
       firePropertyChange(SEASON, Integer.MIN_VALUE, episode.season());
       firePropertyChange(TITLE_FOR_UI, Integer.MIN_VALUE, episode.episode());
+    }
+
+    // inform the TV show about the change
+    if (tvShow != null) {
+      tvShow.updateSeasonForEpisode(this);
     }
   }
 
@@ -938,9 +962,9 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       return;
     }
 
-    // check against null metadata (e.g. aborted request)
+    // check if metadata has at least an id (aka it is not empty)
     if (metadata == null) {
-      LOGGER.error("metadata was null");
+      LOGGER.warn("Wanted to save empty metadata for episode '{}'", getTitle());
       return;
     }
 
@@ -996,7 +1020,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ORIGINAL_TITLE) && StringUtils.isNotBlank(metadata.getOriginalTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getOriginalTitle()))) {
       // Capitalize first letter of original title if setting is set!
       if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
         setOriginalTitle(StrgUtils.capitalize(metadata.getOriginalTitle()));
@@ -1006,7 +1031,19 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       }
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.ENGLISH_TITLE) && StringUtils.isNotBlank(metadata.getEnglishTitle())
+        && (overwriteExistingItems || StringUtils.isBlank(getEnglishTitle()))) {
+      // Capitalize first letter of original title if setting is set!
+      if (TvShowModuleManager.getInstance().getSettings().getCapitalWordsInTitles()) {
+        setEnglishTitle(StrgUtils.capitalize(metadata.getEnglishTitle()));
+      }
+      else {
+        setEnglishTitle(metadata.getEnglishTitle());
+      }
+    }
+
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.PLOT) && StringUtils.isNotBlank(metadata.getPlot())
+        && (overwriteExistingItems || StringUtils.isBlank(getPlot()))) {
       setPlot(metadata.getPlot());
     }
 
@@ -1047,11 +1084,24 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       setEpisodeNumbers(newEpisodeNumbers);
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && (overwriteExistingItems || getFirstAired() == null)) {
+    // do we have an AIRED ep num?
+    // on plain EP scrape, above IF is not entered... but if we scraped one, we can use it here...
+    int currentAiredNum = getEpisode(AIRED);
+    if (currentAiredNum == -1) {
+      // did we scrape an AIRED ep num?
+      MediaEpisodeNumber scrapedAiredNum = metadata.getEpisodeNumber(AIRED);
+      if (scrapedAiredNum != null && scrapedAiredNum.episode() >= 0) {
+        // ok, then take the scraped AIRED numbers and use it!
+        setEpisode(scrapedAiredNum);
+      }
+    }
+
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.AIRED) && metadata.getReleaseDate() != null
+        && (overwriteExistingItems || getFirstAired() == null)) {
       setFirstAired(metadata.getReleaseDate());
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && (overwriteExistingItems || getRuntime() <= 0)) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.RUNTIME) && metadata.getRuntime() > 0 && (overwriteExistingItems || getRuntime() <= 0)) {
       setRuntime(metadata.getRuntime());
     }
 
@@ -1093,18 +1143,14 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       setActors(metadata.getCastMembers(Person.Type.ACTOR));
     }
 
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.DIRECTORS)) {
+    if (config.contains(TvShowEpisodeScraperMetadataConfig.CREW)) {
       if (!matchFound || overwriteExistingItems) {
-        directors.clear();
+        crew.clear();
       }
-      setDirectors(metadata.getCastMembers(Person.Type.DIRECTOR));
-    }
-
-    if (config.contains(TvShowEpisodeScraperMetadataConfig.WRITERS)) {
-      if (!matchFound || overwriteExistingItems) {
-        writers.clear();
-      }
-      setWriters(metadata.getCastMembers(Person.Type.WRITER));
+      setCrew(metadata.getCastMembers(Person.Type.DIRECTOR));
+      setCrew(metadata.getCastMembers(Person.Type.WRITER));
+      setCrew(metadata.getCastMembers(Person.Type.PRODUCER));
+      setCrew(metadata.getCastMembers(Person.Type.OTHER));
     }
 
     // update DB
@@ -1118,7 +1164,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   public void writeNFO() {
     List<TvShowEpisodeNfoNaming> nfoNamings = TvShowModuleManager.getInstance().getSettings().getEpisodeNfoFilenames();
     if (nfoNamings.isEmpty()) {
-      LOGGER.info("Not writing any NFO file, because NFO filename preferences were empty...");
+      LOGGER.debug("Not writing any NFO file, because NFO filename preferences were empty...");
       return;
     }
 
@@ -1143,14 +1189,8 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       default -> new TvShowEpisodeToKodiConnector(episodesInNfo);
     };
 
-    try {
-      connector.write(Collections.singletonList(TvShowEpisodeNfoNaming.FILENAME));
-
-      firePropertyChange(HAS_NFO_FILE, false, true);
-    }
-    catch (Exception e) {
-      LOGGER.error("could not write NFO file - '{}'", e.getMessage());
-    }
+    connector.write(Collections.singletonList(TvShowEpisodeNfoNaming.FILENAME));
+    firePropertyChange(HAS_NFO_FILE, false, true);
   }
 
   /**
@@ -1222,27 +1262,28 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   @JsonSetter
   public void setActors(List<Person> newActors) {
-    // two way sync of actors
+    // two-way sync of actors
     mergePersons(actors, newActors);
     firePropertyChange(ACTORS, null, getActors());
     firePropertyChange(ACTORS_AS_STRING, null, getActorsAsString());
   }
 
   /**
-   * add the given list of directors
+   * add the given list of crew members
    *
-   * @param newDirectors
-   *          a {@link Collection} of directors to be added
+   * @param newCrew
+   *          a {@link Collection} of crew members to be added
    */
-  public void addToDirectors(Collection<Person> newDirectors) {
+  public void addToCrew(Collection<Person> newCrew) {
     Set<Person> newItems = new LinkedHashSet<>();
 
     // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newDirectors)) {
-      if (person == null || directors.contains(person)) {
+    for (Person person : ListUtils.nullSafe(newCrew)) {
+      if (person == null || crew.contains(person)) {
         continue;
       }
-      if (person.getType() != Person.Type.DIRECTOR) {
+      // everything but cast
+      if (person.getType() == Person.Type.ACTOR || person.getType() == Person.Type.GUEST) {
         return;
       }
 
@@ -1253,33 +1294,45 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       return;
     }
 
-    directors.addAll(newItems);
-    firePropertyChange(DIRECTORS, null, directors);
+    crew.addAll(newItems);
+    firePropertyChange(DIRECTORS, null, getCrew());
     firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * remove the all directors.
+   * remove the all crew members.
    */
-  public void removeDirectors() {
-    directors.clear();
-    firePropertyChange(DIRECTORS, null, this.getDirectors());
-    firePropertyChange(DIRECTORS_AS_STRING, null, this.getDirectorsAsString());
+  public void removeCrew() {
+    crew.clear();
+    firePropertyChange(DIRECTORS, null, getCrew());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
   }
 
   /**
-   * Sets the directors.
+   * Sets the crew members.
    *
-   * @param newDirectors
+   * @param newCrew
    *          the new directors
    */
   @JsonSetter
-  public void setDirectors(List<Person> newDirectors) {
-    // two way sync of directors
-    mergePersons(directors, newDirectors);
+  public void setCrew(List<Person> newCrew) {
+    // two-way sync of crew members
+    mergePersons(crew, newCrew);
 
-    firePropertyChange(DIRECTORS, null, this.getDirectors());
-    firePropertyChange(DIRECTORS_AS_STRING, null, this.getDirectorsAsString());
+    firePropertyChange(DIRECTORS, null, getCrew());
+    firePropertyChange(DIRECTORS_AS_STRING, null, getDirectorsAsString());
+    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
+  }
+
+  /**
+   * get the directors.
+   *
+   * @return the directors
+   */
+  public List<Person> getCrew() {
+    return crew;
   }
 
   /**
@@ -1288,7 +1341,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    * @return the directors
    */
   public List<Person> getDirectors() {
-    return directors;
+    return crew.stream().filter(person -> person.getType() == Person.Type.DIRECTOR).toList();
   }
 
   /**
@@ -1298,64 +1351,10 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   public String getDirectorsAsString() {
     List<String> directorNames = new ArrayList<>();
-    for (Person director : directors) {
+    for (Person director : getDirectors()) {
       directorNames.add(director.getName());
     }
     return StringUtils.join(directorNames, ", ");
-  }
-
-  /**
-   * add the given writers
-   *
-   * @param newWriters
-   *          a {@link Collection} of the writers to be added
-   */
-  public void addToWriters(Collection<Person> newWriters) {
-    Set<Person> newItems = new LinkedHashSet<>();
-
-    // do not accept duplicates or null values
-    for (Person person : ListUtils.nullSafe(newWriters)) {
-      if (person == null || writers.contains(person)) {
-        continue;
-      }
-      if (person.getType() != Person.Type.WRITER) {
-        return;
-      }
-
-      newItems.add(person);
-    }
-
-    if (newItems.isEmpty()) {
-      return;
-    }
-
-    writers.addAll(newItems);
-    firePropertyChange(WRITERS, null, getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, getWritersAsString());
-  }
-
-  /**
-   * remove all writers.
-   */
-  public void removeWriters() {
-    writers.clear();
-    firePropertyChange(WRITERS, null, this.getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, this.getWritersAsString());
-  }
-
-  /**
-   * Sets the writers.
-   *
-   * @param newWriters
-   *          the new writers
-   */
-  @JsonSetter
-  public void setWriters(List<Person> newWriters) {
-    // two way sync of writers
-    mergePersons(writers, newWriters);
-
-    firePropertyChange(WRITERS, null, this.getWriters());
-    firePropertyChange(WRITERS_AS_STRING, null, this.getWritersAsString());
   }
 
   /**
@@ -1364,7 +1363,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    * @return the writers
    */
   public List<Person> getWriters() {
-    return writers;
+    return crew.stream().filter(person -> person.getType() == Person.Type.WRITER).toList();
   }
 
   /**
@@ -1374,7 +1373,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   public String getWritersAsString() {
     List<String> writerNames = new ArrayList<>();
-    for (Person writer : writers) {
+    for (Person writer : getWriters()) {
       writerNames.add(writer.getName());
     }
     return StringUtils.join(writerNames, ", ");
@@ -1637,28 +1636,6 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     TvShowModuleManager.getInstance().getTvShowList().persistEpisode(this);
   }
 
-  /**
-   * Event to trigger a season artwork changed for the UI
-   */
-  void setSeasonArtworkChanged(MediaArtworkType type) {
-    switch (type) {
-      case SEASON_POSTER:
-        firePropertyChange(SEASON_POSTER, null, "");
-        break;
-
-      case SEASON_BANNER:
-        firePropertyChange(SEASON_BANNER, null, "");
-        break;
-
-      case SEASON_THUMB:
-        firePropertyChange(SEASON_THUMB, null, "");
-        break;
-
-      default:
-        break;
-    }
-  }
-
   @Override
   protected float calculateScrapeScore() {
     float score = super.calculateScrapeScore();
@@ -1670,8 +1647,7 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     score = score + 2 * returnOneWhenFilled(firstAired);
     score = score + 2 * returnOneWhenFilled(actors);
-    score = score + returnOneWhenFilled(directors);
-    score = score + returnOneWhenFilled(writers);
+    score = score + returnOneWhenFilled(crew);
     score = score + returnOneWhenFilled(artworkUrlMap);
 
     return score;
@@ -1754,6 +1730,13 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
     List<MediaFile> mediaFiles = getMediaFiles();
     for (MediaFile mf : mediaFiles) {
+      // only _physically_ delete media files when there is no other episode pointing to it
+      List<TvShowEpisode> episodes = TvShowList.getTvEpisodesByFile(tvShow, mf.getFile());
+      if (episodes.size() > 1) {
+        // this media file is used by other episodes, so we do not delete it
+        continue;
+      }
+
       if (!mf.deleteSafely(tvShow.getDataSource())) {
         result = false;
       }
@@ -2056,9 +2039,12 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    * @return the runtime in minutes
    */
   public int getRuntime() {
-    int runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
-    if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo() && runtimeFromMi > 0) {
-      return runtimeFromMi;
+    int runtimeFromMi = 0;
+    if (TvShowModuleManager.getInstance().getSettings().isRuntimeFromMediaInfo()) {
+      runtimeFromMi = getRuntimeFromMediaFilesInMinutes();
+      if (runtimeFromMi > 0) {
+        return runtimeFromMi;
+      }
     }
     return runtime == 0 ? runtimeFromMi : runtime;
   }
@@ -2153,42 +2139,51 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
 
   public Object getValueForMetadata(TvShowEpisodeScraperMetadataConfig metadataConfig) {
 
-    switch (metadataConfig) {
-      case SEASON_EPISODE: {
-        return getEpisodeNumbers();
-      }
+    return switch (metadataConfig) {
+      case SEASON_EPISODE -> getEpisodeNumbers();
+      case TITLE -> getTitle();
+      case ORIGINAL_TITLE -> getOriginalTitle();
+      case PLOT -> getPlot();
+      case AIRED -> getFirstAired();
+      case RATING -> getRatings();
+      case TAGS -> getTags();
+      case ACTORS -> getActors();
+      case CREW -> getCrew();
+      case THUMB -> getMediaFiles(MediaFileType.THUMB);
+      default -> null;
+    };
+  }
 
-      case TITLE:
-        return getTitle();
-
-      case ORIGINAL_TITLE:
-        return getOriginalTitle();
-
-      case PLOT:
-        return getPlot();
-
-      case AIRED:
-        return getFirstAired();
-
-      case RATING:
-        return getRatings();
-
-      case TAGS:
-        return getTags();
-
-      case ACTORS:
-        return getActors();
-
-      case DIRECTORS:
-        return getDirectors();
-
-      case WRITERS:
-        return getWriters();
-
-      case THUMB:
-        return getMediaFiles(MediaFileType.THUMB);
+  /**
+   * used to migrate values to their new location
+   *
+   * @param property
+   *          the property/value name
+   * @param value
+   *          the value itself
+   */
+  @JsonAnySetter
+  public void setUnknownFields(String property, Object value) {
+    if (value == null) {
+      return;
     }
 
-    return null;
+    // migrate old properties
+    switch (property) {
+      // producers, writers and directors get merged into a unified crew list
+      case "producers", "writers", "directors" -> {
+        if (value instanceof List<?> crewList) {
+          for (Person person : UpgradeTasks.upgradeCrew(crewList)) {
+            if (!crew.contains(person)) {
+              crew.add(person);
+            }
+          }
+          // sort once
+          crew.sort(Comparator.comparingInt(o -> o.getType().ordinal()));
+        }
+      }
+
+      default -> additionalProperties.put(property, value);
+    }
   }
 }

@@ -56,8 +56,9 @@ public class MovieRenameTask extends TmmThreadPool {
   @Override
   protected void doInBackground() {
     try {
+      LOGGER.info("Renaming '{}' movies", moviesToRename.size());
+
       initThreadPool(1, "rename");
-      start();
 
       List<MediaFile> imageFiles = new ArrayList<>();
 
@@ -77,16 +78,16 @@ public class MovieRenameTask extends TmmThreadPool {
       for (Movie movie : moviesToRename) {
         imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());
       }
-      // re-build the image cache afterwards in an own thread
+      // re-build the image cache afterward in an own thread
       if (Settings.getInstance().isImageCache() && !imageFiles.isEmpty()) {
         imageFiles.forEach(ImageCache::cacheImageAsync);
       }
 
-      LOGGER.info("Done renaming movies)");
+      LOGGER.info("Finished renaming movies - took {} ms", getRuntime());
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "Settings.renamer", "message.renamer.threadcrashed"));
+      LOGGER.error("Could not rename movies - '{}'", e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "Settings.renamer", "message.renamer.threadcrashed"));
     }
   }
 

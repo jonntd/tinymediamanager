@@ -103,11 +103,11 @@ public class TmmOsUtils {
     try (FileWriterWithEncoding writer = new FileWriterWithEncoding(desktop, UrlUtil.UTF_8)) {
       writer.write(sb.toString());
       if (!desktop.setExecutable(true)) {
-        LOGGER.warn("could not make {} executable", desktop.getName());
+        LOGGER.warn("Could not set executable bit for '{}'", desktop.getName());
       }
     }
     catch (IOException e) {
-      LOGGER.warn(e.getMessage());
+      LOGGER.warn("Could not create .desktop file - '{}'", e.getMessage());
     }
   }
 
@@ -168,7 +168,7 @@ public class TmmOsUtils {
       }
       catch (Exception e) {
         // not possible somehow -> load directly from tmm folder
-        LOGGER.info("could not copy native libs to the temp folder -> try to load from install dir");
+        LOGGER.warn("Could not copy native libs to the temp folder - '{}' -> try to load from install dir", e.getMessage());
       }
     }
 

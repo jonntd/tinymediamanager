@@ -25,6 +25,7 @@ import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 /**
  * The enum TvShowEpisodeScraperMetadataConfig is used to control which episode fields should be set after scraping.
@@ -35,6 +36,7 @@ public enum TvShowEpisodeScraperMetadataConfig implements ScraperMetadataConfig 
   // meta data
   TITLE(Type.METADATA),
   ORIGINAL_TITLE(Type.METADATA, "metatag.originaltitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   PLOT(Type.METADATA),
   @JsonAlias({ "AIRED_SEASON_EPISODE", "DVD_SEASON_EPISODE", "DISPLAY_SEASON_EPISODE" })
   SEASON_EPISODE(Type.METADATA, "tvshow.seasonepisode"),
@@ -45,10 +47,7 @@ public enum TvShowEpisodeScraperMetadataConfig implements ScraperMetadataConfig 
 
   // cast
   ACTORS(Type.CAST),
-  DIRECTORS(Type.CAST),
-  WRITERS(Type.CAST),
-  @Deprecated
-  PRODUCERS(Type.DEPRECATED),
+  CREW(Type.CAST),
 
   // artwork
   THUMB(Type.ARTWORK);
@@ -171,5 +170,14 @@ public enum TvShowEpisodeScraperMetadataConfig implements ScraperMetadataConfig 
     }
 
     return values;
+  }
+
+  @JsonCreator
+  public static TvShowEpisodeScraperMetadataConfig forValue(String value) {
+    return switch (value) {
+      // map deprecated ones
+      case "PRODUCERS", "DIRECTORS", "WRITERS" -> TvShowEpisodeScraperMetadataConfig.CREW;
+      default -> TvShowEpisodeScraperMetadataConfig.valueOf(value.toUpperCase());
+    };
   }
 }

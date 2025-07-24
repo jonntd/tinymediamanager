@@ -364,7 +364,7 @@ public class Url {
     }
     catch (UnknownHostException e) {
       cleanup();
-      LOGGER.error("proxy or host not found/reachable - {}", e.getMessage());
+      LOGGER.error("Proxy or host not found/reachable - '{}'", e.getMessage());
       throw new HttpException(e.getMessage());
     }
     catch (HttpException e) {
@@ -375,7 +375,7 @@ public class Url {
     catch (Exception e) {
       cleanup();
       // rethrow that to inform the caller that there was an HTTP-Exception
-      LOGGER.error("Unexpected exception getting url '" + TmmHttpLoggingInterceptor.prepareUrlToLog(url) + "' - " + e.getMessage(), e); // NOSONAR
+      LOGGER.error("Unexpected exception getting url '{}' - '{}'", TmmHttpLoggingInterceptor.prepareUrlToLog(url), e.getMessage());
       throw e;
     }
     return is;
@@ -413,7 +413,7 @@ public class Url {
         throw new InterruptedException();
       }
       catch (Exception e) {
-        LOGGER.warn("problem fetching the url: {}", e.getMessage());
+        LOGGER.warn("Problem fetching the url '{}' - '{}'", url, e.getMessage());
         exception = e;
       }
       if (getStatusCode() == 403 || getStatusCode() == 404) {
@@ -430,7 +430,7 @@ public class Url {
         return null;
       }
 
-      LOGGER.info("could not fetch: {} - retrying", url);
+      LOGGER.debug("could not fetch: {} - retrying", url);
     } while (counter <= retries);
 
     if (exception != null) {
@@ -534,7 +534,7 @@ public class Url {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("Error downloading {} - {}", this.url, e.getMessage());
+      LOGGER.error("Error downloading '{}' - '{}'", TmmHttpLoggingInterceptor.prepareUrlToLog(url), e.getMessage());
     }
     return false;
   }

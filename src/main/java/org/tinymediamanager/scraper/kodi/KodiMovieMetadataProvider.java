@@ -81,7 +81,7 @@ public class KodiMovieMetadataProvider extends AbstractKodiMetadataProvider impl
   @Override
   protected void processXmlContent(String xmlDetails, MediaMetadata md, MediaSearchResult result) throws Exception {
     if (xmlDetails == null || StringUtils.isEmpty(xmlDetails)) {
-      LOGGER.warn("Cannot process empty Xml Contents.");
+      LOGGER.debug("Cannot process empty Xml Contents.");
       return;
     }
 

@@ -32,7 +32,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 
-import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Constants;
@@ -75,12 +74,10 @@ public class MovieFindMissingTask extends TmmThreadPool {
   @Override
   public void doInBackground() {
     try {
-      StopWatch stopWatch = new StopWatch();
-      stopWatch.start();
-      start();
+      LOGGER.info("Finding missing movies...");
 
       // build MF list
-      ArrayList<MediaFile> mfs = new ArrayList<>();
+      List<MediaFile> mfs = new ArrayList<>();
       for (Movie movie : movieList.getMovies()) {
         mfs.addAll(movie.getMediaFiles());
       }
@@ -99,19 +96,18 @@ public class MovieFindMissingTask extends TmmThreadPool {
 
           MediaFile mf = new MediaFile(file);
           if (!mfs.contains(mf)) {
-            LOGGER.info("found possible movie file {}", file);
-            MessageManager.instance
+            LOGGER.debug("found possible movie file {}", file);
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "possible movie", "found possible movie " + file, new String[] { ds }));
           }
         }
       }
 
-      stopWatch.stop();
-      LOGGER.info("Done finding missing movies :) - took {}", stopWatch);
+      LOGGER.debug("Finished finding missing movies :) - took {} ms", getRuntime());
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
+      LOGGER.error("Could not find missing movies - '{}'", e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
 
@@ -158,7 +154,7 @@ public class MovieFindMissingTask extends TmmThreadPool {
 
     @Override
     public FileVisitResult visitFileFailed(Path file, IOException exc) {
-      LOGGER.error("visitFile failed: {}", exc.getMessage());
+      LOGGER.error("Could not read file '{}' - '{}'", file, exc.getMessage());
       return CONTINUE;
     }
   }

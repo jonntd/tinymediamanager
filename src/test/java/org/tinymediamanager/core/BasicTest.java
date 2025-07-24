@@ -103,7 +103,7 @@ public abstract class BasicTest {
     }
 
     if (StringUtils.isNotBlank(key)) {
-      License.getInstance().init2123();
+      License.getInstance().init520();
       License.getInstance().setLicenseCode(key);
     }
   }
@@ -241,16 +241,15 @@ public abstract class BasicTest {
         MediaGenres.values()[new Random().nextInt(MediaGenres.values().length)],
         MediaGenres.values()[new Random().nextInt(MediaGenres.values().length)],
         MediaGenres.values()[new Random().nextInt(MediaGenres.values().length)]));
-    movie
-        .addToWriters(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
-            new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer"),
-            new Person(Person.Type.DIRECTOR, "Ron Clements", "Director"), new Person(Person.Type.DIRECTOR, "John Jusker", "Director")));
+    movie.addToCrew(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
+        new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer"),
+        new Person(Person.Type.DIRECTOR, "Ron Clements", "Director"), new Person(Person.Type.DIRECTOR, "John Jusker", "Director")));
     movie.addToTags(Arrays.asList("Disney", "Oriental"));
 
     movie.addToActors(Arrays.asList(new Person(Person.Type.ACTOR, "Scott Weinger", "Aladdin 'Al' (voice)"),
         new Person(Person.Type.ACTOR, "Robin Williams", "Genie (voice)")));
 
-    movie.addToProducers(
+    movie.addToCrew(
         Arrays.asList(new Person(Person.Type.PRODUCER, "Ron Clements", "Producer"), new Person(Person.Type.PRODUCER, "Donald W. Ernst", "Producer")));
 
     movie.setSpokenLanguages("en");

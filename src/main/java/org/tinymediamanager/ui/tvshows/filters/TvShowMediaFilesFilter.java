@@ -90,6 +90,14 @@ public class TvShowMediaFilesFilter extends AbstractCheckComboBoxTvShowUIFilter<
         }
       }
 
+      // also look in the containing season
+      for (MediaFile mf : episode.getTvShowSeason().getMediaFiles()) {
+        if (selectedItems.contains(mf.getType())) {
+          foundEpisode = true;
+          break;
+        }
+      }
+
       // if there is a match in this episode, we can stop
       if (invert && !foundEpisode) {
         return true;

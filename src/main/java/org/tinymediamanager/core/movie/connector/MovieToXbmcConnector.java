@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
@@ -54,7 +55,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
 
   @Override
   protected void addTrailer() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteTrailer()) {
+    if (settings.isNfoWriteTrailer()) {
       Element trailer = document.createElement("trailer");
       for (MediaTrailer mediaTrailer : new ArrayList<>(movie.getTrailer())) {
         if (mediaTrailer.getInNfo()) {
@@ -88,7 +89,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
         return "plugin://plugin.video.hdtrailers_net/video/" + matcher.group(1) + "/" + URLEncoder.encode(trailer.getUrl(), "UTF-8");
       }
       catch (Exception e) {
-        LOGGER.error("failed to escape " + trailer.getUrl());
+        LOGGER.debug("failed to escape " + trailer.getUrl());
       }
     }
     // everything else is stored directly
@@ -101,7 +102,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   private void addEpbookmark() {
     Element epbookmark = document.createElement("epbookmark");
 
-    Element year = getSingleElementByTag("year");
+    Element year = NfoUtils.getSingleElementByTag(document, "year");
     if (year != null) {
       if (parser != null) {
         epbookmark.setTextContent(parser.epbookmark);
@@ -116,7 +117,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
   private void addTop250() {
     Element top250 = document.createElement("top250");
     top250.setTextContent(Integer.toString(movie.getTop250()));
-    Element set = getSingleElementByTag("set");
+    Element set = NfoUtils.getSingleElementByTag(document, "set");
     if (set != null) {
       root.insertBefore(top250, set);
     }
@@ -129,7 +130,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
     Element status = document.createElement("status");
     Element code = document.createElement("code");
 
-    Element premiered = getSingleElementByTag("premiered");
+    Element premiered = NfoUtils.getSingleElementByTag(document, "premiered");
     if (premiered != null) {
       if (parser != null) {
         status.setTextContent(parser.status);
@@ -144,7 +145,7 @@ public class MovieToXbmcConnector extends MovieGenericXmlConnector {
    * add the <fileinfo>xx</fileinfo> tag with mediainfo data - legacy XBMC format
    */
   protected void addFileinfo() {
-    if (MovieModuleManager.getInstance().getSettings().isNfoWriteFileinfo()) {
+    if (settings.isNfoWriteFileinfo()) {
       Element fileinfo = document.createElement("fileinfo");
       Element streamdetails = document.createElement("streamdetails");
 

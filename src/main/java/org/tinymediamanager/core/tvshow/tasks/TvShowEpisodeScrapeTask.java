@@ -98,7 +98,7 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
 
       // only scrape if at least one ID is available
       if (episode.getTvShow().getIds().isEmpty()) {
-        LOGGER.info("we cannot scrape (no ID): {} - {}", episode.getTvShow().getTitle(), episode.getTitle());
+        LOGGER.warn("Cannot scrape episode (no ID available): '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle());
         continue;
       }
 
@@ -127,10 +127,13 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
       options.setTvShowIds(episode.getTvShow().getIds());
 
       try {
-        LOGGER.info("=====================================================");
-        LOGGER.info("Scrape episode metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
-        LOGGER.info(options.toString());
-        LOGGER.info("=====================================================");
+        LOGGER.info("Scraping episode '{}' (S{} E{}) with '{}'", episode.getTitle(), episode.getSeason(), episode.getEpisode(),
+            mediaScraper.getMediaProvider().getProviderInfo().getId());
+
+        LOGGER.debug("=====================================================");
+        LOGGER.debug("Scrape episode metadata with scraper: {}", mediaScraper.getMediaProvider().getProviderInfo().getId());
+        LOGGER.debug(options.toString());
+        LOGGER.debug("=====================================================");
         MediaMetadata metadata = ((ITvShowMetadataProvider) mediaScraper.getMediaProvider()).getMetadata(options);
 
         // also inject other ids
@@ -139,7 +142,8 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
 
         // also fill other ratings if ratings are requested
         if (TvShowModuleManager.getInstance().getSettings().isFetchAllRatings() && config.contains(TvShowEpisodeScraperMetadataConfig.RATING)) {
-          for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(metadata.getIds(), MediaType.TV_EPISODE))) {
+          for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(metadata.getIds(),
+              TvShowModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.TV_EPISODE))) {
             if (!metadata.getRatings().contains(rating)) {
               metadata.addRating(rating);
             }
@@ -190,19 +194,23 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
         }
       }
       catch (MissingIdException e) {
-        LOGGER.warn("missing id for scrape");
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, episode, "scraper.error.missingid"));
+        LOGGER.warn("Missing IDs for scraping TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+            mediaScraper.getId());
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, episode, "scraper.error.missingid"));
       }
-      catch (NothingFoundException ignored) {
-        LOGGER.debug("nothing found");
+      catch (NothingFoundException e) {
+        LOGGER.info("Nothing found for scraping TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+            mediaScraper.getId());
       }
       catch (ScrapeException e) {
-        LOGGER.error("scrape error - '{}'", e.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+            mediaScraper.getId(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.metadataepisodefailed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
       catch (Exception e) {
-        LOGGER.warn("could not scrape episode - unknown error", e);
+        LOGGER.error("Unforeseen error in episode scrape for '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(), e);
       }
     }
 
@@ -261,15 +269,19 @@ public class TvShowEpisodeScrapeTask extends TmmTask {
           artwork.addAll(artworkProvider.getArtwork(options));
         }
         catch (MissingIdException ignored) {
-          LOGGER.debug("no id available for scraper {}", artworkScraper.getId());
-        }
-        catch (NothingFoundException e) {
-          LOGGER.debug("did not find artwork for '{}' - S{} E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
+          LOGGER.warn("Missing IDs for getting artwork for TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+              artworkScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not scrape artwork for TV show '{}', episode '{}' with '{}' - '{}'", episode.getTvShow().getTitle(), episode.getTitle(),
+              artworkProvider.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie artwork scrape for TV show '{}', episode '{}' with '{}'", episode.getTvShow().getTitle(),
+              episode.getTitle(), artworkProvider.getId(), e);
         }
         finally {
           lock.writeLock().unlock();

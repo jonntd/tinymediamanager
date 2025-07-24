@@ -17,6 +17,9 @@ package org.tinymediamanager.ui.tvshows.settings;
 
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 
+import java.awt.event.ItemListener;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import javax.swing.JCheckBox;
@@ -34,6 +37,7 @@ import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -56,11 +60,20 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxCapitalizeWords;
   private JCheckBox                 chckbxDoNotOverwrite;
   private JCheckBox                 chckbxFetchAllRatings;
+  private JCheckBox                 chckbxRatingImdb;
+  private JCheckBox                 chckbxRatingTmdb;
+  private JCheckBox                 chckbxRatingMcUserscore;
+  private JCheckBox                 chckbxRatingMyAnimeList;
+  private JCheckBox                 chckbxRatingRogerEbert;
+  private JCheckBox                 chckbxRatingTraktTv;
+  private JCheckBox                 chckbxRatingLetterboxd;
 
   /**
    * Instantiates a new movie scraper settings panel.
    */
   TvShowScraperOptionsSettingsPanel() {
+    ItemListener checkBoxListener = e -> checkChanges();
+
     // UI init
     initComponents();
     initDataBindings();
@@ -74,13 +87,21 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
       }
     }
     cbReleaseCountry.addItemListener(l -> settings.setReleaseDateCountry(((CountryItem) cbReleaseCountry.getSelectedItem()).locale.getCountry()));
+
+    chckbxRatingImdb.addItemListener(checkBoxListener);
+    chckbxRatingTmdb.addItemListener(checkBoxListener);
+    chckbxRatingMcUserscore.addItemListener(checkBoxListener);
+    chckbxRatingTraktTv.addItemListener(checkBoxListener);
+    chckbxRatingLetterboxd.addItemListener(checkBoxListener);
+    chckbxRatingMyAnimeList.addItemListener(checkBoxListener);
+    chckbxRatingRogerEbert.addItemListener(checkBoxListener);
   }
 
   private void initComponents() {
     setLayout(new MigLayout("", "[600lp,grow]", "[][]15lp![][15lp!][][15lp!][]"));
     {
       JPanel panelOptions = new JPanel();
-      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][]")); // 16lp ~ width of the
+      panelOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][10lp!][][][][10lp!][]")); // 16lp ~ width of the
 
       JLabel lblOptions = new TmmLabel(TmmResourceBundle.getString("Settings.advancedoptions"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOptions, lblOptions, true);
@@ -107,10 +128,31 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
 
         chckbxFetchAllRatings = new JHintCheckBox(TmmResourceBundle.getString("Settings.fetchallratings"));
         chckbxFetchAllRatings.setToolTipText(TmmResourceBundle.getString("Settings.fetchallratings.desc"));
-        panelOptions.add(chckbxFetchAllRatings, "cell 1 3 2 1");
+        panelOptions.add(chckbxFetchAllRatings, "cell 1 4 2 1");
+
+        chckbxRatingImdb = new JCheckBox("IMDb");
+        panelOptions.add(chckbxRatingImdb, "flowx,cell 2 5");
+
+        chckbxRatingTmdb = new JCheckBox("TMDB");
+        panelOptions.add(chckbxRatingTmdb, "cell 2 5");
+
+        chckbxRatingMcUserscore = new JCheckBox("Metacritic Userscore");
+        panelOptions.add(chckbxRatingMcUserscore, "cell 2 5");
+
+        chckbxRatingMyAnimeList = new JCheckBox("MyAnimeList");
+        panelOptions.add(chckbxRatingMyAnimeList, "cell 2 6");
+
+        chckbxRatingRogerEbert = new JCheckBox("RogerEbert.com");
+        panelOptions.add(chckbxRatingRogerEbert, "cell 2 6");
+
+        chckbxRatingTraktTv = new JCheckBox("Trakt.tv");
+        panelOptions.add(chckbxRatingTraktTv, "cell 2 5");
+
+        chckbxRatingLetterboxd = new JCheckBox("Letterboxd");
+        panelOptions.add(chckbxRatingLetterboxd, "cell 2 5");
 
         chckbxCapitalizeWords = new JCheckBox(TmmResourceBundle.getString("Settings.scraper.capitalizeWords"));
-        panelOptions.add(chckbxCapitalizeWords, "cell 1 4");
+        panelOptions.add(chckbxCapitalizeWords, "cell 1 8");
       }
     }
     {
@@ -130,6 +172,34 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
       panelDefaults.add(chckbxDoNotOverwrite, "cell 1 1 2 1");
     }
+  }
+
+  private void checkChanges() {
+    List<RatingProvider.RatingSource> fetchRatingSources = new ArrayList<>();
+
+    if (chckbxRatingImdb.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.IMDB);
+    }
+    if (chckbxRatingTmdb.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.TMDB);
+    }
+    if (chckbxRatingMcUserscore.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.METACRITIC_USER);
+    }
+    if (chckbxRatingMyAnimeList.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.MAL);
+    }
+    if (chckbxRatingRogerEbert.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.ROGER_EBERT);
+    }
+    if (chckbxRatingTraktTv.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.TRAKT_TV);
+    }
+    if (chckbxRatingLetterboxd.isSelected()) {
+      fetchRatingSources.add(RatingProvider.RatingSource.LETTERBOXD);
+    }
+
+    settings.setFetchRatingSources(fetchRatingSources);
   }
 
   private static class CountryItem {
@@ -156,7 +226,6 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_9, cbCertificationCountry,
         jComboBoxBeanProperty);
     autoBinding_8.bind();
-
     //
     Property settingsBeanProperty_10 = BeanProperty.create("capitalWordsInTitles");
     Property jCheckBoxBeanProperty_1 = BeanProperty.create("selected");
@@ -174,5 +243,34 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_1, chckbxFetchAllRatings,
         jCheckBoxBeanProperty);
     autoBinding_2.bind();
+    //
+    Property jCheckBoxBeanProperty_2 = BeanProperty.create("enabled");
+    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1, chckbxRatingImdb,
+        jCheckBoxBeanProperty_2);
+    autoBinding.bind();
+    //
+    AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1, chckbxRatingTmdb,
+        jCheckBoxBeanProperty_2);
+    autoBinding_3.bind();
+    //
+    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1,
+        chckbxRatingMcUserscore, jCheckBoxBeanProperty_2);
+    autoBinding_4.bind();
+    //
+    AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1,
+        chckbxRatingMyAnimeList, jCheckBoxBeanProperty_2);
+    autoBinding_5.bind();
+    //
+    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1,
+        chckbxRatingRogerEbert, jCheckBoxBeanProperty_2);
+    autoBinding_6.bind();
+    //
+    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1, chckbxRatingTraktTv,
+        jCheckBoxBeanProperty_2);
+    autoBinding_10.bind();
+    //
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1,
+        chckbxRatingLetterboxd, jCheckBoxBeanProperty_2);
+    autoBinding_11.bind();
   }
 }

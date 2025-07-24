@@ -15,14 +15,14 @@
  */
 package org.tinymediamanager.core.movie;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import org.apache.commons.io.FilenameUtils;
 import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.RenamerPreviewContainer;
+import org.tinymediamanager.core.RenamerPreviewContainer.MediaFileTypeContainer;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.entities.Movie;
 
@@ -33,113 +33,64 @@ import org.tinymediamanager.core.movie.entities.Movie;
  */
 public class MovieRenamerPreview {
 
-  private MovieRenamerPreview() {
-    throw new IllegalAccessError();
+  private final Movie                   movie;
+  private final Movie                   clone;    // unused for movies, as the generate makes its own clone
+  private final RenamerPreviewContainer container;
+
+  public MovieRenamerPreview(Movie movie) {
+    this.movie = movie;
+    this.clone = new Movie();
+    this.clone.merge(movie);
+    this.clone.setDataSource(movie.getDataSource());
+    this.container = new RenamerPreviewContainer(movie);
   }
 
-  public static MovieRenamerPreviewContainer renameMovie(Movie movie) {
-    MovieRenamerPreviewContainer container = new MovieRenamerPreviewContainer(movie);
+  public RenamerPreviewContainer generatePreview() {
 
-    LinkedHashMap<String, MediaFile> oldFiles = new LinkedHashMap<>();
-    Set<MediaFile> newFiles = new LinkedHashSet<>();
+    // generate the new path
+    container.newPath = Paths.get(movie.getDataSource())
+        .resolve(MovieRenamer.createDestinationForFoldername(MovieModuleManager.getInstance().getSettings().getRenamerPathname(), movie));
+    this.clone.setPath(container.newPath.toString());
 
-    boolean newDestIsMultiMovieDir = movie.isMultiMovieDir();
-    String pattern = MovieModuleManager.getInstance().getSettings().getRenamerPathname();
-    // keep MMD setting unless renamer pattern is not empty
-    if (!pattern.isEmpty()) {
-      // re-evaluate multiMovieDir based on renamer settings
-      // folder MUST BE UNIQUE, so we need at least a T/E-Y combo or IMDBid
-      // If renaming just to a fixed pattern (eg "$S"), movie will downgrade to a MMD
-      newDestIsMultiMovieDir = !MovieRenamer.isFolderPatternUnique(pattern);
-    }
+    // process movie media files
+    processMovie();
 
-    // temporary for generating preview!
-    Movie movieClone = new Movie();
-    movieClone.merge(movie);
-    movieClone.setDataSource(movie.getDataSource());
-    movieClone.setPath(movie.getPath());
-    movieClone.setDisc(movie.isDisc());
-    movieClone.setStacked(movie.isStacked());
-    movieClone.setMultiMovieDir(newDestIsMultiMovieDir);
-    movieClone.addToMediaFiles(movie.getMediaFiles());
-
-    // do not rename disc FILES - add them 1:1 without renaming
-    if (movieClone.isDisc()) {
-      for (MediaFile mf : movieClone.getMediaFiles()) {
-        oldFiles.put(mf.getFileAsPath().toString(), new MediaFile(mf)); // clone
-        MediaFile ftr = MovieRenamer.generateFilename(movieClone, mf, "").get(0); // there can be only one
-        newFiles.add(ftr);
+    // check for dupes on all new MFs
+    Map<String, MediaFileTypeContainer> duplicates = new HashMap<>();
+    for (MediaFileTypeContainer files : container.getFiles()) {
+      for (String rel : files.newFiles) {
+        if (duplicates.containsKey(rel)) {
+          // we have a dupe
+          files.duped = true;
+          MediaFileTypeContainer other = duplicates.get(rel);
+          other.duped = true;
+          // also set on container/movie level
+          container.renamerProblems = true;
+        }
+        else {
+          duplicates.put(rel, files);
+        }
       }
     }
-    else {
-      String oldVideoBasename = movieClone.getVideoBasenameWithoutStacking();
-      String newVideoBasename = "";
-      if (MovieModuleManager.getInstance().getSettings().getRenamerFilename().strip().isEmpty()) {
-        // we are NOT renaming any files, so we keep the same name on renaming ;)
-        newVideoBasename = movieClone.getVideoBasenameWithoutStacking();
-      }
-      else {
-        // since we rename, generate the new basename
-        MediaFile ftr = MovieRenamer.generateFilename(movieClone, movieClone.getMainVideoFile(), newVideoBasename).get(0);
-        newVideoBasename = FilenameUtils.getBaseName(ftr.getFilenameWithoutStacking());
-      }
+    duplicates.clear();
 
-      // VIDEO needs to be renamed first, since all others depend on that name!!!
-      for (MediaFile mf : movieClone.getMediaFiles(MediaFileType.VIDEO)) {
-        oldFiles.put(mf.getFileAsPath().toString(), new MediaFile(mf)); // clone
-        MediaFile ftr = MovieRenamer.generateFilename(movieClone, mf, newVideoBasename).get(0); // there can be only one
-        newFiles.add(ftr);
-      }
-
-      // all the other MFs...
-      for (MediaFile mf : movieClone.getMediaFilesExceptType(MediaFileType.VIDEO)) {
-        oldFiles.put(mf.getFileAsPath().toString(), new MediaFile(mf));
-        newFiles.addAll(MovieRenamer.generateFilename(movieClone, mf, newVideoBasename, oldVideoBasename)); // N:M, with data from clone
-      }
-    }
-
-    // movie folder needs a rename?
-    Path oldMovieFolder = movieClone.getPathNIO();
-    // String pattern = MovieModuleManager.getInstance().getSettings().getRenamerPathname();
-    if (pattern.isEmpty()) {
-      // same
-      container.newPath = movieClone.getPathNIO();
-    }
-    else {
-      try {
-        container.newPath = Paths.get(movieClone.getDataSource(), MovieRenamer.createDestinationForFoldername(pattern, movieClone));
-      }
-      catch (Exception e) {
-        // new folder name is invalid
-        container.newPath = movieClone.getPathNIO();
-      }
-    }
-
-    if (!oldMovieFolder.equals(container.newPath)) {
-      container.needsRename = true;
-      // update already the "old" files with new path, so we can simply do a contains check ;)
-      for (MediaFile omf : oldFiles.values()) {
-        omf.replacePathForRenamedFolder(oldMovieFolder, container.newPath);
-      }
-    }
-
-    // change status of MFs, if they have been added or not
-    for (MediaFile mf : newFiles) {
-      if (!oldFiles.containsKey(mf.getFileAsPath().toString())) {
-        container.needsRename = true;
-        break;
-      }
-    }
-
-    for (MediaFile mf : oldFiles.values()) {
-      if (!newFiles.contains(mf)) {
-        container.needsRename = true;
-        break;
-      }
-    }
-
-    container.oldMediaFiles.addAll(oldFiles.values());
-    container.newMediaFiles.addAll(newFiles);
     return container;
+  }
+
+  private void processMovie() {
+    String newVideoBasename = MovieRenamer.generateNewVideoBasename(movie);
+    for (MediaFileType type : MediaFileType.values()) {
+      MediaFileTypeContainer c = new MediaFileTypeContainer();
+      for (MediaFile typeMf : movie.getMediaFiles(type)) {
+        c.oldFiles.add(container.getOldPath().relativize(typeMf.getFileAsPath()).toString());
+        List<MediaFile> mfs = MovieRenamer.generateFilename(movie, new MediaFile(typeMf), newVideoBasename);
+        for (MediaFile mf : mfs) {
+          c.newFiles.add(container.getNewPath().relativize(mf.getFileAsPath()).toString());
+        }
+      }
+      if (!c.oldFiles.isEmpty()) {
+        container.addFile(c);
+      }
+    }
   }
 }

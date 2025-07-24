@@ -77,7 +77,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // do we have an id from the options?
     int tvMazeId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
     if (tvMazeId == 0) {
-      LOGGER.warn("no show id available");
+      LOGGER.debug("no show id available");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
@@ -204,19 +204,29 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
         }
         person.setRole(crew.type);
         switch (crew.type) {
-          // case "Executive Producer":
+          case "Executive Producer":
           case "Producer": {
             person.setType(Person.Type.PRODUCER);
             break;
           }
 
           case "Director Of Photography": {
-            person.setType(Person.Type.DIRECTOR);
+            person.setType(Person.Type.CAMERA);
             break;
           }
 
           case "Creator": {
             person.setType(Person.Type.WRITER);
+            break;
+          }
+
+          case "Editor": {
+            person.setType(Person.Type.EDITOR);
+            break;
+          }
+
+          case "Music": {
+            person.setType(Person.Type.COMPOSER);
             break;
           }
 
@@ -357,7 +367,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       episodeNr = options.getIdAsIntOrDefault(MediaMetadata.EPISODE_NR, -1);
     }
     if (seasonNr == -1 && episodeNr == -1 && episodeId == 0 && aired == null) {
-      LOGGER.warn("cannot scrape episode; no valid id/date/numbers found!");
+      LOGGER.debug("cannot scrape episode; no valid id/date/numbers found!");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 
@@ -490,12 +500,12 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
       searchResult = controller.getTvShowSearchResults(options.getSearchQuery());
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (searchResult == null) {
-      LOGGER.warn("no result from tvmaze.com");
+      LOGGER.debug("no result from tvmaze.com");
       return searchResults;
     }
 
@@ -550,7 +560,7 @@ public class TvMazeTvShowMetadataProvider extends TvMazeMetadataProvider
     // do we have an id from the options?
     int showId = options.getIdAsIntOrDefault(MediaMetadata.TVMAZE, 0);
     if (showId == 0) {
-      LOGGER.warn("no show id available");
+      LOGGER.debug("no show id available");
       throw new MissingIdException(MediaMetadata.TVMAZE);
     }
 

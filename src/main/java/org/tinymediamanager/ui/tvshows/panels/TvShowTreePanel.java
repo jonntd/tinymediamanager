@@ -15,9 +15,8 @@
  */
 package org.tinymediamanager.ui.tvshows.panels;
 
-import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
-
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -47,12 +46,13 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
 import javax.swing.table.TableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.AbstractSettings;
-import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.tvshow.TvShowList;
@@ -116,20 +116,11 @@ public class TvShowTreePanel extends TmmListPanel {
     // initialize totals
     updateTotals();
 
-    tvShowList.addPropertyChangeListener(evt -> {
-      switch (evt.getPropertyName()) {
-        case Constants.TV_SHOW_COUNT, Constants.EPISODE_COUNT:
-          updateTotals();
-          break;
-
-        default:
-          break;
-      }
-    });
     TvShowModuleManager.getInstance().getSettings().addPropertyChangeListener(e -> {
       switch (e.getPropertyName()) {
-        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork", "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" -> tree
-            .invalidate();
+        case "tvShowCheckMetadata", "tvShowCheckArtwork", "seasonCheckArtwork", "episodeCheckMetadata", "episodeCheckArtwork",
+            "episodeSpecialsCheckMissingMetadata", "episodeSpecialsCheckMissingArtwork" ->
+          tree.invalidate();
       }
     });
   }
@@ -141,7 +132,7 @@ public class TvShowTreePanel extends TmmListPanel {
     add(searchField, "cell 0 0,growx");
 
     // register global shortcut for the search field
-    getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, CTRL_DOWN_MASK), "search");
+    getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "search");
     getActionMap().put("search", new RequestFocusAction(searchField));
 
     btnFilter = new SplitButton(TmmResourceBundle.getString("movieextendedsearch.filter"));
@@ -231,8 +222,6 @@ public class TvShowTreePanel extends TmmListPanel {
     tree.setRootVisible(false);
 
     tree.getModel().addTableModelListener(arg0 -> {
-      updateTotals();
-
       if (tree.getTreeTableModel().getTreeModel() instanceof TmmTreeModel) {
         if (((TmmTreeModel<?>) tree.getTreeTableModel().getTreeModel()).isAdjusting()) {
           return;
@@ -246,6 +235,28 @@ public class TvShowTreePanel extends TmmListPanel {
       }
       else if (tree.getModel().getRowCount() == 0) {
         TvShowUIModule.getInstance().setSelectedTvShow(null);
+      }
+    });
+
+    tree.getTreeTableModel().addTreeModelListener(new TreeModelListener() {
+      @Override
+      public void treeNodesChanged(TreeModelEvent e) {
+        // do nothing
+      }
+
+      @Override
+      public void treeNodesInserted(TreeModelEvent e) {
+        updateTotals();
+      }
+
+      @Override
+      public void treeNodesRemoved(TreeModelEvent e) {
+        updateTotals();
+      }
+
+      @Override
+      public void treeStructureChanged(TreeModelEvent e) {
+        updateTotals();
       }
     });
 

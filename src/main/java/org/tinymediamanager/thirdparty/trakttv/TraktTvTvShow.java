@@ -123,7 +123,7 @@ class TraktTvTvShow {
           break;
       }
       if (!msg.isEmpty()) {
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", msg, null));
       }
       throw new HttpException(response.code(), message);
     }
@@ -156,11 +156,11 @@ class TraktTvTvShow {
       traktShows = executeCall(api.sync().collectionShows(Extended.METADATA));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
-    LOGGER.info("You have {} TvShows in your Trakt.tv collection", traktShows.size());
+    LOGGER.info("You have {} TV shows in your Trakt.tv collection", traktShows.size());
 
     for (BaseShow traktShow : traktShows) {
       List<TvShow> matchingTmmTvShows = getTmmTvShowForTraktShow(tvShows, traktShow.show);
@@ -228,7 +228,7 @@ class TraktTvTvShow {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
         return;
       }
     }
@@ -245,11 +245,11 @@ class TraktTvTvShow {
       traktShows = executeCall(api.sync().watchedShows(null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
-    LOGGER.info("You have {} TvShows marked as watched on Trakt.tv", traktShows.size());
+    LOGGER.info("You have {} TV shows marked as watched on Trakt.tv", traktShows.size());
     for (BaseShow traktShow : traktShows) {
       List<TvShow> matchingTmmTvShows = getTmmTvShowForTraktShow(tvShows, traktShow.show);
 
@@ -322,7 +322,7 @@ class TraktTvTvShow {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
         return;
       }
     }
@@ -380,7 +380,7 @@ class TraktTvTvShow {
       traktShows = executeCall(api.sync().ratingsShows(RatingsFilter.ALL, null, null, null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
@@ -391,7 +391,7 @@ class TraktTvTvShow {
       traktEpisodes = executeCall(api.sync().ratingsEpisodes(RatingsFilter.ALL, null, null, null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
 
@@ -481,7 +481,7 @@ class TraktTvTvShow {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
         return;
       }
     }
@@ -505,7 +505,7 @@ class TraktTvTvShow {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+      LOGGER.error("Failed removing from Trakt.tv collection - '{}'", e.getMessage());
     }
   }
 
@@ -527,7 +527,7 @@ class TraktTvTvShow {
       printStatus(response);
     }
     catch (Exception e) {
-      LOGGER.error("Failed removing from Trakt.tv collection: {}", e.getMessage());
+      LOGGER.error("Failed removing from Trakt.tv collection - '{}'", e.getMessage());
     }
   }
 
@@ -546,14 +546,14 @@ class TraktTvTvShow {
       traktWatched = executeCall(api.sync().watchedShows(null));
     }
     catch (Exception e) {
-      LOGGER.error("failed syncing trakt: {}", e.getMessage());
+      LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       return;
     }
-    LOGGER.info("You have {} shows in your Trakt.tv collection", traktCollection.size());
-    LOGGER.info("You have {} shows watched", traktWatched.size());
+    LOGGER.debug("You have {} shows in your Trakt.tv collection", traktCollection.size());
+    LOGGER.debug("You have {} shows watched", traktWatched.size());
 
     // *****************************************************************************
-    // 2) remove every shows from the COLLECTION state
+    // 2) remove every show from the COLLECTION state
     // *****************************************************************************
     List<SyncShow> showToRemove = new ArrayList<>();
     for (BaseShow traktShow : traktCollection) {
@@ -567,7 +567,7 @@ class TraktTvTvShow {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
         return;
       }
     }
@@ -587,7 +587,7 @@ class TraktTvTvShow {
         printStatus(response);
       }
       catch (Exception e) {
-        LOGGER.error("failed syncing trakt: {}", e.getMessage());
+        LOGGER.error("Failed syncing Trakt.tv - '{}'", e.getMessage());
       }
     }
   }

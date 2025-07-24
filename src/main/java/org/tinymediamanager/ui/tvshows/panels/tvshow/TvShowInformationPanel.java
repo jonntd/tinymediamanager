@@ -137,8 +137,8 @@ public class TvShowInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -149,8 +149,8 @@ public class TvShowInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to thetvdb", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });

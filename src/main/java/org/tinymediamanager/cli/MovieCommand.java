@@ -312,7 +312,7 @@ class MovieCommand implements Runnable {
           ex.export(movies, export.path);
         }
         catch (Exception e) {
-          LOGGER.error("could not export movies - {}", e.getMessage());
+          LOGGER.error("Could not export movies - '{}'", e.getMessage());
         }
 
         return;

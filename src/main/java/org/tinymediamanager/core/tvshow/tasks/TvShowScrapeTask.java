@@ -34,7 +34,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.entities.Person;
-import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
@@ -145,23 +144,25 @@ public class TvShowScrapeTask extends TmmThreadPool {
             // check if there is another result with 100% score
             if (results.size() > 1) {
               MediaSearchResult result2 = results.get(1);
-              // if both results have 100% score - do not take any result
-              if (result1.getScore() == 1 && result2.getScore() == 1) {
-                LOGGER.info("two 100% results, can't decide which to take - ignore result");
-                MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+              // if both results have the same score - do not take any result
+              if (result1.getScore() == result2.getScore()) {
+                LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", tvShow.getTitle());
+                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
                 return;
               }
-              // create a treshold of 0.75 - to minimize false positives
+
+              // create a threshold of 0.75 - to minimize false positives
               if (result1.getScore() < 0.75) {
-                LOGGER.info("score is lower than 0.75 ({}) - ignore result", result1.getScore());
-                MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                LOGGER.warn("Score ({}) is lower than minimum score (0.75) for '{}' - ignore result", result1.getScore(), tvShow.getTitle());
+                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
                 return;
               }
             }
           }
           else {
-            LOGGER.info("no result found for {}", tvShow.getTitle());
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+            LOGGER.info("No result found for {}", tvShow.getTitle());
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+            return;
           }
         }
 
@@ -170,224 +171,230 @@ public class TvShowScrapeTask extends TmmThreadPool {
         }
 
         // get metadata and artwork
-        if ((tvShowScrapeParams.doSearch && result1 != null) || !tvShowScrapeParams.doSearch) {
-          try {
-            TvShowSearchAndScrapeOptions options = new TvShowSearchAndScrapeOptions(tvShowScrapeParams.scrapeOptions);
-            options.setSearchResult(result1);
+        try {
+          TvShowSearchAndScrapeOptions options = new TvShowSearchAndScrapeOptions(tvShowScrapeParams.scrapeOptions);
+          options.setSearchResult(result1);
 
-            if (tvShowScrapeParams.doSearch) {
-              options.setIds(result1.getIds());
+          if (result1 != null) {
+            options.setIds(result1.getIds());
+          }
+          else {
+            options.setIds(tvShow.getIds());
+          }
+
+          // override scraper with one from search result
+          if (result1 != null) {
+            mediaMetadataScraper = tvShowList.getMediaScraperById(result1.getProviderId());
+          }
+
+          // scrape metadata if wanted
+          MediaMetadata md = null;
+          List<MediaMetadata> episodeList = null;
+
+          if (ScraperMetadataConfig.containsAnyMetadata(tvShowScrapeParams.tvShowScraperMetadataConfig)
+              || ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)) {
+            LOGGER.info("Scraping movie '{}' with '{}'", tvShow.getTitle(), mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
+
+            LOGGER.debug("=====================================================");
+            LOGGER.debug("Scrape tvShow metadata with scraper: {}", mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
+            LOGGER.debug(options.toString());
+            LOGGER.debug("=====================================================");
+            md = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
+
+            if (cancel) {
+              return;
             }
-            else {
-              options.setIds(tvShow.getIds());
-            }
 
-            // override scraper with one from search result
-            if (result1 != null) {
-              mediaMetadataScraper = tvShowList.getMediaScraperById(result1.getProviderId());
-            }
+            // also inject other ids
+            MediaIdUtil.injectMissingIds(md.getIds(), MediaType.TV_SHOW);
 
-            // scrape metadata if wanted
-            MediaMetadata md = null;
-            List<MediaMetadata> episodeList = null;
-
-            if (ScraperMetadataConfig.containsAnyMetadata(tvShowScrapeParams.tvShowScraperMetadataConfig)
-                || ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)) {
-              LOGGER.info("=====================================================");
-              LOGGER.info("Scrape tvShow metadata with scraper: {}", mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
-              LOGGER.info(options.toString());
-              LOGGER.info("=====================================================");
-              md = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
-
-              if (cancel) {
-                return;
-              }
-
-              // also inject other ids
-              MediaIdUtil.injectMissingIds(md.getIds(), MediaType.TV_SHOW);
-
-              // also fill other ratings if ratings are requested
-              if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()
-                  && tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.RATING)) {
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.TV_SHOW))) {
-                  if (!md.getRatings().contains(rating)) {
-                    md.addRating(rating);
-                  }
+            // also fill other ratings if ratings are requested
+            if (TvShowModuleManager.getInstance().getSettings().isFetchAllRatings()
+                && tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.RATING)) {
+              for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                  TvShowModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.TV_SHOW))) {
+                if (!md.getRatings().contains(rating)) {
+                  md.addRating(rating);
                 }
-              }
-
-              // if there is obviously no episode group set, take the best one from the scraper
-              if (tvShow.getEpisodeGroup() == MediaEpisodeGroup.DEFAULT_AIRED) {
-                try {
-                  episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
-
-                  List<MediaEpisodeGroup> episodeGroups = new ArrayList<>(md.getEpisodeGroups());
-                  Collections.sort(episodeGroups);
-                  tvShow.setEpisodeGroup(TvShowHelpers.findBestMatchingEpisodeGroup(tvShow, episodeGroups, episodeList));
-                }
-                catch (Exception e) {
-                  LOGGER.debug("could not fetch episode list - '{}'", e.getMessage());
-                  tvShow.setEpisodeGroup(MediaEpisodeGroup.DEFAULT_AIRED);
-                }
-                finally {
-                  tvShow.setEpisodeGroups(md.getEpisodeGroups());
-                }
-              }
-
-              tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
-              tvShow.setLastScraperId(tvShowScrapeParams.scrapeOptions.getMetadataScraper().getId());
-              tvShow.setLastScrapeLanguage(tvShowScrapeParams.scrapeOptions.getLanguage().name());
-
-              // automatic rename? rename the TV show itself
-              if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-                TmmTask task = new TvShowRenameTask(tvShow);
-                // blocking
-                task.run();
-              }
-
-              // write actor images after possible rename (to have a good folder structure)
-              if (ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)
-                  && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
-                tvShow.writeActorImages(tvShowScrapeParams.overwriteExistingItems);
               }
             }
 
-            // always add all episode data (for missing episodes and episode list)
-            List<TvShowEpisode> episodes = new ArrayList<>();
-            try {
-              if (episodeList == null) {
+            // if there is obviously no episode group set, take the best one from the scraper
+            if (tvShow.getEpisodeGroup() == MediaEpisodeGroup.DEFAULT_AIRED) {
+              try {
                 episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
+
+                List<MediaEpisodeGroup> episodeGroups = new ArrayList<>(md.getEpisodeGroups());
+                Collections.sort(episodeGroups);
+                tvShow.setEpisodeGroup(TvShowHelpers.findBestMatchingEpisodeGroup(tvShow, episodeGroups, episodeList));
               }
-              for (MediaMetadata me : episodeList) {
-                TvShowEpisode ep = new TvShowEpisode();
-                ep.setEpisodeNumbers(me.getEpisodeNumbers());
-                ep.setFirstAired(me.getReleaseDate());
-                ep.setTitle(me.getTitle());
-                ep.setOriginalTitle(me.getOriginalTitle());
-                ep.setPlot(me.getPlot());
-                ep.setActors(me.getCastMembers(Person.Type.ACTOR));
-                ep.setDirectors(me.getCastMembers(Person.Type.DIRECTOR));
-                ep.setWriters(me.getCastMembers(Person.Type.WRITER));
-
-                Map<String, MediaRating> newRatings = new HashMap<>();
-
-                for (MediaRating mediaRating : me.getRatings()) {
-                  newRatings.put(mediaRating.getId(), mediaRating);
-                }
-                ep.setRatings(newRatings);
-
-                episodes.add(ep);
+              catch (Exception e) {
+                LOGGER.debug("could not fetch episode list - '{}'", e.getMessage());
+                tvShow.setEpisodeGroup(MediaEpisodeGroup.DEFAULT_AIRED);
+              }
+              finally {
+                tvShow.setEpisodeGroups(md.getEpisodeGroups());
               }
             }
-            catch (MissingIdException e) {
-              LOGGER.warn("missing id for scrape");
-              MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
-            }
-            catch (ScrapeException e) {
-              LOGGER.error("searchMovieFallback", e);
-              MessageManager.instance.pushMessage(
-                  new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed", new String[] { ":", e.getLocalizedMessage() }));
-            }
-            catch (Exception e) {
-              LOGGER.error("unforeseen error: ", e);
+
+            tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
+            tvShow.setLastScraperId(tvShowScrapeParams.scrapeOptions.getMetadataScraper().getId());
+            tvShow.setLastScrapeLanguage(tvShowScrapeParams.scrapeOptions.getLanguage().name());
+
+            // automatic rename? rename the TV show itself
+            if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+              TmmTask task = new TvShowRenameTask(tvShow);
+              // blocking
+              task.run();
             }
 
-            tvShow.setDummyEpisodes(episodes);
+            // write actor images after possible rename (to have a good folder structure)
+            if (ScraperMetadataConfig.containsAnyCast(tvShowScrapeParams.tvShowScraperMetadataConfig)
+                && TvShowModuleManager.getInstance().getSettings().isWriteActorImages()) {
+              tvShow.writeActorImages(tvShowScrapeParams.overwriteExistingItems);
+            }
+          }
+
+          // always add all episode data (for missing episodes and episode list)
+          List<TvShowEpisode> episodes = new ArrayList<>();
+          try {
+            if (episodeList == null) {
+              episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
+            }
+            for (MediaMetadata me : episodeList) {
+              TvShowEpisode ep = new TvShowEpisode();
+              ep.setEpisodeNumbers(me.getEpisodeNumbers());
+              ep.setFirstAired(me.getReleaseDate());
+              ep.setTitle(me.getTitle());
+              ep.setOriginalTitle(me.getOriginalTitle());
+              ep.setPlot(me.getPlot());
+              ep.setActors(me.getCastMembers(Person.Type.ACTOR));
+              ep.setCrew(me.getCastMembers(Person.Type.DIRECTOR));
+              ep.setCrew(me.getCastMembers(Person.Type.WRITER));
+              ep.setCrew(me.getCastMembers(Person.Type.PRODUCER));
+              ep.setCrew(me.getCastMembers(Person.Type.OTHER));
+
+              Map<String, MediaRating> newRatings = new HashMap<>();
+
+              for (MediaRating mediaRating : me.getRatings()) {
+                newRatings.put(mediaRating.getId(), mediaRating);
+              }
+              ep.setRatings(newRatings);
+
+              episodes.add(ep);
+            }
+          }
+          catch (MissingIdException e) {
+            LOGGER.warn("Could not get episode list for TV show '{}' - no IDs available", tvShow.getTitle());
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+          }
+          catch (ScrapeException e) {
+            LOGGER.error("Could not get episode list for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
+          }
+          catch (Exception e) {
+            LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
+          }
+
+          tvShow.setDummyEpisodes(episodes);
+          tvShow.saveToDb();
+
+          if (cancel) {
+            return;
+          }
+
+          // scrape artwork if wanted
+          if (ScraperMetadataConfig.containsAnyArtwork(tvShowScrapeParams.tvShowScraperMetadataConfig)) {
+            tvShow.setArtwork(getArtwork(tvShow, md), tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
+          }
+
+          if (cancel) {
+            return;
+          }
+
+          // scrape trailer if wanted
+          if (tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.TRAILER)) {
+            tvShow.setTrailers(getTrailers(tvShow, md, trailerScrapers));
+            tvShow.writeNFO();
             tvShow.saveToDb();
 
-            if (cancel) {
-              return;
+            // start automatic movie trailer download
+            if (TvShowModuleManager.getInstance().getSettings().isUseTrailerPreference()
+                && TvShowModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
+                && tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !tvShow.getTrailer().isEmpty()) {
+              TmmTaskManager.getInstance().addDownloadTask(new TvShowTrailerDownloadTask(tvShow));
             }
+          }
 
-            // scrape artwork if wanted
-            if (ScraperMetadataConfig.containsAnyArtwork(tvShowScrapeParams.tvShowScraperMetadataConfig)) {
-              tvShow.setArtwork(getArtwork(tvShow, md), tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
-            }
+          if (cancel) {
+            return;
+          }
 
-            if (cancel) {
-              return;
-            }
+          // download theme
+          if (tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.THEME)) {
+            TmmTaskManager.getInstance()
+                .addUnnamedTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), tvShowScrapeParams.overwriteExistingItems));
+          }
 
-            // scrape trailer if wanted
-            if (tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.TRAILER)) {
-              tvShow.setTrailers(getTrailers(tvShow, md, trailerScrapers));
-              tvShow.writeNFO();
-              tvShow.saveToDb();
+          if (cancel) {
+            return;
+          }
 
-              // start automatic movie trailer download
-              if (TvShowModuleManager.getInstance().getSettings().isUseTrailerPreference()
-                  && TvShowModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
-                  && tvShow.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !tvShow.getTrailer().isEmpty()) {
-                TmmTaskManager.getInstance().addDownloadTask(new TvShowTrailerDownloadTask(tvShow));
-              }
-            }
-
-            if (cancel) {
-              return;
-            }
-
-            // download theme
-            if (tvShowScrapeParams.tvShowScraperMetadataConfig.contains(TvShowScraperMetadataConfig.THEME)) {
-              TmmTaskManager.getInstance()
-                  .addUnnamedTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), tvShowScrapeParams.overwriteExistingItems));
-            }
-
-            if (cancel) {
-              return;
-            }
-
+          // scrape episodes
+          if (!tvShowScrapeParams.episodeScraperMetadataConfig.isEmpty()) {
+            List<TvShowEpisode> episodesToScrape = tvShow.getEpisodesToScrape();
             // scrape episodes
-            if (!tvShowScrapeParams.episodeScraperMetadataConfig.isEmpty()) {
-              List<TvShowEpisode> episodesToScrape = tvShow.getEpisodesToScrape();
-              // scrape episodes
-              TvShowEpisodeSearchAndScrapeOptions options1 = new TvShowEpisodeSearchAndScrapeOptions();
-              options1.loadDefaults();
-              options1.setDataFromOtherOptions(options);
+            TvShowEpisodeSearchAndScrapeOptions options1 = new TvShowEpisodeSearchAndScrapeOptions();
+            options1.loadDefaults();
+            options1.setDataFromOtherOptions(options);
 
-              for (TvShowEpisode episode : episodesToScrape) {
-                if (cancel) {
-                  break;
-                }
-
-                TvShowEpisodeScrapeTask task = new TvShowEpisodeScrapeTask(Collections.singletonList(episode), options1,
-                    tvShowScrapeParams.episodeScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
-                // start this task embedded (to the abortable)
-                task.run();
+            for (TvShowEpisode episode : episodesToScrape) {
+              if (cancel) {
+                break;
               }
-            }
 
-            if (cancel) {
-              return;
-            }
-
-            // last but not least call a further rename task on the TV show root to move the season fanart into the right folders
-            // but only if there has been anything scraped
-            if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()
-                && (!tvShowScrapeParams.tvShowScraperMetadataConfig.isEmpty() || !tvShowScrapeParams.episodeScraperMetadataConfig.isEmpty())) {
-              TvShowRenameTask task = new TvShowRenameTask(tvShow);
+              TvShowEpisodeScrapeTask task = new TvShowEpisodeScrapeTask(Collections.singletonList(episode), options1,
+                  tvShowScrapeParams.episodeScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
               // start this task embedded (to the abortable)
               task.run();
             }
           }
-          catch (MissingIdException e) {
-            LOGGER.warn("missing id for scrape");
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+
+          if (cancel) {
+            return;
           }
-          catch (NothingFoundException e) {
-            LOGGER.debug("nothing found");
+
+          // last but not least - call a further rename task on the TV show root to move the season fanart into the right folders
+          // but only if there has been anything scraped
+          if (TvShowModuleManager.getInstance().getSettings().isRenameAfterScrape()
+              && (!tvShowScrapeParams.tvShowScraperMetadataConfig.isEmpty() || !tvShowScrapeParams.episodeScraperMetadataConfig.isEmpty())) {
+            TvShowRenameTask task = new TvShowRenameTask(tvShow);
+            // start this task embedded (to the abortable)
+            task.run();
           }
-          catch (ScrapeException e) {
-            LOGGER.error("getTvShowMetadata", e);
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
-          }
+        }
+        catch (MissingIdException e) {
+          LOGGER.warn("Could not scrape TV show '{}' - no ID available", tvShow.getTitle());
+          MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+        }
+        catch (NothingFoundException e) {
+          LOGGER.debug("nothing found for '{}'", tvShow.getTitle());
+        }
+        catch (ScrapeException e) {
+          LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.metadatatvshowfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
         }
       }
 
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "TvShowScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "TvShowScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -421,15 +428,19 @@ public class TvShowScrapeTask extends TmmThreadPool {
           artwork.addAll(artworkProvider.getArtwork(options));
         }
         catch (MissingIdException ignored) {
-          LOGGER.debug("no id avaiable for scraper {}", artworkScraper.getId());
+          LOGGER.info("Missing IDs for scraping TV show artwork of '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
         }
         catch (NothingFoundException e) {
           LOGGER.debug("did not find artwork for '{}'", tvShow.getTitle());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                  new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in TV show artwork scrape for '{}'", tvShow.getTitle(), e);
         }
         finally {
           lock.writeLock().unlock();
@@ -460,12 +471,15 @@ public class TvShowScrapeTask extends TmmThreadPool {
           trailers.addAll(trailerProvider.getTrailers(options));
         }
         catch (MissingIdException e) {
-          LOGGER.debug("no usable ID found for scraper {}", trailerScraper.getMediaProvider().getProviderInfo().getId());
+          LOGGER.info("Missing IDs for scraping TV show trailer of '{}' with '{}'", tvShow.getTitle(), trailerScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getTrailers", e);
-          MessageManager.instance
+          LOGGER.error("Could not scrape trailers for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), trailerScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, tvShow, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in TV show trailer scrape for '{}'", tvShow.getTitle(), e);
         }
         finally {
           lock.writeLock().unlock();
@@ -474,7 +488,6 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
       return trailers;
     }
-
   }
 
   @Override

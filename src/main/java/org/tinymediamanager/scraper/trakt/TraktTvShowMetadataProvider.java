@@ -117,7 +117,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
         return results;
       }
       catch (Exception e) {
-        LOGGER.error("Problem scraping for {} - {}", searchString, e.getMessage());
+        LOGGER.debug("Problem scraping for {} - {}", searchString, e.getMessage());
         // throw new ScrapeException(e); // continue
       }
     }
@@ -133,7 +133,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     }
 
     if (searchResults == null || searchResults.isEmpty()) {
-      LOGGER.info("nothing found");
+      LOGGER.debug("nothing found");
       return results;
     }
 
@@ -172,7 +172,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
       id = options.getIdAsString(IMDB);
     }
     if (StringUtils.isBlank(id)) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(IMDB, getId());
     }
 
@@ -248,7 +248,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     }
 
     if (StringUtils.isBlank(id)) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(IMDB, getId());
     }
 
@@ -270,7 +270,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     }
 
     if (show == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 
@@ -361,7 +361,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
         }
       }
       catch (Exception e) {
-        LOGGER.warn("Could not get artwork from tmdb - {}", e.getMessage());
+        LOGGER.debug("Could not get artwork from tmdb - {}", e.getMessage());
       }
     }
 
@@ -391,7 +391,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
       showId = tvShowSearchAndScrapeOptions.getIdAsString(IMDB);
     }
     if (StringUtils.isBlank(showId)) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(IMDB, getId());
     }
 
@@ -475,7 +475,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     }
 
     if (episode == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 
@@ -664,7 +664,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     Episode episode = findEpisodeById(ids);
 
     if (episode == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 
@@ -753,7 +753,7 @@ public class TraktTvShowMetadataProvider extends TraktMetadataProvider
     Episode episode = findEpisodeById(ids);
 
     if (episode == null) {
-      LOGGER.warn("nothing found");
+      LOGGER.debug("nothing found");
       throw new NothingFoundException();
     }
 

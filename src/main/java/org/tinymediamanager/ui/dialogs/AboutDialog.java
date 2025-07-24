@@ -121,9 +121,10 @@ public class AboutDialog extends TmmDialog {
           TmmUIHelper.browseUrl(lblHomepage.getText());
         }
         catch (Exception e) {
-          LOGGER.error(e.getMessage());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, lblHomepage.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not open our homepage in browser - '{}'", e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, lblHomepage.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
         }
       });
       contentPanel.add(lblHomepage, "cell 2 8");

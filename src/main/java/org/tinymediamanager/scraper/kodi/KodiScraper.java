@@ -147,7 +147,7 @@ public class KodiScraper implements IMediaProvider {
         }
       }
       if (this.scraperXml.toLowerCase(Locale.ROOT).endsWith(".py")) {
-        LOGGER.info("Found a python scraper {}, but we can only load XML based ones - sorry.", scraperFolder);
+        LOGGER.warn("Found a python scraper '{}', but we can only load XML based ones - sorry", scraperFolder);
         providerInfo = new MediaProviderInfo("", "", name, ""); // set blank ID, so the outer loop ignores
         return;
       }
@@ -291,7 +291,7 @@ public class KodiScraper implements IMediaProvider {
       this.providerInfo.getConfig().load();
     }
     catch (IOException e) {
-      LOGGER.error("Unable to generate Kodi scraper for folder {}", scraperFolder, e);
+      LOGGER.debug("Unable to generate Kodi scraper for folder {}", scraperFolder, e);
     }
   }
 

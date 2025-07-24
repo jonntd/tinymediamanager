@@ -59,6 +59,8 @@ public class MovieExtraImageFetcherTask implements Runnable {
 
   @Override
   public void run() {
+    LOGGER.info("Fetching extra images for movie '{}'", movie.getTitle());
+
     // try/catch block in the root of the thread to log crashes
     try {
       boolean ok;
@@ -86,11 +88,9 @@ public class MovieExtraImageFetcherTask implements Runnable {
         movie.saveToDb();
       }
     }
-    catch (
-
-    Exception e) {
-      LOGGER.error("Thread crashed: ", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "message.extraimage.threadcrashed"));
+    catch (Exception e) {
+      LOGGER.error("Could not download extra artwork for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "message.extraimage.threadcrashed"));
     }
   }
 
@@ -126,7 +126,7 @@ public class MovieExtraImageFetcherTask implements Runnable {
         }
       }
       catch (IOException e) {
-        LOGGER.error("could not create extrafanarts folder: {}", e.getMessage());
+        LOGGER.error("Could not create extrafanarts folder for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
         return false;
       }
     }
@@ -162,7 +162,7 @@ public class MovieExtraImageFetcherTask implements Runnable {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.warn("problem downloading extrafanart {} - {} ", urlAsString, e.getMessage());
+        LOGGER.warn("Problem downloading extrafanart for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
       }
     }
 
@@ -171,7 +171,7 @@ public class MovieExtraImageFetcherTask implements Runnable {
 
   private boolean downloadExtraThumbs() {
     if (movie.isMultiMovieDir()) {
-      LOGGER.info("Movie '{}' is within a multi-movie-directory - skip downloading of {} images.", movie.getTitle(), type);
+      LOGGER.warn("Movie '{}' is within a multi-movie-directory - skip downloading of '{}' images.", movie.getTitle(), type);
       return false;
     }
 
@@ -191,7 +191,7 @@ public class MovieExtraImageFetcherTask implements Runnable {
       Files.createDirectory(folder);
     }
     catch (IOException e) {
-      LOGGER.error("could not create extrathumbs folder: {}", e.getMessage());
+      LOGGER.error("Could not create extrathumbs folder for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
       return false;
     }
 
@@ -226,7 +226,7 @@ public class MovieExtraImageFetcherTask implements Runnable {
         i++;
       }
       catch (Exception e) {
-        LOGGER.warn("problem downloading extrathumb {} - {}", urlAsString, e.getMessage());
+        LOGGER.warn("Problem downloading extrathumbs for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
       }
     }
 

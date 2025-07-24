@@ -48,7 +48,6 @@ public class TvShowFetchImdbTop250 extends TmmAction {
     putValue(LARGE_ICON_KEY, IconManager.RATING_BLUE);
     putValue(SMALL_ICON, IconManager.RATING_BLUE);
     putValue(NAME, TmmResourceBundle.getString("tvshow.fetchtop250"));
-    // putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK + InputEvent.SHIFT_DOWN_MASK));
   }
 
   @Override
@@ -122,10 +121,10 @@ public class TvShowFetchImdbTop250 extends TmmAction {
                 }
               }
 
-              LOGGER.info("Matched {} Top 250 values from IMDB", cnt);
+              LOGGER.info("Matched {} Top 250 values from IMDb", cnt);
             }
-            catch (Exception ignored) {
-              LOGGER.warn("Error fetching Top 250: {}", ignored.getMessage());
+            catch (Exception e) {
+              LOGGER.warn("Could not fetch IMDb Top 250 - '{}'", e.getMessage());
             }
           }
         });

@@ -156,7 +156,7 @@ public class UrlUtil {
       return String.format("%s://%s/", u.getProtocol(), u.getHost());
     }
     catch (MalformedURLException e) {
-      LOGGER.warn("Failed to get domain url for '{}'", url);
+      LOGGER.debug("Failed to get domain url for '{}'", url);
     }
     return null;
   }
@@ -194,7 +194,7 @@ public class UrlUtil {
       return u.getPath();
     }
     catch (MalformedURLException e) {
-      LOGGER.error("getPathName() Failed for '{}' - {} ", url, e.getMessage());
+      LOGGER.debug("getPathName() Failed for '{}' - {} ", url, e.getMessage());
     }
     return null;
   }

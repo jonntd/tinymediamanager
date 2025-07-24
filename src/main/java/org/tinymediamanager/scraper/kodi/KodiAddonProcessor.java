@@ -167,7 +167,7 @@ class KodiAddonProcessor {
 
     if (StringUtils.isEmpty(movieId)) {
       try {
-        Pattern p = Pattern.compile("http://www.themoviedb.org/movie/([0-9]+)\\-");
+        Pattern p = Pattern.compile("https?://www.themoviedb.org/movie/([0-9]+)\\-");
         Matcher m = p.matcher(url);
         if (m.find()) {
           movieId = m.group(1);
@@ -180,7 +180,7 @@ class KodiAddonProcessor {
 
     if (StringUtils.isEmpty(movieId)) {
       try {
-        Pattern p = Pattern.compile("http://www.thetvdb.com/api/(.*?)/series/([0-9]*)/all");
+        Pattern p = Pattern.compile("https?://www.thetvdb.com/api/(.*?)/series/([0-9]*)/all");
         Matcher m = p.matcher(url);
         if (m.find()) {
           movieId = m.group(2);

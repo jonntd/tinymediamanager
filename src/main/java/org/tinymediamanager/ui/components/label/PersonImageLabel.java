@@ -28,24 +28,24 @@ import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.Person;
 
 /**
- * The Class ActorImageLabel.
+ * The Class PersonImageLabel.
  * 
  * @author Manuel Laggner
  */
-public class ProducerImageLabel extends ImageLabel {
-  private SwingWorker<Void, Void> producerWorker = null;
-  private Person                  producer       = null;
+public class PersonImageLabel extends ImageLabel {
+  private SwingWorker<Void, Void> personWorker = null;
+  private Person                  person       = null;
 
-  public void setProducer(MediaEntity mediaEntity, Person producer) {
+  public void setPerson(MediaEntity mediaEntity, Person person) {
     clearImage();
 
-    if (mediaEntity != null && producer != null && producer != this.producer) {
-      if (producerWorker != null && !producerWorker.isDone()) {
-        producerWorker.cancel(true);
+    if (mediaEntity != null && person != null && person != this.person) {
+      if (personWorker != null && !personWorker.isDone()) {
+        personWorker.cancel(true);
       }
-      this.producer = producer;
-      producerWorker = new ProducerImageLoader(producer, mediaEntity);
-      producerWorker.execute();
+      this.person = person;
+      personWorker = new ActorImageLoader(person, mediaEntity);
+      personWorker.execute();
     }
   }
 
@@ -73,43 +73,43 @@ public class ProducerImageLabel extends ImageLabel {
 
   @Override
   protected boolean isLoading() {
-    return (worker != null && !worker.isDone()) || (producerWorker != null && !producerWorker.isDone());
+    return (worker != null && !worker.isDone()) || (personWorker != null && !personWorker.isDone());
   }
 
   /*
-   * inner class for loading the producer images
+   * inner class for loading the actor images
    */
-  protected class ProducerImageLoader extends SwingWorker<Void, Void> {
-    private final Person      producer;
+  protected class ActorImageLoader extends SwingWorker<Void, Void> {
+    private final Person      actor;
     private final MediaEntity mediaEntity;
     private Path              imagePath = null;
 
-    private ProducerImageLoader(Person producer, MediaEntity mediaEntity) {
-      this.producer = producer;
+    private ActorImageLoader(Person actor, MediaEntity mediaEntity) {
+      this.actor = actor;
       this.mediaEntity = mediaEntity;
     }
 
     @Override
     protected Void doInBackground() {
       // set file (or cached one) if existent
-      String producerImageFilename = producer.getNameForStorage();
-      if (StringUtils.isNotBlank(producerImageFilename)) {
+      String actorImageFilename = actor.getNameForStorage();
+      if (StringUtils.isNotBlank(actorImageFilename)) {
         Path file = null;
 
         // we prefer reading it from the cache
         if (preferCache) {
-          file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.PRODUCER_DIR, producerImageFilename));
+          file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename));
         }
 
         // not in the cache - read it from the path
         if (file == null) {
-          file = Paths.get(mediaEntity.getPath(), Person.PRODUCER_DIR, producerImageFilename);
+          file = Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename);
         }
 
         // not available in the path and not preferred from the cache..
         // well just try to read it from the cache
-        if ((file == null || !Files.exists(file)) && !preferCache) {
-          file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.PRODUCER_DIR, producerImageFilename));
+        if (!Files.exists(file) && !preferCache) {
+          file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename));
         }
 
         if (file != null && Files.exists(file)) {
@@ -120,7 +120,7 @@ public class ProducerImageLabel extends ImageLabel {
 
       // no file found, try to cache url (if visible, otherwise load on demand in paintComponent)
       if (isShowing()) {
-        Path p = ImageCache.getCachedFile(producer.getThumbUrl());
+        Path p = ImageCache.getCachedFile(actor.getThumbUrl());
         if (p != null) {
           imagePath = p;
         }

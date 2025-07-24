@@ -15,21 +15,19 @@
  */
 package org.tinymediamanager.thirdparty.yt;
 
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.regex.Matcher;
 
+import org.apache.commons.lang3.StringUtils;
+import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.license.TmmFeature;
 import org.tinymediamanager.scraper.exceptions.HttpException;
-import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 import org.tinymediamanager.scraper.http.Url;
 
-import com.github.kiulian.downloader.Config;
 import com.github.kiulian.downloader.YoutubeDownloader;
-import com.github.kiulian.downloader.downloader.Downloader;
-import com.github.kiulian.downloader.downloader.request.RequestVideoFileDownload;
-import com.github.kiulian.downloader.downloader.request.RequestVideoStreamDownload;
+import com.github.kiulian.downloader.downloader.AbstractDownloader;
 import com.github.kiulian.downloader.downloader.request.RequestWebpage;
 import com.github.kiulian.downloader.downloader.response.Response;
 import com.github.kiulian.downloader.downloader.response.ResponseImpl;
@@ -40,17 +38,75 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 
 /**
- * the class {@link YTDownloader} is used to pass the YT download over our HTTP client
- * 
+ * The {@link YtDownloader} class is used to pass the YT download operations through our HTTP client. It extends {@link YoutubeDownloader} and
+ * implements {@link TmmFeature} to provide YT download functionality with tinyMediaManager's HTTP client implementation.
+ *
  * @author Manuel Laggner
  */
-public class YTDownloader extends YoutubeDownloader implements TmmFeature {
-  public YTDownloader() throws ScrapeException {
-    super(new Config.Builder().build());
+public class YtDownloader extends YoutubeDownloader implements TmmFeature {
+  private static YtDownloader instance;
+
+  /**
+   * Initializes the YtDownloader singleton instance. Creates the instance eagerly to avoid overhead in subsequent calls.
+   */
+  public static void init() {
+    // create a singleton instance eagerly to avoid overhead
+    instance = new YtDownloader();
+  }
+
+  /**
+   * Gets the singleton instance of YtDownloader. If no instance exists, creates a new one.
+   *
+   * @return the YtDownloader singleton instance
+   */
+  public static YtDownloader getInstance() {
+    if (instance == null) {
+      init();
+    }
+    return instance;
+  }
+
+  /**
+   * Private constructor to ensure singleton pattern. Initializes the parent class and sets up the custom downloader implementation.
+   */
+  private YtDownloader() {
+    super();
     setDownloader(new DownloaderImpl());
   }
 
-  class DownloaderImpl implements Downloader {
+  /**
+   * Extracts the YouTube video ID from a given URL.
+   *
+   * @param url
+   *          the YouTube URL to extract the ID from
+   * @return the extracted YouTube video ID or null if invalid
+   */
+  public String extractYoutubeId(String url) {
+    if (StringUtils.isBlank(url)) {
+      return "";
+    }
+
+    Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(url);
+
+    if (matcher.matches()) {
+      return matcher.group(5);
+    }
+
+    return "";
+  }
+
+  /**
+   * Internal implementation of the YouTube downloader that uses tinyMediaManager's HTTP client. Handles both GET and POST requests for downloading
+   * webpage content.
+   */
+  class DownloaderImpl extends AbstractDownloader {
+    /**
+     * Downloads a webpage using either GET or POST method based on the request configuration.
+     *
+     * @param requestWebpage
+     *          the request configuration containing URL, headers, and other parameters
+     * @return a Response containing the downloaded webpage content or error information
+     */
     @Override
     public Response<String> downloadWebpage(RequestWebpage requestWebpage) {
       if ("POST".equals(requestWebpage.getMethod())) {
@@ -61,6 +117,13 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
       }
     }
 
+    /**
+     * Performs a GET request to download webpage content. Handles URL parameters, headers, and retry logic.
+     *
+     * @param requestWebpage
+     *          the request configuration
+     * @return a Response containing the downloaded content or error information
+     */
     private Response<String> get(RequestWebpage requestWebpage) {
       try {
         Url url = new Url(requestWebpage.getDownloadUrl().replace("{API_KEY}", getApiKey()));
@@ -85,6 +148,13 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
       }
     }
 
+    /**
+     * Performs a POST request to download webpage content. Handles request body, headers, and response validation.
+     *
+     * @param requestWebpage
+     *          the request configuration
+     * @return a Response containing the downloaded content or error information
+     */
     private Response<String> post(RequestWebpage requestWebpage) {
       Call call = null;
       okhttp3.Response response = null;
@@ -123,18 +193,6 @@ public class YTDownloader extends YoutubeDownloader implements TmmFeature {
 
         return ResponseImpl.error(e);
       }
-    }
-
-    @Override
-    public Response<File> downloadVideoAsFile(RequestVideoFileDownload requestVideoFileDownload) {
-      // we handle that internally
-      return null;
-    }
-
-    @Override
-    public Response<Void> downloadVideoAsStream(RequestVideoStreamDownload requestVideoStreamDownload) {
-      // we handle that internally
-      return null;
     }
   }
 }

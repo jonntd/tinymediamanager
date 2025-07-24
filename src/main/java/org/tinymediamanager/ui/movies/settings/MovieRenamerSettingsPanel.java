@@ -48,8 +48,6 @@ import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Bindings;
 import org.jdesktop.beansbinding.Property;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -57,10 +55,12 @@ import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.FlatButton;
+import org.tinymediamanager.ui.components.button.JHintCheckBox;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
@@ -75,11 +75,9 @@ import net.miginfocom.swing.MigLayout;
  * The class MovieRenamerSettingsPanel.
  */
 public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListener {
-  private static final Logger LOGGER           = LoggerFactory.getLogger(MovieRenamerSettingsPanel.class);
-
   private final MovieSettings settings         = MovieModuleManager.getInstance().getSettings();
   private final List<String>  spaceReplacement = new ArrayList<>(Arrays.asList("_", ".", "-"));
-  private final List<String>  colonReplacement = new ArrayList<>(Arrays.asList(" ", "-", "_"));
+  private final List<String>  colonReplacement = new ArrayList<>(Arrays.asList(" ", "-", "_", "∶"));
 
   /**
    * UI components
@@ -89,7 +87,6 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
   private LinkLabel           lblExampleDatasource;
   private JLabel              lblExampleFoldername;
   private JLabel              lblExampleFilename;
-  private JCheckBox           chckbxAsciiReplacement;
 
   private JCheckBox           chckbxFoldernameSpaceReplacement;
   private JComboBox           cbFoldernameSpaceReplacement;
@@ -105,6 +102,8 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
   private JTextField          tfFirstCharacter;
   private JCheckBox           chckbxAllowMerge;
   private JCheckBox           chckbxAutomaticRename;
+  private JHintCheckBox       chckbxAsciiReplacement;
+  private JHintCheckBox       chckbxUnicodeReplacement;
 
   public MovieRenamerSettingsPanel() {
 
@@ -159,6 +158,11 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
       cbColonReplacement.setSelectedIndex(index);
     }
 
+    if (settings.isAsciiReplacement()) {
+      chckbxUnicodeReplacement.setEnabled(false);
+      cbColonReplacement.removeItem(colonReplacement.get(colonReplacement.size() - 1));
+    }
+
     cbFoldernameSpaceReplacement.addActionListener(arg0 -> {
       checkChanges();
       createRenamerExample();
@@ -168,6 +172,24 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
       createRenamerExample();
     });
     cbColonReplacement.addActionListener(arg0 -> {
+      checkChanges();
+      createRenamerExample();
+    });
+    chckbxAsciiReplacement.addActionListener(arg0 -> {
+      if (chckbxAsciiReplacement.isSelected()) {
+        cbColonReplacement.removeItem(ListUtils.getLast(colonReplacement));
+        chckbxUnicodeReplacement.setSelected(false);
+        chckbxUnicodeReplacement.setEnabled(false);
+      }
+      else {
+        cbColonReplacement.addItem(ListUtils.getLast(colonReplacement));
+        chckbxUnicodeReplacement.setEnabled(true);
+      }
+
+      checkChanges();
+      createRenamerExample();
+    });
+    chckbxUnicodeReplacement.addActionListener(arg0 -> {
       checkChanges();
       createRenamerExample();
     });
@@ -184,7 +206,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("hidemode 1", "[600lp,grow]", "[][15lp!][][15lp!][]"));
+    setLayout(new MigLayout("hidemode 1", "[600lp,grow]", "[][15lp!][][15lp!][][15lp!][]"));
     {
       JPanel panelPatterns = new JPanel(new MigLayout("insets 0, hidemode 1", "[20lp!][15lp][][400lp,grow][grow]", "[][][][][][]"));
 
@@ -253,7 +275,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
     }
     {
       JPanel panelAdvancedOptions = new JPanel();
-      panelAdvancedOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][][][][][]")); // 16lp ~ width of the
+      panelAdvancedOptions.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][]")); // 16lp ~ width of the
 
       JLabel lblAdvancedOptions = new TmmLabel(TmmResourceBundle.getString("Settings.advancedoptions"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelAdvancedOptions, lblAdvancedOptions, true);
@@ -267,61 +289,90 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
         JLabel lblAutomaticRenameHint = new JLabel(IconManager.HINT);
         lblAutomaticRenameHint.setToolTipText(TmmResourceBundle.getString("Settings.movie.automaticrename.desc"));
         panelAdvancedOptions.add(lblAutomaticRenameHint, "cell 1 0 2 1");
+      }
+      {
+        chckbxMoviesetSingleMovie = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.moviesetsinglemovie"));
+        panelAdvancedOptions.add(chckbxMoviesetSingleMovie, "cell 1 1 2 1");
+      }
+      {
+        chckbxRemoveOtherNfos = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.removenfo"));
+        panelAdvancedOptions.add(chckbxRemoveOtherNfos, "cell 1 2 2 1");
+      }
+      {
+        chckbxCleanupUnwanted = new JCheckBox(TmmResourceBundle.getString("Settings.cleanupfiles"));
+        panelAdvancedOptions.add(chckbxCleanupUnwanted, "cell 1 3 2 1");
+      }
+      {
+        chckbxAllowMerge = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.movie.allowmerge"));
+        panelAdvancedOptions.add(chckbxAllowMerge, "cell 1 4 2 1");
+      }
+    }
+    {
+      JPanel panelReplacements = new JPanel();
+      panelReplacements.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][]")); // 16lp ~ width of the
 
+      JLabel lblReplacementsT = new TmmLabel(TmmResourceBundle.getString("Settings.renamer.replacements"), H3);
+      CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelReplacements, lblReplacementsT, true);
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#advanced-options-4"));
+      add(collapsiblePanel, "cell 0 4,growx, wmin 0");
+      {
         chckbxFoldernameSpaceReplacement = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.folderspacereplacement"));
         chckbxFoldernameSpaceReplacement.setToolTipText(TmmResourceBundle.getString("Settings.renamer.folderspacereplacement.hint"));
-        panelAdvancedOptions.add(chckbxFoldernameSpaceReplacement, "cell 1 1 2 1");
+        panelReplacements.add(chckbxFoldernameSpaceReplacement, "cell 1 0 2 1");
 
         cbFoldernameSpaceReplacement = new JComboBox<>(spaceReplacement.toArray());
-        panelAdvancedOptions.add(cbFoldernameSpaceReplacement, "cell 1 1 2 1");
+        panelReplacements.add(cbFoldernameSpaceReplacement, "cell 1 0 2 1");
       }
       {
         chckbxFilenameSpaceReplacement = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.spacereplacement"));
         chckbxFilenameSpaceReplacement.setToolTipText(TmmResourceBundle.getString("Settings.renamer.spacereplacement.hint"));
-        panelAdvancedOptions.add(chckbxFilenameSpaceReplacement, "cell 1 2 2 1");
+        panelReplacements.add(chckbxFilenameSpaceReplacement, "cell 1 1 2 1");
 
         cbFilenameSpaceReplacement = new JComboBox<>(spaceReplacement.toArray());
-        panelAdvancedOptions.add(cbFilenameSpaceReplacement, "cell 1 2 2 1");
-      }
-      {
-        JLabel lblColonReplacement = new JLabel(TmmResourceBundle.getString("Settings.renamer.colonreplacement"));
-        panelAdvancedOptions.add(lblColonReplacement, "cell 1 3 2 1");
-        lblColonReplacement.setToolTipText(TmmResourceBundle.getString("Settings.renamer.colonreplacement.hint"));
-
-        cbColonReplacement = new JComboBox<>(colonReplacement.toArray());
-        panelAdvancedOptions.add(cbColonReplacement, "cell 1 3 2 1");
-      }
-      {
-        chckbxAsciiReplacement = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.asciireplacement"));
-        panelAdvancedOptions.add(chckbxAsciiReplacement, "cell 1 4 2 1");
-
-        JLabel lblAsciiHint = new JLabel(TmmResourceBundle.getString("Settings.renamer.asciireplacement.hint"));
-        panelAdvancedOptions.add(lblAsciiHint, "cell 2 5");
-        TmmFontHelper.changeFont(lblAsciiHint, L2);
+        panelReplacements.add(cbFilenameSpaceReplacement, "cell 1 1 2 1");
       }
       {
         JLabel lblFirstCharacterT = new JLabel(TmmResourceBundle.getString("Settings.renamer.firstnumbercharacterreplacement"));
-        panelAdvancedOptions.add(lblFirstCharacterT, "flowx,cell 1 6 2 1");
+        panelReplacements.add(lblFirstCharacterT, "flowx,cell 1 2 2 1");
 
         tfFirstCharacter = new JTextField();
-        panelAdvancedOptions.add(tfFirstCharacter, "cell 1 6 2 1");
+        panelReplacements.add(tfFirstCharacter, "cell 1 2 2 1");
         tfFirstCharacter.setColumns(2);
       }
       {
-        chckbxMoviesetSingleMovie = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.moviesetsinglemovie"));
-        panelAdvancedOptions.add(chckbxMoviesetSingleMovie, "cell 1 7 2 1");
+        chckbxAsciiReplacement = new JHintCheckBox(TmmResourceBundle.getString("Settings.renamer.asciireplacement"));
+
+        String examples = "<html>" + TmmResourceBundle.getString("Settings.renamer.examples") + "<br>";
+
+        examples += "Ä  →  Ae<br>";
+        examples += "Ö  →  Oe<br>";
+        examples += "ß  →  ss<br>";
+        examples += "Á  →  A<br>";
+        examples += "Æ  →  Ae<br>";
+        examples += "…</html>";
+
+        chckbxAsciiReplacement.setToolTipText(examples);
+        panelReplacements.add(chckbxAsciiReplacement, "cell 1 3 2 1");
       }
       {
-        chckbxRemoveOtherNfos = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.removenfo"));
-        panelAdvancedOptions.add(chckbxRemoveOtherNfos, "cell 1 8 2 1");
+        JLabel lblColonReplacement = new JLabel(TmmResourceBundle.getString("Settings.renamer.colonreplacement"));
+        panelReplacements.add(lblColonReplacement, "flowx,cell 1 4 2 1");
+        lblColonReplacement.setToolTipText(TmmResourceBundle.getString("Settings.renamer.colonreplacement.hint"));
+
+        cbColonReplacement = new JComboBox<>(colonReplacement.toArray());
+        panelReplacements.add(cbColonReplacement, "cell 1 4 2 1");
       }
       {
-        chckbxCleanupUnwanted = new JCheckBox(TmmResourceBundle.getString("Settings.cleanupfiles"));
-        panelAdvancedOptions.add(chckbxCleanupUnwanted, "cell 1 9 2 1");
-      }
-      {
-        chckbxAllowMerge = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.movie.allowmerge"));
-        panelAdvancedOptions.add(chckbxAllowMerge, "cell 1 10 2 1");
+        chckbxUnicodeReplacement = new JHintCheckBox(TmmResourceBundle.getString("Settings.renamer.unicodereplacement"));
+
+        String examples = "<html>" + TmmResourceBundle.getString("Settings.renamer.examples") + "<br>";
+        examples += ":  →  ∶<br>";
+        examples += "/  →  ⁄<br>";
+        examples += "&gt;  →  ›<br>";
+        examples += "…</html>";
+
+        chckbxUnicodeReplacement.setToolTipText(examples);
+        panelReplacements.add(chckbxUnicodeReplacement, "cell 1 5 2 1");
       }
     }
     {
@@ -331,7 +382,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
       JLabel lblExampleHeader = new TmmLabel(TmmResourceBundle.getString("Settings.example"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelExample, lblExampleHeader, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#example"));
-      add(collapsiblePanel, "cell 0 4, growx, wmin 0");
+      add(collapsiblePanel, "cell 0 6, growx, wmin 0");
       {
         JLabel lblExampleT = new TmmLabel(TmmResourceBundle.getString("tmm.movie"));
         panelExample.add(lblExampleT, "cell 1 0");
@@ -549,5 +600,10 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
     AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_3, chckbxCleanupUnwanted,
         jCheckBoxBeanProperty);
     autoBinding_8.bind();
+    //
+    Property movieSettingsBeanProperty_4 = BeanProperty.create("unicodeReplacement");
+    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_4, chckbxUnicodeReplacement,
+        jCheckBoxBeanProperty);
+    autoBinding_9.bind();
   }
 }

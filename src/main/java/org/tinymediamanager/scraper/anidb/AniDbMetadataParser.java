@@ -213,6 +213,8 @@ class AniDbMetadataParser {
     else { // QUESTION: This gets set even if `titleMain` is blank. Is that ok?
       md.setTitle(titleMain);
     }
+
+    md.setEnglishTitle(titleEN);
   }
 
   /**

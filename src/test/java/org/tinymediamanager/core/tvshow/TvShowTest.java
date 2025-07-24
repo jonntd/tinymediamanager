@@ -122,6 +122,9 @@ public class TvShowTest extends BasicTvShowTest {
 
     // ************************************************************************
     // various real world examples
+    assertEqual("S:1 E:6 Split", detectEpisode("Totenfrau： Bis ans Ende (6⧸6).mkv")); // Unicode slash; Split... yes, because of "stacking marker"
+    assertEqual("S:2 E:2 Split", detectEpisode("S2/Totenfrau： whatever(2⧸6).mkv")); // ShortSeason
+    assertEqual("S:2 E:5 Split", detectEpisode("Season 2/Totenfrau： Bis ans Ende (5⧸6).mkv"));
     assertEqual("S:1 E:133 E:134", detectEpisode("InuYasha [tmdbid-35610]/S06E07-E08 [a-S] 133-134 [03A48078].mkv")); // Anime multi abs
     assertEqual("S:4 E:12", detectEpisode("Die Heiland – Wir sind Anwalt - Folge 37_ Kompromisslos (S04_E12) - 20241121 - 220000.mkv"));
     assertEqual("S:2024", detectEpisode("The.Daily.Show.2024.04.23.Stephanie.Kelton.1080p.HEVC.x265"));
@@ -360,6 +363,14 @@ public class TvShowTest extends BasicTvShowTest {
     assertEqual("S:1 E:1 Split", detectEpisode("name.ep01a_01.discb.ext"));
     assertEqual("S:1 E:1 Split", detectEpisode("name.s01e01.1.s01e01.2.of.2.ext"));
     assertEqual("S:1 E:1", detectEpisode("name.1x01.1x01.2.ext")); // do not detect that one
+  }
+
+  @Test
+  public void translatedSeasons() {
+    for (String trans : TvShowEpisodeAndSeasonParser.SEASON_TRANSLATIONS) {
+      String name = "Homeland - " + trans + " 8 [HDTV][Cap.804][Castellano][www.descargas2020.org].avi";
+      assertEqual("S:8 E:4", detectEpisode(name));
+    }
   }
 
   /**

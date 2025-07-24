@@ -89,6 +89,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -747,7 +748,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setProductionCompany(String newValue) {
     String oldValue = this.productionCompany;
-    this.productionCompany = newValue;
+    this.productionCompany = StrgUtils.strip(newValue);
 
     firePropertyChange(PRODUCTION_COMPANY, oldValue, newValue);
   }
@@ -791,7 +792,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setNote(String newValue) {
     String oldValue = this.note;
-    this.note = newValue;
+    this.note = StrgUtils.strip(newValue);
     firePropertyChange("note", oldValue, newValue);
   }
 
@@ -805,7 +806,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setLastScraperId(String newValue) {
     String oldValue = lastScraperId;
-    lastScraperId = newValue;
+    lastScraperId = StrgUtils.strip(newValue);
     firePropertyChange("lastScraperId", oldValue, newValue);
   }
 
@@ -815,7 +816,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
 
   public void setLastScrapeLanguage(String newValue) {
     String oldValue = lastScrapeLanguage;
-    lastScrapeLanguage = newValue;
+    lastScrapeLanguage = StrgUtils.strip(newValue);
     firePropertyChange("lastScrapeLanguage", oldValue, newValue);
   }
 
@@ -842,7 +843,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   public void setId(String key, Object value) {
     // remove ID, if empty/0/null
     // if we only skipped it, the existing entry will stay although someone changed it to empty.
-    String v = StringUtils.strip(String.valueOf(value));
+    String v = String.valueOf(value).strip();
     if ("".equals(v) || "0".equals(v) || "null".equals(v)) {
       ids.remove(key);
     }
@@ -852,7 +853,20 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
         return;
       }
 
-      ids.put(key, value);
+      if (value instanceof String) {
+        try {
+          Integer parsedInt = Integer.parseInt(v); // our stripped string
+          // cool, it is an Integer
+          ids.put(key, parsedInt);
+        }
+        catch (NumberFormatException ex) {
+          // must be still string, add stripped one
+          ids.put(key, v);
+        }
+      }
+      else {
+        ids.put(key, value);
+      }
     }
     firePropertyChange(key, null, value);
     firePropertyChange(ID, null, value);
@@ -953,6 +967,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * fire an add event for the given {@link MediaFile}
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to fire the event for
+   */
   protected void fireAddedEventForMediaFile(MediaFile mediaFile) {
     if (mediaFile == null) {
       return;
@@ -1014,6 +1034,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * fire a remove event for the given {@link MediaFile}
+   *
+   * @param mediaFile
+   *          the {@link MediaFile} to fire the event for
+   */
   protected void fireRemoveEventForMediaFile(MediaFile mediaFile) {
     if (mediaFile == null) {
       return;
@@ -1075,6 +1101,12 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     }
   }
 
+  /**
+   * gets all MediaFiles of this entity<br>
+   * <b>Note:</b> this is a copy of the internal list, so you can modify it without affecting the original list
+   *
+   * @return list of MF (may be empty, but never null)
+   */
   public List<MediaFile> getMediaFiles() {
     List<MediaFile> mf = new ArrayList<>();
 
@@ -1088,6 +1120,21 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     return mf;
   }
 
+  /**
+   * gets all MediaFiles of this entity and embedded/child entities<br>
+   * <b>Note:</b> this is a copy of the internal list, so you can modify it without affecting the original list
+   *
+   * @return list of MF (may be empty, but never null)
+   */
+  public List<MediaFile> getMediaFilesRecursive() {
+    return getMediaFiles();
+  }
+
+  /**
+   * checks whether this {@link MediaEntity} has any MediaFiles or not
+   *
+   * @return true if there are MediaFiles, false otherwise
+   */
   public boolean hasMediaFiles() {
     return !mediaFiles.isEmpty();
   }
@@ -1347,7 +1394,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
             Files.move(oldCache, newCache);
           }
           catch (IOException e) {
-            LOGGER.warn("Error moving cached file - '{}'", e.getMessage());
+            LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
           }
         }
       }
@@ -1443,7 +1490,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
       if (StringUtils.isBlank(tag) || tags.stream().anyMatch(tag::equalsIgnoreCase)) {
         continue;
       }
-      newItems.add(tag);
+      newItems.add(StrgUtils.strip(tag));
     }
 
     if (newItems.isEmpty()) {
@@ -1491,14 +1538,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
    * @return the tag as string
    */
   public String getTagsAsString() {
-    StringBuilder sb = new StringBuilder();
-    for (String tag : tags) {
-      if (!StringUtils.isBlank(sb)) {
-        sb.append(", ");
-      }
-      sb.append(tag);
-    }
-    return sb.toString();
+    return String.join(", ", tags);
   }
 
   /**

@@ -64,6 +64,7 @@ import org.tinymediamanager.core.movie.jmte.MovieNamedFirstCharacterRenderer;
 import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetRenderer;
 import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetWithDummyRenderer;
 import org.tinymediamanager.scraper.entities.MediaCertification;
+import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.floreysoft.jmte.Engine;
 import com.floreysoft.jmte.extended.ChainedNamedRenderer;
@@ -101,7 +102,17 @@ public class MovieJmteTests extends BasicMovieTest {
       engine.setOutputAppender(new TmmOutputAppender() {
         @Override
         protected String replaceInvalidCharacters(String text) {
+          if (isUnicodeReplacementEnabled()) {
+            // Unicode replacement of forbidden characters
+            return StrgUtils.replaceForbiddenFilesystemCharacters(text);
+          }
+
           return MovieRenamer.replaceInvalidCharacters(text);
+        }
+
+        @Override
+        protected boolean isUnicodeReplacementEnabled() {
+          return MovieModuleManager.getInstance().getSettings().isUnicodeReplacement();
         }
       });
 
@@ -312,17 +323,16 @@ public class MovieJmteTests extends BasicMovieTest {
 
     movie.setWatched(true);
     movie.setGenres(Arrays.asList(MediaGenres.ADVENTURE, MediaGenres.FAMILY));
-    movie
-        .addToWriters(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
-            new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer")));
-    movie.addToDirectors(
+    movie.addToCrew(Arrays.asList(new Person(Person.Type.WRITER, "Ted Elliott", "Writer"), new Person(Person.Type.WRITER, "Terry Rossio", "Writer"),
+        new Person(Person.Type.WRITER, "Ron Clements", "Writer"), new Person(Person.Type.WRITER, "John Jusker", "Writer")));
+    movie.addToCrew(
         Arrays.asList(new Person(Person.Type.DIRECTOR, "Ron Clements", "Director"), new Person(Person.Type.DIRECTOR, "John Jusker", "Director")));
     movie.addToTags(Arrays.asList("Disney", "Oriental"));
 
     movie.addToActors(Arrays.asList(new Person(Person.Type.ACTOR, "Scott Weinger", "Aladdin 'Al' (voice)"),
         new Person(Person.Type.ACTOR, "Robin Williams", "Genie (voice)")));
 
-    movie.addToProducers(
+    movie.addToCrew(
         Arrays.asList(new Person(Person.Type.PRODUCER, "Ron Clements", "Producer"), new Person(Person.Type.PRODUCER, "Donald W. Ernst", "Producer")));
 
     movie.setSpokenLanguages("en");

@@ -460,6 +460,29 @@ public class TmmTreeModel<E extends TmmTreeNode> extends DefaultTreeModel {
   }
 
   /**
+   * get a list of all children (recursive!) from the given node
+   *
+   * @param parent
+   *          the given node to get all children for - recursive call
+   * @return a list of all children
+   */
+  private List<E> getChildrenRecursive(final E parent) {
+    List<E> children = new ArrayList<>();
+
+    Enumeration e = parent.children();
+    while (e.hasMoreElements()) {
+      E child = (E) e.nextElement();
+      children.add(child);
+
+      if (child.getChildCount() > 0) {
+        children.addAll(getChildrenRecursive(child));
+      }
+    }
+
+    return children;
+  }
+
+  /**
    * filter and sort the children
    * 
    * @param parentNode
@@ -620,6 +643,12 @@ public class TmmTreeModel<E extends TmmTreeNode> extends DefaultTreeModel {
     }
 
     // force re-calculate of the whole subtree
+    // down to its children
+    for (E child : getChildrenRecursive(node)) {
+      filteredNodeChildrenCache.remove(child.getId());
+    }
+
+    // and up
     for (Object obj : parent.getPath()) {
       if (obj instanceof TmmTreeNode) {
         filteredNodeChildrenCache.remove(((TmmTreeNode) obj).getId());
@@ -850,7 +879,7 @@ public class TmmTreeModel<E extends TmmTreeNode> extends DefaultTreeModel {
     isAdjusting = adjusting;
   }
 
-  private abstract class DelayedUpdateTask extends TimerTask {
+  public abstract static class DelayedUpdateTask extends TimerTask {
     boolean updateNeeded = false;
   }
 }

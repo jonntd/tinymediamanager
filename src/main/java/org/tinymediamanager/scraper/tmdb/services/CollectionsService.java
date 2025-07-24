@@ -5,6 +5,7 @@ import java.util.Map;
 import org.tinymediamanager.scraper.tmdb.entities.AppendToResponse;
 import org.tinymediamanager.scraper.tmdb.entities.Collection;
 import org.tinymediamanager.scraper.tmdb.entities.Images;
+import org.tinymediamanager.scraper.tmdb.entities.Translations;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -65,4 +66,13 @@ public interface CollectionsService {
    */
   @GET("collection/{collection_id}/images")
   Call<Images> images(@Path("collection_id") int collectionId, @Query("language") String language);
+
+  /**
+   * Get all translations for a specific collection id.
+   * 
+   * @param collectionId
+   *          TMDb id.
+   */
+  @GET("collection/{collection_id}/translations")
+  Call<Translations> translations(@Path("collection_id") int collectionId);
 }

@@ -78,7 +78,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
   protected MediaProviderInfo createMediaProviderInfo() {
     MediaProviderInfo info = super.createMediaProviderInfo();
 
-    info.getConfig().addText("apiKey", "", true);
+    info.getConfig().addText(MediaProviderInfo.API_KEY, "", true);
     info.getConfig().addText("pin", "", true);
     info.getConfig().addBoolean("scrapeLanguageNames", true);
 
@@ -128,7 +128,7 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
       }
     }
 
@@ -159,12 +159,12 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
             }
           }
           catch (Exception e) {
-            LOGGER.error("problem getting data vom tvdb via ID: {}", e.getMessage());
+            LOGGER.debug("problem getting data vom tvdb via ID: {}", e.getMessage());
           }
         }
       }
       catch (Exception e) {
-        LOGGER.error("problem getting data vom tvdb: {}", e.getMessage());
+        LOGGER.debug("problem getting data vom tvdb: {}", e.getMessage());
         throw new ScrapeException(e);
       }
     }
@@ -268,19 +268,21 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     }
 
     if (id == 0) {
-      LOGGER.warn("no id available");
+      LOGGER.debug("no id available");
       throw new MissingIdException(getId());
     }
 
     MovieExtendedRecord movie;
     Translation baseTranslation = null;
     Translation fallbackTranslation = null;
+    Translation englishTranslation = null;
 
     try {
       // language in 3 char
       String baseLanguage = LanguageUtils.getIso3Language(options.getLanguage().toLocale());
       String fallbackLanguage = LanguageUtils
           .getIso3Language(MediaLanguages.get(getProviderInfo().getConfig().getValue(FALLBACK_LANGUAGE)).toLocale());
+      String englishLanguage = LanguageUtils.getIso3Language(MediaLanguages.en.toLocale());
 
       // pt-BR is pt at tvdb...
       if ("pob".equals(baseLanguage)) {
@@ -313,17 +315,28 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
           fallbackTranslation = translationResponse.body().data;
         }
       }
+
+      if (englishLanguage.equals(baseLanguage) && baseLanguage != null) {
+        englishTranslation = baseTranslation;
+      }
+      else if (englishLanguage.equals(fallbackLanguage) && fallbackTranslation != null) {
+        englishTranslation = fallbackTranslation;
+      }
+      else if (movie.nameTranslations.contains(englishLanguage)) {
+        Response<TranslationResponse> translationResponse = tvdb.getMoviesService().getMoviesTranslation(id, englishLanguage).execute();
+        if (translationResponse.isSuccessful()) {
+          englishTranslation = translationResponse.body().data;
+        }
+      }
     }
     catch (Exception e) {
-      LOGGER.error("failed to get meta data: {}", e.getMessage());
+      LOGGER.debug("failed to get meta data: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     // populate metadata
     md.setId(getId(), movie.id);
-    parseRemoteIDs(movie.remoteIds).forEach((k, v) -> {
-      md.setId(k, v);
-    });
+    parseRemoteIDs(movie.remoteIds).forEach(md::setId);
 
     if (baseTranslation != null && StringUtils.isNotBlank(baseTranslation.name)) {
       md.setTitle(baseTranslation.name);
@@ -336,6 +349,11 @@ public class TheTvDbMovieMetadataProvider extends TheTvDbMetadataProvider implem
     }
 
     md.setOriginalTitle(movie.name);
+
+    if (englishTranslation != null && StringUtils.isNotBlank(englishTranslation.name)) {
+      md.setEnglishTitle(englishTranslation.name);
+    }
+
     if (movie.originalCountry != null) {
       if (Boolean.TRUE.equals(getProviderInfo().getConfig().getValueAsBool("scrapeLanguageNames"))) {
         md.addCountry(LanguageUtils.getLocalizedCountryForLanguage(options.getLanguage().toLocale(), movie.originalCountry));

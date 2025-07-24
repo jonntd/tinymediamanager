@@ -31,5 +31,6 @@ public class MovieSetSettingsNode extends TmmSettingsNode {
     setBoldText(true);
 
     addChild(new TmmSettingsNode(TmmResourceBundle.getString("scraper.artwork"), new MovieSetImageSettingsPanel()));
+    addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.postprocessing"), new MovieSetPostProcessingSettingsPanel()));
   }
 }

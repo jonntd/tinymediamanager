@@ -91,8 +91,10 @@ public class MovieScrapeTask extends TmmThreadPool {
       return;
     }
 
+    LOGGER.info("Scraping {} movies with '{}'", movieScrapeParams.moviesToScrape.size(),
+        mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
+
     initThreadPool(3, "scrape");
-    start();
 
     for (Movie movie : movieScrapeParams.moviesToScrape) {
       submitTask(new Worker(movie));
@@ -126,7 +128,7 @@ public class MovieScrapeTask extends TmmThreadPool {
         });
       }
       catch (Exception e) {
-        LOGGER.error("SmartScrape crashed: {}", e.getMessage());
+        LOGGER.error("SmartScrape crashed - '{}'", e.getMessage());
       }
     }
 
@@ -139,7 +141,7 @@ public class MovieScrapeTask extends TmmThreadPool {
       TmmTaskManager.getInstance().addUnnamedTask(task);
     }
 
-    LOGGER.info("Done scraping movies)");
+    LOGGER.info("Finished scraping movies - took {} ms", getRuntime());
   }
 
   @Override
@@ -161,16 +163,18 @@ public class MovieScrapeTask extends TmmThreadPool {
 
     @Override
     public void run() {
-      try {
-        movieList = MovieModuleManager.getInstance().getMovieList();
-        // set up scrapers
-        MediaScraper mediaMetadataScraper = movieScrapeParams.searchAndScrapeOptions.getMetadataScraper();
-        List<MediaScraper> artworkScrapers = movieScrapeParams.searchAndScrapeOptions.getArtworkScrapers();
-        List<MediaScraper> trailerScrapers = movieScrapeParams.searchAndScrapeOptions.getTrailerScrapers();
+      movieList = MovieModuleManager.getInstance().getMovieList();
+      // set up scrapers
+      MediaScraper mediaMetadataScraper = movieScrapeParams.searchAndScrapeOptions.getMetadataScraper();
+      List<MediaScraper> artworkScrapers = movieScrapeParams.searchAndScrapeOptions.getArtworkScrapers();
+      List<MediaScraper> trailerScrapers = movieScrapeParams.searchAndScrapeOptions.getTrailerScrapers();
 
+      try {
         // search movie
         MediaSearchResult result1 = null;
         if (movieScrapeParams.doSearch) {
+          LOGGER.info("Searching for movie '{}'", movie.getTitle());
+
           result1 = searchForMovie(mediaMetadataScraper);
           if (result1 == null) {
             // append this search request to the UI with search & scrape dialog
@@ -182,83 +186,38 @@ public class MovieScrapeTask extends TmmThreadPool {
         }
 
         // get metadata, artwork and trailers
-        if ((movieScrapeParams.doSearch && result1 != null) || !movieScrapeParams.doSearch) {
-          MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions(movieScrapeParams.searchAndScrapeOptions);
-          options.setSearchResult(result1);
+        MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions(movieScrapeParams.searchAndScrapeOptions);
+        options.setSearchResult(result1);
 
-          // we didn't do a search - pass imdbid and tmdbid from movie object
-          if (movieScrapeParams.doSearch) {
-            options.setIds(result1.getIds());
-            // override scraper with one from search result
-            mediaMetadataScraper = movieList.getMediaScraperById(result1.getProviderId());
-          }
-          else {
-            options.setIds(movie.getIds());
-          }
+        // we didn't do a search - pass imdbid and tmdbid from movie object
+        if (result1 != null) {
+          options.setIds(result1.getIds());
+          // override scraper with one from search result
+          mediaMetadataScraper = movieList.getMediaScraperById(result1.getProviderId());
+        }
+        else {
+          options.setIds(movie.getIds());
+        }
 
-          // scrape metadata if wanted
-          MediaMetadata md = null;
+        // scrape metadata if wanted
+        MediaMetadata md = null;
 
-          if (mediaMetadataScraper != null && mediaMetadataScraper.getMediaProvider() != null) {
-            LOGGER.info("=====================================================");
-            LOGGER.info("Scrape movie metadata with scraper: " + mediaMetadataScraper.getMediaProvider().getProviderInfo().getId() + ", "
-                + mediaMetadataScraper.getMediaProvider().getProviderInfo().getVersion());
-            LOGGER.info(options.toString());
-            LOGGER.info("=====================================================");
-            try {
-              md = ((IMovieMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
+        if (mediaMetadataScraper != null && mediaMetadataScraper.getMediaProvider() != null) {
+          LOGGER.info("Scraping movie '{}' with '{}'", movie.getTitle(), mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
 
-              if (movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.COLLECTION)
-                  && md.getIdAsInt(MediaMetadata.TMDB_SET) == 0 && !mediaMetadataScraper.getId().equals(MediaMetadata.TMDB)) {
-                int movieSetId = MetadataUtil.getMovieSetId(md.getIds());
-                if (movieSetId > 0) {
-                  md.setId(MediaMetadata.TMDB_SET, movieSetId);
-                }
-              }
+          LOGGER.debug("=====================================================");
+          LOGGER.debug("Scrape movie metadata with scraper: " + mediaMetadataScraper.getMediaProvider().getProviderInfo().getId() + ", "
+              + mediaMetadataScraper.getMediaProvider().getProviderInfo().getVersion());
+          LOGGER.debug(options.toString());
+          LOGGER.debug("=====================================================");
+          try {
+            md = ((IMovieMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
 
-              if (cancel) {
-                return;
-              }
-
-              // also inject other ids
-              MediaIdUtil.injectMissingIds(md.getIds(), MediaType.MOVIE);
-
-              // also fill other ratings if ratings are requested
-              if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()
-                  && movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.RATING)) {
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
-                  if (!md.getRatings().contains(rating)) {
-                    md.addRating(rating);
-                  }
-                }
-              }
-            }
-            catch (MissingIdException e) {
-              LOGGER.warn("missing id for scrape");
-              MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "scraper.error.missingid"));
-            }
-            catch (ScrapeException e) {
-              LOGGER.error("searchMovieFallback", e);
-              MessageManager.instance.pushMessage(
-                  new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
-            }
-
-            if (md != null && (ScraperMetadataConfig.containsAnyMetadata(movieScrapeParams.scraperMetadataConfig)
-                || ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig))) {
-              movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems);
-              movie.setLastScraperId(movieScrapeParams.searchAndScrapeOptions.getMetadataScraper().getId());
-              movie.setLastScrapeLanguage(movieScrapeParams.searchAndScrapeOptions.getLanguage().name());
-
-              if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
-                TmmTask task = new MovieRenameTask(Collections.singletonList(movie));
-                // blocking
-                task.run();
-              }
-
-              // write actor images after possible rename (to have a good folder structure)
-              if (ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig)
-                  && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
-                movie.writeActorImages(movieScrapeParams.overwriteExistingItems);
+            if (movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.COLLECTION) && md.getIdAsInt(MediaMetadata.TMDB_SET) == 0
+                && !mediaMetadataScraper.getId().equals(MediaMetadata.TMDB)) {
+              int movieSetId = MetadataUtil.getMovieSetId(md.getIds());
+              if (movieSetId > 0) {
+                md.setId(MediaMetadata.TMDB_SET, movieSetId);
               }
             }
 
@@ -266,36 +225,87 @@ public class MovieScrapeTask extends TmmThreadPool {
               return;
             }
 
-            // scrape artwork if wanted
-            if (ScraperMetadataConfig.containsAnyArtwork(movieScrapeParams.scraperMetadataConfig)) {
-              movie.setArtwork(getArtwork(movie, md, artworkScrapers), movieScrapeParams.scraperMetadataConfig,
-                  movieScrapeParams.overwriteExistingItems);
-            }
+            // also inject other ids
+            MediaIdUtil.injectMissingIds(md.getIds(), MediaType.MOVIE);
 
-            if (cancel) {
-              return;
-            }
-
-            // scrape trailer if wanted
-            if (movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.TRAILER)) {
-              movie.setTrailers(getTrailers(movie, md, trailerScrapers));
-              movie.saveToDb();
-              movie.writeNFO();
-
-              // start automatic movie trailer download
-              if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
-                  && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload()
-                  && movie.getMediaFiles(MediaFileType.TRAILER).isEmpty() && !movie.getTrailer().isEmpty()) {
-                TmmTaskManager.getInstance().addDownloadTask(new MovieTrailerDownloadTask(movie));
+            // also fill other ratings if ratings are requested
+            if (MovieModuleManager.getInstance().getSettings().isFetchAllRatings()
+                && movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.RATING)) {
+              for (MediaRating rating : ListUtils.nullSafe(
+                  RatingProvider.getRatings(md.getIds(), MovieModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.MOVIE))) {
+                if (!md.getRatings().contains(rating)) {
+                  md.addRating(rating);
+                }
               }
+            }
+          }
+          catch (MissingIdException e) {
+            LOGGER.warn("Missing IDs for scraping movie '{}' with '{}'", movie.getTitle(), mediaMetadataScraper.getId());
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "scraper.error.missingid"));
+          }
+          catch (ScrapeException e) {
+            LOGGER.error("Could not scrape movie '{}' with '{}' - '{}'", movie.getTitle(), mediaMetadataScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.ERROR, movie, "message.scrape.metadatamoviefailed", new String[] { ":", e.getLocalizedMessage() }));
+          }
+          catch (Exception e) {
+            LOGGER.error("Unforeseen error in movie scrape for '{}'", movie.getTitle(), e);
+          }
+
+          if (md != null && (ScraperMetadataConfig.containsAnyMetadata(movieScrapeParams.scraperMetadataConfig)
+              || ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig))) {
+            movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems);
+            movie.setLastScraperId(movieScrapeParams.searchAndScrapeOptions.getMetadataScraper().getId());
+            movie.setLastScrapeLanguage(movieScrapeParams.searchAndScrapeOptions.getLanguage().name());
+
+            if (MovieModuleManager.getInstance().getSettings().isRenameAfterScrape()) {
+              TmmTask task = new MovieRenameTask(Collections.singletonList(movie));
+              // blocking
+              task.run();
+            }
+
+            // write actor images after possible rename (to have a good folder structure)
+            if (ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig)
+                && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
+              movie.writeActorImages(movieScrapeParams.overwriteExistingItems);
+            }
+          }
+
+          if (cancel) {
+            return;
+          }
+
+          // scrape artwork if wanted
+          if (ScraperMetadataConfig.containsAnyArtwork(movieScrapeParams.scraperMetadataConfig)) {
+            movie.setArtwork(getArtwork(movie, md, artworkScrapers), movieScrapeParams.scraperMetadataConfig,
+                movieScrapeParams.overwriteExistingItems);
+          }
+
+          if (cancel) {
+            return;
+          }
+
+          // scrape trailer if wanted
+          if (movieScrapeParams.scraperMetadataConfig.contains(MovieScraperMetadataConfig.TRAILER)) {
+            movie.setTrailers(getTrailers(movie, md, trailerScrapers));
+            movie.saveToDb();
+            movie.writeNFO();
+
+            // start automatic movie trailer download
+            if (MovieModuleManager.getInstance().getSettings().isUseTrailerPreference()
+                && MovieModuleManager.getInstance().getSettings().isAutomaticTrailerDownload() && movie.getMediaFiles(MediaFileType.TRAILER).isEmpty()
+                && !movie.getTrailer().isEmpty()) {
+              TmmTaskManager.getInstance().addDownloadTask(new MovieTrailerDownloadTask(movie));
             }
           }
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(
-            new Message(MessageLevel.ERROR, "MovieScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape movie '{}' - '{}'", movie.getTitle(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(MessageLevel.ERROR, "MovieScraper", "message.scrape.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -305,30 +315,31 @@ public class MovieScrapeTask extends TmmThreadPool {
 
       if (ListUtils.isNotEmpty(results)) {
         result = results.get(0);
-        // check if there is an other result with 100% score
+        // check if there is another result with the same score
         if (results.size() > 1) {
           MediaSearchResult result2 = results.get(1);
           // if both results have the same score - do not take any result
           if (result.getScore() == result2.getScore()) {
-            LOGGER.info("two identical results, can't decide which to take - ignore result");
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.toosimilar"));
+            LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", movie.getTitle());
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.toosimilar"));
             return null;
           }
         }
 
         // get threshold from settings (default 0.75) - to minimize false positives
         final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
-        LOGGER.info("using treshold from settings of {}", scraperTreshold);
+        LOGGER.debug("using threshold from settings of {}", scraperTreshold);
         if (result.getScore() < scraperTreshold) {
-          LOGGER.info("score is lower than {} ({}) - ignore result", scraperTreshold, result.getScore());
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, movie, "movie.scrape.toolowscore", new String[] { String.format("%.2f", scraperTreshold) }));
+          LOGGER.warn("Score ({}) is lower than minimum score ({}) for '{}' - ignore result", result.getScore(), scraperTreshold, movie.getTitle());
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, movie, "movie.scrape.toolowscore", new String[] { String.format("%.2f", scraperTreshold) }));
           return null;
         }
       }
       else {
-        LOGGER.info("no result found for {}", movie.getTitle());
-        MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.nomatchfound"));
+        LOGGER.info("No result found for '{}'", movie.getTitle());
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.nomatchfound"));
       }
 
       return result;
@@ -363,12 +374,16 @@ public class MovieScrapeTask extends TmmThreadPool {
           artwork.addAll(artworkProvider.getArtwork(options));
         }
         catch (MissingIdException ignored) {
-          // no need to log here
+          LOGGER.info("Missing IDs for scraping movie artwork of '{}' with '{}'", movie.getTitle(), scraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getArtwork", e);
-          MessageManager.instance.pushMessage(
-              new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+          LOGGER.error("Could not scrape movie artwork of '{}' with '{}' - '{}'", movie.getTitle(), scraper.getId(), e.getMessage());
+          MessageManager.getInstance()
+              .pushMessage(
+                  new Message(MessageLevel.ERROR, movie, "message.scrape.movieartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie artwork scrape for '{}'", movie.getTitle(), e);
         }
         finally {
           lock.writeLock().unlock();
@@ -397,12 +412,15 @@ public class MovieScrapeTask extends TmmThreadPool {
           trailers.addAll(trailerProvider.getTrailers(options));
         }
         catch (MissingIdException e) {
-          LOGGER.debug("no usable ID found for scraper {}", trailerScraper.getMediaProvider().getProviderInfo().getId());
+          LOGGER.info("Missing IDs for scraping movie trailers of '{}' with '{}'", movie.getTitle(), trailerScraper.getId());
         }
         catch (ScrapeException e) {
-          LOGGER.error("getTrailers", e);
-          MessageManager.instance
+          LOGGER.error("Could not scrape movie trailers of '{}' with '{}' - '{}'", movie.getTitle(), trailerScraper.getId(), e.getMessage());
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, movie, "message.scrape.trailerfailed", new String[] { ":", e.getLocalizedMessage() }));
+        }
+        catch (Exception e) {
+          LOGGER.error("Unforeseen error in movie trailer scrape for '{}'", movie.getTitle(), e);
         }
         finally {
           lock.writeLock().unlock();

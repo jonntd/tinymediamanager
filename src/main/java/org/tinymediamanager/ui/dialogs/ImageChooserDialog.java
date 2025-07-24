@@ -651,7 +651,7 @@ public class ImageChooserDialog extends TmmDialog {
     }
     else {
       ImageIcon imageIcon = new ImageIcon(
-          Scalr.resize(originalImage, Scalr.Method.BALANCED, Scalr.Mode.AUTOMATIC, size.x, size.y, Scalr.OP_ANTIALIAS));
+          Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, size.x, size.y, Scalr.OP_ANTIALIAS));
       button.setIcon(imageIcon);
     }
 
@@ -1046,7 +1046,7 @@ public class ImageChooserDialog extends TmmDialog {
         }
       }
       catch (Exception e) {
-        LOGGER.error("could not download manually entered image url: {} - {}", tfImageUrl.getText(), e.getMessage());
+        LOGGER.error("Could not download manually entered image url '{}' - '{}'", tfImageUrl.getText(), e.getMessage());
       }
     };
     task.run();
@@ -1446,7 +1446,7 @@ public class ImageChooserDialog extends TmmDialog {
 
               return null;
             }
-            LOGGER.error("could not process artwork downloading - {}", e.getMessage());
+            LOGGER.error("Could not process artwork downloading - '{}'", e.getMessage());
           }
         } // end foreach scraper
       }
@@ -1476,7 +1476,7 @@ public class ImageChooserDialog extends TmmDialog {
           return null;
         }
         catch (ExecutionException e) {
-          LOGGER.error("ThreadPool imageChooser: Error getting result! - {}", e.getMessage());
+          LOGGER.error("ThreadPool imageChooser: Error getting result! - '{}'", e.getMessage());
         }
       }
 

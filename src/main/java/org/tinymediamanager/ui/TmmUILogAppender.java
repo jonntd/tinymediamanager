@@ -15,99 +15,204 @@
  */
 package org.tinymediamanager.ui;
 
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
+import java.awt.Color;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
-import ch.qos.logback.classic.filter.ThresholdFilter;
+import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
+
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.OutputStreamAppender;
+import ch.qos.logback.core.AppenderBase;
 
 /**
- * The Class TmmUILogAppender, receive logs from logback and forward it to the UI.
+ * The {@code TmmUILogAppender} class is a custom Logback appender that captures log messages from tinyMediaManager and forwards them to a custom
+ * Swing-based UI component for display.
+ * <p>
+ * This appender supports filtering logs by level and formatting using a custom pattern. Messages are buffered and only a fixed number (100 by
+ * default) are stored in memory.
+ * </p>
+ * <p>
+ * It is designed to integrate with a {@link TmmLogTextPane} for visual log output.
+ * </p>
  *
  * @author Manuel Laggner
  */
-public class TmmUILogAppender extends OutputStreamAppender<ILoggingEvent> {
-  private final CopyableByteArrayOutputStream BUFFER = new CopyableByteArrayOutputStream(2 * 1024 * 1024);
+public class TmmUILogAppender extends AppenderBase<ILoggingEvent> {
 
-  public TmmUILogAppender(String level) {
-    super();
-    ThresholdFilter filter = new ThresholdFilter();
-    filter.setLevel(level);
-    filter.start();
-    addFilter(filter);
-  }
+  private static final int      MAX_LOG_SIZE = 100;
 
-  @Override
-  public void start() {
-    setOutputStream(BUFFER);
-    super.start();
-  }
+  private final Deque<LogEntry> logBuffer    = new LinkedList<>();
+  private final List<Level>     levels;
 
-  @Override
-  public void setOutputStream(final OutputStream outputStream) {
-    if (outputStream != BUFFER) {
-      throw new IllegalStateException("Invalid output stream (" + CopyableByteArrayOutputStream.class + " expected) !");
-    }
-    super.setOutputStream(outputStream);
+  private TmmLogTextPane        textPane;
+
+  /**
+   * Creates a new {@code TmmUILogAppender} for a single log level.
+   *
+   * @param level
+   *          the log level to capture (e.g., Level.INFO)
+   */
+  public TmmUILogAppender(Level level) {
+    this(List.of(level));
   }
 
   /**
-   * get the new log messages (from offset "from" to the end)
+   * Creates a new {@code TmmUILogAppender} for multiple log levels.
+   *
+   * @param levels
+   *          the list of log levels to capture
    */
-  public LogOutput getLogOutput(final int from) {
-    final byte[] buffer;
-    final int size;
-
-    try {
-      streamWriteLock.lock();
-      size = BUFFER.size();
-      buffer = (from < size) ? BUFFER.toByteArray(from) : null;
-    }
-    finally {
-      streamWriteLock.unlock();
-    }
-
-    return new LogOutput(size, (buffer != null) ? new String(buffer, 0, buffer.length) : "");
+  public TmmUILogAppender(List<Level> levels) {
+    super();
+    this.levels = new ArrayList<>(levels);
   }
 
-  private static class CopyableByteArrayOutputStream extends ByteArrayOutputStream {
+  /**
+   * Sets the UI text pane to which logs should be output. If a buffer of previous logs exists, they will be appended to the pane immediately.
+   *
+   * @param textPane
+   *          the {@link TmmLogTextPane} to output logs
+   */
+  public void setTextPane(TmmLogTextPane textPane) {
+    this.textPane = textPane;
 
-    protected CopyableByteArrayOutputStream(final int size) {
-      super(size);
-    }
-
-    protected synchronized byte[] toByteArray(final int from) {
-      final int pos = (from < 0 || from > count) ? 0 : from;
-      return copyOfRange(this.buf, pos, this.count);
-    }
-
-    public static byte[] copyOfRange(final byte[] original, final int from, final int to) {
-      final int newLength = to - from;
-      if (newLength < 0) {
-        throw new IllegalArgumentException(from + " > " + to);
+    if (this.textPane != null) {
+      synchronized (logBuffer) {
+        this.textPane.setText("");
+        for (LogEntry logEntry : logBuffer) {
+          this.textPane.appendFormatted(logEntry);
+        }
       }
-      final byte[] copy = new byte[newLength];
-      System.arraycopy(original, from, copy, 0, Math.min(original.length - from, newLength));
-      return copy;
     }
   }
 
-  public static class LogOutput {
-    private final int    byteCount;
-    private final String content;
-
-    protected LogOutput(final int byteCount, final String content) {
-      this.byteCount = byteCount;
-      this.content = content;
+  /**
+   * Receives a logging event and processes it. Only logs originating from the {@code org.tinymediamanager} package and matching the configured levels
+   * are processed.
+   *
+   * @param eventObject
+   *          the logging event to append
+   */
+  @Override
+  protected void append(ILoggingEvent eventObject) {
+    if (!eventObject.getLoggerName().startsWith("org.tinymediamanager")) {
+      // ignore all non tmm logs
+      return;
+    }
+    if (!levels.contains(eventObject.getLevel())) {
+      // ignore anything that's not in our levels list
+      return;
     }
 
-    public int getByteCount() {
-      return byteCount;
+    LogEntry logEntry = new LogEntry(new SimpleDateFormat("HH:mm:ss").format(new Date(eventObject.getTimeStamp())), eventObject.getLevel().toString(),
+        eventObject.getFormattedMessage());
+
+    synchronized (logBuffer) {
+      if (logBuffer.size() >= MAX_LOG_SIZE) {
+        logBuffer.removeFirst();
+      }
+      logBuffer.addLast(logEntry);
     }
 
-    public String getContent() {
-      return content;
+    if (textPane != null) {
+      SwingUtilities.invokeLater(() -> textPane.appendFormatted(logEntry));
+    }
+  }
+
+  /**
+   * A lightweight record that holds a single log entry including its timestamp, log level, and message content.
+   *
+   * @param timestamp
+   *          the time of the log (formatted as HH:mm:ss)
+   * @param level
+   *          the log level (e.g., INFO, WARN)
+   * @param message
+   *          the message content
+   */
+  private record LogEntry(String timestamp, String level, String message) {
+  }
+
+  /**
+   * {@code TmmLogTextPane} is a custom {@link JTextPane} component used for displaying log messages in a styled format. It color-codes messages based
+   * on log level and includes timestamps.
+   * <p>
+   * Supported log levels include INFO, WARN, and ERROR, with each level assigned a specific color/style. Messages are displayed in a monospace font
+   * for readability.
+   * </p>
+   */
+  public static class TmmLogTextPane extends JTextPane {
+
+    private final StyledDocument     doc;
+    private final Style              defaultStyle;
+    private final Style              dateStyle;
+    private final Map<String, Style> levelStyles = new HashMap<>();
+
+    /**
+     * Constructs a new {@code TmmLogTextPane}, initializing the text styles for default messages, timestamps, and log levels (INFO, WARN, ERROR). The
+     * pane is set to be non-editable.
+     */
+    public TmmLogTextPane() {
+      this.doc = getStyledDocument();
+      setEditable(false);
+
+      // Default (black)
+      defaultStyle = doc.addStyle("DEFAULT", null);
+      StyleConstants.setForeground(defaultStyle, getForeground());
+
+      // Date style
+      dateStyle = doc.addStyle("DATE", null);
+      StyleConstants.setFontFamily(dateStyle, "Courier New");
+
+      // Level styles
+      levelStyles.put("INFO", dateStyle);
+      levelStyles.put("WARN", createStyle(new Color(255, 125, 0)));
+      levelStyles.put("ERROR", createStyle(Color.RED));
+    }
+
+    /**
+     * Creates a new {@link Style} object with the specified foreground color. The created style uses a bold, monospace ("Courier New") font.
+     *
+     * @param color
+     *          the foreground color for the style
+     * @return a new {@link Style} configured with the given color
+     */
+    private Style createStyle(Color color) {
+      Style style = doc.addStyle(color.toString(), null);
+      StyleConstants.setForeground(style, color);
+      StyleConstants.setBold(style, true);
+      StyleConstants.setFontFamily(style, "Courier New");
+      return style;
+    }
+
+    /**
+     * Appends a log entry to the text pane in a styled format. Includes the timestamp (in monospace), the log level (color-coded), and the log
+     * message.
+     *
+     * @param logEntry
+     *          the log entry to be appended to the pane
+     */
+    private void appendFormatted(LogEntry logEntry) {
+      try {
+        doc.insertString(doc.getLength(), "[" + logEntry.timestamp + "] ", dateStyle);
+        doc.insertString(doc.getLength(), String.format("%-5s ", logEntry.level), levelStyles.getOrDefault(logEntry.level, defaultStyle));
+        doc.insertString(doc.getLength(), logEntry.message + "\n", defaultStyle);
+        setCaretPosition(doc.getLength());
+      }
+      catch (BadLocationException ignored) {
+        // ignore
+      }
     }
   }
 }

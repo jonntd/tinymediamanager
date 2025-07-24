@@ -32,7 +32,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieTrailerNaming;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 
 public class ITMediaTrailerDownloadTest extends BasicITest {
 
@@ -54,7 +54,7 @@ public class ITMediaTrailerDownloadTest extends BasicITest {
       t.setUrl("https://www.youtube.com/watch?v=zNCz4mQzfEI");
       m.addToTrailer(Collections.singletonList(t));
 
-      YTDownloadTask task = new YTDownloadTask(t, TrailerQuality.HD_720, false) {
+      YtDownloadTask task = new YtDownloadTask(t, TrailerQuality.HD_720, false) {
         @Override
         protected Path getDestinationWoExtension() {
           return m.getPathNIO().resolve(m.getTrailerFilename(MovieTrailerNaming.FILENAME_TRAILER));

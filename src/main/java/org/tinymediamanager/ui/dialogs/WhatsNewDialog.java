@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.NoBorderScrollPane;
 import org.tinymediamanager.ui.components.label.LinkLabel;
@@ -54,8 +55,9 @@ public class WhatsNewDialog extends TmmDialog {
   private static final Logger LOGGER = LoggerFactory.getLogger(WhatsNewDialog.class);
 
   public WhatsNewDialog(String changelog) {
-    super(TmmResourceBundle.getString("whatsnew.title"), "whatsnew");
-    setName("WhatsNewDialog");
+    // includes the dialog's name to force the dialog to be centered above the main window
+    super(MainWindow.getInstance(), TmmResourceBundle.getString("whatsnew.title"), "whatsnewdialog"); // includes the dialog's name in the settings
+
     setMinimumSize(new Dimension(800, 600));
     {
       JPanel panelContent = new JPanel();
@@ -79,7 +81,7 @@ public class WhatsNewDialog extends TmmDialog {
             TmmUIHelper.browseUrl(hle.getURL().toString());
           }
           catch (Exception e) {
-            LOGGER.error("error browsing to " + hle.getURL().toString() + " :" + e.getMessage());
+            LOGGER.error("Could not open '{}' in browser - '{}'", hle.getURL(), e.getMessage());
           }
         }
       });
@@ -150,7 +152,7 @@ public class WhatsNewDialog extends TmmDialog {
     }
     catch (IOException e) {
       // no file found
-      LOGGER.warn(e.getMessage());
+      LOGGER.warn("Could not display changelog - '{}'", e.getMessage());
     }
   }
 }

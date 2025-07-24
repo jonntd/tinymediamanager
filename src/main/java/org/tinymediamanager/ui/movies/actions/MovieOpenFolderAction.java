@@ -15,14 +15,12 @@
  */
 package org.tinymediamanager.ui.movies.actions;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.KeyStroke;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.ui.IconManager;
@@ -36,13 +34,12 @@ import org.tinymediamanager.ui.movies.MovieUIModule;
  * @author Manuel Laggner
  */
 public class MovieOpenFolderAction extends TmmAction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MovieOpenFolderAction.class);
 
   public MovieOpenFolderAction() {
     putValue(NAME, TmmResourceBundle.getString("movie.openfolder"));
     putValue(SMALL_ICON, IconManager.FOLDER_OPEN);
     putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.openfolder.desc"));
-    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.CTRL_DOWN_MASK));
+    putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
   }
 
   @Override

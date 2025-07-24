@@ -15,16 +15,6 @@
  */
 package org.tinymediamanager.ui.movies.panels;
 
-import static org.tinymediamanager.core.Constants.BANNER;
-import static org.tinymediamanager.core.Constants.CLEARLOGO;
-import static org.tinymediamanager.core.Constants.FANART;
-import static org.tinymediamanager.core.Constants.ID;
-import static org.tinymediamanager.core.Constants.MEDIA_FILES;
-import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
-import static org.tinymediamanager.core.Constants.POSTER;
-import static org.tinymediamanager.core.Constants.RATING;
-import static org.tinymediamanager.core.Constants.THUMB;
-
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.beans.PropertyChangeListener;
@@ -44,11 +34,6 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 
 import org.apache.commons.lang3.StringUtils;
-import org.jdesktop.beansbinding.AutoBinding;
-import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
-import org.jdesktop.beansbinding.BeanProperty;
-import org.jdesktop.beansbinding.Bindings;
-import org.jdesktop.beansbinding.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.MediaFileHelper;
@@ -73,10 +58,6 @@ import org.tinymediamanager.ui.components.panel.IdLinkPanel;
 import org.tinymediamanager.ui.components.textfield.LinkTextArea;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPaneHTML;
-import org.tinymediamanager.ui.converter.CertificationImageConverter;
-import org.tinymediamanager.ui.converter.LockedConverter;
-import org.tinymediamanager.ui.converter.RuntimeConverter;
-import org.tinymediamanager.ui.converter.ZeroIdConverter;
 import org.tinymediamanager.ui.movies.MovieSelectionModel;
 import org.tinymediamanager.ui.panels.InformationPanel;
 import org.tinymediamanager.ui.panels.MediaInformationLogosPanel;
@@ -93,8 +74,6 @@ public class MovieInformationPanel extends InformationPanel {
   private static final Logger        LOGGER                 = LoggerFactory.getLogger(MovieInformationPanel.class);
   private static final String        LAYOUT_ARTWORK_VISIBLE = "[n:100lp:20%, grow][300lp:300lp,grow 350]";
   private static final String        LAYOUT_ARTWORK_HIDDEN  = "[][300lp:300lp,grow 350]";
-
-  private final MovieSelectionModel  movieSelectionModel;
 
   /** UI components */
   private RatingPanel                ratingPanel;
@@ -132,12 +111,7 @@ public class MovieInformationPanel extends InformationPanel {
    *          the movie selection model
    */
   public MovieInformationPanel(MovieSelectionModel movieSelectionModel) {
-    this.movieSelectionModel = movieSelectionModel;
-
     initComponents();
-
-    // beansbinding init
-    initDataBindings();
 
     // action listeners
     lblTmdbid.addActionListener(arg0 -> {
@@ -146,8 +120,8 @@ public class MovieInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to tmdbid", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -158,8 +132,8 @@ public class MovieInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -172,7 +146,7 @@ public class MovieInformationPanel extends InformationPanel {
       }
     });
 
-    // manual coded binding
+    // UI binding
     PropertyChangeListener propertyChangeListener = propertyChangeEvent -> {
       String property = propertyChangeEvent.getPropertyName();
       Object source = propertyChangeEvent.getSource();
@@ -185,51 +159,8 @@ public class MovieInformationPanel extends InformationPanel {
       MovieSelectionModel selectionModel = (MovieSelectionModel) source;
       Movie movie = selectionModel.getSelectedMovie();
 
-      if ("selectedMovie".equals(property) || POSTER.equals(property)) {
-        setArtwork(movie, MediaFileType.POSTER);
-      }
-
-      if ("selectedMovie".equals(property) || FANART.equals(property)) {
-        setArtwork(movie, MediaFileType.FANART);
-      }
-
-      if ("selectedMovie".equals(property) || BANNER.equals(property)) {
-        setArtwork(movie, MediaFileType.BANNER);
-      }
-
-      if ("selectedMovie".equals(property) || THUMB.equals(property)) {
-        setArtwork(movie, MediaFileType.THUMB);
-      }
-
-      if ("selectedMovie".equals(property) || CLEARLOGO.equals(property)) {
-        setArtwork(movie, MediaFileType.CLEARLOGO);
-      }
-
-      if ("selectedMovie".equals(property) || MEDIA_FILES.equals(property) || MEDIA_INFORMATION.equals(property)) {
-        panelLogos.setMediaInformationSource(movie);
-      }
-
-      if ("selectedMovie".equals(property) || ID.equals(property)) {
-        // other IDs
-        panelOtherIds.removeAll();
-        for (String key : movie.getIds().keySet()) {
-          // all but IMDB and TMDB
-          if (MediaMetadata.IMDB.equals(key) || MediaMetadata.TMDB.equals(key)) {
-            continue;
-          }
-
-          panelOtherIds.add(new IdLinkPanel(key, movie));
-        }
-        panelOtherIds.invalidate();
-        panelOtherIds.repaint();
-      }
-
       if ("selectedMovie".equals(property)) {
-        SwingUtilities.invokeLater(() -> scrollPane.getVerticalScrollBar().setValue(0));
-      }
-
-      if ("selectedMovie".equals(property) || RATING.equals(property)) {
-        setRating(movie);
+        changeMovie(movie);
       }
     };
 
@@ -242,11 +173,68 @@ public class MovieInformationPanel extends InformationPanel {
           TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
         }
         catch (Exception ex) {
-          LOGGER.error("open file", ex);
-          MessageManager.instance
+          LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
         }
       }
+    });
+  }
+
+  private void changeMovie(Movie movie) {
+    lblMovieName.setText(movie.getTitle());
+    lblMovieName.setIcon(movie.isLocked() ? IconManager.LOCK_BLUE : null);
+    lblOriginalTitle.setText(movie.getOriginalTitle());
+    lblYear.setText(getIntegerAsStringWoZero(movie.getYear()));
+    lblReleaseDate.setText(movie.getReleaseDateAsString());
+    lblCertification.setText(movie.getCertification().getLocalizedName());
+    lblRunningTime.setText(convertRuntime(movie.getRuntime()));
+    taGenres.setText(movie.getGenresAsString());
+    lblDirector.setText(movie.getDirectorsAsString());
+    taProduction.setText(movie.getProductionCompany());
+    lblCountry.setText(movie.getCountry());
+    lblSpokenLanguages.setText(movie.getLocalizedSpokenLanguages());
+
+    lblCertificationLogo.setIcon(getCertificationIcon(movie.getCertification()));
+    lblImdbid.setText(movie.getImdbId());
+    lblTmdbid.setText(getIntegerAsStringWoZero(movie.getTmdbId()));
+    // other IDs
+    panelOtherIds.removeAll();
+    for (String key : movie.getIds().keySet()) {
+      // all but IMDB and TMDB
+      if (MediaMetadata.IMDB.equals(key) || MediaMetadata.TMDB.equals(key)) {
+        continue;
+      }
+
+      panelOtherIds.add(new IdLinkPanel(key, movie));
+    }
+    panelOtherIds.invalidate();
+    panelOtherIds.repaint();
+
+    lblTagline.setText(movie.getTagline());
+    taPlot.setText(movie.getPlot());
+
+    lblMovieSet.setText(movie.getMovieSetTitle());
+    lblShowlink.setText(movie.getShowlinksAsString());
+    lblEdition.setText(movie.getEdition().getTitle());
+    taTags.setText(movie.getTagsAsString());
+    lblMoviePath.setText(movie.getPath());
+    taNote.setText(movie.getNote());
+
+    setArtwork(movie, MediaFileType.POSTER);
+    setArtwork(movie, MediaFileType.FANART);
+    setArtwork(movie, MediaFileType.BANNER);
+    setArtwork(movie, MediaFileType.THUMB);
+    setArtwork(movie, MediaFileType.CLEARLOGO);
+
+    panelLogos.setMediaInformationSource(movie);
+
+    setRating(movie);
+
+    // scroll everything up
+    SwingUtilities.invokeLater(() -> {
+      scrollPane.getVerticalScrollBar().setValue(0);
+      scrollPane.getHorizontalScrollBar().setValue(0);
     });
   }
 
@@ -417,7 +405,7 @@ public class MovieInformationPanel extends InformationPanel {
 
       {
         panelLogos = new MediaInformationLogosPanel();
-        panelRight.add(panelLogos, "cell 0 4,growx");
+        panelRight.add(panelLogos, "cell 0 4,growx, wmin 0");
       }
 
       {
@@ -515,130 +503,5 @@ public class MovieInformationPanel extends InformationPanel {
     }
 
     ratingPanel.setRatings(ratings);
-  }
-
-  protected void initDataBindings() {
-    Property jLabelBeanProperty = BeanProperty.create("text");
-    Property movieSelectionModelBeanProperty_8 = BeanProperty.create("selectedMovie.year");
-    AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_8, lblYear,
-        jLabelBeanProperty);
-    autoBinding_9.bind();
-    //
-    Property movieSelectionModelBeanProperty_12 = BeanProperty.create("selectedMovie.imdbId");
-    Property JTextPaneBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_12, lblImdbid,
-        JTextPaneBeanProperty);
-    autoBinding_10.bind();
-    //
-    Property movieSelectionModelBeanProperty_13 = BeanProperty.create("selectedMovie.runtime");
-    AutoBinding autoBinding_14 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_13,
-        lblRunningTime, jLabelBeanProperty);
-    autoBinding_14.setConverter(new RuntimeConverter());
-    autoBinding_14.bind();
-    //
-    Property movieSelectionModelBeanProperty_15 = BeanProperty.create("selectedMovie.tmdbId");
-    AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_15, lblTmdbid,
-        JTextPaneBeanProperty);
-    autoBinding_7.setConverter(new ZeroIdConverter());
-    autoBinding_7.bind();
-    //
-    Property movieSelectionModelBeanProperty_16 = BeanProperty.create("selectedMovie.genresAsString");
-    AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_16, taGenres,
-        JTextPaneBeanProperty);
-    autoBinding_17.bind();
-    //
-    Property movieSelectionModelBeanProperty_14 = BeanProperty.create("selectedMovie.plot");
-    AutoBinding autoBinding_18 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_14, taPlot,
-        JTextPaneBeanProperty);
-    autoBinding_18.bind();
-    //
-    Property movieSelectionModelBeanProperty_3 = BeanProperty.create("selectedMovie.tagline");
-    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_3, lblTagline,
-        jLabelBeanProperty);
-    autoBinding_4.bind();
-    //
-    Property movieSelectionModelBeanProperty_4 = BeanProperty.create("selectedMovie.title");
-    AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_4, lblMovieName,
-        jLabelBeanProperty);
-    autoBinding_5.bind();
-    //
-    Property movieSelectionModelBeanProperty_2 = BeanProperty.create("selectedMovie.locked");
-    Property jLabelBeanProperty_2 = BeanProperty.create("icon");
-    AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_2, lblMovieName,
-        jLabelBeanProperty_2);
-    autoBinding_2.setConverter(new LockedConverter());
-    autoBinding_2.bind();
-    //
-    Property movieSelectionModelBeanProperty = BeanProperty.create("selectedMovie.certification.localizedName");
-    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty, lblCertification,
-        jLabelBeanProperty);
-    autoBinding.bind();
-    //
-    Property movieSelectionModelBeanProperty_6 = BeanProperty.create("selectedMovie.originalTitle");
-    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_6,
-        lblOriginalTitle, jLabelBeanProperty);
-    autoBinding_8.bind();
-    //
-    Property movieSelectionModelBeanProperty_1 = BeanProperty.create("selectedMovie.releaseDateAsString");
-    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_1,
-        lblReleaseDate, jLabelBeanProperty);
-    autoBinding_11.bind();
-    //
-    Property movieSelectionModelBeanProperty_10 = BeanProperty.create("selectedMovie.productionCompany");
-    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_10,
-        taProduction, JTextPaneBeanProperty);
-    autoBinding_12.bind();
-    //
-    Property movieSelectionModelBeanProperty_11 = BeanProperty.create("selectedMovie.country");
-    AutoBinding autoBinding_13 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_11, lblCountry,
-        jLabelBeanProperty);
-    autoBinding_13.bind();
-    //
-    Property movieSelectionModelBeanProperty_17 = BeanProperty.create("selectedMovie.localizedSpokenLanguages");
-    AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_17,
-        lblSpokenLanguages, jLabelBeanProperty);
-    autoBinding_15.bind();
-    //
-    Property movieSelectionModelBeanProperty_18 = BeanProperty.create("selectedMovie.movieSetTitle");
-    AutoBinding autoBinding_16 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_18, lblMovieSet,
-        jLabelBeanProperty);
-    autoBinding_16.bind();
-    //
-    Property movieSelectionModelBeanProperty_19 = BeanProperty.create("selectedMovie.edition.title");
-    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_19, lblEdition,
-        jLabelBeanProperty);
-    autoBinding_19.bind();
-    //
-    Property movieSelectionModelBeanProperty_20 = BeanProperty.create("selectedMovie.tagsAsString");
-    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_20, taTags,
-        JTextPaneBeanProperty);
-    autoBinding_20.bind();
-    //
-    Property movieSelectionModelBeanProperty_21 = BeanProperty.create("selectedMovie.path");
-    Property linkLabelBeanProperty = BeanProperty.create("text");
-    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_21,
-        lblMoviePath, linkLabelBeanProperty);
-    autoBinding_21.bind();
-    //
-    Property movieSelectionModelBeanProperty_22 = BeanProperty.create("selectedMovie.note");
-    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_22, taNote,
-        JTextPaneBeanProperty);
-    autoBinding_22.bind();
-    //
-    Property movieSelectionModelBeanProperty_23 = BeanProperty.create("selectedMovie.certification");
-    AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_23,
-        lblCertificationLogo, jLabelBeanProperty_2);
-    autoBinding_23.setConverter(new CertificationImageConverter());
-    autoBinding_23.bind();
-    //
-    Property movieSelectionModelBeanProperty_25 = BeanProperty.create("selectedMovie.showlinksAsString");
-    AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_25, lblShowlink,
-        jLabelBeanProperty);
-    autoBinding_25.bind();
-    //
-    Property movieSelectionModelBeanProperty_26 = BeanProperty.create("selectedMovie.directorsAsString");
-    AutoBinding autoBinding_26 = Bindings.createAutoBinding(UpdateStrategy.READ, movieSelectionModel, movieSelectionModelBeanProperty_26, lblDirector,
-        jLabelBeanProperty);
-    autoBinding_26.bind();
   }
 }

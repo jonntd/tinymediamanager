@@ -77,7 +77,7 @@ class KodiUtil {
       }
       if (!xmlHeaderNew.equals(xmlHeaderOrig)) {
         xmlHeaderNew = xmlHeaderNew.replaceAll("  ", " ");
-        LOGGER.warn("Fixing invalid XML header! " + xmlHeaderOrig + " -> " + xmlHeaderNew);
+        LOGGER.debug("Fixing invalid XML header! " + xmlHeaderOrig + " -> " + xmlHeaderNew);
         ret = ret.replace(xmlHeaderOrig, xmlHeaderNew);
       }
     }
@@ -97,7 +97,7 @@ class KodiUtil {
     while (m.find()) {
       String g = m.group(1);
       if (g.contains("<") || g.contains(">")) {
-        LOGGER.warn("Fixing invalid XML entities: {}", g);
+        LOGGER.debug("Fixing invalid XML entities: {}", g);
         String fixed = m.group(1).replaceAll("<", "&lt;").replaceAll(">", "&gt;");
         ret = ret.replace(g, fixed); // use string replace
       }
@@ -315,7 +315,7 @@ class KodiUtil {
         }
       }
       catch (Exception e) {
-        LOGGER.error("could not load scraper " + scraper.getProviderInfo().getId(), e);
+        LOGGER.debug("could not load scraper " + scraper.getProviderInfo().getId(), e);
       }
     }
     return metadataProviders;

@@ -17,14 +17,12 @@ package org.tinymediamanager.core.tvshow;
 
 import static org.tinymediamanager.core.Constants.ADDED_TV_SHOW;
 import static org.tinymediamanager.core.Constants.EPISODE_COUNT;
-import static org.tinymediamanager.core.Constants.MEDIA_FILES;
-import static org.tinymediamanager.core.Constants.MEDIA_INFORMATION;
 import static org.tinymediamanager.core.Constants.REMOVED_TV_SHOW;
 import static org.tinymediamanager.core.Constants.TAGS;
 import static org.tinymediamanager.core.Constants.TV_SHOWS;
 import static org.tinymediamanager.core.Constants.TV_SHOW_COUNT;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_TV_SHOWS;
 
-import java.beans.PropertyChangeListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -61,14 +59,16 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaFileSubtitle;
+import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
-import org.tinymediamanager.license.License;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.MediaSearchResult;
@@ -114,7 +114,6 @@ public final class TvShowList extends AbstractModelObject {
   private final CopyOnWriteArrayList<String>             hdrFormatInEpisodes;
   private final CopyOnWriteArrayList<String>             audioTitlesInEpisodes;
 
-  private final PropertyChangeListener                   propertyChangeListener;
   private final ReadWriteLock                            readWriteLock = new ReentrantReadWriteLock();
 
   /**
@@ -138,29 +137,6 @@ public final class TvShowList extends AbstractModelObject {
     hdrFormatInEpisodes = new CopyOnWriteArrayList<>();
     audioTitlesInEpisodes = new CopyOnWriteArrayList<>();
     subtitleFormatsInEpisodes = new CopyOnWriteArrayList<>();
-
-    // the tag listener: it's used to always have a full list of all tags used in tmm
-    propertyChangeListener = evt -> {
-      // listen to changes of tags
-      if (Constants.TAGS.equals(evt.getPropertyName()) && evt.getSource() instanceof TvShow tvShow) {
-        updateTvShowTags(Collections.singleton(tvShow));
-      }
-      if (Constants.TAGS.equals(evt.getPropertyName()) && evt.getSource() instanceof TvShowEpisode episode) {
-        updateEpisodeTags(Collections.singleton(episode));
-      }
-      if ((MEDIA_FILES.equals(evt.getPropertyName()) || MEDIA_INFORMATION.equals(evt.getPropertyName()))
-          && evt.getSource() instanceof TvShowEpisode episode) {
-        updateMediaInformationLists(Collections.singleton(episode));
-      }
-      if (EPISODE_COUNT.equals(evt.getPropertyName())) {
-        firePropertyChange(EPISODE_COUNT, evt.getOldValue(), evt.getNewValue());
-      }
-    };
-
-    License.getInstance().addEventListener(() -> {
-      firePropertyChange(TV_SHOW_COUNT, 0, tvShows.size());
-      firePropertyChange(EPISODE_COUNT, 0, 1);
-    });
   }
 
   /**
@@ -299,7 +275,6 @@ public final class TvShowList extends AbstractModelObject {
     tvShows.add(newValue);
     readWriteLock.writeLock().unlock();
 
-    newValue.addPropertyChangeListener(propertyChangeListener);
     firePropertyChange(TV_SHOWS, null, tvShows);
     firePropertyChange(ADDED_TV_SHOW, null, newValue);
     firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
@@ -405,15 +380,17 @@ public final class TvShowList extends AbstractModelObject {
         TvShowModuleManager.getInstance().removeSeasonFromDb(season);
       }
       catch (Exception e) {
-        LOGGER.error("problem removing season from DB: {}", e.getMessage());
+        LOGGER.error("Error removing season {} of '{}' from DB - '{}'", season.getSeason(), tvShow.getTitle(), e.getMessage());
       }
     }
 
     try {
       TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
+      // only need to trigger a remove of the whole TV show
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(tvShow));
     }
     catch (Exception e) {
-      LOGGER.error("problem removing TV show from DB: {}", e.getMessage());
+      LOGGER.error("Error removing TV show '{}' from DB - '{}'", tvShow.getTitle(), e.getMessage());
     }
 
     // and remove the image cache
@@ -455,15 +432,17 @@ public final class TvShowList extends AbstractModelObject {
         TvShowModuleManager.getInstance().removeSeasonFromDb(season);
       }
       catch (Exception e) {
-        LOGGER.error("problem removing season from DB: {}", e.getMessage());
+        LOGGER.error("Error removing season {} of '{}' from DB - '{}'", season.getSeason(), tvShow.getTitle(), e.getMessage());
       }
     }
 
     try {
       TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
+      // only need to trigger a remove of the whole TV show
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(tvShow));
     }
     catch (Exception e) {
-      LOGGER.error("problem removing TV show from DB: {}", e.getMessage());
+      LOGGER.error("Error removing TV show '{}' from DB - '{}'", tvShow.getTitle(), e.getMessage());
     }
 
     // and remove the image cache
@@ -542,7 +521,7 @@ public final class TvShowList extends AbstractModelObject {
    * Load tv shows from database.
    */
   void loadTvShowsFromDatabase(MVMap<UUID, String> tvShowMap, MVMap<UUID, String> seasonMap, MVMap<UUID, String> episodesMap) {
-    LOGGER.info("Loading {} TvShows from database...", tvShowMap.size());
+    LOGGER.info("Loading {} TV shows from database...", tvShowMap.size());
     TvShowModuleManager module = TvShowModuleManager.getInstance();
 
     //////////////////////////////////////////////////
@@ -563,7 +542,7 @@ public final class TvShowList extends AbstractModelObject {
 
         // some sanity checks
         if (isCorrupt(tvShow)) {
-          LOGGER.error("Removing corrupt show: {}", json);
+          LOGGER.debug("Removing corrupt show: {}", json);
           toRemove.add(uuid);
           return;
         }
@@ -576,13 +555,13 @@ public final class TvShowList extends AbstractModelObject {
         // for performance reasons we add tv shows after loading the episodes
         if (!tvShowsFromDb.add(tvShow)) {
           // already in there?! remove dupe
-          LOGGER.info("removed duplicate '{}'", tvShow.getTitle());
+          LOGGER.debug("removed duplicate '{}'", tvShow.getTitle());
           toRemove.add(uuid);
         }
       }
       catch (Exception e) {
-        LOGGER.warn("problem decoding TV show json string: {}", e.getMessage());
-        LOGGER.info("dropping corrupt TV show: {}", json);
+        LOGGER.debug("problem decoding TV show json string: {}", json);
+        LOGGER.warn("Dropping corrupt TV show from database because of - '{}'", e.getMessage());
         toRemove.add(uuid);
       }
     });
@@ -627,8 +606,8 @@ public final class TvShowList extends AbstractModelObject {
         }
       }
       catch (Exception e) {
-        LOGGER.warn("problem decoding episode json string: {}", e.getMessage());
-        LOGGER.info("dropping corrupt episode: {}", json);
+        LOGGER.debug("problem decoding episode json string: '{}'", json);
+        LOGGER.warn("Dropping corrupt episode from database because of - '{}'", e.getMessage());
         toRemove.add(uuid);
       }
     });
@@ -656,14 +635,14 @@ public final class TvShowList extends AbstractModelObject {
 
         // some sanity checks
         if (isCorrupt(episode)) {
-          LOGGER.error("Removing corrupt episode: {}", json);
+          LOGGER.debug("Removing corrupt episode: {}", json);
           toRemove.add(uuid);
           return;
         }
 
         if (episode.isDummy()) {
           // should not happen! remove this episode here
-          LOGGER.error("Removing dummy episode from wrong storage: S{}E{} - {}", episode.getSeason(), episode.getEpisode(), episode.getTitle());
+          LOGGER.debug("Removing dummy episode from wrong storage: S{}E{} - {}", episode.getSeason(), episode.getEpisode(), episode.getTitle());
           toRemove.add(uuid);
           return;
         }
@@ -685,8 +664,8 @@ public final class TvShowList extends AbstractModelObject {
         }
       }
       catch (Exception e) {
-        LOGGER.warn("problem decoding episode json string: {}", e.getMessage());
-        LOGGER.info("dropping corrupt episode: {}", json);
+        LOGGER.debug("problem decoding episode json string: '{}'", json);
+        LOGGER.warn("Dropping corrupt episode from database because of - '{}'", e.getMessage());
         toRemove.add(uuid);
       }
     });
@@ -733,28 +712,23 @@ public final class TvShowList extends AbstractModelObject {
         episode.initializeAfterLoading();
         episodes.add(episode);
       }
-
-      tvShow.addPropertyChangeListener(propertyChangeListener);
     }
 
-    updateTvShowTags(tvShows);
-    updateCertification(tvShows);
-
-    updateEpisodeTags(episodes);
-    updateMediaInformationLists(episodes);
+    updateTvShowLists(tvShows);
+    updateEpisodeLists(episodes);
   }
 
   private boolean isCorrupt(TvShow show) {
     if (StringUtils.isBlank(show.getPath())) {
-      LOGGER.error("TvShow without path - dropping");
+      LOGGER.debug("TvShow without path - dropping");
       return true;
     }
     if (StringUtils.isBlank(show.getDataSource())) {
-      LOGGER.error("TvShow without datasource - dropping");
+      LOGGER.debug("TvShow without datasource - dropping");
       return true;
     }
     if (TmmOsUtils.hasInvalidCharactersForFilesystem(show.getPath())) {
-      LOGGER.error("TvShow with invalid characters for this OS - dropping");
+      LOGGER.debug("TvShow with invalid characters for this OS - dropping");
       return true;
     }
     return false;
@@ -762,15 +736,15 @@ public final class TvShowList extends AbstractModelObject {
 
   private boolean isCorrupt(TvShowEpisode episode) {
     if (episode.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
-      LOGGER.error("Episode S{} E{} without MediaFiles - dropping", episode.getSeason(), episode.getEpisode());
+      LOGGER.debug("Episode S{} E{} without MediaFiles - dropping", episode.getSeason(), episode.getEpisode());
       return true;
     }
     if (StringUtils.isBlank(episode.getPath())) {
-      LOGGER.error("Episode S{} E{} without path - dropping", episode.getSeason(), episode.getEpisode());
+      LOGGER.debug("Episode S{} E{} without path - dropping", episode.getSeason(), episode.getEpisode());
       return true;
     }
     if (TmmOsUtils.hasInvalidCharactersForFilesystem(episode.getPath())) {
-      LOGGER.error("Episode S{} E{} with invalid characters for this OS - dropping", episode.getSeason(), episode.getEpisode());
+      LOGGER.debug("Episode S{} E{} with invalid characters for this OS - dropping", episode.getSeason(), episode.getEpisode());
       return true;
     }
     return false;
@@ -791,9 +765,11 @@ public final class TvShowList extends AbstractModelObject {
     // update/insert this TV show to the database
     try {
       TvShowModuleManager.getInstance().persistTvShow(tvShow);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(tvShow));
+      updateTvShowLists(Collections.singletonList(tvShow));
     }
     catch (Exception e) {
-      LOGGER.error("failed to persist episode: {} - {}", tvShow.getTitle(), e.getMessage());
+      LOGGER.error("Failed to persist TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
     }
   }
 
@@ -801,9 +777,10 @@ public final class TvShowList extends AbstractModelObject {
     // update/insert this episode to the database
     try {
       TvShowModuleManager.getInstance().persistSeason(season);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(season));
     }
     catch (Exception e) {
-      LOGGER.error("failed to persist season: {} - S{} : {}", season.getTvShow().getTitle(), season.getSeason(), e.getMessage());
+      LOGGER.error("Failed to persist season {} of '{}' - '{}'", season.getSeason(), season.getTvShow().getTitle(), e.getMessage());
     }
   }
 
@@ -811,17 +788,19 @@ public final class TvShowList extends AbstractModelObject {
     // sanity check
     if (isCorrupt(episode)) {
       // remove corrupt episode
-      LOGGER.info("Cannot persist episode {} - \"S{}E{}\" - dropping", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
+      LOGGER.warn("Cannot persist episode S{} E{} of '{}' - dropping", episode.getSeason(), episode.getEpisode(), episode.getTvShow().getTitle());
       removeEpisodeFromDb(episode);
     }
     else {
       // update/insert this episode to the database
       try {
         TvShowModuleManager.getInstance().persistEpisode(episode);
+        EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createSaveEvent(episode));
+        updateEpisodeLists(Collections.singleton(episode));
       }
       catch (Exception e) {
-        LOGGER.error("failed to persist episode: {} - S{}E{} - {} : {}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode(),
-            episode.getTitle(), e.getMessage());
+        LOGGER.error("Failed to persist episode S{} E{} of '{}' - '{}'", episode.getSeason(), episode.getEpisode(), episode.getTvShow().getTitle(),
+            e.getMessage());
       }
     }
   }
@@ -830,10 +809,11 @@ public final class TvShowList extends AbstractModelObject {
     // delete this episode from the database
     try {
       TvShowModuleManager.getInstance().removeEpisodeFromDb(episode);
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(episode));
     }
     catch (Exception e) {
-      LOGGER.error("failed to remove episode: {} - S{}E{} - {} : {}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode(),
-          episode.getTitle(), e.getMessage());
+      LOGGER.error("Failed to remove episode S{} E{} of '{}' - '{}'", episode.getSeason(), episode.getEpisode(), episode.getTvShow().getTitle(),
+          e.getMessage());
     }
   }
 
@@ -1015,10 +995,12 @@ public final class TvShowList extends AbstractModelObject {
       options.setSearchYear(year);
     }
 
-    LOGGER.info("=====================================================");
-    LOGGER.info("Searching with scraper: {}", provider.getProviderInfo().getId());
-    LOGGER.info("options: {}", options);
-    LOGGER.info("=====================================================");
+    LOGGER.info("Search '{}' for TV show title '{}'", provider.getProviderInfo().getId(), searchTerm);
+
+    LOGGER.debug("=====================================================");
+    LOGGER.debug("Searching with scraper: {}", provider.getProviderInfo().getId());
+    LOGGER.debug("options: {}", options);
+    LOGGER.debug("=====================================================");
     results.addAll(provider.search(options));
 
     // Fallback:
@@ -1026,14 +1008,22 @@ public final class TvShowList extends AbstractModelObject {
     if (results.isEmpty() && options.getSearchQuery().matches("^\\d{4}.*")) {
       TvShowSearchAndScrapeOptions o = new TvShowSearchAndScrapeOptions(options); // copy
       o.setSearchQuery(options.getSearchQuery().substring(4));
-      LOGGER.info("=====================================================");
-      LOGGER.info("Searching again without year in title: {}", provider.getProviderInfo().getId());
-      LOGGER.info("options: {}", o);
-      LOGGER.info("=====================================================");
+      LOGGER.debug("=====================================================");
+      LOGGER.debug("Searching again without year in title: {}", provider.getProviderInfo().getId());
+      LOGGER.debug("options: {}", o);
+      LOGGER.debug("=====================================================");
       results.addAll(provider.search(o));
     }
 
     return new ArrayList<>(results);
+  }
+
+  private void updateTvShowLists(Collection<TvShow> tvShows) {
+    TmmTaskManager.getInstance().addUiTask(() -> {
+      updateTvShowTags(tvShows);
+      updateCertification(tvShows);
+      firePropertyChange(EPISODE_COUNT, 0, 1);
+    });
   }
 
   private void updateTvShowTags(Collection<TvShow> tvShows) {
@@ -1057,6 +1047,13 @@ public final class TvShowList extends AbstractModelObject {
 
   public List<String> getTagsInTvShows() {
     return tagsInTvShows;
+  }
+
+  private void updateEpisodeLists(Collection<TvShowEpisode> episodes) {
+    TmmTaskManager.getInstance().addUiTask(() -> {
+      updateEpisodeTags(episodes);
+      updateMediaInformationLists(episodes);
+    });
   }
 
   private void updateEpisodeTags(Collection<TvShowEpisode> episodes) {
@@ -1133,9 +1130,7 @@ public final class TvShowList extends AbstractModelObject {
           // HDR Format
           if (!mf.getHdrFormat().isEmpty()) {
             String[] hdrs = mf.getHdrFormat().split(", ");
-            for (String hdr : hdrs) {
-              hdrFormat.add(hdr);
-            }
+            hdrFormat.addAll(Arrays.asList(hdrs));
           }
         }
 
@@ -1400,7 +1395,7 @@ public final class TvShowList extends AbstractModelObject {
     }
 
     if (problemsDetected) {
-      LOGGER.warn("episodes without VIDEOs detected");
+      LOGGER.debug("episodes without VIDEOs detected");
 
       // and push a message
       // also delay it so that the UI has time to start up
@@ -1412,7 +1407,7 @@ public final class TvShowList extends AbstractModelObject {
           // ignored
         }
         Message message = new Message(MessageLevel.SEVERE, "tmm.tvshows", "message.database.corrupteddata");
-        MessageManager.instance.pushMessage(message);
+        MessageManager.getInstance().pushMessage(message);
       });
       thread.start();
     }
@@ -1495,7 +1490,7 @@ public final class TvShowList extends AbstractModelObject {
           tvShow.setDuplicate();
           TvShow show2 = showMap.get(id);
           show2.setDuplicate();
-          LOGGER.info("DUPECHECK: tvshows have the same ID ({}): {} <=> {}", id, tvShow.getTitle(), show2.getTitle());
+          LOGGER.info("Duplicate check: TV shows have the same ID ({}): {} <=> {}", id, tvShow.getTitle(), show2.getTitle());
         }
         else {
           // no, store show
@@ -1517,7 +1512,7 @@ public final class TvShowList extends AbstractModelObject {
         if (duplicate != null) {
           duplicate.setDuplicate();
           episode.setDuplicate();
-          LOGGER.info("DUPECHECK: episodes have the same number ({}) in show {}", se, tvShow.getTitle());
+          LOGGER.info("Duplicate check: episodes have the same number ({}) in show {}", se, tvShow.getTitle());
         }
         else {
           episodeMap.put(se, episode);
@@ -1533,7 +1528,7 @@ public final class TvShowList extends AbstractModelObject {
           if (duplicate != null) {
             duplicate.setDuplicate();
             episode.setDuplicate();
-            LOGGER.info("DUPECHECK: files have the same hash ({}): {} <=> {}", crc, episode.getMainFile().getFileAsPath().toAbsolutePath(),
+            LOGGER.info("Duplicate check: files have the same hash ({}): {} <=> {}", crc, episode.getMainFile().getFileAsPath().toAbsolutePath(),
                 duplicate.getMainFile().getFileAsPath().toAbsolutePath());
           }
           else {

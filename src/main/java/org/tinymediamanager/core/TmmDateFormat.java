@@ -123,7 +123,7 @@ public class TmmDateFormat {
       jnaAvailable = true;
     }
     catch (Throwable e) {
-      LOGGER.error("could not load JNA: " + e.getMessage());
+      LOGGER.error("Could not load JNA - '{}'", e.getMessage());
     }
 
     DateFormat[] formats = null;
@@ -139,7 +139,7 @@ public class TmmDateFormat {
       }
     }
     catch (Throwable e) {
-      LOGGER.error("could not load native date formats: " + e.getMessage());
+      LOGGER.error("Could not load native date formats -'{}'", e.getMessage());
     }
 
     if (formats == null || formats.length < 11) {

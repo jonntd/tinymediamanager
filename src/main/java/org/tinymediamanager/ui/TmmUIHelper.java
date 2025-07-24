@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 
 import javax.swing.JFileChooser;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
@@ -95,7 +96,7 @@ public class TmmUIHelper {
       ToolTipManager.sharedInstance().setInitialDelay(300);
     }
     catch (Exception e) {
-      LOGGER.error("Failed to initialize LaF - {}", e.getMessage());
+      LOGGER.error("Failed to initialize LaF - '{}'", e.getMessage());
     }
 
     // load font settings
@@ -109,7 +110,7 @@ public class TmmUIHelper {
       UIManager.put("defaultFont", savedFont);
     }
     catch (Exception e) {
-      LOGGER.warn("could not set default font - {}", e.getMessage());
+      LOGGER.warn("Could not set default font '{}' - '{}'", Settings.getInstance().getFontFamily(), e.getMessage());
     }
   }
 
@@ -136,7 +137,7 @@ public class TmmUIHelper {
         return openDirectoryDialog(title, initialPath);
       }
       catch (Exception | Error e) {
-        LOGGER.warn("cannot open AWT directory chooser: {}", e.getMessage());
+        LOGGER.warn("Cannot open AWT directory chooser: '{}'", e.getMessage());
       }
       finally {
         // reset system property
@@ -153,7 +154,7 @@ public class TmmUIHelper {
         return new TinyFileDialogs().chooseDirectory(title, Paths.get(initialPath));
       }
       catch (Exception | Error e) {
-        LOGGER.error("could not call TinyFileDialogs - {}", e.getMessage());
+        LOGGER.error("Could not call TinyFileDialogs - '{}'", e.getMessage());
       }
     }
 
@@ -245,7 +246,7 @@ public class TmmUIHelper {
         return openFileDialog(title, initialPath, FileDialog.LOAD, null);
       }
       catch (Exception | Error e) {
-        LOGGER.warn("cannot open AWT filechooser: {}", e.getMessage());
+        LOGGER.warn("Cannot open AWT filechooser - '{}'", e.getMessage());
       }
     }
     else {
@@ -270,7 +271,7 @@ public class TmmUIHelper {
         return new TinyFileDialogs().openFile(title, Paths.get(initialPath), filterList, filterDescription);
       }
       catch (Exception | Error e) {
-        LOGGER.error("could not call TinyFileDialogs - {}", e.getMessage());
+        LOGGER.error("Could not call TinyFileDialogs - '{}'", e.getMessage());
       }
     }
 
@@ -294,7 +295,7 @@ public class TmmUIHelper {
         }
       }
       catch (Exception e) {
-        LOGGER.error("could not call osascript - '{}'", e.getMessage());
+        LOGGER.error("Could not call osascript - '{}'", e.getMessage());
       }
 
       return null;
@@ -351,7 +352,7 @@ public class TmmUIHelper {
         return openFileDialog(title, initialPath, FileDialog.SAVE, filename);
       }
       catch (Exception | Error e) {
-        LOGGER.warn("cannot open AWT filechooser: {}", e.getMessage());
+        LOGGER.warn("Cannot open AWT filechooser - '{}'", e.getMessage());
       }
     }
     else {
@@ -372,7 +373,7 @@ public class TmmUIHelper {
         return new TinyFileDialogs().saveFile(title, Paths.get(initialPath, filename), filterList, filterDescription);
       }
       catch (Exception | Error e) {
-        LOGGER.error("could not call TinyFileDialogs - {}", e.getMessage());
+        LOGGER.error("Could not call TinyFileDialogs - '{}'", e.getMessage());
       }
     }
 
@@ -471,8 +472,8 @@ public class TmmUIHelper {
       }
     }
     catch (Exception ex) {
-      LOGGER.error("open filemanager", ex);
-      MessageManager.instance
+      LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, path, "message.erroropenfolder", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
@@ -529,8 +530,8 @@ public class TmmUIHelper {
       browseUrl(url);
     }
     catch (Exception e) {
-      LOGGER.error("could not open url '{}' - {}", url, e.getMessage());
-      MessageManager.instance
+      LOGGER.error("Could not open url '{}' - '{}'", url, e.getMessage());
+      MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
     }
   }
@@ -598,7 +599,7 @@ public class TmmUIHelper {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Couldn't redirect stream: {}", e.getLocalizedMessage());
+        LOGGER.debug("Could not redirect stream: '{}'", e.getLocalizedMessage());
       }
     }
   }
@@ -625,6 +626,7 @@ public class TmmUIHelper {
     // update all visible components
     for (Window w : Window.getWindows()) {
       SwingUtilities.updateComponentTreeUI(w);
+      w.invalidate();
     }
 
     // update icons
@@ -680,7 +682,7 @@ public class TmmUIHelper {
       try {
         UpdateCheck updateCheck = new UpdateCheck();
         if (updateCheck.isUpdateAvailable()) {
-          LOGGER.info("update available");
+          LOGGER.info("Update available");
 
           // we might need this somewhen...
           if (Globals.isSelfUpdatable() && updateCheck.isForcedUpdate()) {
@@ -719,7 +721,7 @@ public class TmmUIHelper {
         }
       }
       catch (Exception e) {
-        LOGGER.warn("Update check failed - {}", e.getMessage());
+        LOGGER.warn("Update check failed - '{}'", e.getMessage());
       }
     };
 
@@ -760,19 +762,34 @@ public class TmmUIHelper {
   /**
    * Get all selected rows from the given {@link JTable} as rows from the underlying model
    * 
-   * @param table
+   * @param jTable
    *          the {@link JTable}
    * @return an int[] containing the model indices of all selected rows
    */
-  public static int[] getSelectedRowsAsModelRows(JTable table) {
-    int[] tableRows = table.getSelectedRows();
+  public static int[] getSelectedRowsAsModelRows(JTable jTable) {
+    int[] tableRows = jTable.getSelectedRows();
     int[] modelRows = new int[tableRows.length];
     for (int i = 0; i < tableRows.length; i++) {
-      modelRows[i] = table.convertRowIndexToModel(tableRows[i]);
+      modelRows[i] = jTable.convertRowIndexToModel(tableRows[i]);
     }
 
     // sort it (descending)
     ArrayUtils.reverse(modelRows);
     return modelRows;
+  }
+
+  /**
+   * Get all selected rows from the given {@link JList} as rows from the underlying model
+   *
+   * @param jList
+   *          the {@link JList}
+   * @return an int[] containing the model indices of all selected rows
+   */
+  public static int[] getSelectedRowsAsModelRows(JList<?> jList) {
+    int[] selectedIndices = jList.getSelectedIndices();
+
+    // sort it (descending)
+    ArrayUtils.reverse(selectedIndices);
+    return selectedIndices;
   }
 }

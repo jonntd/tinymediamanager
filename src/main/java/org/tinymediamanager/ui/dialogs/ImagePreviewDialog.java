@@ -117,7 +117,7 @@ public class ImagePreviewDialog extends TmmDialog {
               originalImageBytes = url.getBytesWithRetry(5);
             }
             catch (Exception e) {
-              LOGGER.error("could not load image - {}", e.getMessage());
+              LOGGER.error("Could not load image '{}' - '{}'", imageUrl, e.getMessage());
             }
           }
 
@@ -133,9 +133,10 @@ public class ImagePreviewDialog extends TmmDialog {
                   TmmUIHelper.browseUrl(imageUrl);
                 }
                 catch (Exception e) {
-                  LOGGER.error("browse to image url '{}' - '{}'", imageUrl, e.getMessage());
-                  MessageManager.instance.pushMessage(
-                      new Message(Message.MessageLevel.ERROR, imageUrl, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
+                  LOGGER.error("Could not open '{}' in browser - '{}'", imageUrl, e.getMessage());
+                  MessageManager.getInstance()
+                      .pushMessage(
+                          new Message(Message.MessageLevel.ERROR, imageUrl, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
                 }
               });
 
@@ -149,7 +150,7 @@ public class ImagePreviewDialog extends TmmDialog {
               }
             }
             catch (Exception e) {
-              LOGGER.error("could not load image - '{}'", e.getMessage());
+              LOGGER.error("Could not load image '{}' - '{}'", imageUrl, e.getMessage());
             }
           }
 
@@ -199,7 +200,7 @@ public class ImagePreviewDialog extends TmmDialog {
         }
         catch (Exception ex) {
           LOGGER.error("Could not save image file: {}", ex.getMessage());
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, "", "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
         }
       });

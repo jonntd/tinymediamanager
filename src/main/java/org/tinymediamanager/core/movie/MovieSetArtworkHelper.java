@@ -33,7 +33,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
@@ -157,7 +156,7 @@ public class MovieSetArtworkHelper {
             }
           }
           catch (Exception e) {
-            LOGGER.warn("could not write files", e);
+            LOGGER.warn("Could not write movie set artwork files", e);
           }
         }
 
@@ -188,7 +187,7 @@ public class MovieSetArtworkHelper {
               }
             }
             catch (Exception e) {
-              LOGGER.warn("could not write files", e);
+              LOGGER.warn("Could not write movie set artwork files", e);
             }
           }
         }
@@ -223,7 +222,7 @@ public class MovieSetArtworkHelper {
           }
         }
         catch (IOException e) {
-          LOGGER.warn("could not search for empty dir: {}", e.getMessage());
+          LOGGER.debug("could not search for empty dir: {}", e.getMessage());
         }
       }
     }
@@ -835,7 +834,7 @@ public class MovieSetArtworkHelper {
       }
     }
     catch (Exception e) {
-      LOGGER.error("remove movie set artwork: {}", e.getMessage());
+      LOGGER.error("Remove movie set artwork for '{}' did not work - '{}'", movie.getTitle(), e.getMessage());
     }
   }
 
@@ -861,10 +860,10 @@ public class MovieSetArtworkHelper {
     Path movieSetArtworkFolder = Paths.get(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder());
     List<Path> subfolders;
     try (Stream<Path> stream = Files.walk(movieSetArtworkFolder, 1)) {
-      subfolders = stream.filter(Files::isDirectory).collect(Collectors.toList());
+      subfolders = stream.filter(Files::isDirectory).toList();
     }
     catch (Exception e) {
-      LOGGER.warn("could not clean movie set artwork subfolders - '{}'", e.getMessage());
+      LOGGER.warn("Could not clean movie set artwork subfolders '{}' - '{}'", movieSetArtworkFolder, e.getMessage());
       return;
     }
 
@@ -876,7 +875,7 @@ public class MovieSetArtworkHelper {
         Utils.deleteEmptyDirectoryRecursive(path);
       }
       catch (Exception e) {
-        LOGGER.warn("could not clean empty subfolder '{}' - '{}'", path, e.getMessage());
+        LOGGER.warn("Could not clean empty subfolder '{}' - '{}'", path, e.getMessage());
       }
     }
   }
@@ -1056,7 +1055,7 @@ public class MovieSetArtworkHelper {
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("fetch image: {} - {}", urlToArtwork, e.getMessage());
+        LOGGER.error("Could not fetch image '{}' - '{}'", urlToArtwork, e.getMessage());
       }
     }
 
@@ -1070,7 +1069,7 @@ public class MovieSetArtworkHelper {
             Files.createDirectories(path.getParent());
           }
           catch (IOException e) {
-            LOGGER.warn("could not create directory '{}' - {} ", path.getParent(), e.getMessage());
+            LOGGER.warn("Could not create directory '{}' - '{}'", path.getParent(), e.getMessage());
           }
         }
 
@@ -1086,7 +1085,7 @@ public class MovieSetArtworkHelper {
           ImageCache.cacheImageSilently(artwork);
         }
         catch (Exception e) {
-          LOGGER.warn("could not write file", e);
+          LOGGER.warn("Could not write file '{}' - '{}'", path, e.getMessage());
         }
       }
     }
@@ -1129,7 +1128,7 @@ public class MovieSetArtworkHelper {
             }
           }
           catch (Exception e) {
-            LOGGER.warn("could not write files", e);
+            LOGGER.warn("Could not write movie set artwork files", e);
           }
         }
       }
@@ -1142,7 +1141,7 @@ public class MovieSetArtworkHelper {
         writeImage(bytes, ImageCache.getCacheDir().resolve(filename + ".jpg"));
       }
       catch (Exception e) {
-        LOGGER.warn("error in image fetcher", e);
+        LOGGER.warn("Error writing artwork file '{}' - '{}'", filename, e.getMessage());
       }
     }
 

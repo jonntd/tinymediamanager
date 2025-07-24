@@ -6,7 +6,7 @@ variables:
   MAVEN_CLI_OPTS: "-s .ci/settings.xml --batch-mode"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   LFTP_OPTIONS: "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no'; set net:timeout 5; set net:max-retries 2; set net:reconnect-interval-base 5;"
-  TMM_VERSION: "5.1.8"
+  TMM_VERSION: "5.2.0"
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -71,7 +71,7 @@ build:
     ##
     - echo -e "\e[0Ksection_start:`date +%s`:maven_build\r\e[0KMaven build"
     - echo -n "$CODE_SIGN_CERT" | base64 -d > "code-sign-cert.p12"
-    - mvn $MAVEN_CLI_OPTS -U -P dist -DbuildNumber=${CI_COMMIT_SHORT_SHA} -Dgetdown=getdown.txt -Dthread_pool_size=1 release:prepare release:perform -Dresume=false -DautoVersionSubmodules=true -DdryRun=false -Dmaven.test.skip=true -DskipITs -DscmCommentPrefix="[ci skip]"
+    - mvn $MAVEN_CLI_OPTS -U -P dist -DbuildNumber=${CI_COMMIT_SHORT_SHA} -DskipSign=false -Dgetdown=getdown.txt -Dthread_pool_size=1 release:prepare release:perform -Dresume=false -DautoVersionSubmodules=true -DdryRun=false -Dmaven.test.skip=true -DskipITs -DscmCommentPrefix="[ci skip]"
     - echo -e "\e[0Ksection_end:`date +%s`:maven_build\r\e[0K"
 
     # build Windows installer

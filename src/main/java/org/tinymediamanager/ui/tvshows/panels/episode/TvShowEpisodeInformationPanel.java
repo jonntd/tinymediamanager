@@ -188,8 +188,8 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
           TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
         }
         catch (Exception ex) {
-          LOGGER.error("open file - '{}'", e);
-          MessageManager.instance
+          LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
+          MessageManager.getInstance()
               .pushMessage(new Message(Message.MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
         }
       }
@@ -210,8 +210,8 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to imdbid", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });
@@ -224,8 +224,8 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception e) {
-        LOGGER.error("browse to thetvdb", e);
-        MessageManager.instance
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
       }
     });

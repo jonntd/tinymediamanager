@@ -86,9 +86,10 @@ public class ExportAnalysisDataAction extends TmmAction {
       }
     }
     catch (Exception ex) {
-      LOGGER.error("Could not write logs.zip: {}", ex.getMessage());
-      MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, file != null ? file.toString() : "", "message.erroropenfile",
-          new String[] { ":", ex.getLocalizedMessage() }));
+      LOGGER.error("Could not write logs.zip - '{}'", ex.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, file != null ? file.toString() : "", "message.erroropenfile",
+              new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 
@@ -113,7 +114,7 @@ public class ExportAnalysisDataAction extends TmmAction {
           zos.closeEntry();
         }
         catch (Exception e) {
-          LOGGER.warn("unable to attach {} - {}", logFile, e.getMessage());
+          LOGGER.debug("Unable to attach {} - {}", logFile, e.getMessage());
         }
       }
 
@@ -131,7 +132,7 @@ public class ExportAnalysisDataAction extends TmmAction {
             zos.closeEntry();
           }
           catch (Exception e) {
-            LOGGER.warn("unable to attach {} - {}", dataFile.getName(), e.getMessage());
+            LOGGER.debug("unable to attach {} - {}", dataFile.getName(), e.getMessage());
           }
         }
       }
@@ -146,7 +147,7 @@ public class ExportAnalysisDataAction extends TmmAction {
           zos.closeEntry();
         }
         catch (Exception e) {
-          LOGGER.warn("unable to attach {} - {}", extraFile.getFileName(), e.getMessage());
+          LOGGER.debug("unable to attach {} - {}", extraFile.getFileName(), e.getMessage());
         }
 
         Utils.deleteFileSafely(extraFile);
@@ -179,7 +180,7 @@ public class ExportAnalysisDataAction extends TmmAction {
       archive.finish();
     }
     catch (Exception e) {
-      LOGGER.error("Failed to create zip file: {}", e.getMessage()); // NOSONAR
+      LOGGER.error("Failed to create zip file - '{}'", e.getMessage());
     }
     return exportFile;
   }
@@ -202,7 +203,7 @@ public class ExportAnalysisDataAction extends TmmAction {
       archive.finish();
     }
     catch (Exception e) {
-      LOGGER.error("Failed to create zip file: {}", e.getMessage()); // NOSONAR
+      LOGGER.error("Failed to create zip file - '{}'", e.getMessage());
     }
     return exportFile;
   }

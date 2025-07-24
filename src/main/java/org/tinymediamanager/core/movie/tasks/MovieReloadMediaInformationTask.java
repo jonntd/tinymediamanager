@@ -18,7 +18,6 @@ package org.tinymediamanager.core.movie.tasks;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Message;
@@ -49,9 +48,7 @@ public class MovieReloadMediaInformationTask extends TmmThreadPool {
   @Override
   protected void doInBackground() {
     try {
-      StopWatch stopWatch = new StopWatch();
-      stopWatch.start();
-      LOGGER.info("get MediaInfo...");
+      LOGGER.info("Getting MediaInfo for '{}' movies", moviesToReload.size());
       // update MediaInfo
       start();
       for (Movie m : moviesToReload) {
@@ -71,12 +68,12 @@ public class MovieReloadMediaInformationTask extends TmmThreadPool {
       }
 
       waitForCompletionOrCancel();
-      stopWatch.stop();
-      LOGGER.info("Done getting MediaInfo - took {}", stopWatch);
+
+      LOGGER.info("Finished getting MediaInfo - took {} ms", getRuntime());
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MediaInfo", "message.mediainfo.threadcrashed"));
+      LOGGER.error("Could not get MediaInfo - '{}'", e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MediaInfo", "message.mediainfo.threadcrashed"));
     }
   }
 

@@ -59,7 +59,7 @@ public class ITKodiRPCTest {
       LOGGER.error("no movies found");
     }
     else {
-      LOGGER.info("found " + movies.size() + " movies");
+      LOGGER.debug("found " + movies.size() + " movies");
       for (MovieDetail res : movies) {
         for (String c : res.country) {
           System.out.println(c);

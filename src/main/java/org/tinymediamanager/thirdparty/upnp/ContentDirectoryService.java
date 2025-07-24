@@ -220,7 +220,7 @@ public class ContentDirectoryService extends AbstractContentDirectoryService {
       throw new ContentDirectoryException(ContentDirectoryErrorCode.NO_SUCH_OBJECT, "BrowseFlag wrong " + browseFlag);
     }
     catch (Exception ex) {
-      LOGGER.error("Browse failed", ex);
+      LOGGER.debug("Browse failed", ex);
       throw new ContentDirectoryException(ContentDirectoryErrorCode.CANNOT_PROCESS, ex.toString());
     }
   }

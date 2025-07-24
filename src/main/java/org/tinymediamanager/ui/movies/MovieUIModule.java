@@ -52,6 +52,7 @@ import org.tinymediamanager.ui.movies.actions.MovieChangeDatasourceAction;
 import org.tinymediamanager.ui.movies.actions.MovieChecksumAction;
 import org.tinymediamanager.ui.movies.actions.MovieCleanUpFilesAction;
 import org.tinymediamanager.ui.movies.actions.MovieClearImageCacheAction;
+import org.tinymediamanager.ui.movies.actions.MovieCopyToAction;
 import org.tinymediamanager.ui.movies.actions.MovieCreateOfflineAction;
 import org.tinymediamanager.ui.movies.actions.MovieDeleteAction;
 import org.tinymediamanager.ui.movies.actions.MovieDownloadActorImagesAction;
@@ -282,6 +283,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
 
     editPopupMenu.addSeparator();
     editPopupMenu.add(createAndRegisterAction(MovieExportAction.class));
+    editPopupMenu.add(createAndRegisterAction(MovieCopyToAction.class));
 
     // rename popup menu
     renamePopupMenu = new JPopupMenu(TmmResourceBundle.getString("Toolbar.rename"));
@@ -379,6 +381,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
 
     popupMenu.addSeparator();
     popupMenu.add(createAndRegisterAction(MovieExportAction.class));
+    popupMenu.add(createAndRegisterAction(MovieCopyToAction.class));
     popupMenu.add(createAndRegisterAction(MoviePlayAction.class));
     popupMenu.add(createAndRegisterAction(MovieOpenFolderAction.class));
 

@@ -54,7 +54,6 @@ public class MoviePostProcessDialog extends PostProcessDialog {
 
     MovieModuleManager.getInstance().getSettings().forceSaveSettings();
 
-    firePropertyChange("postProcess", null, process);
     setVisible(false);
   }
 }

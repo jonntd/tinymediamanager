@@ -164,4 +164,12 @@ public class ListUtilsTest {
     assertThat(sorted.get(4)).isEqualTo(2);
     assertThat(sorted.get(5)).isEqualTo(1);
   }
+
+  @Test
+  public void testGetLast() {
+    List<Integer> list = List.of(1, 2, 3);
+    assertThat(ListUtils.getLast(list)).isEqualTo(3);
+    assertThat(ListUtils.getLast(new ArrayList<Integer>())).isNull();
+    assertThat(ListUtils.getLast((List<Integer>) null)).isNull();
+  }
 }

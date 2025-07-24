@@ -21,6 +21,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
@@ -34,6 +35,8 @@ import org.tinymediamanager.core.AbstractSettings;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmProperties;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.entities.Movie;
@@ -43,7 +46,6 @@ import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.movies.filters.IMovieUIFilter;
 
 import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.swing.DefaultEventSelectionModel;
 
 /**
@@ -61,33 +63,38 @@ public class MovieSelectionModel extends AbstractModelObject implements ListSele
   private Movie                             selectedMovie;
   private DefaultEventSelectionModel<Movie> selectionModel;
   private MovieMatcherEditor                matcherEditor;
-  private SortedList<Movie>                 sortedList;
   private PropertyChangeListener            propertyChangeListener;
 
   /**
    * Instantiates a new movie selection model. Usage in MoviePanel
    * 
-   * @param sortedList
-   *          the sorted list
    * @param source
    *          the source
    * @param matcher
    *          the matcher
    */
-  public MovieSelectionModel(SortedList<Movie> sortedList, EventList<Movie> source, MovieMatcherEditor matcher) {
+  public MovieSelectionModel(EventList<Movie> source, MovieMatcherEditor matcher) {
     constructInitialMovie();
 
-    this.sortedList = sortedList;
     this.selectionModel = new DefaultEventSelectionModel<>(source);
     this.selectionModel.addListSelectionListener(this);
     this.matcherEditor = matcher;
     this.selectedMovies = selectionModel.getSelected();
 
-    propertyChangeListener = evt -> {
-      if (evt.getSource() == selectedMovie) {
-        // wrap this event in a new event for listeners of the selection model
-        firePropertyChange(evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
+    // eventbus listener
+    EventBus.registerListener(EventBus.TOPIC_MOVIES, event -> {
+      if (event.sender() instanceof Movie movie && movie == selectedMovie) {
+        if (event.eventType().equals(Event.TYPE_REMOVE)) {
+          setSelectedMovie(initialMovie);
+        }
+        else {
+          // delegate this to UI listeners
+          firePropertyChange(SELECTED_MOVIE, null, movie);
+        }
       }
+    });
+
+    propertyChangeListener = evt -> {
       if (evt.getSource() instanceof IMovieUIFilter) {
         firePropertyChange("filterChanged", null, evt.getSource());
       }
@@ -116,14 +123,9 @@ public class MovieSelectionModel extends AbstractModelObject implements ListSele
    * @param movie
    *          the new selected movie
    */
-  public void setSelectedMovie(Movie movie) {
+  public synchronized void setSelectedMovie(Movie movie) {
     Movie oldValue = this.selectedMovie;
-    if (movie == null) {
-      this.selectedMovie = initialMovie;
-    }
-    else {
-      this.selectedMovie = movie;
-    }
+    this.selectedMovie = Objects.requireNonNullElse(movie, initialMovie);
 
     if (oldValue != null) {
       oldValue.removePropertyChangeListener(propertyChangeListener);

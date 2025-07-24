@@ -88,10 +88,9 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
 
   @Override
   protected void doInBackground() {
-    LOGGER.info("Getting missing artwork");
+    LOGGER.info("Getting missing artwork for '{}' TV shows", tvShows.size());
 
     initThreadPool(3, "scrapeMissingTvShowArtwork");
-    start();
 
     List<TvShowSeason> reducedSeasons = new ArrayList<>(seasons);
 
@@ -140,7 +139,8 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
     }
 
     waitForCompletionOrCancel();
-    LOGGER.info("Done getting missing artwork");
+
+    LOGGER.info("Finished getting missing artwork - took {} ms", getRuntime());
   }
 
   @Override
@@ -184,15 +184,13 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             artwork.addAll(artworkProvider.getArtwork(options));
           }
           catch (MissingIdException ignored) {
-            LOGGER.debug("no id found for scraper {}", artworkProvider.getProviderInfo());
-          }
-          catch (NothingFoundException e) {
-            LOGGER.debug("did not find artwork for '{}'", tvShow.getTitle());
+            LOGGER.warn("Missing IDs for getting artwork of TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(
-                new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
           finally {
             lock.writeLock().unlock();
@@ -201,13 +199,15 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
 
         // now set & download the artwork
         if (!artwork.isEmpty()) {
+          LOGGER.info("Download missing artwork for TV show '{}'", tvShow.getTitle());
           TvShowArtworkHelper.downloadMissingArtwork(tvShow, artwork);
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape artwork for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }
@@ -247,15 +247,13 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             artwork.addAll(artworkProvider.getArtwork(options));
           }
           catch (MissingIdException ignored) {
-            LOGGER.debug("no id found for scraper {}", artworkProvider.getProviderInfo());
-          }
-          catch (NothingFoundException e) {
-            LOGGER.debug("did not find artwork for '{}'", tvShow.getTitle());
+            LOGGER.warn("Missing IDs for getting artwork of TV show '{}' with '{}'", tvShow.getTitle(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(
-                new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed", new String[] { ":", e.getLocalizedMessage() }));
+            LOGGER.error("Could not scrape artwork for TV show '{}' with '{}' - '{}'", tvShow.getTitle(), artworkScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
           finally {
             lock.writeLock().unlock();
@@ -270,9 +268,10 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape artwork for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }
@@ -317,15 +316,19 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
             }
           }
           catch (MissingIdException ignored) {
-            LOGGER.debug("no id found for scraper {}", artworkProvider.getProviderInfo());
+            LOGGER.warn("Missing IDs for getting artwork of TV show '{}' episode S{} E{} with '{}'", episode.getTvShow().getTitle(),
+                episode.getSeason(), episode.getEpisode(), artworkScraper.getId());
           }
           catch (NothingFoundException e) {
-            LOGGER.debug("did not find artwork for '{}' - S{}/E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
+            LOGGER.debug("Did not find artwork for TV show '{}', episode S{} E{} with '{}'", episode.getTvShow().getTitle(), episode.getSeason(),
+                episode.getEpisode(), artworkScraper.getId());
           }
           catch (ScrapeException e) {
-            LOGGER.error("getArtwork", e);
-            MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
-                new String[] { ":", e.getLocalizedMessage() }));
+            LOGGER.error("Could not scrape artwork for TV show '{}', episode S{} E{} with '{}' - '{}'", episode.getTvShow().getTitle(),
+                episode.getSeason(), episode.getEpisode(), artworkScraper.getId(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, episode, "message.scrape.tvshowartworkfailed",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
         }
 
@@ -342,9 +345,11 @@ public class TvShowMissingArtworkDownloadTask extends TmmThreadPool {
         }
       }
       catch (Exception e) {
-        LOGGER.error("Thread crashed", e);
-        MessageManager.instance.pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
-            new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not scrape artwork for TV show '{}', episode S{} E{} - '{}'", episode.getTvShow().getTitle(), episode.getSeason(),
+            episode.getEpisode(), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(new Message(Message.MessageLevel.ERROR, "TvShowMissingArtwork", "message.scrape.threadcrashed",
+                new String[] { ":", e.getLocalizedMessage() }));
       }
     }
   }

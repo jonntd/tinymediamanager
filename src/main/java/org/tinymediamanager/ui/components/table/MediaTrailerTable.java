@@ -120,9 +120,10 @@ public class MediaTrailerTable extends TmmEditorTable {
         TmmUIHelper.browseUrl(url);
       }
       catch (Exception ex) {
-        LOGGER.error(ex.getMessage());
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, trailer.getUrl(), "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
+        LOGGER.error("Could not open '{}' in browser - '{}'", url, ex.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, trailer.getUrl(), "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
       }
     }
   }

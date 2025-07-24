@@ -15,15 +15,17 @@
  */
 package org.tinymediamanager.ui.moviesets;
 
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTable;
@@ -34,25 +36,31 @@ import org.tinymediamanager.ui.components.treetable.TmmTreeTable;
  * @author Manuel Laggner
  */
 public class MovieSetSelectionModel extends AbstractModelObject {
-  public static final String           SELECTED_MOVIE_SET = "selectedMovieSet";
+  public static final String SELECTED_MOVIE_SET = "selectedMovieSet";
 
-  private final MovieSet               initalMovieSet     = new MovieSet("");
-  private final PropertyChangeListener propertyChangeListener;
+  private final MovieSet     initalMovieSet     = new MovieSet("");
 
-  private MovieSet                     selectedMovieSet;
-  private TmmTreeTable                 treeTable;
+  private MovieSet           selectedMovieSet;
+  private TmmTreeTable       treeTable;
 
   /**
    * Instantiates a new movie selection model. Usage in MovieSetPanel
    */
   public MovieSetSelectionModel() {
     selectedMovieSet = initalMovieSet;
-    propertyChangeListener = evt -> {
-      if (evt.getSource() == selectedMovieSet) {
-        // wrap this event in a new event for listeners of the selection model
-        firePropertyChange(evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
+
+    // eventbus listener
+    EventBus.registerListener(EventBus.TOPIC_MOVIE_SETS, event -> {
+      if (event.sender() instanceof MovieSet movieSet && movieSet == selectedMovieSet) {
+        if (event.eventType().equals(Event.TYPE_REMOVE)) {
+          setSelectedMovieSet(initalMovieSet);
+        }
+        else {
+          // delegate this to UI listeners
+          firePropertyChange(SELECTED_MOVIE_SET, null, movieSet);
+        }
       }
-    };
+    });
   }
 
   public void setTreeTable(TmmTreeTable treeTable) {
@@ -68,21 +76,7 @@ public class MovieSetSelectionModel extends AbstractModelObject {
   public void setSelectedMovieSet(MovieSet movieSet) {
     MovieSet oldValue = this.selectedMovieSet;
 
-    if (movieSet != null) {
-      this.selectedMovieSet = movieSet;
-    }
-    else {
-      this.selectedMovieSet = initalMovieSet;
-    }
-
-    if (oldValue != null) {
-      oldValue.removePropertyChangeListener(propertyChangeListener);
-    }
-
-    if (selectedMovieSet != null) {
-      selectedMovieSet.addPropertyChangeListener(propertyChangeListener);
-    }
-
+    this.selectedMovieSet = Objects.requireNonNullElse(movieSet, initalMovieSet);
     firePropertyChange(SELECTED_MOVIE_SET, oldValue, this.selectedMovieSet);
   }
 

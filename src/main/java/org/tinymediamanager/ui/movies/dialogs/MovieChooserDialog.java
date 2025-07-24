@@ -32,8 +32,10 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
@@ -50,6 +52,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -59,6 +62,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -132,24 +136,22 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 public class MovieChooserDialog extends TmmDialog implements ActionListener {
-  private static final Logger                                                  LOGGER                = LoggerFactory
-      .getLogger(MovieChooserDialog.class);
+  private static final Logger                                                  LOGGER         = LoggerFactory.getLogger(MovieChooserDialog.class);
 
-  private final MovieList                                                      movieList             = MovieModuleManager.getInstance()
-      .getMovieList();
+  private final MovieList                                                      movieList      = MovieModuleManager.getInstance().getMovieList();
   private final Movie                                                          movieToScrape;
   private final List<MediaScraper>                                             artworkScrapers;
   private final List<MediaScraper>                                             trailerScrapers;
+  private final SortedList<MovieChooserModel>                                  searchResultEventList;
+  private final EventList<Person>                                              castMemberEventList;
 
   private MediaScraper                                                         mediaScraper;
-  private SortedList<MovieChooserModel>                                        searchResultEventList = null;
-  private EventList<Person>                                                    castMemberEventList   = null;
-  private MovieChooserModel                                                    selectedResult        = null;
+  private MovieChooserModel                                                    selectedResult = null;
 
   private SearchTask                                                           activeSearchTask;
 
-  private boolean                                                              continueQueue         = true;
-  private boolean                                                              navigateBack          = false;
+  private boolean                                                              continueQueue  = true;
+  private boolean                                                              navigateBack   = false;
 
   /**
    * UI components
@@ -219,8 +221,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             TmmUIHelper.openFile(MediaFileHelper.getMainVideoFile(mf));
           }
           catch (Exception ex) {
-            LOGGER.error("open file", ex);
-            MessageManager.instance
+            LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
+            MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, mf, "message.erroropenfile", new String[] { ":", ex.getLocalizedMessage() }));
           }
         });
@@ -298,28 +300,29 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchDetail = new JPanel();
         splitPane.setRightComponent(panelSearchDetail);
-        panelSearchDetail.setLayout(new MigLayout("", "[100lp:15%:20%,grow][300lp:500lp,grow 3]", "[]2lp[]2lp[][150lp:25%:50%][50lp:100lp,grow]"));
+        panelSearchDetail.setLayout(
+            new MigLayout("", "[150lp:15%:20%,grow][15lp!][300lp:500lp,grow 3]", "[]2lp[]2lp[8lp!]2lp[][15lp!][100lp:15%:30%][100lp:25%:50%,grow]"));
         {
           lblTitle = new JLabel("");
           TmmFontHelper.changeFont(lblTitle, 1.167, Font.BOLD);
-          panelSearchDetail.add(lblTitle, "cell 1 0, wmin 0");
+          panelSearchDetail.add(lblTitle, "cell 2 0,wmin 0");
         }
         {
           lblOriginalTitle = new JLabel("");
-          panelSearchDetail.add(lblOriginalTitle, "cell 1 1,wmin 0");
+          panelSearchDetail.add(lblOriginalTitle, "cell 2 1,wmin 0");
         }
         {
           lblTagline = new JLabel("");
-          panelSearchDetail.add(lblTagline, "cell 1 2, wmin 0");
+          panelSearchDetail.add(lblTagline, "cell 2 3,wmin 0");
         }
         {
           lblMoviePoster = new ImageLabel(false);
           lblMoviePoster.setDesiredAspectRatio(2 / 3f);
-          panelSearchDetail.add(lblMoviePoster, "cell 0 0 1 4,grow");
+          panelSearchDetail.add(lblMoviePoster, "cell 0 0 1 6,grow");
         }
         {
           JScrollPane scrollPane = new NoBorderScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 1 3,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 5,grow");
           {
             taMovieDescription = new ReadOnlyTextArea();
             scrollPane.setViewportView(taMovieDescription);
@@ -327,7 +330,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         }
         {
           JScrollPane scrollPane = new JScrollPane();
-          panelSearchDetail.add(scrollPane, "cell 0 4 2 1,grow");
+          panelSearchDetail.add(scrollPane, "cell 2 6,grow");
           {
             tableCastMembers = new TmmTable(new TmmTableModel<>(castMemberEventList, new CastMemberTableFormat()));
             tableCastMembers.configureScrollPane(scrollPane);
@@ -398,6 +401,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         okButton.setIcon(IconManager.APPLY_INV);
         okButton.setActionCommand("OK");
         okButton.addActionListener(this);
+        getRootPane().registerKeyboardAction(this, "OK",
+            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
         addButton(okButton);
       }
     }
@@ -472,7 +477,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           }
         }
         catch (Exception ex) {
-          LOGGER.warn(ex.getMessage());
+          LOGGER.debug("scraping", ex);
         }
       }
     });
@@ -498,7 +503,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         if (model != MovieChooserModel.emptyResult) {
           // when scraping was not successful, abort saving
           if (!model.isScraped()) {
-            MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed"));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "message.scrape.threadcrashed"));
             return;
           }
 
@@ -535,7 +540,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
                 ratingMediaMetadata.setIds(md.getIds());
 
                 ratingMediaMetadata.setRatings(ratingsFromMd);
-                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(), MediaType.MOVIE))) {
+                for (MediaRating rating : ListUtils.nullSafe(RatingProvider.getRatings(md.getIds(),
+                    MovieModuleManager.getInstance().getSettings().getFetchRatingSources(), MediaType.MOVIE))) {
                   if (!ratingMediaMetadata.getRatings().contains(rating)) {
                     ratingMediaMetadata.addRating(rating);
                   }

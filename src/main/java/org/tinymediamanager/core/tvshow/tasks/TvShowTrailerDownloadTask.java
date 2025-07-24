@@ -32,7 +32,7 @@ import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaTrailer;
 import org.tinymediamanager.core.tasks.TrailerDownloadTask;
-import org.tinymediamanager.core.tasks.YTDownloadTask;
+import org.tinymediamanager.core.tasks.YtDownloadTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
@@ -91,12 +91,12 @@ public class TvShowTrailerDownloadTask extends TmmTask {
     trailers.addAll(tvShow.getTrailer());
 
     if (trailers.isEmpty()) {
-      LOGGER.warn("no trailers for '{}' available", tvShow.getTitle());
+      LOGGER.info("No trailers available for '{}'", tvShow.getTitle());
       return;
     }
 
     // now try to download the trailers until we get one ;)
-    LOGGER.info("downloading trailer for '{}'", tvShow.getTitle());
+    LOGGER.info("Downloading trailer for '{}'", tvShow.getTitle());
 
     // now try to download the trailers until we get one ;)
     for (MediaTrailer trailer : trailers) {
@@ -112,7 +112,7 @@ public class TvShowTrailerDownloadTask extends TmmTask {
 
         Matcher matcher = Utils.YOUTUBE_PATTERN.matcher(url);
         if (matcher.matches()) {
-          task = new YTDownloadTask(trailer, desiredQuality, TvShowModuleManager.getInstance().getSettings().isUseYtDlp()) {
+          task = new YtDownloadTask(trailer, desiredQuality, TvShowModuleManager.getInstance().getSettings().isUseYtDlp()) {
             @Override
             protected Path getDestinationWoExtension() {
               return getDestination();

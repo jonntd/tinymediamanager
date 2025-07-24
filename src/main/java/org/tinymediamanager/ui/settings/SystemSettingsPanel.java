@@ -330,7 +330,7 @@ class SystemSettingsPanel extends JPanel {
       extraConfig.save();
     }
     catch (Exception e) {
-      LOGGER.warn("Could not write memory settings - {}", e.getMessage());
+      LOGGER.warn("Could not write memory settings - '{}'", e.getMessage());
     }
   }
 

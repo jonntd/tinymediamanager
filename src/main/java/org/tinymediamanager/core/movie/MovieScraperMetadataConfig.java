@@ -24,6 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.ScraperMetadataConfig;
 import org.tinymediamanager.core.TmmResourceBundle;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * The enum MovieScraperMetadataConfig is used to control which fields will be set after scraping
  * 
@@ -34,6 +36,7 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
   ID(Type.METADATA, "metatag.id"),
   TITLE(Type.METADATA),
   ORIGINAL_TITLE(Type.METADATA, "metatag.originaltitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   TAGLINE(Type.METADATA),
   PLOT(Type.METADATA),
   YEAR(Type.METADATA),
@@ -52,9 +55,7 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
 
   // cast
   ACTORS(Type.CAST),
-  PRODUCERS(Type.CAST),
-  DIRECTORS(Type.CAST),
-  WRITERS(Type.CAST),
+  CREW(Type.CAST),
 
   // artwork
   POSTER(Type.ARTWORK),
@@ -62,7 +63,6 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
   BANNER(Type.ARTWORK),
   CLEARART(Type.ARTWORK),
   THUMB(Type.ARTWORK),
-  LOGO(Type.DEPRECATED),
   CLEARLOGO(Type.ARTWORK),
   DISCART(Type.ARTWORK, "mediafiletype.disc"),
   KEYART(Type.ARTWORK),
@@ -157,15 +157,7 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
    * @return a {@link List} of all values except deprecated ones
    */
   public static List<MovieScraperMetadataConfig> getValues() {
-    List<MovieScraperMetadataConfig> values = new ArrayList<>();
-
-    for (MovieScraperMetadataConfig value : values()) {
-      if (value.type != Type.DEPRECATED) {
-        values.add(value);
-      }
-    }
-
-    return values;
+    return new ArrayList<>(Arrays.asList(values()));
   }
 
   /**
@@ -181,11 +173,21 @@ public enum MovieScraperMetadataConfig implements ScraperMetadataConfig {
     List<MovieScraperMetadataConfig> exclude = Arrays.asList(valuesToExclude);
 
     for (MovieScraperMetadataConfig value : values()) {
-      if (value.type != Type.DEPRECATED && !exclude.contains(value)) {
+      if (!exclude.contains(value)) {
         values.add(value);
       }
     }
 
     return values;
+  }
+
+  @JsonCreator
+  public static MovieScraperMetadataConfig forValue(String value) {
+    return switch (value) {
+      // map deprecated ones
+      case "PRODUCERS", "DIRECTORS", "WRITERS" -> MovieScraperMetadataConfig.CREW;
+      case "LOGO" -> MovieScraperMetadataConfig.CLEARLOGO;
+      default -> MovieScraperMetadataConfig.valueOf(value.toUpperCase());
+    };
   }
 }

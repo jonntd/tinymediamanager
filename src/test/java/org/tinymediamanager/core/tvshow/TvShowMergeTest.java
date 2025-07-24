@@ -1,5 +1,6 @@
 package org.tinymediamanager.core.tvshow;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.junit.Assert;
@@ -40,15 +41,19 @@ public class TvShowMergeTest extends BasicTvShowTest {
     TvShow show1 = new TvShow();
     show1.setTitle("show1");
     show1.setYear(2009);
+    MediaFile mf1 = new MediaFile(Path.of("/some/show/mf1.mkv"));
+    MediaFile mf2 = new MediaFile(Path.of("/some/show/mf2.mkv"));
 
     TvShowEpisode ep1 = new TvShowEpisode();
     ep1.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 1));
     ep1.setTvShow(show1);
+    ep1.addToMediaFiles(mf1);
     show1.addEpisode(ep1);
 
     TvShowEpisode ep2 = new TvShowEpisode();
     ep2.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 2));
     ep2.setTvShow(show1);
+    ep2.addToMediaFiles(mf2);
     show1.addEpisode(ep2);
 
     // ---------------------------------------
@@ -60,6 +65,7 @@ public class TvShowMergeTest extends BasicTvShowTest {
     ep3.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, 1, 2));
     ep3.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_DVD, 1, 2)); // <-- should be merged
     ep3.setTvShow(show2);
+    ep3.addToMediaFiles(mf2); // <-- same file
     show2.addEpisode(ep3);
 
     TvShowEpisode ep4 = new TvShowEpisode();

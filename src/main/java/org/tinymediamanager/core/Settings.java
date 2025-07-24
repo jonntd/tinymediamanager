@@ -98,7 +98,7 @@ public final class Settings extends AbstractSettings {
 
   private boolean                                          imageCache                   = true;
   private CacheSize                                        imageCacheSize               = CacheSize.BIG;
-  private CacheType                                        imageCacheType               = CacheType.QUALITY;
+  private CacheType                                        imageCacheType               = CacheType.ULTRA_QUALITY;
 
   // language 2 char - saved to config
   private String                                           language;
@@ -679,7 +679,7 @@ public final class Settings extends AbstractSettings {
       ProxySettings.setProxySettings(getProxyHost(), port, getProxyUsername(), getProxyPassword());
     }
     catch (NumberFormatException e) {
-      LOGGER.error("could not parse proxy port: {}", e.getMessage());
+      LOGGER.debug("Could not parse proxy port - {}", e.getMessage());
     }
   }
 
@@ -1406,7 +1406,7 @@ public final class Settings extends AbstractSettings {
       TmmHttpServer.getInstance().updateConfiguration(enableHttpServer, httpServerPort, httpApiKey);
     }
     catch (Exception e) {
-      LOGGER.error("could not update HTTP server configuration - '{}'", e.getMessage());
+      LOGGER.error("Could not update HTTP server configuration - '{}'", e.getMessage());
     }
   }
 

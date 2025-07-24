@@ -64,6 +64,7 @@ import org.tinymediamanager.scraper.ScraperType;
 import org.tinymediamanager.scraper.entities.CountryCode;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaLanguages;
+import org.tinymediamanager.scraper.rating.RatingProvider;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -171,6 +172,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        nfoWriteLockdata                       = false;
   boolean                                        nfoWriteTrailer                        = true;
   boolean                                        nfoWriteFileinfo                       = true;
+  boolean                                        nfoWriteArtworkUrls                    = true;
 
   // renamer
   boolean                                        renameAfterScrape                      = false;
@@ -188,6 +190,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        renamerCleanupUnwanted                 = false;
   String                                         renamerFirstCharacterNumberReplacement = "#";
   boolean                                        asciiReplacement                       = false;
+  boolean                                        unicodeReplacement                     = false;
   boolean                                        specialSeason                          = true;
   boolean                                        createMissingSeasonItems               = false;
 
@@ -200,6 +203,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig           = new ArrayList<>();
   boolean                                        doNotOverwriteExistingData             = false;
   boolean                                        fetchAllRatings                        = false;
+  final List<RatingProvider.RatingSource>        fetchRatingSources                     = new ArrayList<>();
 
   // artwork scraper
   final List<MediaLanguages>                     imageScraperLanguages                  = ObservableCollections.observableList(new ArrayList<>());
@@ -217,7 +221,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        imageEpisodeScrapeAllSources           = false;
 
   // trailer scraper
-  boolean                                        useYtDlp                               = false;
+  boolean                                        useYtDlp                               = true;
   boolean                                        useTrailerPreference                   = true;
   boolean                                        automaticTrailerDownload               = false;
   TrailerQuality                                 trailerQuality                         = TrailerQuality.HD_720;
@@ -775,6 +779,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.asciiReplacement;
     this.asciiReplacement = newValue;
     firePropertyChange("asciiReplacement", oldValue, newValue);
+  }
+
+  public boolean isUnicodeReplacement() {
+    return unicodeReplacement;
+  }
+
+  public void setUnicodeReplacement(boolean newValue) {
+    boolean oldValue = this.unicodeReplacement;
+    this.unicodeReplacement = newValue;
+    firePropertyChange("unicodeReplacement", oldValue, newValue);
   }
 
   public boolean isRenamerCleanupUnwanted() {
@@ -1823,6 +1837,16 @@ public final class TvShowSettings extends AbstractSettings {
     firePropertyChange("nfoWriteFileinfo", oldValue, newValue);
   }
 
+  public boolean isNfoWriteArtworkUrls() {
+    return nfoWriteArtworkUrls;
+  }
+
+  public void setNfoWriteArtworkUrls(boolean newValue) {
+    boolean oldValue = this.nfoWriteArtworkUrls;
+    this.nfoWriteArtworkUrls = newValue;
+    firePropertyChange("nfoWriteArtworkUrls", oldValue, newValue);
+  }
+
   public boolean isWriteActorImages() {
     return writeActorImages;
   }
@@ -1994,6 +2018,16 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.fetchAllRatings;
     this.fetchAllRatings = newValue;
     firePropertyChange("fetchAllRatings", oldValue, newValue);
+  }
+
+  public List<RatingProvider.RatingSource> getFetchRatingSources() {
+    return fetchRatingSources;
+  }
+
+  public void setFetchRatingSources(List<RatingProvider.RatingSource> newValues) {
+    fetchRatingSources.clear();
+    fetchRatingSources.addAll(newValues);
+    firePropertyChange("fetchRatingSources", null, fetchRatingSources);
   }
 
   public void addShowTvShowArtworkTypes(MediaFileType type) {

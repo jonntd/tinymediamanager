@@ -78,7 +78,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
 
     // imdbid check
     if (!MediaIdUtil.isValidImdbId(imdbId)) {
-      LOGGER.warn("no imdb id found");
+      LOGGER.debug("no imdb id found");
       throw new MissingIdException(MediaMetadata.IMDB);
     }
 
@@ -92,18 +92,18 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
     MediaMetadata metadata = parseDetail(doc, "movie"); // is also movie for series... weird
     if (metadata == null) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -123,7 +123,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
     List<MediaMetadata> episodeList = getEpisodeList(options.createTvShowSearchAndScrapeOptions());
 
     if (episodeList.isEmpty()) {
-      LOGGER.warn("EpisodeList is empty, cannot fetch episode information");
+      LOGGER.debug("EpisodeList is empty, cannot fetch episode information");
       throw new NothingFoundException();
     }
 
@@ -155,18 +155,18 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
     MediaMetadata metadata = parseDetail(doc, "movie"); // is also movie for series... weird
     if (metadata == null) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -216,12 +216,12 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 
@@ -247,7 +247,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
         Thread.currentThread().interrupt();
       }
       catch (Exception e) {
-        LOGGER.error("error searching: {}", e.getMessage());
+        LOGGER.debug("error searching: {}", e.getMessage());
         throw new ScrapeException(e);
       }
     }
@@ -282,7 +282,7 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
     episodeList = new ArrayList<>();
 
     if (StringUtils.isBlank(getApiKey())) {
-      LOGGER.warn("no API Key found");
+      LOGGER.debug("no API Key found");
       throw new ScrapeException(new HttpException(401, "Unauthorized"));
     }
 
@@ -295,12 +295,12 @@ public class OmdbTvShowMetadataProvider extends OmdbMetadataProvider implements 
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {}", e.getMessage());
+      LOGGER.debug("error searching: {}", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (doc == null || doc.childrenSize() == 0) {
-      LOGGER.warn("no result found");
+      LOGGER.debug("no result found");
       throw new NothingFoundException();
     }
 

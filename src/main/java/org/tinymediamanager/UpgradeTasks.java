@@ -34,14 +34,12 @@ import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
-import org.tinymediamanager.core.movie.MovieModuleManager;
-import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
-import org.tinymediamanager.core.tvshow.TvShowModuleManager;
-import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
+import org.tinymediamanager.core.entities.Person;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
@@ -49,6 +47,8 @@ import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.ui.TmmUILayoutStore;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * The class UpdateTasks. To perform needed update tasks
@@ -120,13 +120,9 @@ public abstract class UpgradeTasks {
           Files.move(wrongExtra, correctExtra, StandardCopyOption.REPLACE_EXISTING);
         }
         catch (IOException e) {
-          LOGGER.warn("Could not move launcher-extra.yml from {} to {}", wrongExtra, correctExtra);
+          LOGGER.warn("Could not move launcher-extra.yml from '{}' to '{}'", wrongExtra, correctExtra);
         }
       }
-
-      // remove LOGO from check artwork
-      MovieModuleManager.getInstance().getSettings().removeMovieCheckArtwork(MovieScraperMetadataConfig.LOGO);
-      TvShowModuleManager.getInstance().getSettings().removeTvShowCheckArtwork(TvShowScraperMetadataConfig.LOGO);
     }
 
     if (StrgUtils.compareVersion(v, "5.1.1") < 0) {
@@ -273,6 +269,44 @@ public abstract class UpgradeTasks {
   }
 
   /**
+   * Upgrade old style crew members (which are unmarshalled as a key/value {@link Map}
+   * 
+   * @param values
+   *          the {@link Map} containing all properties of the old crew members
+   * @return a {@link List} of all migrated crew members
+   */
+  public static List<Person> upgradeCrew(List<?> values) {
+    ObjectMapper mapper = new ObjectMapper();
+    List<Person> crew = new ArrayList<>();
+
+    for (Object entry : values) {
+      if (entry instanceof Map<?, ?> map) {
+        try {
+          Person person = mapper.convertValue(map, Person.class);
+
+          // set the role name if empty
+          if (person != null && StringUtils.isBlank(person.getRole())
+              && (person.getType() == Person.Type.PRODUCER || person.getType() == Person.Type.DIRECTOR || person.getType() == Person.Type.WRITER)) {
+            String roleName = TmmResourceBundle.getString("Person." + person.getType().name());
+            if (!"???".equals(roleName)) {
+              person.setRole(roleName);
+            }
+          }
+
+          if (!crew.contains(person)) {
+            crew.add(person);
+          }
+        }
+        catch (Exception e) {
+          LOGGER.debug("Could not upgrade crew member - '{}'", e.getMessage());
+        }
+      }
+    }
+
+    return crew;
+  }
+
+  /**
    * copy over data/settings from v4
    * 
    * @param path
@@ -337,7 +371,7 @@ public abstract class UpgradeTasks {
       pb.start();
     }
     catch (Exception e) {
-      LOGGER.error("Cannot spawn process:", e);
+      LOGGER.error("Could not restart tinyMediaManager", e);
     }
 
     TinyMediaManager.shutdownLogger();

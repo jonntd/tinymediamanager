@@ -15,23 +15,26 @@
  */
 package org.tinymediamanager.ui.tvshows;
 
-import java.beans.PropertyChangeListener;
+import static org.tinymediamanager.core.bus.EventBus.TOPIC_TV_SHOWS;
+
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
 
+import javax.swing.tree.TreeNode;
+
 import org.apache.commons.lang3.StringUtils;
-import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
+import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
-import org.tinymediamanager.ui.components.table.TmmTableFormat;
 import org.tinymediamanager.ui.components.tree.TmmTreeDataProvider;
 import org.tinymediamanager.ui.components.tree.TmmTreeNode;
-import org.tinymediamanager.ui.components.treetable.AbstractTmmTreeTableNodeComparator;
 import org.tinymediamanager.ui.components.treetable.TmmTreeTableFormat;
 
 /**
@@ -40,146 +43,108 @@ import org.tinymediamanager.ui.components.treetable.TmmTreeTableFormat;
  * @author Manuel Laggner
  */
 public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
-  private final TmmTreeTableFormat<TmmTreeNode> tableFormat;
-  private final TmmTreeNode                     root       = new TmmTreeNode(new Object(), this);
+  private final TmmTreeNode root       = new TmmTreeNode(new Object(), this);
 
-  private final PropertyChangeListener          tvShowPropertyChangeListener;
-  private final PropertyChangeListener          seasonPropertyChangeListener;
-  private final PropertyChangeListener          episodePropertyChangeListener;
-
-  private final TvShowList                      tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+  private final TvShowList  tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
   public TvShowTreeDataProvider(TmmTreeTableFormat<TmmTreeNode> tableFormat) {
-    this.tableFormat = tableFormat;
 
-    // do not react on other events of the tvShowList
-    PropertyChangeListener tvShowListPropertyChangeListener = evt -> {
-      TvShow tvShow;
-
-      switch (evt.getPropertyName()) {
-        case Constants.ADDED_TV_SHOW:
-          tvShow = (TvShow) evt.getNewValue();
-          addTvShow(tvShow);
-          break;
-
-        case Constants.REMOVED_TV_SHOW:
-          tvShow = (TvShow) evt.getNewValue();
-          removeTvShow(tvShow);
-          break;
-
-        default:
-          // do not react on other events of the tvShowList
-          if (evt.getSource() instanceof TvShowList) {
-            break;
-          }
-
-          nodeChanged(evt.getSource());
-          break;
+    EventBus.registerListener(TOPIC_TV_SHOWS, event -> {
+      if (event.sender() instanceof TvShow tvShow) {
+        processTvShow(tvShow, event.eventType());
       }
-    };
-    tvShowList.addPropertyChangeListener(tvShowListPropertyChangeListener);
-
-    tvShowPropertyChangeListener = evt -> {
-      TvShowSeason season;
-      TvShowEpisode episode;
-
-      // only process events from the TV show itself
-      if (!(evt.getSource() instanceof TvShow)) {
-        return;
+      else if (event.sender() instanceof TvShowSeason season) {
+        processSeason(season, event.eventType());
       }
-
-      switch (evt.getPropertyName()) {
-        case Constants.ADDED_SEASON:
-          season = (TvShowSeason) evt.getNewValue();
-          addTvShowSeason(season);
-          break;
-
-        case Constants.REMOVED_SEASON:
-          season = (TvShowSeason) evt.getNewValue();
-          removeTvShowSeason(season);
-          break;
-
-        case Constants.ADDED_EPISODE:
-          episode = (TvShowEpisode) evt.getNewValue();
-          addTvShowEpisode(episode);
-          break;
-
-        case Constants.REMOVED_EPISODE:
-          episode = (TvShowEpisode) evt.getNewValue();
-          removeTvShowEpisode(episode);
-          break;
-
-        case Constants.EPISODE_COUNT, Constants.SEASON_COUNT:
-          // do not react on change of the episode count
-          break;
-
-        default:
-          nodeChanged(evt.getSource());
-          break;
+      else if (event.sender() instanceof TvShowEpisode episode) {
+        processEpisode(episode, event.eventType());
       }
-    };
+    });
 
-    seasonPropertyChangeListener = evt -> {
-      TvShowSeason season = (TvShowSeason) evt.getSource();
-
-      switch (evt.getPropertyName()) {
-        case Constants.ADDED_SEASON:
-          addTvShowSeason((TvShowSeason) evt.getNewValue());
-          break;
-
-        case Constants.REMOVED_SEASON:
-          removeTvShowSeason((TvShowSeason) evt.getNewValue());
-          break;
-
-        case Constants.ADDED_EPISODE:
-          addTvShowEpisode((TvShowEpisode) evt.getNewValue());
-          break;
-
-        case Constants.REMOVED_EPISODE:
-          removeTvShowEpisode((TvShowEpisode) evt.getNewValue());
-          break;
-
-        default:
-          nodeChanged(season);
-          break;
-      }
-    };
-
-    episodePropertyChangeListener = evt -> {
-      TvShowEpisode episode = (TvShowEpisode) evt.getSource();
-
-      switch (evt.getPropertyName()) {
-        // changed the season/episode nr of an episode
-        case Constants.SEASON, Constants.EPISODE, Constants.EPISODE_GROUP:
-          // check if we need to change the position in the tree
-          updateEpisode(episode);
-          updateDummyEpisodesForTvShow(episode.getTvShow());
-          break;
-
-        case Constants.TV_SHOW:
-          // do not react on change of the TV show itself
-          break;
-
-        case Constants.WATCHED, Constants.MEDIA_FILES:
-          // update the node itself, but also its parents
-          nodeChanged(episode);
-          nodeChanged(episode.getTvShowSeason());
-          nodeChanged(episode.getTvShow());
-          break;
-
-        default:
-          nodeChanged(episode);
-          break;
-      }
-    };
-
-    setTreeComparator(new TvShowTreeNodeComparator());
+    setTreeComparator(new TvShowTreeNodeComparator(tableFormat));
 
     TvShowModuleManager.getInstance().getSettings().addPropertyChangeListener(evt -> {
       switch (evt.getPropertyName()) {
         case "displayMissingEpisodes", "displayMissingSpecials", "displayMissingNotAired" -> updateDummyEpisodes();
       }
     });
+  }
+
+  private void processTvShow(TvShow tvShow, String eventType) {
+    // check if existing
+    TmmTreeNode tvShowNode = getNodeFromCache(tvShow);
+    if (tvShowNode != null) {
+      if (Event.TYPE_REMOVE.equals(eventType)) {
+        // TV show deleted
+        removeTvShow(tvShow);
+      }
+      else {
+        // TV show updated
+        nodeChanged(tvShow);
+        updateDummyEpisodes();
+      }
+    }
+    else {
+      // TV show added
+      addTvShow(tvShow);
+    }
+  }
+
+  private void processSeason(TvShowSeason season, String eventType) {
+    updateSeason(season);
+  }
+
+  private void processEpisode(TvShowEpisode episode, String eventType) {
+    if (Event.TYPE_REMOVE.equals(eventType)) {
+      removeTvShowEpisode(episode);
+    }
+    else {
+      updateEpisode(episode);
+    }
+    updateDummyEpisodesForTvShow(episode.getTvShow());
+  }
+
+  private void updateSeason(TvShowSeason season) {
+    TmmTreeNode seasonNode = getNodeFromCache(season);
+
+    if (seasonNode == null) {
+      seasonNode = addTvShowSeason(season);
+    }
+
+    if (seasonNode != null) {
+      updateSeason(seasonNode);
+    }
+  }
+
+  private void updateSeason(TmmTreeNode seasonNode) {
+    if (seasonNode.getUserObject() instanceof TvShowSeason season) {
+      if (seasonNode.getChildCount() == 0) {
+        TmmTreeNode cachedNode = removeNodeFromCache(season);
+        if (cachedNode == null) {
+          return;
+        }
+
+        firePropertyChange(NODE_REMOVED, null, cachedNode);
+      }
+      else {
+        List<TvShowEpisode> episodesForDisplay = season.getEpisodesForDisplay();
+
+        // remove episodes which are no more to display
+        for (Enumeration<TreeNode> e = seasonNode.children(); e.hasMoreElements();) {
+          TreeNode child = e.nextElement();
+          if (child instanceof TmmTreeNode tmmTreeNode && tmmTreeNode.getUserObject() instanceof TvShowEpisode episode) {
+            if (!episodesForDisplay.contains(episode)) {
+              removeTvShowEpisode(episode);
+            }
+          }
+        }
+
+        // add missing ones
+        for (TvShowEpisode episode : episodesForDisplay) {
+          addTvShowEpisode(episode);
+        }
+      }
+    }
   }
 
   /**
@@ -243,9 +208,19 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
    * trigger a node changed event for all other events
    * 
    * @param source
+   *          the source {@link Object} to trigger the change
    */
   private void nodeChanged(Object source) {
-    TmmTreeNode node = getNodeFromCache(source);
+    nodeChanged(getNodeFromCache(source));
+  }
+
+  /**
+   * trigger a node changed event for all other events
+   * 
+   * @param node
+   *          the {@link TmmTreeNode} to trigger the change
+   */
+  private void nodeChanged(TmmTreeNode node) {
     if (node != null) {
       firePropertyChange(NODE_CHANGED, null, node);
     }
@@ -288,12 +263,7 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     if (parent == root) {
       List<TmmTreeNode> nodes = new ArrayList<>();
       for (TvShow tvShow : new ArrayList<>(tvShowList.getTvShows())) {
-        TmmTreeNode node = new TvShowTreeNode(tvShow, this);
-        putNodeToCache(tvShow, node);
-        nodes.add(node);
-
-        // add a propertychangelistener for this tv show
-        tvShow.addPropertyChangeListener(tvShowPropertyChangeListener);
+        nodes.add(getOrCreateNode(tvShow));
       }
       return nodes;
     }
@@ -301,32 +271,15 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       List<TmmTreeNode> nodes = new ArrayList<>();
       for (TvShowSeason season : tvShow.getSeasons()) {
         if (!season.getEpisodesForDisplay().isEmpty()) {
-          TmmTreeNode node = new TvShowSeasonTreeNode(season, this);
-          putNodeToCache(season, node);
-          nodes.add(node);
+          nodes.add(getOrCreateNode(season));
         }
-
-        // add a propertychangelistener for this seasib
-        season.addPropertyChangeListener(seasonPropertyChangeListener);
       }
       return nodes;
     }
     else if (parent.getUserObject() instanceof TvShowSeason season) {
       List<TmmTreeNode> nodes = new ArrayList<>();
       for (TvShowEpisode episode : season.getEpisodesForDisplay()) {
-        // look if a node of this episode already exist
-        TmmTreeNode node = getNodeFromCache(episode);
-
-        if (node == null) {
-          // create a new one
-          node = new TvShowEpisodeTreeNode(episode, this);
-          putNodeToCache(episode, node);
-        }
-
-        nodes.add(node);
-
-        // add a propertychangelistener for this episode
-        episode.addPropertyChangeListener(episodePropertyChangeListener);
+        nodes.add(getOrCreateNode(episode));
       }
       return nodes;
     }
@@ -350,15 +303,10 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     putNodeToCache(tvShow, node);
     firePropertyChange(NODE_INSERTED, null, node);
 
-    // and also add a propertychangelistener to react on changes inside the tv show
-    tvShow.addPropertyChangeListener(tvShowPropertyChangeListener);
     return node;
   }
 
   private void removeTvShow(TvShow tvShow) {
-    // remove the propertychangelistener from this tv show
-    tvShow.removePropertyChangeListener(tvShowPropertyChangeListener);
-
     TmmTreeNode cachedNode = removeNodeFromCache(tvShow);
     if (cachedNode == null) {
       return;
@@ -375,15 +323,38 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     firePropertyChange(NODE_REMOVED, null, cachedNode);
   }
 
+  private TmmTreeNode getOrCreateNode(MediaEntity entity) {
+    TmmTreeNode cachedNode = getNodeFromCache(entity);
+    if (cachedNode != null) {
+      return cachedNode;
+    }
+
+    if (entity instanceof TvShow tvShow) {
+      TmmTreeNode node = new TvShowTreeNode(tvShow, this);
+      putNodeToCache(tvShow, node);
+      return node;
+    }
+    else if (entity instanceof TvShowSeason season) {
+      TmmTreeNode node = new TvShowSeasonTreeNode(season, this);
+      putNodeToCache(season, node);
+      return node;
+    }
+    else if (entity instanceof TvShowEpisode episode) {
+      TmmTreeNode node = new TvShowEpisodeTreeNode(episode, this);
+      putNodeToCache(episode, node);
+      return node;
+    }
+    else {
+      throw new IllegalArgumentException();
+    }
+  }
+
   private TmmTreeNode addTvShowSeason(TvShowSeason season) {
     // check if this season has already been added
     TmmTreeNode cachedNode = getNodeFromCache(season);
     if (cachedNode != null) {
       return cachedNode;
     }
-
-    // add a propertychangelistener for this season
-    season.addPropertyChangeListener(seasonPropertyChangeListener);
 
     // add a new node (only if there is at least one EP inside)
     if (!season.getEpisodesForDisplay().isEmpty()) {
@@ -404,34 +375,33 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       return;
     }
 
+    // check if the season is already in the UI
+    TmmTreeNode seasonNode = getNodeFromCache(episode.getTvShowSeason());
+    if (seasonNode == null) {
+      addTvShowSeason(episode.getTvShowSeason());
+    }
+
     // add a new node
     TmmTreeNode node = new TvShowEpisodeTreeNode(episode, this);
     putNodeToCache(episode, node);
     firePropertyChange(NODE_INSERTED, null, node);
-
-    // and also add a propertychangelistener to react on changes inside the episode
-    episode.addPropertyChangeListener(episodePropertyChangeListener);
   }
 
   private void removeTvShowEpisode(TvShowEpisode episode) {
-    // remove the propertychangelistener from this episode
-    episode.removePropertyChangeListener(episodePropertyChangeListener);
-
     TmmTreeNode cachedNode = removeNodeFromCache(episode);
     if (cachedNode != null) {
-      firePropertyChange(NODE_REMOVED, null, cachedNode);
-    }
+      TmmTreeNode seasonNode = (TmmTreeNode) cachedNode.getParent();
 
-    // okay, we've removed the episode; now check which seasons we have to remove too
-    if (episode.getTvShowSeason().getEpisodesForDisplay().isEmpty()) {
-      removeTvShowSeason(episode.getTvShowSeason());
+      firePropertyChange(NODE_REMOVED, null, cachedNode);
+
+      // and remove the season node too
+      if (seasonNode != null && seasonNode.getUserObject() instanceof TvShowSeason season && season.getEpisodesForDisplay().isEmpty()) {
+        removeTvShowSeason(season);
+      }
     }
   }
 
   private void removeTvShowSeason(TvShowSeason season) {
-    // remove the propertychangelistener from this season
-    season.removePropertyChangeListener(seasonPropertyChangeListener);
-
     TmmTreeNode cachedNode = removeNodeFromCache(season);
     if (cachedNode == null) {
       return;
@@ -443,105 +413,8 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   /*
    * helper classes
    */
-  class TvShowTreeNodeComparator extends AbstractTmmTreeTableNodeComparator {
-    private final Comparator stringComparator;
-
-    private Comparator       sortComparator;
-
-    private TvShowTreeNodeComparator() {
-      stringComparator = new TmmTableFormat.StringComparator();
-
-      // initialize the comparator with comparing the title ascending
-      sortColumn = 0;
-      sortDirection = SortDirection.ASCENDING;
-      sortComparator = getSortComparator();
-    }
-
-    @Override
-    public int compare(TmmTreeNode o1, TmmTreeNode o2) {
-      Object userObject1 = o1.getUserObject();
-      Object userObject2 = o2.getUserObject();
-
-      if (userObject1 instanceof TvShow && userObject2 instanceof TvShow) {
-        int compairingResult = sortComparator.compare(getColumnValue(o1, sortColumn), getColumnValue(o2, sortColumn));
-        if (compairingResult == 0 && sortColumn != 0) {
-          compairingResult = stringComparator.compare(getColumnValue(o1, 0), getColumnValue(o2, 0));
-        }
-        else {
-          if (sortDirection == SortDirection.DESCENDING) {
-            compairingResult = compairingResult * -1;
-          }
-        }
-        return compairingResult;
-      }
-
-      if (userObject1 instanceof TvShowSeason && userObject2 instanceof TvShowSeason) {
-        TvShowSeason tvShowSeason1 = (TvShowSeason) userObject1;
-        TvShowSeason tvShowSeason2 = (TvShowSeason) userObject2;
-        return tvShowSeason1.getSeason() - tvShowSeason2.getSeason();
-      }
-
-      if (userObject1 instanceof TvShowEpisode && userObject2 instanceof TvShowEpisode) {
-        TvShowEpisode tvShowEpisode1 = (TvShowEpisode) userObject1;
-        TvShowEpisode tvShowEpisode2 = (TvShowEpisode) userObject2;
-        return tvShowEpisode1.getEpisode() - tvShowEpisode2.getEpisode();
-      }
-
-      return o1.toString().compareToIgnoreCase(o2.toString());
-    }
-
-    @Override
-    public void columnClicked(int column, boolean shift, boolean control) {
-      if (sortColumn == column) {
-        if (sortDirection == SortDirection.ASCENDING) {
-          sortDirection = SortDirection.DESCENDING;
-        }
-        else {
-          sortDirection = SortDirection.ASCENDING;
-        }
-      }
-      else {
-        sortDirection = SortDirection.ASCENDING;
-      }
-      sortColumn = column;
-
-      sortComparator = getSortComparator();
-    }
-
-    @Override
-    public void fromString(String stringEncoded) {
-      super.fromString(stringEncoded);
-      sortComparator = getSortComparator();
-    }
-
-    private Comparator getSortComparator() {
-      if (sortColumn == 0) {
-        // sort on the node/title
-        return stringComparator;
-      }
-      else {
-        return tableFormat.getColumnComparator(sortColumn - 1);
-      }
-    }
-
-    private Object getColumnValue(TmmTreeNode treeNode, int i) {
-      if (i == 0) {
-        return ((TvShow) treeNode.getUserObject()).getTitleSortable();
-      }
-      return tableFormat.getColumnValue(treeNode, i - 1);
-    }
-
-    public SortDirection getSortDirection(int sortColumn) {
-      if (sortColumn == this.sortColumn) {
-        return sortDirection;
-      }
-
-      return null;
-    }
-  }
 
   abstract static class AbstractTvShowTreeNode extends TmmTreeNode {
-
     AbstractTvShowTreeNode(Object userObject, TmmTreeDataProvider<TmmTreeNode> dataProvider) {
       super(userObject, dataProvider);
     }

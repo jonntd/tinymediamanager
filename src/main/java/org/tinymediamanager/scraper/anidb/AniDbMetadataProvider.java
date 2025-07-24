@@ -99,8 +99,8 @@ public abstract class AniDbMetadataProvider implements TmmFeature {
       animeList = new OnDiskCachedUrl("http://anidb.net/api/anime-titles.dat.gz", 2, TimeUnit.DAYS); // use 2 days instead of 1
     }
     catch (Exception e) {
-      LOGGER.error("error getting AniDB index: {}", e.getMessage());
-      return;
+      LOGGER.debug("Error getting AniDB index: {}", e.getMessage());
+      throw new ScrapeException("Error getting AniDB index: " + e.getMessage());
     }
 
     try (Scanner scanner = new Scanner(new GZIPInputStream(animeList.getInputStream()), StandardCharsets.UTF_8)) {
@@ -128,8 +128,8 @@ public abstract class AniDbMetadataProvider implements TmmFeature {
       Thread.currentThread().interrupt();
     }
     catch (IOException e) {
-      LOGGER.error("error getting AniDB index: {}", e.getMessage());
-      throw new ScrapeException(e);
+      LOGGER.debug("Error getting AniDB index: {}", e.getMessage());
+      throw new ScrapeException("Error getting AniDB index: " + e.getMessage());
     }
   }
 

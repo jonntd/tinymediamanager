@@ -420,7 +420,7 @@ class TvShowCommand implements Runnable {
           ex.export(tvShows, export.path);
         }
         catch (Exception e) {
-          LOGGER.error("could not export tv shows - {}", e.getMessage());
+          LOGGER.error("Could not export TV shows - '{}'", e.getMessage());
         }
 
         return;

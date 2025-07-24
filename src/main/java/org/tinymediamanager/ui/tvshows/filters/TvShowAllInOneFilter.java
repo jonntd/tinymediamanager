@@ -202,7 +202,7 @@ public class TvShowAllInOneFilter extends AbstractTextTvShowUIFilter {
       for (TvShowEpisode episode : episodes) {
         boolean found = false;
 
-        for (Person director : episode.getDirectors()) {
+        for (Person director : episode.getCrew()) {
           if (StringUtils.isNotBlank(director.getName())) {
             Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(director.getName()));
             if (matcher.find()) {

@@ -178,6 +178,7 @@ public class TvShowEpisodeNfoParser {
 
     public String                     title               = "";
     public String                     originaltitle       = "";
+    public String                     englishTitle        = "";
     public String                     showTitle           = "";
     public int                        season              = -1;
     public int                        episode             = -1;
@@ -236,6 +237,7 @@ public class TvShowEpisodeNfoParser {
       // parse all supported fields
       parseTag(Episode::parseTitle);
       parseTag(Episode::parseOriginalTitle);
+      parseTag(Episode::parseEnglishTitle);
       parseTag(Episode::parseShowTitle);
       parseTag(Episode::parseSeason);
       parseTag(Episode::parseEpisode);
@@ -301,7 +303,7 @@ public class TvShowEpisodeNfoParser {
         function.apply(this);
       }
       catch (Exception e) {
-        LOGGER.warn("problem parsing tag (line {}) - {}", e.getStackTrace()[0].getLineNumber(), e.getMessage());
+        LOGGER.debug("problem parsing tag (line {}) - {}", e.getStackTrace()[0].getLineNumber(), e.getMessage());
       }
 
       return null;
@@ -352,6 +354,20 @@ public class TvShowEpisodeNfoParser {
       Element element = getSingleElement(root, "originaltitle");
       if (element != null) {
         originaltitle = element.ownText();
+      }
+
+      return null;
+    }
+
+    /**
+     * the english title usually comes in the english_title tag
+     */
+    private Void parseEnglishTitle() {
+      supportedElements.add("english_title");
+
+      Element element = getSingleElement(root, "english_title");
+      if (element != null) {
+        englishTitle = element.ownText();
       }
 
       return null;
@@ -1616,6 +1632,7 @@ public class TvShowEpisodeNfoParser {
       TvShowEpisode episode = new TvShowEpisode();
       episode.setTitle(title);
       episode.setOriginalTitle(originaltitle);
+      episode.setEnglishTitle(englishTitle);
 
       // do we have episode group information
       if (!episodeNumbers.isEmpty()) {
@@ -1680,7 +1697,7 @@ public class TvShowEpisodeNfoParser {
         }
         newDirectors.add(morphPerson(DIRECTOR, director));
       }
-      episode.addToDirectors(newDirectors);
+      episode.addToCrew(newDirectors);
 
       List<org.tinymediamanager.core.entities.Person> newWriters = new ArrayList<>();
       for (Person writer : credits) {
@@ -1689,7 +1706,7 @@ public class TvShowEpisodeNfoParser {
         }
         newWriters.add(morphPerson(WRITER, writer));
       }
-      episode.addToWriters(newWriters);
+      episode.addToCrew(newWriters);
 
       episode.addToTags(tags);
 

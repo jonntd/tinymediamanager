@@ -34,12 +34,12 @@ public final class Constants {
   public static final String AUDIO_CHANNEL          = "audioChannel";
   public static final String AUDIOSTREAMS_COUNT     = "audioStreams";
   public static final String BANNER                 = "banner";
-  public static final String BANNER_URL             = "bannerUrl";
   public static final String CHARACTERART           = "characterart";
   public static final String CERTIFICATION          = "certification";
   public static final String CLEARART               = "clearart";
   public static final String CLEARLOGO              = "clearlogo";
   public static final String COUNTRY                = "country";
+  public static final String CREW                   = "crew";
   public static final String DATA_SOURCE            = "dataSource";
   public static final String DATE_ADDED             = "dateAdded";
   public static final String DATE_ADDED_AS_STRING   = "dateAddedAsString";
@@ -52,7 +52,6 @@ public final class Constants {
   public static final String EPISODE_COUNT          = "episodeCount";
   public static final String EPISODE_GROUP          = "episodeGroup";
   public static final String FANART                 = "fanart";
-  public static final String FANART_URL             = "fanartUrl";
   public static final String FIRST_AIRED            = "firstAired";
   public static final String FIRST_AIRED_AS_STRING  = "firstAiredAsString";
   public static final String FRAME_RATE             = "frameRate";
@@ -77,7 +76,6 @@ public final class Constants {
   public static final String PATH                   = "path";
   public static final String PLOT                   = "plot";
   public static final String POSTER                 = "poster";
-  public static final String POSTER_URL             = "posterUrl";
   public static final String PRODUCERS              = "producers";
   public static final String PRODUCERS_AS_STRING    = "producersAsString";
   public static final String PRODUCTION_COMPANY     = "productionCompany";
@@ -91,7 +89,6 @@ public final class Constants {
   public static final String REMOVED_TV_SHOW        = "removedTvShow";
   public static final String ROLE                   = "role";
   public static final String RUNTIME                = "runtime";
-  public static final String SCRAPED                = "scraped";
   public static final String SEASON                 = "season";
   public static final String SEASON_COUNT           = "seasonCount";
   public static final String SEASON_POSTER          = "seasonPoster";
@@ -108,7 +105,6 @@ public final class Constants {
   public static final String TAGS                   = "tags";
   public static final String TAGS_AS_STRING         = "tagsAsString";
   public static final String THUMB                  = "thumb";
-  public static final String THUMB_URL              = "thumbUrl";
   public static final String TITLE                  = "title";
   public static final String TITLE_FOR_UI           = "titleForUi";
   public static final String TITLE_SORTABLE         = "titleSortable";
@@ -130,5 +126,6 @@ public final class Constants {
   public static final String AUDIO_TITLE            = "audioTitle";
 
   private Constants() {
+    throw new IllegalAccessError();
   }
 }

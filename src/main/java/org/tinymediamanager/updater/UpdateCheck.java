@@ -109,7 +109,7 @@ public class UpdateCheck {
           Thread.currentThread().interrupt();
         }
         catch (Exception e) {
-          LOGGER.warn("Unable to download from url {} - {}", urlAsString, e.getMessage());
+          LOGGER.warn("Unable to download from url '{}' - '{}'", urlAsString, e.getMessage());
         }
         if (valid) {
           break; // no exception - step out :)
@@ -151,7 +151,7 @@ public class UpdateCheck {
       Thread.currentThread().interrupt();
     }
     catch (Exception e) {
-      LOGGER.warn("Update task failed badly! {}", e.getMessage());
+      LOGGER.warn("Update task failed badly - '{}'", e.getMessage());
 
       try {
         // try a hardcoded "backup url" for GD.txt, where we could specify a new location :)
@@ -179,7 +179,7 @@ public class UpdateCheck {
         Thread.currentThread().interrupt();
       }
       catch (Exception e2) {
-        LOGGER.warn("Update fallback failed - {}", e2.getMessage());
+        LOGGER.warn("Update fallback failed - '{}'", e2.getMessage());
       }
     }
     return false;

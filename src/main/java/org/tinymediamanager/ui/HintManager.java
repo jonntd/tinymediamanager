@@ -130,7 +130,7 @@ public class HintManager {
       setOpaque(false);
       updateBalloonBorder();
 
-      hintLabel.setText("<html>" + hint.message + "</html>");
+      hintLabel.setText("<html><b>" + hint.message + "</b></html>");
 
       // grab all mouse events to avoid that components overlapped
       // by the hint panel receive them
@@ -294,8 +294,8 @@ public class HintManager {
     private static final int ARC             = 8;
     private static final int ARROW_XY        = 16;
     private static final int ARROW_SIZE      = 8;
-    private static final int SHADOW_SIZE     = 6;
-    private static final int SHADOW_TOP_SIZE = 3;
+    private static final int SHADOW_SIZE     = 3;
+    private static final int SHADOW_TOP_SIZE = 1;
 
     private final int        direction;
     private final Color      borderColor;

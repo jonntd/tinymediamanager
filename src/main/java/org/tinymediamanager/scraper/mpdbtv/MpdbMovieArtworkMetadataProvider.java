@@ -85,7 +85,7 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
       return Collections.emptyList();
     }
 
-    LOGGER.info("========= BEGIN MPDB.tv artwork scraping");
+    LOGGER.debug("========= BEGIN MPDB.tv artwork scraping");
     try {
       Response<MovieEntity> response = controller.getScrapeInformation(getEncodedUserName(), getSubscriptionKey(), id,
           options.getLanguage().toLocale(), null, FORMAT);
@@ -97,7 +97,7 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
         catch (IOException e) {
           // ignore
         }
-        LOGGER.warn("request was not successful: HTTP/{} - {}", response.code(), message);
+        LOGGER.debug("request was not successful: HTTP/{} - {}", response.code(), message);
         throw new HttpException(response.code(), response.message());
       }
       if (response.isSuccessful()) {
@@ -112,12 +112,12 @@ public class MpdbMovieArtworkMetadataProvider extends MpdbMetadataProvider imple
       throw new ScrapeException(e);
     }
     catch (Exception e) {
-      LOGGER.error("error searching: {} ", e.getMessage());
+      LOGGER.debug("error searching: {} ", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (scrapeResult == null) {
-      LOGGER.warn("no result from MPDB.tv");
+      LOGGER.debug("no result from MPDB.tv");
       return Collections.emptyList();
     }
 

@@ -191,9 +191,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     Utils.removeEmptyStringsFromList(dataSources);
     if (dataSources.isEmpty() && moviesToUpdate.isEmpty()) {
       LOGGER.info("no datasource to update");
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.nonespecified"));
       return;
     }
+
     preDir = 0;
     postDir = 0;
     visFile = 0;
@@ -235,11 +236,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       movieList.reevaluateMMD();
       stopWatch.stop();
-      LOGGER.info("Done updating datasource :) - took {}", stopWatch);
+
+      LOGGER.info("Finished updating data sources :) - took {} ms", stopWatch);
     }
     catch (Exception e) {
-      LOGGER.error("Thread crashed", e);
-      MessageManager.instance.pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
+      LOGGER.error("Could not update movie data data sources - '{}'", e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
   }
 
@@ -254,11 +256,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       // check the special case, that the data source is also an ignore folder
       if (isInSkipFolder(dsAsPath)) {
-        LOGGER.debug("datasource '{}' is also a skipfolder - skipping", ds);
+        LOGGER.warn("Datasource '{}' is also a skip folder - skipping", ds);
         continue;
       }
 
-      LOGGER.info("Start UDS on datasource: {}", ds);
+      LOGGER.info("Starting \"update data sources\" on datasource: {}", ds);
       miTasks.clear();
       initThreadPool(3, "update");
       setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + ds + "'");
@@ -269,7 +271,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // if the DS exists (and we have access to read it): Files.exist = true
       if (!Files.exists(dsAsPath)) {
         // error - continue with next datasource
-        MessageManager.instance
+        LOGGER.warn("Data source '{}' is not available - skipping", dsAsPath);
+        MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
         continue;
       }
@@ -292,12 +295,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           isEmpty = Utils.isFolderEmpty(dsAsPath);
         }
         catch (Exception e) {
-          LOGGER.warn("could not check folder '{}' for emptiness - {}", dsAsPath, e.getMessage());
+          LOGGER.warn("Could not check folder '{}' for emptiness - '{}'", dsAsPath, e.getMessage());
         }
 
         if (isEmpty) {
           // error - continue with next datasource
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
           continue;
         }
@@ -310,8 +313,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           if (name.equalsIgnoreCase(MediaFileHelper.BDMV) || name.equalsIgnoreCase(MediaFileHelper.VIDEO_TS)
               || name.equalsIgnoreCase(MediaFileHelper.HVDVD_TS)) {
             // there cannot be a disc folder in root! Everything breaks...
-            MessageManager.instance.pushMessage(
-                new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.discfolderinroot", new String[] { path.toString() }));
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.discfolderinroot", new String[] { path.toString() }));
             continue;
           }
           if (existingMovies.contains(path)) {
@@ -343,8 +347,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       waitForCompletionOrCancel();
 
       // print stats
-      LOGGER.info("FilesFound: {}", filesFound.size());
-      LOGGER.info("moviesFound: {}", movieList.getMovieCount());
+      LOGGER.info("Files found: {}", filesFound.size());
+      LOGGER.info("Movies found: {}", movieList.getMovieCount());
       LOGGER.debug("PreDir: {}", preDir);
       LOGGER.debug("PostDir: {}", postDir);
       LOGGER.debug("VisFile: {}", visFile);
@@ -399,7 +403,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       return;
     }
 
-    LOGGER.info("Start UDS for movie sets");
+    LOGGER.info("Start \"update data sources\" for movie sets");
 
     Set<Path> movieSetFiles = getAllFilesRecursiveButNoDiscFiles(Paths.get(MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder()));
 
@@ -475,7 +479,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private void updateMovies() {
-    LOGGER.info("Start UDS for selected movies");
+    LOGGER.info("Start \"update data sources\" for selected movies");
+
     initThreadPool(3, "update");
     setTaskName(TmmResourceBundle.getString("update.datasource"));
     publishState();
@@ -494,7 +499,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // if the DS exists (and we have access to read it): Files.exist = true
       if (!Files.exists(dsAsPath)) {
         // error - continue with next datasource
-        MessageManager.instance
+        MessageManager.getInstance()
             .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
         continue;
       }
@@ -510,12 +515,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           isEmpty = Utils.isFolderEmpty(dsAsPath);
         }
         catch (Exception e) {
-          LOGGER.warn("could not check folder '{}' for emptiness - {}", dsAsPath, e.getMessage());
+          LOGGER.warn("Could not check folder '{}' for emptiness - '{}'", dsAsPath, e.getMessage());
         }
 
         if (isEmpty) {
           // error - continue with next datasource
-          MessageManager.instance
+          MessageManager.getInstance()
               .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
           continue;
         }
@@ -545,8 +550,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     waitForCompletionOrCancel();
 
     // print stats
-    LOGGER.info("FilesFound: {}", filesFound.size());
-    LOGGER.info("moviesFound: {}", movieList.getMovieCount());
+    LOGGER.info("Files found: {}", filesFound.size());
+    LOGGER.info("Movies found: {}", movieList.getMovieCount());
     LOGGER.debug("PreDir: {}", preDir);
     LOGGER.debug("PostDir: {}", postDir);
     LOGGER.debug("VisFile: {}", visFile);
@@ -733,14 +738,14 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     for (MediaFile mf : mfs) {
 
       if (mf.getType() == MediaFileType.NFO) {
-        LOGGER.info("| parsing NFO {}", mf.getFileAsPath());
+        LOGGER.trace("| parsing NFO {}", mf.getFileAsPath());
         Movie nfo = null;
         try {
           MovieNfoParser movieNfoParser = MovieNfoParser.parseNfo(mf.getFileAsPath());
           nfo = movieNfoParser.toMovie();
         }
         catch (Exception e) {
-          LOGGER.warn("problem parsing NFO: {}", e.getMessage());
+          LOGGER.debug("problem parsing NFO: {}", e.getMessage());
         }
 
         if (movie == null) {
@@ -768,7 +773,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             }
           }
           catch (IOException e) {
-            LOGGER.warn("| couldn't read NFO {}", mf);
+            LOGGER.debug("| couldn't read NFO {}", mf);
           }
         }
       } // end NFO
@@ -831,7 +836,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     Movie movie = movieList.getMovieByPath(movieDir);
     if (movie != null && movie.isLocked()) {
-      LOGGER.info("movie '{}' found in uds, but is locked", movie.getPath());
+      LOGGER.warn("Movie '{}' found in \"update data source\", but is locked", movie.getPath());
       return;
     }
 
@@ -841,7 +846,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     filesFound.addAll(allFiles); // our global cache
     fileLock.writeLock().unlock();
 
-    // convert to MFs (we need it anyways at the end)
+    // convert to MFs (we need it anyway at the end)
     List<MediaFile> mfs = new ArrayList<>();
     for (Path file : allFiles) {
       mfs.add(new MediaFile(file));
@@ -929,7 +934,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       }
 
       // get the "cleaner" name/year combo from
-      movie.setTitle(Utils.removeSortableName(video[0]));
+      movie.setTitle(StrgUtils.replaceUnicodeCharactersInverse(Utils.removeSortableName(video[0])));
       if (!video[1].isEmpty()) {
         try {
           movie.setYear(Integer.parseInt(video[1]));
@@ -943,7 +948,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       if (StringUtils.isNotBlank(bdmtTitle)) {
         video = ParserUtils.detectCleanTitleAndYear(bdmtTitle, MovieModuleManager.getInstance().getSettings().getBadWord());
         if (!video[0].isEmpty()) {
-          movie.setTitle(Utils.removeSortableName(video[0]));
+          movie.setTitle(StrgUtils.replaceUnicodeCharactersInverse(Utils.removeSortableName(video[0])));
         }
         if (!video[1].isEmpty()) {
           try {
@@ -963,7 +968,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
     else if (StringUtils.isBlank(movie.getTitle())) {
       // .45 for ex
-      movie.setTitle(Utils.removeSortableName(videoName));
+      movie.setTitle(StrgUtils.replaceUnicodeCharactersInverse(Utils.removeSortableName(videoName)));
     }
 
     movie.setPath(movieDir.toAbsolutePath().toString());
@@ -1093,7 +1098,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       movie.saveToDb();
     }
     else {
-      LOGGER.error("could not add '{}' because no VIDEO file found", movieDir);
+      LOGGER.warn("Could not add '{}' because no VIDEO file found", movieDir);
       return;
     }
 
@@ -1189,7 +1194,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // 1) check if MF is already assigned to a movie within path
       for (Movie m : movies) {
         for (MediaFile mfile : m.getMediaFiles(MediaFileType.VIDEO)) {
-          if (mfile.equals(mfs) || mfile.getBasename().equalsIgnoreCase(mf.getBasename())) {
+          if (mfile.equals(mf) || mfile.getBasename().equalsIgnoreCase(mf.getBasename())) {
             // ok, our MF is already in an movie
             LOGGER.debug("| found movie '{}' from MediaFile {}", m.getTitle(), mf);
             movie = m;
@@ -1210,7 +1215,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       }
 
       if (movie != null && movie.isLocked()) {
-        LOGGER.info("movie '{}' found in uds, but is locked", movie.getPath());
+        LOGGER.info("Movie '{}' found in \"update data source\", but is locked", movie.getPath());
         continue;
       }
 
@@ -1381,7 +1386,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           case FANART:
             if (mf.getPath().toLowerCase(Locale.ROOT).contains("extrafanart")) {
               // there shouldn't be any files here
-              LOGGER.warn("problem: detected media file type FANART in extrafanart folder: {}", mf.getPath());
+              LOGGER.debug("problem: detected media file type FANART in extrafanart folder: {}", mf.getPath());
               continue;
             }
 
@@ -1396,7 +1401,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           case THUMB:
             if (mf.getPath().toLowerCase(Locale.ROOT).contains("extrathumbs")) { //
               // there shouldn't be any files here
-              LOGGER.warn("| problem: detected media file type THUMB in extrathumbs folder: {}", mf.getPath());
+              LOGGER.debug("| problem: detected media file type THUMB in extrathumbs folder: {}", mf.getPath());
               continue;
             }
 
@@ -1463,7 +1468,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         // debug
         if (mf.getType() != MediaFileType.GRAPHIC && mf.getType() != MediaFileType.UNKNOWN && mf.getType() != MediaFileType.NFO
             && !movie.getMediaFiles().contains(mf)) {
-          LOGGER.warn("| Movie not added mf: {}", mf.getFileAsPath());
+          LOGGER.debug("| Movie not added mf: {}", mf.getFileAsPath());
         }
 
       } // end new MF found
@@ -1528,7 +1533,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     setWorkUnits(0);
     publishState();
 
-    LOGGER.info("removing orphaned movies/files...");
+    LOGGER.info("Removing orphaned movies/files...");
     List<Movie> moviesToRemove = new ArrayList<>();
     for (int i = movies.size() - 1; i >= 0; i--) {
       if (cancel) {
@@ -1555,7 +1560,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
         else {
           // can be; MMD and/or dir=DS root
-          LOGGER.warn("dir {} not in hashset, but on hdd!", movieDir);
+          LOGGER.debug("dir {} not in hashset, but on hdd!", movieDir);
         }
       }
 
@@ -1606,7 +1611,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             continue;
           }
           else {
-            LOGGER.warn("DISC folder detected - remove VIDEO {}", mf.getFileAsPath());
+            LOGGER.debug("DISC folder detected - remove VIDEO {}", mf.getFileAsPath());
             movie.removeFromMediaFiles(mf);
             dirty = true;
           }
@@ -1618,7 +1623,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             continue; // do not remove self
           }
           if (sub.getPathNIO().startsWith(movie.getPathNIO())) {
-            LOGGER.warn("Movie {} inside DISC folder of {} - removing", sub.getMainFile().getFileAsPath(), movie.getPath());
+            LOGGER.debug("Movie {} inside DISC folder of {} - removing", sub.getMainFile().getFileAsPath(), movie.getPath());
             moviesToRemove.add(sub);
           }
         }
@@ -1642,7 +1647,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     initThreadPool(1, "mediainfo");
 
-    LOGGER.info("getting Mediainfo...");
+    LOGGER.info("Getting Mediainfo...");
 
     // first insert all collected MI tasks
     for (Runnable task : miTasks) {
@@ -1688,7 +1693,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     initThreadPool(1, "mediainfo");
 
-    LOGGER.info("getting Mediainfo...");
+    LOGGER.info("Getting Mediainfo...");
     for (Movie movie : movies) {
       if (cancel) {
         break;
@@ -1798,12 +1803,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       }
     }
     catch (Exception e) {
-      LOGGER.error("error on listFilesAndDirs", e);
-      LOGGER.debug("falling back to the alternate coding");
+      LOGGER.error("Error while getting a file listing of '{}' - '{}'", directory, e.getMessage());
+      LOGGER.debug("could not list files in normal way", e);
       fileNames = listFilesAndDirs2(directory);
     }
     if (fileNames.isEmpty()) {
-      LOGGER.warn("Tried to list {}, but it was empty?!", directory);
+      LOGGER.debug("Tried to list '{}', but it was empty?!", directory);
     }
 
     // return sorted
@@ -1838,7 +1843,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       }
     }
     catch (Exception e) {
-      LOGGER.error("error on listFilesAndDirs2", e);
+      LOGGER.error("Error while getting a file listing of '{}' (alternate way) - '{}'", directory, e.getMessage());
+      LOGGER.debug("could not list files in alternate way", e);
     }
 
     // return sorted
@@ -2148,7 +2154,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
       }
       catch (IOException e) {
-        LOGGER.error("error on listFilesOnly: {}", e.getMessage());
+        LOGGER.error("Error while getting a file listing of '{}' - '{}'", directory, e.getMessage());
       }
 
       // return sorted

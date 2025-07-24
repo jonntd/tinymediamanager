@@ -72,7 +72,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
     SortedSet<MediaSearchResult> results = _search(options);
     if (results.isEmpty() && options.getSearchYear() > 0) {
       // nothing found, try w/o year
-      LOGGER.info("Search found nothing, try again without year...");
+      LOGGER.debug("Search found nothing, try again without year...");
       options.setSearchYear(-1);
       results = _search(options);
     }
@@ -110,7 +110,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
     }
 
     if (seasonNr == -1 || episodeNr == -1) {
-      LOGGER.warn("no aired date/season number/episode number found");
+      LOGGER.debug("no aired date/season number/episode number found");
       return md; // not even date set? return
     }
 
@@ -118,7 +118,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
 
     String showId = options.getIdAsString(scraper.getProviderInfo().getId());
     if (showId == null) {
-      LOGGER.error("Could not find showId - please scrape show first!");
+      LOGGER.warn("Could not find showId - please scrape show first!");
       return null;
     }
 
@@ -132,7 +132,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
         epXml = KodiMetadataProvider.XML_CACHE.get(scraper.getProviderInfo().getId() + "_" + showId + "_S" + lz(seasonNr) + "_E" + lz(episodeNr));
       }
       catch (Exception e) {
-        LOGGER.error("Could not fetch episodeslist!", e);
+        LOGGER.debug("Could not fetch episodeslist!", e);
       }
     }
 
@@ -166,7 +166,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
 
     }
     catch (Exception e) {
-      LOGGER.error("Could not get episode details!");
+      LOGGER.debug("Could not get episode details!");
     }
 
     return md;
@@ -194,7 +194,7 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
     // might be multiple!!
     String episodeUrl = innerXml(DOMUtils.getElementByTagName(xml.getDocumentElement(), EPISODEGUIDE));
     if (StringUtils.isEmpty(episodeUrl)) {
-      LOGGER.warn("No Episode Data!");
+      LOGGER.debug("No Episode Data!");
     }
     else {
       KodiMetadataProvider.XML_CACHE.put(scraper.getProviderInfo().getId() + "_" + showId + "_" + "EPISODEGUIDE_URL", episodeUrl);
@@ -288,12 +288,12 @@ public class KodiTvShowMetadataProvider extends AbstractKodiMetadataProvider imp
       }
     }
     catch (Exception e) {
-      LOGGER.error("problem scraping: " + e.getMessage());
+      LOGGER.debug("problem scraping - '{}'", e.getMessage());
       throw new ScrapeException(e);
     }
 
     if (episodeList.isEmpty()) {
-      LOGGER.warn("Could not find episodes - did you scrape the show recently?");
+      LOGGER.debug("Could not find episodes - did you scrape the show recently?");
     }
     return episodeList;
   }

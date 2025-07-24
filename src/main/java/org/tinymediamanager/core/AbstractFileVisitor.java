@@ -81,12 +81,12 @@ public abstract class AbstractFileVisitor implements FileVisitor<Path> {
       return FileVisitResult.SKIP_SUBTREE;
     }
     else if (e instanceof NoSuchFileException) {
-      LOGGER.error("visit file failed (not found): {}", e.getMessage());
+      LOGGER.warn("Could not visit file '{}' - '{}'", path, e.getMessage());
       return FileVisitResult.SKIP_SUBTREE;
     }
     else {
       // any other problem here
-      LOGGER.error("visit file failed: {}", e.getMessage());
+      LOGGER.warn("Could not visit file '{}' - '{}'", path, e.getMessage());
       // add some more trace infos to get a clue what exactly failed
       LOGGER.trace("visit file failed", e);
       return CONTINUE;
@@ -112,7 +112,7 @@ public abstract class AbstractFileVisitor implements FileVisitor<Path> {
       postVisitDirectory(parent, null);
     }
     catch (IOException e) {
-      LOGGER.error("error on traverseTreeAlternate: {}", e.getMessage());
+      LOGGER.error("Could not get files for '{}' - '{}'", parent, e.getMessage());
     }
   }
 }

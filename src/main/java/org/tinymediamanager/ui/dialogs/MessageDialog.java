@@ -89,9 +89,10 @@ public class MessageDialog extends TmmDialog {
             TmmUIHelper.browseUrl(lblLink.getText());
           }
           catch (Exception e) {
-            LOGGER.error(e.getMessage());
-            MessageManager.instance.pushMessage(
-                new Message(Message.MessageLevel.ERROR, lblLink.getText(), "message.erroropenurl", new String[] { ":", e.getLocalizedMessage() }));
+            LOGGER.error("Could not open '{}' in browser - '{}'", lblLink.getText(), e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(new Message(Message.MessageLevel.ERROR, lblLink.getText(), "message.erroropenurl",
+                    new String[] { ":", e.getLocalizedMessage() }));
           }
         });
         panelContent.add(lblLink, "cell 1 2");

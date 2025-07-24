@@ -18,6 +18,7 @@ package org.tinymediamanager.core.threading;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,11 +37,11 @@ import org.tinymediamanager.core.threading.TmmThreadPool.TmmThreadFactory;
  * @author Manuel Laggner
  */
 public class TmmTaskManager implements TmmTaskListener {
-  public final AtomicLong                GLOB_THRD_CNT    = new AtomicLong(1);
+  public final AtomicLong                GLOB_THRD_CNT = new AtomicLong(1);
 
-  private static final TmmTaskManager    instance         = new TmmTaskManager();
-  private final Set<TmmTaskListener>     taskListener     = new CopyOnWriteArraySet<>();
-  private final Set<TmmTaskHandle>       runningTasks     = new CopyOnWriteArraySet<>();
+  private static final TmmTaskManager    instance      = new TmmTaskManager();
+  private final Set<TmmTaskListener>     taskListener  = new CopyOnWriteArraySet<>();
+  private final Set<TmmTaskHandle>       runningTasks  = new CopyOnWriteArraySet<>();
 
   // we have some "named" queues, holding different types of tasks
   // image download/subtitle download are rather small/fast tasks - we only queue them in a queue and provide to abort the complete queue
@@ -51,29 +52,34 @@ public class TmmTaskManager implements TmmTaskListener {
   // this is a queue which holds "other" tasks
   private ThreadPoolExecutor             unnamedTaskExecutor;
 
-  // trailer download are rather big/long running tasks; only x at a time can be run and they are able to be cancelled individually
+  // trailer download are rather big/long-running tasks; only x at a time can be run and they are able to be cancelled individually
   private ThreadPoolExecutor             downloadExecutor;
 
   // main tasks (update datasource, scraping, renaming) are queueable tasks, but only one at a time can run; they can be cancelled individually
-  private final ThreadPoolExecutor       mainTaskExecutor = createMainTaskQueue();
+  private final ThreadPoolExecutor       mainTaskExecutor;
+
+  private final ExecutorService          uiTaskExecutor;
 
   // fake task handles to manage queues
   private final TmmTaskHandle            imageDownloadHandle;
   private final TmmTaskHandle            imageCacheHandle;
 
   // scheduled threads
-  private final ScheduledExecutorService scheduler        = Executors.newScheduledThreadPool(1);
+  private final ScheduledExecutorService scheduler     = Executors.newScheduledThreadPool(1);
 
-  private boolean                        isShutdown       = false;
+  private boolean                        isShutdown    = false;
 
   private TmmTaskManager() {
+    mainTaskExecutor = createMainTaskQueue();
+    uiTaskExecutor = Executors.newSingleThreadExecutor();
+
     imageDownloadHandle = new ImageDownloadTaskHandle();
     imageCacheHandle = new ImageCacheTaskHandle();
 
     Settings.getInstance().addPropertyChangeListener("maximumDownloadThreads", e -> {
       // only need to set this if there is already an executor. otherwise the executor will be created with the right amount
       if (downloadExecutor != null) {
-        // we have to make sure the maximum pool size is always larger then the core pool size
+        // we have to make sure the maximum pool size is always larger than the core pool size
         if (downloadExecutor.getMaximumPoolSize() < Settings.getInstance().getMaximumDownloadThreads()) {
           downloadExecutor.setMaximumPoolSize(Settings.getInstance().getMaximumDownloadThreads());
           downloadExecutor.setCorePoolSize(Settings.getInstance().getMaximumDownloadThreads());
@@ -293,6 +299,16 @@ public class TmmTaskManager implements TmmTaskListener {
     mainTaskExecutor.execute(newTask);
   }
 
+  /**
+   * add a new UI related task which is not run in the EDT (like rebuilding tag lists, ...)
+   * 
+   * @param runnable
+   *          the runnable to queue
+   */
+  public void addUiTask(Runnable runnable) {
+    uiTaskExecutor.submit(runnable);
+  }
+
   private ThreadPoolExecutor createMainTaskQueue() {
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, // max threads
         1, TimeUnit.SECONDS, // time to wait before closing idle workers
@@ -320,12 +336,10 @@ public class TmmTaskManager implements TmmTaskListener {
     if (downloadExecutor != null) {
       downloadExecutor.shutdown();
     }
-    if (mainTaskExecutor != null) {
-      mainTaskExecutor.shutdown();
-    }
-    if (scheduler != null) {
-      scheduler.shutdown();
-    }
+
+    mainTaskExecutor.shutdown();
+    scheduler.shutdown();
+
     for (TmmTaskHandle task : runningTasks) {
       task.cancel();
     }
@@ -359,10 +373,10 @@ public class TmmTaskManager implements TmmTaskListener {
     if (downloadExecutor != null && !downloadExecutor.isTerminated()) {
       downloadExecutor.shutdownNow();
     }
-    if (mainTaskExecutor != null && !mainTaskExecutor.isTerminated()) {
+    if (!mainTaskExecutor.isTerminated()) {
       mainTaskExecutor.shutdownNow();
     }
-    if (scheduler != null && !scheduler.isTerminated()) {
+    if (!scheduler.isTerminated()) {
       scheduler.shutdownNow();
     }
   }

@@ -36,9 +36,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -50,6 +47,7 @@ import org.tinymediamanager.core.DateField;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -66,8 +64,6 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -190,7 +186,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
 
         // serialize to string
         Writer out = new StringWriter();
-        getTransformer().transform(new DOMSource(document), new StreamResult(out));
+        NfoUtils.getTransformer().transform(new DOMSource(document), new StreamResult(out));
         String xml = out.toString().replaceAll("(?<!\r)\n", "\r\n"); // windows conform line endings
 
         Path f = tvShow.getPathNIO().resolve(nfoFilename);
@@ -220,8 +216,8 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + tvShow.getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance
+        LOGGER.error("Could not write TV show NFO file '{}' - '{}'", tvShow.getPathNIO().resolve(nfoFilename), e.getMessage());
+        MessageManager.getInstance()
             .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
@@ -427,15 +423,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * we will write all supported artwork types here
    */
   protected void addThumb() {
-    addThumb(MediaFileType.POSTER, "poster");
-    addThumb(MediaFileType.BANNER, "banner");
-    addThumb(MediaFileType.CLEARART, "clearart");
-    addThumb(MediaFileType.CLEARLOGO, "clearlogo");
-    addThumb(MediaFileType.THUMB, "landscape");
-    addThumb(MediaFileType.KEYART, "keyart");
-    addThumb(MediaFileType.LOGO, "logo");
-    addThumb(MediaFileType.CHARACTERART, "characterart");
-    addThumb(MediaFileType.DISC, "discart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      addThumb(MediaFileType.POSTER, "poster");
+      addThumb(MediaFileType.BANNER, "banner");
+      addThumb(MediaFileType.CLEARART, "clearart");
+      addThumb(MediaFileType.CLEARLOGO, "clearlogo");
+      addThumb(MediaFileType.THUMB, "landscape");
+      addThumb(MediaFileType.KEYART, "keyart");
+      addThumb(MediaFileType.LOGO, "logo");
+      addThumb(MediaFileType.CHARACTERART, "characterart");
+      addThumb(MediaFileType.DISC, "discart");
+    }
   }
 
   private void addThumb(MediaFileType type, String aspect) {
@@ -468,15 +466,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season posters in multiple <thumb aspect="poster" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonPoster() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String posterUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_POSTER);
-      if (StringUtils.isNotBlank(posterUrl)) {
-        thumb.setAttribute("aspect", "poster");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(posterUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String posterUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_POSTER);
+        if (StringUtils.isNotBlank(posterUrl)) {
+          thumb.setAttribute("aspect", "poster");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(posterUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -485,15 +485,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season banners in multiple <thumb aspect="banner" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonBanner() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String bannerUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_BANNER);
-      if (StringUtils.isNotBlank(bannerUrl)) {
-        thumb.setAttribute("aspect", "banner");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(bannerUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String bannerUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_BANNER);
+        if (StringUtils.isNotBlank(bannerUrl)) {
+          thumb.setAttribute("aspect", "banner");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(bannerUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -502,15 +504,17 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * add the season thumbs in multiple <thumb aspect="thumb" type="season" season="x">xxx</thumb> tags
    */
   protected void addSeasonThumb() {
-    for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
-      Element thumb = document.createElement("thumb");
-      String thumbUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_THUMB);
-      if (StringUtils.isNotBlank(thumbUrl)) {
-        thumb.setAttribute("aspect", "thumb");
-        thumb.setAttribute("type", "season");
-        thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
-        thumb.setTextContent(thumbUrl);
-        root.appendChild(thumb);
+    if (settings.isNfoWriteArtworkUrls()) {
+      for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+        Element thumb = document.createElement("thumb");
+        String thumbUrl = tvShowSeason.getArtworkUrl(MediaFileType.SEASON_THUMB);
+        if (StringUtils.isNotBlank(thumbUrl)) {
+          thumb.setAttribute("aspect", "thumb");
+          thumb.setAttribute("type", "season");
+          thumb.setAttribute("season", String.valueOf(tvShowSeason.getSeason()));
+          thumb.setTextContent(thumbUrl);
+          root.appendChild(thumb);
+        }
       }
     }
   }
@@ -519,27 +523,29 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
    * the new fanart in the form <fanart><thumb>xxx</thumb></fanart>
    */
   protected void addFanart() {
-    Element fanart = document.createElement("fanart");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element fanart = document.createElement("fanart");
 
-    Set<String> fanartUrls = new LinkedHashSet<>();
+      Set<String> fanartUrls = new LinkedHashSet<>();
 
-    // main fanart
-    String fanartUrl = tvShow.getArtworkUrl(MediaFileType.FANART);
-    if (StringUtils.isNotBlank(fanartUrl)) {
-      fanartUrls.add(fanartUrl);
-    }
+      // main fanart
+      String fanartUrl = tvShow.getArtworkUrl(MediaFileType.FANART);
+      if (StringUtils.isNotBlank(fanartUrl)) {
+        fanartUrls.add(fanartUrl);
+      }
 
-    // extrafanart
-    fanartUrls.addAll(tvShow.getExtraFanartUrls());
+      // extrafanart
+      fanartUrls.addAll(tvShow.getExtraFanartUrls());
 
-    for (String url : fanartUrls) {
-      Element thumb = document.createElement("thumb");
-      thumb.setTextContent(url);
-      fanart.appendChild(thumb);
-    }
+      for (String url : fanartUrls) {
+        Element thumb = document.createElement("thumb");
+        thumb.setTextContent(url);
+        fanart.appendChild(thumb);
+      }
 
-    if (!fanartUrls.isEmpty()) {
-      root.appendChild(fanart);
+      if (!fanartUrls.isEmpty()) {
+        root.appendChild(fanart);
+      }
     }
   }
 
@@ -611,7 +617,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
           root.appendChild(episodeguide);
         }
         catch (Exception e) {
-          LOGGER.warn("could not set episodeguide");
+          LOGGER.debug("could not set episodeguide");
         }
       }
     }
@@ -629,7 +635,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       episodeguide.setTextContent(new ObjectMapper().writeValueAsString(ids));
     }
     catch (Exception e) {
-      LOGGER.warn("could not create episodeguide - '{}'", e.getMessage());
+      LOGGER.debug("could not create episodeguide - '{}'", e.getMessage());
     }
 
     return episodeguide;
@@ -902,7 +908,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       actor.appendChild(role);
     }
 
-    if (StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
+    if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
       Element thumb = document.createElement("thumb");
       thumb.setTextContent(tvShowActor.getThumbUrl());
       actor.appendChild(thumb);
@@ -922,7 +928,7 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
       actor.appendChild(profile);
     }
 
-    addPersonIdsAsChildren(actor, tvShowActor);
+    NfoUtils.addPersonIdsAsChildren(actor, tvShowActor);
 
     root.appendChild(actor);
   }
@@ -956,19 +962,20 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }
   }
 
   /**
-   * add the missing meta data for tinyMediaManager to this NFO
+   * add the missing metadata for tinyMediaManager to this NFO
    */
   protected void addTinyMediaManagerTags() {
     root.appendChild(document.createComment("tinyMediaManager meta data"));
     addUserNote();
     addEpisodeGroups();
+    addEnglishTitle();
   }
 
   /**
@@ -1000,48 +1007,12 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
   }
 
   /**
-   * get any single element by the tag name
-   *
-   * @param tag
-   *          the tag name
-   * @return an element or null
+   * add the english title in <english_title>xxx</english_title>
    */
-  protected Element getSingleElementByTag(String tag) {
-    NodeList nodeList = document.getElementsByTagName(tag);
-    for (int i = 0; i < nodeList.getLength(); ++i) {
-      Node node = nodeList.item(i);
-      if (node.getNodeType() == Node.ELEMENT_NODE) {
-        return (Element) node;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * get the transformer for XML output
-   *
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
+  protected void addEnglishTitle() {
+    Element englishTitle = document.createElement("english_title");
+    englishTitle.setTextContent(tvShow.getEnglishTitle());
+    root.appendChild(englishTitle);
   }
 
   /**
@@ -1067,39 +1038,5 @@ public abstract class TvShowGenericXmlConnector implements ITvShowConnector {
 
     // the first found as fallback
     return tvShow.getIds().keySet().stream().findFirst().orElse("");
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML children
-   *
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsChildren(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      Element id = document.createElement("tmdbid");
-      id.setTextContent(String.valueOf(tmdbId));
-      element.appendChild(id);
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      Element id = document.createElement("imdbid");
-      id.setTextContent(imdbId);
-      element.appendChild(id);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      Element id = document.createElement("tvdbid");
-      id.setTextContent(String.valueOf(tvdbId));
-      element.appendChild(id);
-    }
   }
 }

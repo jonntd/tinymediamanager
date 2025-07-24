@@ -70,7 +70,7 @@ public class TvShowCastFilter extends AbstractTextTvShowUIFilter {
         boolean foundWriter = false;
         boolean foundDirector = false;
 
-        for (Person director : episode.getDirectors()) {
+        for (Person director : episode.getCrew()) {
           if (StringUtils.isNotBlank(director.getName())) {
             Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(director.getName()));
             if (matcher.find()) {

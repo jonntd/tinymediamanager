@@ -34,7 +34,6 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -42,10 +41,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.CertificationStyle;
-import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.NfoUtils;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -60,6 +59,7 @@ import org.tinymediamanager.core.tvshow.filenaming.TvShowEpisodeNfoNaming;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.util.DateUtils;
+import org.tinymediamanager.scraper.util.LanguageUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -74,7 +74,6 @@ import org.w3c.dom.NodeList;
 public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisodeConnector {
   private static final Logger                 LOGGER                 = LoggerFactory.getLogger(TvShowEpisodeGenericXmlConnector.class);
 
-  protected static final String               ORACLE_IS_STANDALONE   = "http://www.oracle.com/xml/is-standalone";
   protected static final DecimalFormatSymbols DECIMAL_FORMAT_SYMBOLS = new DecimalFormatSymbols(Locale.US);
 
   protected final List<TvShowEpisode>         episodes;
@@ -200,7 +199,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
 
           // serialize to string
           Writer out = new StringWriter();
-          Transformer transformer = getTransformer();
+          Transformer transformer = NfoUtils.getTransformer();
 
           // suppress xml header on all episode but the first
           if (!first) {
@@ -241,9 +240,10 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
         newNfos.add(mf);
       }
       catch (Exception e) {
-        LOGGER.error("write '" + firstEpisode.getPathNIO().resolve(nfoFilename) + "'", e);
-        MessageManager.instance.pushMessage(
-            new Message(Message.MessageLevel.ERROR, firstEpisode, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
+        LOGGER.error("Could not write epsiode NFO file '{}' - '{}'", firstEpisode.getPathNIO().resolve(nfoFilename), e.getMessage());
+        MessageManager.getInstance()
+            .pushMessage(
+                new Message(Message.MessageLevel.ERROR, firstEpisode, "message.nfo.writeerror", new String[] { ":", e.getLocalizedMessage() }));
       }
     }
 
@@ -357,7 +357,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
    * imdb should have default="true", but if no imdb ID is available, we must ensure that at least one entry has default="true"
    */
   protected void addIds(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
-    String defaultScraper = detectDefaultScraper(episode);
+    String defaultScraper = NfoUtils.detectDefaultScraper(episode);
 
     for (Map.Entry<String, Object> entry : episode.getIds().entrySet()) {
       Element uniqueid = document.createElement("uniqueid");
@@ -480,12 +480,14 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
    * add the thumb in the form <thumb>xxx</thumb> tags
    */
   protected void addThumb(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
-    Element thumb = document.createElement("thumb");
+    if (settings.isNfoWriteArtworkUrls()) {
+      Element thumb = document.createElement("thumb");
 
-    String thumbUrl = episode.getArtworkUrl(MediaFileType.THUMB);
-    if (StringUtils.isNotBlank(thumbUrl)) {
-      thumb.setTextContent(thumbUrl);
-      root.appendChild(thumb);
+      String thumbUrl = episode.getArtworkUrl(MediaFileType.THUMB);
+      if (StringUtils.isNotBlank(thumbUrl)) {
+        thumb.setTextContent(thumbUrl);
+        root.appendChild(thumb);
+      }
     }
   }
 
@@ -578,114 +580,42 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
       Element fileinfo = document.createElement("fileinfo");
       Element streamdetails = document.createElement("streamdetails");
 
-      List<MediaFile> videos = episode.getMediaFiles(MediaFileType.VIDEO);
-      if (!videos.isEmpty()) {
-        MediaFile videoFile = videos.get(0);
-        Element video = document.createElement("video");
+      MediaFile videoFile = episode.getMainVideoFile();
+      if (videoFile != MediaFile.EMPTY_MEDIAFILE) {
+        {
+          Element video = NfoUtils.createStreamdetailsVideoTag(streamdetails, videoFile);
 
-        Element codec = document.createElement("codec");
-        // workaround for h265/hevc since Kodi just "knows" hevc
-        // https://forum.kodi.tv/showthread.php?tid=354886&pid=2955329#pid2955329
-        if ("h265".equalsIgnoreCase(videoFile.getVideoCodec())) {
-          codec.setTextContent("HEVC");
-        }
-        else {
-          codec.setTextContent(videoFile.getVideoCodec());
-        }
-        video.appendChild(codec);
-
-        Element aspect = document.createElement("aspect");
-        aspect.setTextContent(String.valueOf(videoFile.getAspectRatio()));
-        video.appendChild(aspect);
-
-        Element width = document.createElement("width");
-        width.setTextContent(String.valueOf(videoFile.getVideoWidth()));
-        video.appendChild(width);
-
-        Element height = document.createElement("height");
-        height.setTextContent(String.valueOf(videoFile.getVideoHeight()));
-        video.appendChild(height);
-
-        if (episode.isVideoInHDR()) {
-          // basically a TMM string to Kodi skin mapping, but only one
-          Element hdr = document.createElement("hdrtype");
-          if (videoFile.getHdrFormat().contains("Dolby Vision")) {
-            hdr.setTextContent("dolbyvision");
+          // does not work reliable for disc style movies, MediaInfo and even Kodi write weird values in there
+          if (!episode.isDisc() && !episode.getMainVideoFile().getExtension().equalsIgnoreCase("iso")) {
+            Element durationinseconds = document.createElement("durationinseconds");
+            durationinseconds.setTextContent(String.valueOf(episode.getRuntimeFromMediaFiles()));
+            video.appendChild(durationinseconds);
           }
-          else if (videoFile.getHdrFormat().contains("HLG")) {
-            hdr.setTextContent("hlg");
-          }
-          else if (videoFile.getHdrFormat().contains("HDR10")) {
-            hdr.setTextContent("hdr10");
-          }
-          video.appendChild(hdr);
+
+          streamdetails.appendChild(video);
         }
 
-        // does not work reliable for disc style movies, MediaInfo and even Kodi write weird values in there
-        if (!episode.isDisc() && !episode.getMainVideoFile().getExtension().equalsIgnoreCase("iso")) {
-          Element durationinseconds = document.createElement("durationinseconds");
-          durationinseconds.setTextContent(String.valueOf(episode.getRuntimeFromMediaFiles()));
-          video.appendChild(durationinseconds);
-        }
-
-        if (!videoFile.getVideo3DFormat().isEmpty()) {
-          Element stereomode = document.createElement("stereomode");
-          switch (videoFile.getVideo3DFormat()) {
-            // old style till TMM 5.1.4
-            case MediaFileHelper.VIDEO_3D_SBS:
-            case MediaFileHelper.VIDEO_3D_HSBS:
-              stereomode.setTextContent("left_right");
-              break;
-
-            case MediaFileHelper.VIDEO_3D_TAB:
-            case MediaFileHelper.VIDEO_3D_HTAB:
-              stereomode.setTextContent("top_bottom");
-              break;
-
-            default:
-              // new style as of TMM 5.1.5
-              stereomode.setTextContent(videoFile.getVideo3DFormat());
-              break;
-          }
-          video.appendChild(stereomode);
-        }
-
-        streamdetails.appendChild(video);
-
-        for (MediaFileAudioStream as : videoFile.getAudioStreams()) {
-          Element audio = document.createElement("audio");
-
-          Element audioCodec = document.createElement("codec");
-          audioCodec.setTextContent(as.getCodec().replaceAll("-", "_"));
-          audio.appendChild(audioCodec);
-
-          Element language = document.createElement("language");
-          language.setTextContent(as.getLanguage());
-          audio.appendChild(language);
-
-          Element channels = document.createElement("channels");
-          channels.setTextContent(String.valueOf(as.getAudioChannels()));
-          audio.appendChild(channels);
-
+        for (MediaFileAudioStream audioStream : videoFile.getAudioStreams()) {
+          Element audio = NfoUtils.createStreamdetailsAudioTag(streamdetails, audioStream);
           streamdetails.appendChild(audio);
         }
 
-        for (MediaFileSubtitle ss : videoFile.getSubtitles()) {
+        for (MediaFileSubtitle sub : videoFile.getSubtitles()) {
           Element subtitle = document.createElement("subtitle");
 
           Element language = document.createElement("language");
-          language.setTextContent(ss.getLanguage());
+          language.setTextContent(LanguageUtils.parseLanguageFromString(sub.getLanguage()));
           subtitle.appendChild(language);
 
           streamdetails.appendChild(subtitle);
         }
 
-        for (MediaFile sub : episode.getMediaFiles(MediaFileType.SUBTITLE)) {
-          for (MediaFileSubtitle ss : sub.getSubtitles()) {
+        for (MediaFile mediaFile : episode.getMediaFiles(MediaFileType.SUBTITLE)) {
+          for (MediaFileSubtitle sub : mediaFile.getSubtitles()) {
             Element subtitle = document.createElement("subtitle");
 
             Element language = document.createElement("language");
-            language.setTextContent(ss.getLanguage());
+            language.setTextContent(LanguageUtils.parseLanguageFromString(sub.getLanguage()));
             subtitle.appendChild(language);
 
             streamdetails.appendChild(subtitle);
@@ -797,7 +727,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
       Element element = document.createElement("credits");
       element.setTextContent(writer.getName());
 
-      addPersonIdsAsAttributes(element, writer);
+      NfoUtils.addPersonIdsAsAttributes(element, writer);
 
       root.appendChild(element);
     }
@@ -811,7 +741,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
       Element element = document.createElement("director");
       element.setTextContent(director.getName());
 
-      addPersonIdsAsAttributes(element, director);
+      NfoUtils.addPersonIdsAsAttributes(element, director);
 
       root.appendChild(element);
     }
@@ -834,7 +764,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
         actor.appendChild(role);
       }
 
-      if (StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
+      if (settings.isNfoWriteArtworkUrls() && StringUtils.isNotBlank(tvShowActor.getThumbUrl())) {
         Element thumb = document.createElement("thumb");
         thumb.setTextContent(tvShowActor.getThumbUrl());
         actor.appendChild(thumb);
@@ -854,7 +784,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
         actor.appendChild(profile);
       }
 
-      addPersonIdsAsChildren(actor, tvShowActor);
+      NfoUtils.addPersonIdsAsChildren(actor, tvShowActor);
 
       root.appendChild(actor);
     }
@@ -883,6 +813,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
     addOriginalFilename(episode, parser);
     addUserNote(episode, parser);
     addEpisodeGroups(episode, parser);
+    addEnglishTitle(episode, parser);
   }
 
   /**
@@ -945,6 +876,17 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
   }
 
   /**
+   * add the english title in <english_title>xxx</english_title>
+   */
+  protected void addEnglishTitle(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
+    if (StringUtils.isNotBlank(episode.getEnglishTitle())) {
+      Element englishTitle = document.createElement("english_title");
+      englishTitle.setTextContent(episode.getEnglishTitle());
+      root.appendChild(englishTitle);
+    }
+  }
+
+  /**
    * add all unsupported tags from the source file to the destination file
    */
   protected void addUnsupportedTags(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
@@ -957,7 +899,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
           root.appendChild(document.importNode(unsupported.getFirstChild(), true));
         }
         catch (Exception e) {
-          LOGGER.error("import unsupported tags: {}", e.getMessage());
+          LOGGER.debug("import unsupported tags: {}", e.getMessage());
         }
       }
     }
@@ -981,117 +923,4 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
     return null;
   }
 
-  /**
-   * get the transformer for XML output
-   *
-   * @return the transformer
-   * @throws Exception
-   *           any Exception that has been thrown
-   */
-  protected Transformer getTransformer() throws Exception {
-    Transformer transformer = TransformerFactory.newInstance().newTransformer(); // NOSONAR
-
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
-    // not supported in all JVMs
-    try {
-      transformer.setOutputProperty(ORACLE_IS_STANDALONE, "yes");
-    }
-    catch (Exception ignored) {
-      // okay, seems we're not on OracleJDK, OPenJDK or AdopOpenJDK
-    }
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-    return transformer;
-  }
-
-  /**
-   * try to detect the default scraper by the given ids
-   *
-   * @return the scraper where the default should be set
-   */
-  private String detectDefaultScraper(TvShowEpisode episode) {
-    // IMDB first
-    if (episode.getIds().containsKey(MediaMetadata.IMDB)) {
-      return MediaMetadata.IMDB;
-    }
-
-    // TVDB second
-    if (episode.getIds().containsKey(MediaMetadata.TVDB)) {
-      return MediaMetadata.TVDB;
-    }
-
-    // TMDB third
-    if (episode.getIds().containsKey(MediaMetadata.TMDB)) {
-      return MediaMetadata.TMDB;
-    }
-
-    // the first found as fallback
-    return episode.getIds().keySet().stream().findFirst().orElse("");
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML attributes
-   *
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsAttributes(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      element.setAttribute("tmdbid", String.valueOf(tmdbId));
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      element.setAttribute("imdbid", imdbId);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      element.setAttribute("tvdbid", String.valueOf(tvdbId));
-    }
-  }
-
-  /**
-   * add all well known ids for the given {@link Person} as XML children
-   *
-   * @param element
-   *          the NFO {@link Element} to add the ids to
-   * @param person
-   *          the {@link Person} to get the ids from
-   */
-  protected void addPersonIdsAsChildren(Element element, Person person) {
-    // TMDB id
-    int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
-    if (tmdbId > 0) {
-      Element id = document.createElement("tmdbid");
-      id.setTextContent(String.valueOf(tmdbId));
-      element.appendChild(id);
-    }
-
-    // IMDB id
-    String imdbId = person.getIdAsString(MediaMetadata.IMDB);
-    if (StringUtils.isNotBlank(imdbId)) {
-      Element id = document.createElement("imdbid");
-      id.setTextContent(imdbId);
-      element.appendChild(id);
-    }
-
-    // TVDB id
-    int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
-    if (tvdbId > 0) {
-      Element id = document.createElement("tvdbid");
-      id.setTextContent(String.valueOf(tvdbId));
-      element.appendChild(id);
-    }
-  }
 }

@@ -46,7 +46,7 @@ public class MoviePostProcessExecutor extends PostProcessExecutor {
     List<Movie> selectedMovies = MovieUIModule.getInstance().getSelectionModel().getSelectedMovies();
 
     for (Movie movie : selectedMovies) {
-      LOGGER.info("PostProcessing: START {}", postProcess);
+      LOGGER.info("Executing post process '{}' for movie '{}'", postProcess.getName(), movie.getTitle());
       String[] command = substituteMovieTokens(movie);
       try {
         executeCommand(command, movie);

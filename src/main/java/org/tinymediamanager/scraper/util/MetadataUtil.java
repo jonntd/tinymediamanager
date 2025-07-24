@@ -121,7 +121,7 @@ public class MetadataUtil {
       return m.group(1);
     }
     else {
-      LOGGER.warn("Could not find Running Time in {}; using Regex: {}", in, regex);
+      LOGGER.debug("Could not find Running Time in {}; using Regex: {}", in, regex);
       return null;
     }
   }

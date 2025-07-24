@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 
-import org.apache.commons.lang3.StringUtils;
 import org.mp4parser.Container;
 import org.mp4parser.muxer.Movie;
 import org.mp4parser.muxer.Track;
@@ -66,7 +65,7 @@ public class TmmMuxer {
         return;
       }
       catch (Exception e) {
-        LOGGER.error("could not mux files using FFmpeg - '{}'", e.getMessage());
+        LOGGER.error("Could not mux files using FFmpeg - '{}'", e.getMessage());
         // fallback to mp4parser
       }
     }

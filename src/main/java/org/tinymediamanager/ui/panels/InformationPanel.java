@@ -19,24 +19,33 @@ package org.tinymediamanager.ui.panels;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.Box;
+import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.UIManager;
 
 import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.scraper.entities.CountryCode;
+import org.tinymediamanager.scraper.entities.MediaCertification;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.images.TmmSvgIcon;
+
+import com.kitfox.svg.app.beans.SVGIcon;
 
 /**
  * the class {@link InformationPanel} is used to provide some boilerplate code for the information panels
@@ -146,5 +155,53 @@ public abstract class InformationPanel extends JPanel {
 
     setColumnLayout(visible);
     revalidate();
+  }
+
+  protected Icon getCertificationIcon(MediaCertification cert) {
+    // we have no certification here
+    if (cert == null || cert == MediaCertification.UNKNOWN) {
+      return null;
+    }
+    // try to find an image for this genre
+    try {
+      URI uri = getClass().getResource("/org/tinymediamanager/ui/images/certification/" + cert.name().toLowerCase(Locale.ROOT) + ".svg").toURI();
+      TmmSvgIcon icon = new TmmSvgIcon(uri);
+      icon.setPreferredHeight(32);
+      icon.setAutosize(SVGIcon.AUTOSIZE_STRETCH);
+
+      // only color the monochrome ones
+      if (cert.getCountry() == CountryCode.US) {
+        icon.setColor(UIManager.getColor("Label.foreground"), "#000000");
+      }
+
+      return icon;
+    }
+    catch (Exception e) {
+      return null;
+    }
+  }
+
+  protected String getIntegerAsStringWoZero(Integer integer) {
+    if (integer == null || integer.equals(0)) {
+      return "";
+    }
+
+    return String.valueOf(integer);
+  }
+
+  protected String convertRuntime(Integer runtimeInMinutes) {
+    if (runtimeInMinutes == null || runtimeInMinutes.equals(0)) {
+      return "";
+    }
+
+    long h = TimeUnit.MINUTES.toHours(runtimeInMinutes);
+    long m = TimeUnit.MINUTES.toMinutes(runtimeInMinutes - TimeUnit.HOURS.toMinutes(h));
+
+    if (h > 0) {
+      return String.format("%dh %02dm", h, m);
+    }
+    else {
+      return String.format("%dm", m);
+    }
   }
 }

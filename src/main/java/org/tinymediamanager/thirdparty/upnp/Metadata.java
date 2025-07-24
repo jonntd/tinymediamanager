@@ -103,9 +103,9 @@ class Metadata {
         }
 
         persons = new ArrayList<>();
-        for (Person a : tmmMovie.getProducers()) {
-          persons.add(new PersonWithRole(a.getName(), a.getRole()));
-        }
+        // for (Person a : tmmMovie.getProducers()) {
+        // persons.add(new PersonWithRole(a.getName(), a.getRole()));
+        // }
         if (!persons.isEmpty()) {
           PersonWithRole[] arr = persons.toArray(new PersonWithRole[persons.size()]);
           m.setProducers(arr);
@@ -114,7 +114,7 @@ class Metadata {
 
     }
     catch (Exception e) {
-      LOGGER.error("Error getting TMM movie", e);
+      LOGGER.error("UPnP: Error getting movie '{}'", e.getMessage());
     }
     return m;
   }
@@ -174,7 +174,7 @@ class Metadata {
 
     }
     catch (Exception e) {
-      LOGGER.error("Error getting TMM show", e);
+      LOGGER.error("UPnP: Error getting episode - '{}'", e.getMessage());
     }
 
     return m;
