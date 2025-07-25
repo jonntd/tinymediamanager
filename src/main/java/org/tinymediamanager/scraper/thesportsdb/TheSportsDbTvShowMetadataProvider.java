@@ -39,6 +39,7 @@ import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
 import org.tinymediamanager.scraper.thesportsdb.entities.Event;
 import org.tinymediamanager.scraper.thesportsdb.entities.Events;
 import org.tinymediamanager.scraper.thesportsdb.entities.LeagueDetail;
+import org.tinymediamanager.scraper.thesportsdb.entities.Leagues;
 import org.tinymediamanager.scraper.thesportsdb.entities.Season;
 import org.tinymediamanager.scraper.thesportsdb.entities.Seasons;
 import org.tinymediamanager.scraper.util.CacheMap;
@@ -88,11 +89,12 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     // get show information
     LOGGER.debug("========= BEGIN TheSportsDB Scraping");
     try {
-      Response<LeagueDetail> httpResponse = api.lookupServiceV1().lookupLeague(leagueId).execute();
+      Response<Leagues> httpResponse = api.lookupServiceV1().lookupLeague(leagueId).execute();
       if (!httpResponse.isSuccessful()) {
         throw new HttpException(httpResponse.code(), httpResponse.message());
       }
-      league = httpResponse.body();
+      Leagues leagues = httpResponse.body();
+      league = leagues.leagues.get(0);
     }
     catch (IOException e) {
       LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
@@ -141,7 +143,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     md.addMediaArt(imagesToMA(MediaArtworkType.BACKGROUND, league.strFanart4));
     md.addMediaArt(imagesToMA(MediaArtworkType.BANNER, league.strBanner));
     md.addMediaArt(imagesToMA(MediaArtworkType.THUMB, league.strBadge));
-    md.addMediaArt(imagesToMA(MediaArtworkType.LOGO, league.strLogo));
+    md.addMediaArt(imagesToMA(MediaArtworkType.CLEARLOGO, league.strLogo));
 
     return md;
   }
@@ -284,8 +286,8 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     List<Event> eventList = new ArrayList<>();
     List<Season> seasons = null;
     try {
-      // MediaMetadata show = getMetadata(options);
       Response<Seasons> response = api.listServiceV1().getSeasons(leagueId).execute();
+      // TODO get seasons with poster & badges, if they start to return anything
       if (!response.isSuccessful()) {
         throw new HttpException(response.code(), response.message());
       }

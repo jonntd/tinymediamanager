@@ -4,5 +4,5 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Leagues {
-  public List<League> leagues = new ArrayList<>();
+  public List<LeagueDetail> leagues = new ArrayList<>();
 }
