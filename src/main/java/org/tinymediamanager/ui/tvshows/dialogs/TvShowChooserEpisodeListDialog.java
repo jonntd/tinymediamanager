@@ -19,8 +19,11 @@ package org.tinymediamanager.ui.tvshows.dialogs;
 import java.awt.BorderLayout;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -111,7 +114,6 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
 
     for (EpisodeContainer episodeContainer : episodes) {
       episodeContainer.clearData();
-
       if (episodeGroup != null) {
         // try to find the best matching episode in the given episode group
         for (MediaMetadata md : tvShowChooserModel.getEpisodeList()) {
@@ -139,6 +141,32 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
         }
       }
     }
+
+    // second run, especially for TSDB, to correct multiple episodes with the same date/SEE number
+    for (EpisodeContainer episodeContainer : episodes) {
+      if (episodeContainer.getFirstAired() != null && episodeContainer.getIds().containsKey(MediaMetadata.TSDB)) {
+        // for each container, get all the episodes with SAME date (can be multiple)
+        List<MediaMetadata> matchedDate = tvShowChooserModel.getEpisodeList()
+            .stream()
+            .filter(md -> md.getReleaseDate() != null && DateUtils.toLocalD(md.getReleaseDate()).equals(episodeContainer.getFirstAired()))
+            .toList();
+
+        // with that reduced list, we calculate a title-match score, and find the best match
+        Map<Float, MediaMetadata> found = new HashMap<>();
+        for (MediaMetadata md : matchedDate) {
+          float score = MetadataUtil.calculateScore(episodeContainer.getEpisodeTitle(), md.getTitle());
+          found.put(score, md);
+        }
+        if (found != null && found.size() > 0) {
+          // get best match!!!
+          List<Float> sortedKeys = new ArrayList<Float>(found.keySet());
+          Collections.sort(sortedKeys);
+          Collections.reverse(sortedKeys);
+          episodeContainer.setTitle(found.get(sortedKeys.get(0)).getTitle());
+        }
+      }
+    }
+
     tableEpisodes.adjustColumnPreferredWidths(6);
   }
 
@@ -173,6 +201,10 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
 
     public LocalDate getFirstAired() {
       return tvShowEpisode.getFirstAired() == null ? null : DateUtils.toLocalD(tvShowEpisode.getFirstAired());
+    }
+
+    public Map<String, Object> getIds() {
+      return tvShowEpisode.getIds();
     }
 
     public String getTitle() {
