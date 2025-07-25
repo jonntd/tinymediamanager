@@ -22,14 +22,18 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import javax.swing.ImageIcon;
 
 import org.apache.commons.lang3.StringUtils;
+import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaSource;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
@@ -393,13 +397,24 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     addColumn(col);
 
     /*
-     * audio codec and channels(hidden per default)
+     * main audio codec and channels(hidden per default)
      */
     col = new Column(TmmResourceBundle.getString("metatag.audio"), "audio", this::getAudio, String.class);
     col.setColumnComparator(stringComparator);
     col.setHeaderIcon(IconManager.AUDIO);
     col.setMinWidth(fontMetrics.stringWidth("DTS 7ch") + getCellPadding());
     col.setDefaultHidden(true);
+    addColumn(col);
+
+    /*
+     * audio stream count (hidden per default)
+     */
+    col = new Column(TmmResourceBundle.getString("metatag.audiostreamcount"), "audiostreamcount", this::getAudioStreamCount, Integer.class);
+    col.setColumnComparator(integerComparator);
+    col.setHeaderIcon(IconManager.AUDIO);
+    col.setMinWidth(fontMetrics.stringWidth("9") + getCellPadding());
+    col.setDefaultHidden(true);
+    col.setCellTooltip(this::audioStreamTooltip);
     addColumn(col);
 
     /*
@@ -845,6 +860,109 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
     }
 
     return audio;
+  }
+
+  private Integer getAudioStreamCount(TmmTreeNode node) {
+    Object userObject = node.getUserObject();
+    if (userObject instanceof TvShowEpisode episode) {
+      return getAudioStreamCount(episode);
+    }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueAudioStreamCount(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueAudioStreamCount(tvShow.getEpisodes());
+    }
+    return null;
+  }
+
+  private int getAudioStreamCount(TvShowEpisode episode) {
+    int count = episode.getMainVideoFile().getAudioStreams().size();
+    for (MediaFile audioFile : episode.getMediaFiles(MediaFileType.AUDIO)) {
+      count += audioFile.getAudioStreams().size();
+    }
+    return count;
+  }
+
+  private Integer detectUniqueAudioStreamCount(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the audio codec/channels
+    int streamCount = getAudioStreamCount(episodes.get(0));
+    for (TvShowEpisode episode : episodes) {
+      int otherAudioStreamCount = getAudioStreamCount(episode);
+      if (streamCount != otherAudioStreamCount) {
+        return null;
+      }
+    }
+
+    return streamCount;
+  }
+
+  private String audioStreamTooltip(TmmTreeNode node) {
+    if (!settings.isShowTvShowTableTooltips()) {
+      return null;
+    }
+
+    Object userObject = node.getUserObject();
+
+    if (userObject instanceof TvShowEpisode episode) {
+      return createAudioStreamCountText(episode);
+    }
+    else if (userObject instanceof TvShowSeason season) {
+      return detectUniqueAudioStreamCountText(season.getEpisodes());
+    }
+    else if (userObject instanceof TvShow tvShow) {
+      return detectUniqueAudioStreamCountText(tvShow.getEpisodes());
+    }
+
+    return null;
+  }
+
+  private String detectUniqueAudioStreamCountText(List<TvShowEpisode> episodes) {
+    if (episodes.isEmpty()) {
+      return null;
+    }
+
+    // return the source only if _all_ episode have the audio codec/language/title
+    String tooltipText = createAudioStreamCountText(episodes.get(0));
+    for (TvShowEpisode episode : episodes) {
+      String otherTooltipText = createAudioStreamCountText(episode);
+      if (!Objects.equals(tooltipText, otherTooltipText)) {
+        return null;
+      }
+    }
+
+    return tooltipText;
+  }
+
+  private String createAudioStreamCountText(TvShowEpisode episode) {
+    List<MediaFileAudioStream> audioStreams = new ArrayList<>(episode.getMainVideoFile().getAudioStreams());
+
+    // and create a tooltip text
+    if (!audioStreams.isEmpty()) {
+      List<String> tooltipText = new ArrayList<>();
+
+      for (MediaFileAudioStream audioStream : audioStreams) {
+        String stream = audioStream.getCodec();
+
+        if (StringUtils.isNotBlank(audioStream.getLanguage())) {
+          stream += " - " + audioStream.getLanguage();
+        }
+
+        if (StringUtils.isNotBlank(audioStream.getTitle())) {
+          stream += " (" + audioStream.getTitle() + ")";
+        }
+
+        tooltipText.add(stream);
+      }
+
+      return StringUtils.join(tooltipText, "\n");
+    }
+
+    return null;
   }
 
   private MediaSource getMediaSource(TmmTreeNode node) {

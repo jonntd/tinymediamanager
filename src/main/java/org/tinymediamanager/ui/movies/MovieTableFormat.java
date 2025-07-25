@@ -32,6 +32,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.entities.MediaFileAudioStream;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.movie.MovieComparator;
 import org.tinymediamanager.core.movie.MovieEdition;
@@ -426,7 +427,7 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     addColumn(col);
 
     /*
-     * audio codec and channels(hidden per default)
+     * main audio codec and channels(hidden per default)
      */
     col = new Column(TmmResourceBundle.getString("metatag.audio"), "audio", movie -> {
       List<MediaFile> videos = movie.getMediaFiles(MediaFileType.VIDEO);
@@ -441,6 +442,46 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     col.setColumnComparator(stringComparator);
     col.setHeaderIcon(IconManager.AUDIO);
     col.setMinWidth(fontMetrics.stringWidth("DTS 7ch") + getCellPadding());
+    col.setDefaultHidden(true);
+    addColumn(col);
+
+    /*
+     * audio stream count (hidden per default)
+     */
+    col = new Column(TmmResourceBundle.getString("metatag.audiostreamcount"), "audiostreamcount", movie -> {
+      int count = movie.getMainVideoFile().getAudioStreams().size();
+      for (MediaFile audioFile : movie.getMediaFiles(MediaFileType.AUDIO)) {
+        count += audioFile.getAudioStreams().size();
+      }
+      return count;
+    }, Integer.class);
+    col.setColumnComparator(integerComparator);
+    col.setHeaderIcon(IconManager.AUDIO);
+    col.setMinWidth(fontMetrics.stringWidth("9") + getCellPadding());
+    col.setCellTooltip(showTooltip(movie -> {
+      // get all available audio streams
+      List<MediaFileAudioStream> audioStreams = new ArrayList<>(movie.getMainVideoFile().getAudioStreams());
+      movie.getMediaFiles(MediaFileType.AUDIO).forEach(mediaFile -> audioStreams.addAll(mediaFile.getAudioStreams()));
+
+      // and create a tooltip text
+      List<String> tooltipText = new ArrayList<>();
+
+      for (MediaFileAudioStream audioStream : audioStreams) {
+        String stream = audioStream.getCodec();
+
+        if (StringUtils.isNotBlank(audioStream.getLanguage())) {
+          stream += " - " + audioStream.getLanguage();
+        }
+
+        if (StringUtils.isNotBlank(audioStream.getTitle())) {
+          stream += " (" + audioStream.getTitle() + ")";
+        }
+
+        tooltipText.add(stream);
+      }
+
+      return StringUtils.join(tooltipText, "\n");
+    }));
     col.setDefaultHidden(true);
     addColumn(col);
 

@@ -8,6 +8,7 @@ Version 5.2.0
 + [Movies, TV shows] added an action to copy movies and TV shows to external folders #2731
 + [Movies, TV shows] added a Kodi conform mapping of mediainfo values for the NFO export #2473 #2940 #2991
   ATTENTION: You need to re-write your NFO files to get the new values
++ [Movies, TV shows] added a new column displaying the amount of audio streams #2990
 + [Movie sets] added a column to display the amount of missing movies in a set #2915
 + [Movie sets] added the post processing framework to movie sets too #2901
 + [TV shows] added an action to force re-writing of season NFO files #2654
