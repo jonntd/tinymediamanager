@@ -144,7 +144,7 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
 
     // second run, especially for TSDB, to correct multiple episodes with the same date/SEE number
     for (EpisodeContainer episodeContainer : episodes) {
-      if (episodeContainer.getFirstAired() != null && episodeContainer.getIds().containsKey(MediaMetadata.TSDB)) {
+      if (episodeContainer.getFirstAired() != null && episodeContainer.getShowIds().containsKey(MediaMetadata.TSDB)) {
         // for each container, get all the episodes with SAME date (can be multiple)
         List<MediaMetadata> matchedDate = tvShowChooserModel.getEpisodeList()
             .stream()
@@ -203,8 +203,8 @@ class TvShowChooserEpisodeListDialog extends TmmDialog {
       return tvShowEpisode.getFirstAired() == null ? null : DateUtils.toLocalD(tvShowEpisode.getFirstAired());
     }
 
-    public Map<String, Object> getIds() {
-      return tvShowEpisode.getIds();
+    public Map<String, Object> getShowIds() {
+      return tvShowEpisode.getTvShow().getIds();
     }
 
     public String getTitle() {

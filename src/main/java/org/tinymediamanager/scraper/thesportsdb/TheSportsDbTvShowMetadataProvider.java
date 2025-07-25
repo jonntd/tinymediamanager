@@ -41,14 +41,18 @@ import org.tinymediamanager.scraper.thesportsdb.entities.Events;
 import org.tinymediamanager.scraper.thesportsdb.entities.LeagueDetail;
 import org.tinymediamanager.scraper.thesportsdb.entities.Season;
 import org.tinymediamanager.scraper.thesportsdb.entities.Seasons;
+import org.tinymediamanager.scraper.util.CacheMap;
 import org.tinymediamanager.scraper.util.DateUtils;
+import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 
 import retrofit2.Response;
 
 public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvider implements ITvShowMetadataProvider, ITvShowArtworkProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(TheSportsDbTvShowMetadataProvider.class);
+  private static final Logger                                LOGGER                 = LoggerFactory
+      .getLogger(TheSportsDbTvShowMetadataProvider.class);
+  private static final CacheMap<String, List<MediaMetadata>> EPISODE_LIST_CACHE_MAP = new CacheMap<>(60, 10);
 
   @Override
   protected Logger getLogger() {
@@ -270,6 +274,13 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
       throw new MissingIdException(MediaMetadata.TSDB);
     }
 
+    // look in the cache map if there is an entry
+    List<MediaMetadata> episodes = EPISODE_LIST_CACHE_MAP.get(leagueId + "_" + options.getLanguage().getLanguage());
+    if (ListUtils.isNotEmpty(episodes)) {
+      // cache hit!
+      return episodes;
+    }
+
     List<Event> eventList = new ArrayList<>();
     List<Season> seasons = null;
     try {
@@ -368,6 +379,11 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
       md.addMediaArt(imagesToMA(MediaArtworkType.BANNER, event.strBanner));
 
       returnList.add(md);
+    }
+
+    // cache for further fast access
+    if (ListUtils.isNotEmpty(returnList)) {
+      EPISODE_LIST_CACHE_MAP.put(leagueId + "_" + options.getLanguage().getLanguage(), returnList);
     }
     return returnList;
   }
