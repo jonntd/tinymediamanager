@@ -120,6 +120,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     md.setId(MediaMetadata.TSDB, league.idLeague);
     md.setTitle(league.strLeague);
 
+    md.setYear(MetadataUtil.parseInt(league.intFormedYear, 0));
     try {
       md.setReleaseDate(DateUtils.parseDate(league.dateFirstEvent));
     }
@@ -144,6 +145,30 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     md.addMediaArt(imagesToMA(MediaArtworkType.BANNER, league.strBanner));
     md.addMediaArt(imagesToMA(MediaArtworkType.THUMB, league.strBadge));
     md.addMediaArt(imagesToMA(MediaArtworkType.CLEARLOGO, league.strLogo));
+
+    // get all season + images
+    List<Season> seasons = null;
+    try {
+      Response<Seasons> response = api.listServiceV1().getSeasonsWithPosters(leagueId).execute();
+      if (!response.isSuccessful()) {
+        throw new HttpException(response.code(), response.message());
+      }
+      seasons = response.body().seasons;
+    }
+    catch (Exception e) {
+      LOGGER.trace("could not get Episode information: {}", e.getMessage());
+    }
+    for (Season season : seasons) {
+      int year = MetadataUtil.parseInt(season.strSeason.replaceAll("\\-.*", ""), 0);
+      if (year > 0) {
+        md.addSeasonName(MediaEpisodeGroup.DEFAULT_AIRED, year, season.strSeason);
+        MediaArtwork ma = imagesToMA(MediaArtworkType.SEASON_POSTER, season.strPoster);
+        if (ma != null) {
+          ma.setSeason(year);
+          md.addMediaArt(ma);
+        }
+      }
+    }
 
     return md;
   }
@@ -426,11 +451,6 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
   public List<MediaArtwork> getArtwork(ArtworkSearchAndScrapeOptions options) throws ScrapeException {
     LOGGER.debug("getArtwork(): {}", options);
 
-    // Original - /images/media/league/fanart/xpwsrw1421853005.jpg
-    // Medium 500px - /images/media/league/fanart/xpwsrw1421853005.jpg/medium
-    // Small 250px - /images/media/league/fanart/xpwsrw1421853005.jpg/small
-    // Tiny 50px - /images/media/league/badge/pdd43f1610891709.png/tiny
-
     // lazy initialization of the api
     initAPI();
 
@@ -475,14 +495,37 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
         ma = new MediaArtwork(MediaMetadata.TSDB, type);
         ma.setOriginalUrl(imageUrl);
         ma.setPreviewUrl(imageUrl + "/small");
-        // Original - /images/media/league/fanart/xpwsrw1421853005.jpg
-        // Medium 500px - /images/media/league/fanart/xpwsrw1421853005.jpg/medium
-        // Small 250px - /images/media/league/fanart/xpwsrw1421853005.jpg/small
-        // Tiny 50px - /images/media/league/badge/pdd43f1610891709.png/tiny
 
-        // reuse poster sizes, since our enum is the same across all types ;)
-        ma.addImageSize(500, 0, imageUrl + "/medium", MediaArtwork.PosterSizes.MEDIUM.ordinal());
-        ma.addImageSize(250, 0, imageUrl + "/small", MediaArtwork.PosterSizes.SMALL.ordinal());
+        // see https://www.thesportsdb.com/docs_artwork
+        switch (type) {
+          case POSTER:
+          case SEASON_POSTER:
+            ma.addImageSize(680, 1000, imageUrl, MediaArtwork.PosterSizes.getSizeOrder(680));
+            ma.addImageSize(340, 500, imageUrl + "/small", MediaArtwork.PosterSizes.getSizeOrder(340));
+            break;
+
+          case BACKGROUND:
+          case THUMB:
+          case SEASON_FANART:
+          case SEASON_THUMB:
+            ma.addImageSize(1280, 720, imageUrl, MediaArtwork.FanartSizes.getSizeOrder(1280));
+            ma.addImageSize(640, 360, imageUrl + "/small", MediaArtwork.FanartSizes.getSizeOrder(640));
+            break;
+
+          case BANNER:
+          case SEASON_BANNER:
+            ma.addImageSize(1000, 185, imageUrl, MediaArtwork.getSizeOrder(type, 1000));
+            ma.addImageSize(540, 100, imageUrl + "/small", MediaArtwork.getSizeOrder(type, 540));
+            break;
+
+          case CLEARLOGO:
+            ma.addImageSize(800, 310, imageUrl, MediaArtwork.getSizeOrder(type, 800));
+            ma.addImageSize(400, 155, imageUrl + "/small", MediaArtwork.getSizeOrder(type, 400));
+            break;
+
+          default:
+            break;
+        }
       }
     }
     catch (Exception e) {
