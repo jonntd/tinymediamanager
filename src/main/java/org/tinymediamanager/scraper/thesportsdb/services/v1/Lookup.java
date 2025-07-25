@@ -1,6 +1,7 @@
 package org.tinymediamanager.scraper.thesportsdb.services.v1;
 
 import org.tinymediamanager.scraper.thesportsdb.entities.Leagues;
+import org.tinymediamanager.scraper.thesportsdb.entities.Lineups;
 import org.tinymediamanager.scraper.thesportsdb.entities.Team;
 
 import retrofit2.Call;
@@ -16,4 +17,6 @@ public interface Lookup {
   @GET("json/{api_key}/lookupteam.php")
   Call<Team> lookupTeam(@Query("id") String teamId);
 
+  @GET("json/{api_key}/lookuplineup.php")
+  Call<Lineups> lookupLineupForEvent(@Query("id") String eventId);
 }

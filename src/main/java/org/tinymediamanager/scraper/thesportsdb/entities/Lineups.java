@@ -5,6 +5,6 @@ import java.util.List;
 
 import org.tinymediamanager.scraper.entities.BaseJsonEntity;
 
-public class Seasons extends BaseJsonEntity {
-  public List<Season> seasons = new ArrayList<>();
+public class Lineups extends BaseJsonEntity {
+  public List<Lineup> lineup = new ArrayList<>();
 }

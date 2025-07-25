@@ -29,6 +29,7 @@ import org.tinymediamanager.scraper.MediaSearchResult;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.exceptions.HttpException;
 import org.tinymediamanager.scraper.exceptions.MissingIdException;
@@ -40,6 +41,8 @@ import org.tinymediamanager.scraper.thesportsdb.entities.Event;
 import org.tinymediamanager.scraper.thesportsdb.entities.Events;
 import org.tinymediamanager.scraper.thesportsdb.entities.LeagueDetail;
 import org.tinymediamanager.scraper.thesportsdb.entities.Leagues;
+import org.tinymediamanager.scraper.thesportsdb.entities.Lineup;
+import org.tinymediamanager.scraper.thesportsdb.entities.Lineups;
 import org.tinymediamanager.scraper.thesportsdb.entities.Season;
 import org.tinymediamanager.scraper.thesportsdb.entities.Seasons;
 import org.tinymediamanager.scraper.util.CacheMap;
@@ -149,11 +152,22 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     // get all season + images
     List<Season> seasons = null;
     try {
-      Response<Seasons> response = api.listServiceV1().getSeasonsWithPosters(leagueId).execute();
+      Response<Seasons> response = api.listServiceV1().getSeasons(leagueId).execute();
       if (!response.isSuccessful()) {
         throw new HttpException(response.code(), response.message());
       }
       seasons = response.body().seasons;
+
+      // we got the seasons
+      // call again with posters.
+      // they might be partly filled, OR RETURN NO SEASON AT ALL - hence the second call
+      response = api.listServiceV1().getSeasonsWithPosters(leagueId).execute();
+      if (response.isSuccessful()) {
+        List<Season> seasonsWithPosters = response.body().seasons;
+        if (seasonsWithPosters != null && !seasonsWithPosters.isEmpty()) {
+          seasons = seasonsWithPosters;
+        }
+      }
     }
     catch (Exception e) {
       LOGGER.trace("could not get Episode information: {}", e.getMessage());
@@ -161,7 +175,8 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     for (Season season : seasons) {
       int year = MetadataUtil.parseInt(season.strSeason.replaceAll("\\-.*", ""), 0);
       if (year > 0) {
-        md.addSeasonName(MediaEpisodeGroup.DEFAULT_AIRED, year, season.strSeason);
+        // "Staffel 2021 - 2021-2022" look weird in UI"
+        // md.addSeasonName(MediaEpisodeGroup.DEFAULT_AIRED, year, season.strSeason);
         MediaArtwork ma = imagesToMA(MediaArtworkType.SEASON_POSTER, season.strPoster);
         if (ma != null) {
           ma.setSeason(year);
@@ -190,11 +205,6 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
       query = options.getMetadata().getTitle();
     }
 
-    // get episode number and season number
-    // MediaEpisodeGroup episodeGroup = options.getEpisodeGroup();
-    // int seasonNr = -1;
-    // int episodeNr = -1;
-
     List<MediaMetadata> events = getEpisodeList(options.createTvShowSearchAndScrapeOptions());
     // match here in 4 distinct loops, to not accidentally match by S/EE when we have the correct id/date later on
     if (!events.isEmpty()) {
@@ -202,6 +212,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
         for (MediaMetadata event : events) {
           if (event.getIdAsString(MediaMetadata.TSDB).equals(eventId)) {
             LOGGER.trace("found match via ID");
+            injectPlayers(event);
             return event;
           }
         }
@@ -223,25 +234,50 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
           Collections.sort(sortedKeys);
           Collections.reverse(sortedKeys);
           LOGGER.trace("found match via releaseDate");
-          return found.get(sortedKeys.get(0));
+          MediaMetadata event = found.get(sortedKeys.get(0));
+          injectPlayers(event);
+          return event;
         }
       }
       if (options.getMetadata() != null && query.length() > 0) {
         for (MediaMetadata event : events) {
           if (query.equals(event.getTitle())) {
             LOGGER.trace("found match via title");
+            injectPlayers(event);
             return event;
           }
         }
       }
-      // nah, no number matching here
-      // for (MediaMetadata ep : eps) {
-      // MediaEpisodeNumber num = ep.getEpisodeNumber(episodeGroup);
-      // if (num.episode() == episodeNr && num.season() == seasonNr) {
-      // LOGGER.trace("found match via S/EE numbers");
-      // return ep;
-      // }
-      // }
+
+      // still not found? try to match by S/EE numbers
+      MediaEpisodeGroup episodeGroup = options.getEpisodeGroup();
+      int seasonNr = -1;
+      int episodeNr = -1;
+      // new style
+      if (options.getIds().get(MediaMetadata.EPISODE_NR) instanceof List<?> episodeNumbers) {
+        for (Object obj : episodeNumbers) {
+          if (obj instanceof MediaEpisodeNumber episodeNumber && episodeNumber.episodeGroup().equals(episodeGroup)) {
+            episodeNr = episodeNumber.episode();
+            seasonNr = episodeNumber.season();
+            break;
+          }
+        }
+      }
+      // old style
+      if (seasonNr == -1 && episodeNr == -1) {
+        seasonNr = options.getIdAsIntOrDefault(MediaMetadata.SEASON_NR, -1);
+        episodeNr = options.getIdAsIntOrDefault(MediaMetadata.EPISODE_NR, -1);
+      }
+      if (seasonNr < 0 || episodeNr < 0) {
+        throw new NothingFoundException();
+      }
+      for (MediaMetadata event : events) {
+        MediaEpisodeNumber num = event.getEpisodeNumber(episodeGroup);
+        if (num.episode() == episodeNr && num.season() == seasonNr) {
+          LOGGER.trace("found match via S/EE numbers");
+          return event;
+        }
+      }
       LOGGER.trace("could not match anything from episodeList.");
     }
     else {
@@ -251,6 +287,45 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
 
     // not found? Maybe we couldn't scrape episodeList (b/c of missing showId) - get direct
     throw new NothingFoundException();
+  }
+
+  private void injectPlayers(MediaMetadata md) {
+    try {
+      // TBD - only when we have a team? or always?
+      if (md.getCastMembers().size() == 2) {
+        md.setCastMembers(null); // reset cast, since we will inject players
+        List<Lineup> lineups = null;
+        try {
+          Response<Lineups> httpResponse = api.lookupServiceV1().lookupLineupForEvent(md.getIdAsString(MediaMetadata.TSDB)).execute();
+          if (!httpResponse.isSuccessful()) {
+            throw new HttpException(httpResponse.code(), httpResponse.message());
+          }
+          Lineups body = httpResponse.body();
+          lineups = body.lineup;
+        }
+        catch (IOException e) {
+          LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
+        }
+        if (lineups == null || lineups.isEmpty()) {
+          throw new NothingFoundException();
+        }
+
+        for (Lineup lineup : lineups) {
+          Person p = new Person(Type.OTHER); // use other, to add them to TMMs "crew" list
+          if (lineup.strHome.equalsIgnoreCase("No")) {
+            p = new Person(Type.GUEST);
+          }
+          p.setName(lineup.strPlayer);
+          p.setRole(lineup.strPosition);
+          p.setId(MediaMetadata.TSDB, lineup.idPlayer);
+          p.setThumbUrl(lineup.strThumb);
+          md.addCastMember(p);
+        }
+      }
+    }
+    catch (Exception e) {
+      LOGGER.warn("Could not inject players into metadata: {}", e.getMessage());
+    }
   }
 
   @Override
@@ -312,7 +387,6 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     List<Season> seasons = null;
     try {
       Response<Seasons> response = api.listServiceV1().getSeasons(leagueId).execute();
-      // TODO get seasons with poster & badges, if they start to return anything
       if (!response.isSuccessful()) {
         throw new HttpException(response.code(), response.message());
       }

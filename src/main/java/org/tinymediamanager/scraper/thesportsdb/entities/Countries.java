@@ -3,6 +3,8 @@ package org.tinymediamanager.scraper.thesportsdb.entities;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Countries {
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Countries extends BaseJsonEntity {
   public List<Country> countries = new ArrayList<>();
 }
