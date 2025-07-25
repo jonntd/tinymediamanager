@@ -669,8 +669,8 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
       JPanel details2Panel = new JPanel();
       tabbedPane.addTab(TmmResourceBundle.getString("metatag.details2"), details2Panel);
 
-      details2Panel
-          .setLayout(new MigLayout("", "[][150lp:400lp,grow][20lp:n][][150lp:300lp,grow]", "[][100lp:150lp,grow][20lp:n][100lp:150lp,grow][][grow]"));
+      details2Panel.setLayout(new MigLayout("", "[][200lp:n][20lp:50lp][][50lp:100lp][20lp:n][grow][300lp:300lp,grow]",
+          "[][][][][][100lp][pref!][20lp:n][100lp:150lp,grow][][grow]"));
       {
         JLabel lblDateAdded = new TmmLabel(TmmResourceBundle.getString("metatag.dateadded"));
         details2Panel.add(lblDateAdded, "cell 0 0,alignx right");
@@ -679,77 +679,78 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details2Panel.add(spDateAdded, "cell 1 0");
       }
       {
-        JLabel lblIds = new TmmLabel("Ids");
-        details2Panel.add(lblIds, "flowy,cell 3 0 1 2,alignx right,aligny top");
-
-        tableIds = new MediaIdTable(ids);
+        JLabel lblIds = new TmmLabel(TmmResourceBundle.getString("metatag.ids"));
+        details2Panel.add(lblIds, "flowy,cell 6 0 1 3,alignx right,aligny top");
 
         JScrollPane scrollPaneIds = new JScrollPane();
+        details2Panel.add(scrollPaneIds, "cell 7 0 1 7,growx");
+
+        tableIds = new MediaIdTable(ids, ScraperType.TV_SHOW);
         tableIds.configureScrollPane(scrollPaneIds);
-        details2Panel.add(scrollPaneIds, "cell 3 0 1 2,grow");
 
         JButton btnAddId = new SquareIconButton(new AddIdAction());
-        details2Panel.add(btnAddId, "cell 3 0 1 2,alignx right");
+        details2Panel.add(btnAddId, "cell 6 0 1 3,alignx right,aligny top");
 
         JButton btnRemoveId = new SquareIconButton(new RemoveIdAction());
-        details2Panel.add(btnRemoveId, "cell 3 0 1 2,alignx right,aligny top");
+        details2Panel.add(btnRemoveId, "cell 6 0 1 3,alignx right,aligny top");
       }
       {
         JLabel lblGenres = new TmmLabel(TmmResourceBundle.getString("metatag.genre"));
-        details2Panel.add(lblGenres, "flowy,cell 0 3,alignx right,aligny top");
+        details2Panel.add(lblGenres, "flowy,cell 0 8,alignx right,aligny top");
 
         JScrollPane scrollPaneGenres = new JScrollPane();
-        details2Panel.add(scrollPaneGenres, "cell 1 3,grow");
+        details2Panel.add(scrollPaneGenres, "cell 1 8 4 1,grow");
 
         listGenres = new JList<>();
         scrollPaneGenres.setViewportView(listGenres);
-
-        JButton btnAddGenre = new SquareIconButton(new AddGenreAction());
-        details2Panel.add(btnAddGenre, "cell 0 3,alignx right");
-
-        JButton btnRemoveGenre = new SquareIconButton(new RemoveGenreAction());
-        details2Panel.add(btnRemoveGenre, "cell 0 3,alignx right,aligny top");
-
-        JButton btnMoveGenreUp = new SquareIconButton(new MoveGenreUpAction());
-        details2Panel.add(btnMoveGenreUp, "cell 0 3,alignx right,aligny top");
-
-        JButton btnMoveGenreDown = new SquareIconButton(new MoveGenreDownAction());
-        details2Panel.add(btnMoveGenreDown, "cell 0 3,alignx right,aligny top");
 
         cbGenres = new AutocompleteComboBox(MediaGenres.values());
         cbGenresAutocompleteSupport = cbGenres.getAutoCompleteSupport();
         InputMap im = cbGenres.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbGenres.getActionMap().put(enterAction, new AddGenreAction());
-        details2Panel.add(cbGenres, "cell 1 4,growx");
+        details2Panel.add(cbGenres, "cell 1 9 4 1,growx,wmin 0");
+
+        JButton btnAddGenre = new SquareIconButton(new AddGenreAction());
+        details2Panel.add(btnAddGenre, "cell 0 8,alignx right,aligny top");
+
+        JButton btnRemoveGenre = new SquareIconButton(new RemoveGenreAction());
+        details2Panel.add(btnRemoveGenre, "cell 0 8,alignx right,aligny top");
+
+        JButton btnMoveGenreUp = new SquareIconButton(new MoveGenreUpAction());
+        details2Panel.add(btnMoveGenreUp, "cell 0 8,alignx right,aligny top");
+
+        JButton btnMoveGenreDown = new SquareIconButton(new MoveGenreDownAction());
+        details2Panel.add(btnMoveGenreDown, "cell 0 8,alignx right,aligny top");
       }
       {
         JLabel lblTags = new TmmLabel(TmmResourceBundle.getString("metatag.tags"));
-        details2Panel.add(lblTags, "flowy,cell 3 3,alignx right,aligny top");
+        details2Panel.add(lblTags, "flowy,cell 6 8,alignx right,aligny top");
 
         JScrollPane scrollPaneTags = new JScrollPane();
-        details2Panel.add(scrollPaneTags, "cell 4 3,grow");
+        details2Panel.add(scrollPaneTags, "cell 7 8,grow");
+
         listTags = new JList();
         scrollPaneTags.setViewportView(listTags);
-
-        JButton btnAddTag = new SquareIconButton(new AddTagAction());
-        details2Panel.add(btnAddTag, "cell 3 3,alignx right");
-
-        JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
-        details2Panel.add(btnRemoveTag, "cell 3 3,alignx right,aligny top");
-
-        JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
-        details2Panel.add(btnMoveTagUp, "cell 3 3,alignx right,aligny top");
-
-        JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
-        details2Panel.add(btnMoveTagDown, "cell 3 3,alignx right,aligny top");
 
         cbTags = new AutocompleteComboBox<>(tvShowList.getTagsInTvShows());
         cbTagsAutocompleteSupport = cbTags.getAutoCompleteSupport();
         InputMap im = cbTags.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         Object enterAction = im.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0));
         cbTags.getActionMap().put(enterAction, new AddTagAction());
-        details2Panel.add(cbTags, "cell 4 4,growx");
+        details2Panel.add(cbTags, "cell 7 9,growx,wmin 0");
+
+        JButton btnAddTag = new SquareIconButton(new AddTagAction());
+        details2Panel.add(btnAddTag, "cell 6 8,alignx right,aligny top");
+
+        JButton btnRemoveTag = new SquareIconButton(new RemoveTagAction());
+        details2Panel.add(btnRemoveTag, "cell 6 8,alignx right,aligny top");
+
+        JButton btnMoveTagUp = new SquareIconButton(new MoveTagUpAction());
+        details2Panel.add(btnMoveTagUp, "cell 6 8,alignx right,aligny top");
+
+        JButton btnMoveTagDown = new SquareIconButton(new MoveTagDownAction());
+        details2Panel.add(btnMoveTagDown, "cell 6 8,alignx right,aligny top");
       }
     }
 
