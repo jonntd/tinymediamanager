@@ -63,7 +63,7 @@ public class MediaGenres extends DynaEnum<MediaGenres> {
   public static final MediaGenres              GAME_SHOW       = new MediaGenres("GAME_SHOW", 17, "Game Show",
       new String[] { "Game Show", "Gameshow" });
   public static final MediaGenres              HISTORY         = new MediaGenres("HISTORY", 18, "History");
-  public static final MediaGenres              HOLIDAY         = new MediaGenres("HOLIDAY", 19, "Holiday", new String[] { "Travel" });
+  public static final MediaGenres              HOLIDAY         = new MediaGenres("HOLIDAY", 19, "Holiday");
   public static final MediaGenres              HORROR          = new MediaGenres("HORROR", 20, "Horror");
   public static final MediaGenres              INDIE           = new MediaGenres("INDIE", 21, "Indie", new String[] { "Special Interest" });
   public static final MediaGenres              MINI_SERIES     = new MediaGenres("MINI_SERIES", 22, "Mini-Series");
