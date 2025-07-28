@@ -224,7 +224,9 @@ public class UniversalTvShowMetadataProvider implements ITvShowMetadataProvider 
       }
 
       for (String value : values) {
-        if (((episode && entry.getKey().startsWith("episode")) || (!episode && !entry.getKey().startsWith("episode"))) && !UNDEFINED.equals(value)) {
+
+        if (((episode && entry.getKey().startsWith("episode")) || (!episode && !entry.getKey().startsWith("episode"))
+            || FALLBACK_SCRAPERS.equals(entry.getKey())) && !UNDEFINED.equals(value)) {
           ITvShowMetadataProvider mp = COMPATIBLE_SCRAPERS.get(value);
           if (mp != null && mp.isActive()) {
             metadataProviders.add(mp);
