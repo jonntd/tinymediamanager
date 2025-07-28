@@ -61,8 +61,17 @@ class TheSportsDbController {
     this.dateFormat = new SimpleDateFormat(TSDB_DATE_PATTERN, Locale.ENGLISH);
   }
 
-  public String apiKey() {
+  public String getApiKey() {
     return apiKey;
+  }
+
+  /**
+   * with the old free key, we get sometimes more results, which leads in better caching. <br>
+   * Unfortunately, the free key sometimes responds with garbage data (inputID does not match outputID) <br>
+   * so then we could try the other key ;)
+   */
+  public void swapFreeKey() {
+    this.apiKey = this.apiKey.equals("3") ? "123" : "3";
   }
 
   protected Retrofit getRetrofit() {

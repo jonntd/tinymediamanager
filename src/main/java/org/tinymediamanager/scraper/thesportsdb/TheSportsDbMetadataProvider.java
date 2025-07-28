@@ -50,11 +50,11 @@ public abstract class TheSportsDbMetadataProvider implements IMediaProvider {
     // check if the API should change from current key to another
     if (api != null) {
       String userApiKey = providerInfo.getUserApiKey();
-      if (StringUtils.isNotBlank(userApiKey) && !userApiKey.equals(api.apiKey())) {
+      if (StringUtils.isNotBlank(userApiKey) && !userApiKey.equals(api.getApiKey())) {
         // force re-initialization with new key
         api = null;
       }
-      else if (StringUtils.isBlank(userApiKey) && !getApiKey().equals(api.apiKey())) {
+      else if (StringUtils.isBlank(userApiKey) && !getApiKey().equals(api.getApiKey())) {
         // force re-initialization with new key
         api = null;
       }

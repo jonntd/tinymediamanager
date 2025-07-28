@@ -25,6 +25,7 @@ import org.tinymediamanager.core.tvshow.TvShowEpisodeSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.MediaSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaSearchResult;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
@@ -102,27 +103,42 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     catch (IOException e) {
       LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
     }
-    if (league == null) {
-      throw new NothingFoundException();
-    }
 
     // special case
     // Free api key "3" ALWAYS returns league 4396 (for demo purposes i guess)
+    // Edit: "sometimes", as it works now - dafuq?
+    if (!leagueId.equals(league.idLeague) && api.getApiKey().equals("3")) {
+      // anyway - retry with other key
+      try {
+        api.swapFreeKey();
+        Response<Leagues> httpResponse = api.lookupServiceV1().lookupLeague(leagueId).execute();
+        api.swapFreeKey();
+        if (!httpResponse.isSuccessful()) {
+          throw new HttpException(httpResponse.code(), httpResponse.message());
+        }
+        Leagues leagues = httpResponse.body();
+        league = leagues.leagues.get(0);
+      }
+      catch (IOException e) {
+        LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
+      }
+    }
+
+    if (league == null) {
+      throw new NothingFoundException();
+    }
     if (!leagueId.equals(league.idLeague)) {
       // not able to scrape a "show" does not allow to scrape "episodes"
-      // so we FAKE a successful scrape here for free users :/
-      if (api.apiKey().equals("3")) {
-        md.setTitle(options.getSearchQuery()); // return 1:1
-        md.setId(MediaMetadata.TSDB, leagueId);// return 1:1
-        return md;
-      }
-      // with a payed key, THAT should not happen!
-      throw new ScrapeException("API returned garbage - cannot proceed");
+      // so we FAKE a successful scrape here for that case.
+      // better less data, than no scrape at all!
+      // np, since we DO have an ID which will work with our JSON lookup
+      md.setTitle(options.getSearchQuery()); // return 1:1
+      md.setId(MediaMetadata.TSDB, leagueId);// return 1:1
+      return md;
     }
 
     md.setId(MediaMetadata.TSDB, league.idLeague);
     md.setTitle(league.strLeague);
-
     md.setYear(MetadataUtil.parseInt(league.intFormedYear, 0));
     try {
       md.setReleaseDate(DateUtils.parseDate(league.dateFirstEvent));
@@ -278,14 +294,28 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
           return event;
         }
       }
-      LOGGER.trace("could not match anything from episodeList.");
-    }
-    else {
-      // scrape direct?!
-      LOGGER.trace("getEpisodeList() returned nothing...?");
     }
 
-    // not found? Maybe we couldn't scrape episodeList (b/c of missing showId) - get direct
+    // nothing found?
+    // Happens mostly with free key, where we get no real episodeList
+    // So... if we DO have an ID, scrape directly
+    LOGGER.trace("Could not match anything from episodeList - trying direct");
+    if (eventId != null) {
+      try {
+        Response<Events> httpResponse = api.lookupServiceV1().lookupEvent(eventId).execute();
+        if (!httpResponse.isSuccessful()) {
+          throw new HttpException(httpResponse.code(), httpResponse.message());
+        }
+        Events eventList = httpResponse.body();
+        Event event = eventList.events.get(0);
+        MediaMetadata md = getMetadataFromEvent(options, event);
+        return md;
+      }
+      catch (IOException e) {
+        LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
+      }
+    }
+
     throw new NothingFoundException();
   }
 
@@ -310,13 +340,30 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
           throw new NothingFoundException();
         }
 
+        // sanity check - response does not match request - try other key ;)
+        if (lineups.get(0).idEvent != md.getIdAsString(MediaMetadata.TSDB) && api.getApiKey().equals("3")) {
+          try {
+            api.swapFreeKey();
+            Response<Lineups> httpResponse = api.lookupServiceV1().lookupLineupForEvent(md.getIdAsString(MediaMetadata.TSDB)).execute();
+            api.swapFreeKey();
+            if (!httpResponse.isSuccessful()) {
+              throw new HttpException(httpResponse.code(), httpResponse.message());
+            }
+            Lineups body = httpResponse.body();
+            lineups = body.lineup;
+          }
+          catch (IOException e) {
+            LOGGER.trace("could not get Main TvShow information: {}", e.getMessage());
+          }
+        }
+
         for (Lineup lineup : lineups) {
-          Person p = new Person(Type.OTHER); // use other, to add them to TMMs "crew" list
+          Person p = new Person(Type.ACTOR); // use OTHER, to add them to TMMs "crew" list?
           if (lineup.strHome.equalsIgnoreCase("No")) {
             p = new Person(Type.GUEST);
           }
           p.setName(lineup.strPlayer);
-          p.setRole(lineup.strPosition);
+          p.setRole(lineup.strTeam + " - " + lineup.strPosition);
           p.setId(MediaMetadata.TSDB, lineup.idPlayer);
           p.setThumbUrl(lineup.strThumb);
           md.addCastMember(p);
@@ -407,7 +454,10 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
           throw new HttpException(response.code(), response.message());
         }
         Events events = response.body();
-        if (events.events.size() == 100 && api.apiKey().equals("3")) {
+        if (events.events.size() == 15 && api.getApiKey().equals("123")) {
+          LOGGER.trace("League {} / Season {} did return 15 events. There could be more with a paid API key...", leagueId, season.strSeason);
+        }
+        if (events.events.size() == 100 && api.getApiKey().equals("3")) {
           LOGGER.trace("League {} / Season {} did return 100 events. There could be more with a paid API key...", leagueId, season.strSeason);
         }
         eventList.addAll(events.events);
@@ -420,65 +470,7 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
     List<MediaMetadata> returnList = new ArrayList<>();
     // get the correct information
     for (Event event : eventList) {
-      MediaMetadata md = new MediaMetadata(getId());
-      md.setScrapeOptions(options);
-
-      md.setId(MediaMetadata.TSDB, event.idEvent);
-      md.setTitle(event.strEvent);
-      md.setPlot(event.strDescriptionEN);
-
-      int season = 0;
-      int ep = 0;
-
-      try {
-        Date d = DateUtils.parseDate(event.dateEvent);
-        md.setReleaseDate(d);
-        LocalDate ld = DateUtils.toLocalD(d);
-        md.setYear(ld.getYear());
-        season = ld.getYear(); // our seasons are year based!
-      }
-      catch (ParseException e) {
-        // ignore
-      }
-
-      ep = MetadataUtil.parseInt(event.intRound, 0);
-      md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, season, ep);
-
-      if (event.strHomeTeam != null && !event.strHomeTeam.isEmpty()) {
-        Person p = new Person(Type.ACTOR);
-        p.setName(event.strHomeTeam);
-        p.setRole("Home Team"); // FIXME: translate
-        p.setThumbUrl(event.strHomeTeamBadge);
-        md.addCastMember(p);
-      }
-      if (event.strAwayTeam != null && !event.strAwayTeam.isEmpty()) {
-        Person p = new Person(Type.GUEST); // uuh, guest, nice :)
-        p.setName(event.strAwayTeam);
-        p.setRole("Away Team"); // FIXME: translate
-        p.setThumbUrl(event.strAwayTeamBadge);
-        md.addCastMember(p);
-      }
-
-      md.addCountry(event.strVenue); // well
-      md.addCountry(event.strCity); // well
-      md.addCountry(event.strCountry);
-
-      if (event.strVideo != null && !event.strVideo.isEmpty()) {
-        MediaTrailer mt = new MediaTrailer();
-        mt.setProvider(getProviderFromUrl(event.strVideo));
-        mt.setUrl(event.strVideo);
-        mt.setDate(md.getReleaseDate());
-        mt.setScrapedBy(MediaMetadata.TSDB);
-        mt.setName(DateUtils.toLocalD(md.getReleaseDate()).toString() + " - " + event.strEvent);
-        md.addTrailer(mt);
-      }
-
-      // we won't add null ones ;)
-      md.addMediaArt(imagesToMA(MediaArtworkType.POSTER, event.strPoster));
-      md.addMediaArt(imagesToMA(MediaArtworkType.BACKGROUND, event.strFanart));
-      md.addMediaArt(imagesToMA(MediaArtworkType.THUMB, event.strThumb));
-      md.addMediaArt(imagesToMA(MediaArtworkType.BANNER, event.strBanner));
-
+      MediaMetadata md = getMetadataFromEvent(options, event);
       returnList.add(md);
     }
 
@@ -487,6 +479,69 @@ public class TheSportsDbTvShowMetadataProvider extends TheSportsDbMetadataProvid
       EPISODE_LIST_CACHE_MAP.put(leagueId + "_" + options.getLanguage().getLanguage(), returnList);
     }
     return returnList;
+  }
+
+  private MediaMetadata getMetadataFromEvent(MediaSearchAndScrapeOptions options, Event event) {
+    MediaMetadata md = new MediaMetadata(getId());
+    md.setScrapeOptions(options);
+
+    md.setId(MediaMetadata.TSDB, event.idEvent);
+    md.setTitle(event.strEvent);
+    md.setPlot(event.strDescriptionEN);
+
+    int season = 0;
+    int ep = 0;
+
+    try {
+      Date d = DateUtils.parseDate(event.dateEvent);
+      md.setReleaseDate(d);
+      LocalDate ld = DateUtils.toLocalD(d);
+      md.setYear(ld.getYear());
+      season = ld.getYear(); // our seasons are year based!
+    }
+    catch (ParseException e) {
+      // ignore
+    }
+
+    ep = MetadataUtil.parseInt(event.intRound, 0);
+    md.setEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, season, ep);
+
+    // dummy persons - we will overwrite that later
+    if (event.strHomeTeam != null && !event.strHomeTeam.isEmpty()) {
+      Person p = new Person(Type.ACTOR);
+      p.setName(event.strHomeTeam);
+      p.setRole("Home Team");
+      p.setThumbUrl(event.strHomeTeamBadge);
+      md.addCastMember(p);
+    }
+    if (event.strAwayTeam != null && !event.strAwayTeam.isEmpty()) {
+      Person p = new Person(Type.GUEST); // uuh, guest, nice :)
+      p.setName(event.strAwayTeam);
+      p.setRole("Away Team");
+      p.setThumbUrl(event.strAwayTeamBadge);
+      md.addCastMember(p);
+    }
+
+    md.addCountry(event.strVenue); // well
+    md.addCountry(event.strCity); // well
+    md.addCountry(event.strCountry);
+
+    if (event.strVideo != null && !event.strVideo.isEmpty()) {
+      MediaTrailer mt = new MediaTrailer();
+      mt.setProvider(getProviderFromUrl(event.strVideo));
+      mt.setUrl(event.strVideo);
+      mt.setDate(md.getReleaseDate());
+      mt.setScrapedBy(MediaMetadata.TSDB);
+      mt.setName(DateUtils.toLocalD(md.getReleaseDate()).toString() + " - " + event.strEvent);
+      md.addTrailer(mt);
+    }
+
+    // we won't add null ones ;)
+    md.addMediaArt(imagesToMA(MediaArtworkType.POSTER, event.strPoster));
+    md.addMediaArt(imagesToMA(MediaArtworkType.BACKGROUND, event.strFanart));
+    md.addMediaArt(imagesToMA(MediaArtworkType.THUMB, event.strThumb));
+    md.addMediaArt(imagesToMA(MediaArtworkType.BANNER, event.strBanner));
+    return md;
   }
 
   /**

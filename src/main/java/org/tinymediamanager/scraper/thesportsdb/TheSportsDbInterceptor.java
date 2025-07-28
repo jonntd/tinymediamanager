@@ -59,7 +59,7 @@ public class TheSportsDbInterceptor implements Interceptor {
     HttpUrl.Builder urlBuilder = request.url().newBuilder();
     List<String> enc = urlBuilder.getEncodedPathSegments$okhttp();
     if (enc.contains("%7Bapi_key%7D")) {
-      urlBuilder.setEncodedPathSegment(3, tsdbController.apiKey()); // V1 is on 3rd column
+      urlBuilder.setEncodedPathSegment(3, tsdbController.getApiKey()); // V1 is on 3rd column
     }
 
     Request.Builder builder = request.newBuilder();
