@@ -18,6 +18,8 @@ package org.tinymediamanager.ui.tvshows;
 import java.beans.PropertyChangeListener;
 
 import org.tinymediamanager.core.AbstractModelObject;
+import org.tinymediamanager.core.bus.Event;
+import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 
 /**
@@ -38,6 +40,19 @@ public class TvShowEpisodeSelectionModel extends AbstractModelObject {
    */
   public TvShowEpisodeSelectionModel() {
     selectedTvShowEpisode = initalTvShowEpisode;
+
+    // eventbus listener
+    EventBus.registerListener(EventBus.TOPIC_TV_SHOWS, event -> {
+      if (event.sender() instanceof TvShowEpisode episode && episode == selectedTvShowEpisode) {
+        if (event.eventType().equals(Event.TYPE_REMOVE)) {
+          setSelectedTvShowEpisode(initalTvShowEpisode);
+        }
+        else {
+          // delegate this to UI listeners
+          firePropertyChange(SELECTED_TV_SHOW_EPISODE, null, episode);
+        }
+      }
+    });
 
     propertyChangeListener = evt -> {
       if (evt.getSource() == selectedTvShowEpisode) {
