@@ -718,7 +718,6 @@ public class Utils {
         catch (AccessDeniedException e) {
           // propagate to UI by logging with error
           LOGGER.error("ACCESS DENIED (move folder) for '{}' to '{}' - '{}'", srcDir, destDir, e.getMessage());
-          break;
         }
         catch (AtomicMoveNotSupportedException a) {
           // if it fails (b/c not on same file system) use that; original documentation
@@ -755,7 +754,6 @@ public class Utils {
           catch (AccessDeniedException e) {
             // propagate to UI by logging with error
             LOGGER.error("ACCESS DENIED (move folder) for '{}' - '{}'", srcDir, e.getMessage());
-            break;
           }
           catch (IOException e) {
             LOGGER.warn("Rename problem (fallback) for '{}' - '{}'", srcDir, e.getMessage()); // NOSONAR
@@ -870,7 +868,6 @@ public class Utils {
         catch (AccessDeniedException e) {
           // propagate to UI by logging with error
           LOGGER.error("ACCESS DENIED (move file) for '{}' to '{}' - '{}'", srcFile, destFile, e.getMessage());
-          break;
         }
         catch (AtomicMoveNotSupportedException a) {
           // if it fails (b/c not on same file system) use that
@@ -883,7 +880,6 @@ public class Utils {
           catch (AccessDeniedException e) {
             // propagate to UI by logging with error
             LOGGER.error("ACCESS DENIED (move file) for '{}' - '{}'", srcFile, e.getMessage());
-            break;
           }
           catch (IOException e) {
             LOGGER.warn("Rename problem (fallback) for '{}' - '{}'", srcFile, e.getMessage()); // NOSONAR
@@ -1002,7 +998,6 @@ public class Utils {
         catch (AccessDeniedException e) {
           // propagate to UI by logging with error
           LOGGER.error("ACCESS DENIED (copy file) for '{}' to '{}' - '{}'", srcFile, destFile, e.getMessage());
-          break;
         }
         catch (UnsupportedOperationException u) {
           // maybe copy with attributes does not work here (across file systems), just try without file attributes
@@ -1015,7 +1010,6 @@ public class Utils {
           catch (AccessDeniedException e) {
             // propagate to UI by logging with error
             LOGGER.error("ACCESS DENIED (copy file) for '{}' to '{}' - '{}'", srcFile, destFile, e.getMessage());
-            break;
           }
           catch (IOException e) {
             LOGGER.warn("Copy did not work (fallback) for '{}' - '{}'", srcFile, e.getMessage());
