@@ -1,5 +1,7 @@
 package org.tinymediamanager.thirdparty;
 
+import java.net.DatagramSocket;
+
 //Copyright (c) 2011, Maxim Veksler
 //http://stackoverflow.com/questions/5034321/understanding-jdk-1-6-on-ubuntu-linux-ipv6-output-handling
 //All rights reserved.
@@ -31,6 +33,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 import org.slf4j.Logger;
@@ -83,7 +86,7 @@ public class NetworkUtil {
    */
   public static String getMachineMac() {
     try {
-      return obtainMACFromAddress(getNonLoopbackNetworkInterface());
+      return obtainMACFromAddress(getDefaultNetworkInterface());
     }
     catch (Exception e) {
       if (log.isDebugEnabled()) {
@@ -101,7 +104,7 @@ public class NetworkUtil {
    */
   public static String getMachineHostname() {
     try {
-      NetworkInterface networkInterface = getNonLoopbackNetworkInterface();
+      NetworkInterface networkInterface = getDefaultNetworkInterface();
       Inet4Address address = getInet4Address(networkInterface);
       if (address != null)
         return address.getCanonicalHostName();
@@ -122,7 +125,7 @@ public class NetworkUtil {
    */
   public static String getMachineIPv6Hostname() {
     try {
-      NetworkInterface networkInterface = getNonLoopbackNetworkInterface();
+      NetworkInterface networkInterface = getDefaultNetworkInterface();
       Inet6Address address = getInet6Address(networkInterface);
       if (address != null)
         return address.getCanonicalHostName();
@@ -143,7 +146,7 @@ public class NetworkUtil {
    */
   public static String getMachineIPAddress() {
     try {
-      NetworkInterface networkInterface = getNonLoopbackNetworkInterface();
+      NetworkInterface networkInterface = getDefaultNetworkInterface();
       Inet4Address address = getInet4Address(networkInterface);
       if (address != null)
         return address.getHostAddress();
@@ -164,7 +167,7 @@ public class NetworkUtil {
    */
   public static String getMachineIPv6Address() {
     try {
-      NetworkInterface networkInterface = getNonLoopbackNetworkInterface();
+      NetworkInterface networkInterface = getDefaultNetworkInterface();
       Inet6Address address = getInet6Address(networkInterface);
       if (address != null)
         return address.getHostAddress();
@@ -239,8 +242,10 @@ public class NetworkUtil {
       Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
       while (inetAddresses.hasMoreElements()) {
         InetAddress address = inetAddresses.nextElement();
-        if (!address.isLoopbackAddress())
+        if (!address.isLoopbackAddress()) {
+          System.out.println("Found non-loopback interface: " + networkInterface.getDisplayName() + " with address: " + address);
           return networkInterface;
+        }
       }
     }
 
@@ -248,4 +253,43 @@ public class NetworkUtil {
     return null;
   }
 
+  private static NetworkInterface getDefaultNetworkInterface() {
+    // Find the default publicly routed network interface in the machine.
+    // return null if we can't, otherwise its name.
+    final String globalHost = "a.root-servers.net"; // Must exist.
+    NetworkInterface nif = null;
+    InetAddress remoteAddress = null;
+    try {
+      // This requires we can do name resolution, if we can't we probably don't have
+      // an interface thats publicly routed.
+      remoteAddress = InetAddress.getByName(globalHost);
+    }
+    catch (UnknownHostException e) {
+      // Log an error if you want.
+    }
+
+    if (remoteAddress != null) {
+      try (DatagramSocket s = new DatagramSocket()) {
+        // UDP does not actually open a connection, we just need to do this to get the
+        // interface we would send packets on if we actually tried.
+        s.connect(remoteAddress, 80);
+        nif = NetworkInterface.getByInetAddress(s.getLocalAddress());
+      }
+      catch (SocketException e) {
+        // Log the error if you want.
+      }
+    }
+
+    // old fallback
+    if (nif == null) {
+      try {
+        // If we can't find a default network interface, try to find a non-loopback one.
+        nif = getNonLoopbackNetworkInterface();
+      }
+      catch (SocketException e) {
+        // Log the error if you want.
+      }
+    }
+    return nif;
+  }
 }
