@@ -243,7 +243,6 @@ public class NetworkUtil {
       while (inetAddresses.hasMoreElements()) {
         InetAddress address = inetAddresses.nextElement();
         if (!address.isLoopbackAddress()) {
-          System.out.println("Found non-loopback interface: " + networkInterface.getDisplayName() + " with address: " + address);
           return networkInterface;
         }
       }
@@ -283,7 +282,7 @@ public class NetworkUtil {
     // old fallback
     if (nif == null) {
       try {
-        // If we can't find a default network interface, try to find a non-loopback one.
+        // If we can't find a default network interface, try to find a non-loopback one, as before
         nif = getNonLoopbackNetworkInterface();
       }
       catch (SocketException e) {

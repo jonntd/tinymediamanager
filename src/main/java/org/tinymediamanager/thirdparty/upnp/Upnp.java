@@ -129,17 +129,19 @@ public class Upnp {
     if (localDevice == null) {
       DeviceIdentity identity = new DeviceIdentity(UDN.uniqueSystemIdentifier("tinyMediaManager"), 600);
       DeviceType type = new UDADeviceType("MediaServer", 1);
-      String hostname = NetworkUtil.getMachineHostname();
-      if (hostname == null) {
-        hostname = ipAddress;
-      }
+
+      // nah, stick with IP address
+      // String hostname = NetworkUtil.getMachineHostname();
+      // if (hostname == null) {
+      // hostname = ipAddress;
+      // }
 
       // @formatter:off
       DeviceDetails details = new DeviceDetails("tinyMediaManager",
         new ManufacturerDetails("tinyMediaManager", "https://www.tinymediamanager.org/"),
         new ModelDetails("tinyMediaManager", "tinyMediaManager - Media Server", ReleaseInfo.getVersion()), 
         // @Namespace default /dev/<udn>/desc
-        new URI("http://" + hostname + ":" + UPNP_PORT + "/dev/" + identity.getUdn().getIdentifierString() + "/desc"),
+        new URI("http://" + ipAddress + ":" + UPNP_PORT + "/dev/" + identity.getUdn().getIdentifierString() + "/desc"),
         new DLNADoc[] {
             new DLNADoc("DMS", DLNADoc.Version.V1_5), 
             new DLNADoc("M-DMS", DLNADoc.Version.V1_5) 
