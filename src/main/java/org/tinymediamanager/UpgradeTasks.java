@@ -17,6 +17,9 @@ package org.tinymediamanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,6 +43,7 @@ import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
@@ -377,5 +381,26 @@ public abstract class UpgradeTasks {
     TinyMediaManager.shutdownLogger();
 
     System.exit(0);
+  }
+
+  public static Map<?, ?> loadOldDatabase(Path path) throws Exception {
+    // Path to your JAR file
+    File jarFile = new File("dbmigrator.jar");
+
+    // Convert the file to a URL
+    URL jarUrl = jarFile.toURI().toURL();
+
+    try (URLClassLoader loader = new URLClassLoader(new URL[] { jarUrl }, MovieModuleManager.class.getClassLoader())) {
+      // Step 2: Load the class by name
+      Class<?> dbmigrator = loader.loadClass("org.tinymediamanager.dbmigrator.DatabaseMigrator");
+
+      // Step 3: Instantiate the class
+      Object pluginInstance = dbmigrator.getDeclaredConstructor().newInstance();
+
+      // Step 4: Call a method reflectively
+      Method executeMethod = dbmigrator.getMethod("loadOldDatabase", String.class);
+
+      return (Map<?, ?>) executeMethod.invoke(pluginInstance, path.toString());
+    }
   }
 }

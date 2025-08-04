@@ -32,9 +32,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStore;
+import org.h2.mvstore.MVStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.UpgradeTasks;
 import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.CustomNullStringSerializerProvider;
 import org.tinymediamanager.core.ITmmModule;
@@ -190,6 +192,46 @@ public final class MovieModuleManager implements ITmmModule {
       return;
     }
     catch (Exception e) {
+      if (e instanceof MVStoreException && e.getMessage().contains("format 1 is smaller")) {
+        // this is a special case - we try to load the dbmigrator plugin
+        // to migrate the old database
+        LOGGER.warn("Database file '{}' contains an old format - trying to import via dbmigrator.jar", databaseFile);
+
+        try {
+          Path databaseBackup = Paths.get(Globals.BACKUP_FOLDER, MOVIE_DB + ".oldv1");
+
+          Utils.deleteFileSafely(databaseBackup);
+          Utils.moveFileSafe(databaseFile, databaseBackup);
+
+          Map<?, ?> oldDatabase = UpgradeTasks.loadOldDatabase(databaseBackup);
+          loadDatabase(databaseFile);
+
+          Map<UUID, String> oldMovieMap = (Map<UUID, String>) oldDatabase.get("movies");
+          if (oldMovieMap != null) {
+            movieMap.putAll(oldMovieMap);
+          }
+
+          Map<UUID, String> oldMovieSetMap = (Map<UUID, String>) oldDatabase.get("movieSets");
+          if (oldMovieSetMap != null) {
+            movieSetMap.putAll(oldMovieSetMap);
+          }
+
+          Map<String, String> oldMetadataMap = (Map<String, String>) oldDatabase.get("metadata");
+          if (oldMetadataMap != null) {
+            metadataMap.putAll(oldMetadataMap);
+          }
+
+          getMovieList().loadMoviesFromDatabase(movieMap);
+          getMovieList().loadMovieSetsFromDatabase(movieSetMap);
+          getMovieList().initDataAfterLoading();
+
+          return;
+        }
+        catch (Exception ex) {
+          LOGGER.error("Could not load old database - '{}'", ex.getMessage());
+        }
+      }
+
       // look if the file is locked by another process (rethrow rather than delete the db file)
       if (e instanceof IllegalStateException && e.getMessage().contains("file is locked")) {
         throw e;
@@ -275,8 +317,9 @@ public final class MovieModuleManager implements ITmmModule {
           mvStore.close();
 
           try {
-            Utils.deleteFileSafely(Paths.get(Globals.BACKUP_FOLDER, MOVIE_DB + ".corrupted"));
-            Utils.moveFileSafe(databaseFile, Paths.get(Globals.BACKUP_FOLDER, MOVIE_DB + ".corrupted"));
+            Path corruptedFile = Paths.get(Globals.BACKUP_FOLDER, MOVIE_DB + ".corrupted");
+            Utils.deleteFileSafely(corruptedFile);
+            Utils.moveFileSafe(databaseFile, corruptedFile);
           }
           catch (Exception e1) {
             LOGGER.error("Could not move corrupted database to '{}' - '{}", MOVIE_DB + ".corrupted", e1.getMessage());
@@ -342,8 +385,6 @@ public final class MovieModuleManager implements ITmmModule {
     if (mvStore != null && !mvStore.isClosed()) {
       writePendingChanges(true);
       mvStore.commit();
-
-      mvStore.compactMoveChunks();
       mvStore.close();
     }
 

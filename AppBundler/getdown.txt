@@ -19,6 +19,7 @@ ui.hide_decorations = true
 # Application jar files, on classpath (generated from classpath in build.xml)
 code = tmm.jar
 code = restart.jar
+code = dbmigrator.jar
 %CODELIBS%
 
 resource = [windows-amd64] tinyMediaManager.exe
@@ -33,6 +34,7 @@ resource = tmm.png
 resource = changelog.txt
 resource = launcher.yml
 resource = restart.jar
+resource = dbmigrator.jar
 
 # JRE - will be mixed into the path by the ant build
 # DO NOT MAKE uresource HERE, BECAUSE UNTAR OF SYMLINKS DOES NOT WORK IN JAVA

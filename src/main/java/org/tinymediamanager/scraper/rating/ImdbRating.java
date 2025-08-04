@@ -89,7 +89,14 @@ class ImdbRating {
   private static void initImdbRatings() {
     Path databaseFile = Paths.get(Globals.CACHE_FOLDER, IMDB_DB);
     try {
-      mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compressHigh().autoCommitDisabled().open();
+      try {
+        mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compressHigh().autoCommitDisabled().open();
+      }
+      catch (Exception e) {
+        LOGGER.debug("Could not open IMDB ratings database - '{}'", e.getMessage());
+        Utils.deleteFileSafely(databaseFile);
+        mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compressHigh().autoCommitDisabled().open();
+      }
       ratingMap = mvStore.openMap("ratings");
 
       Url cachedUrl = new OnDiskCachedUrl("https://datasets.imdbws.com/title.ratings.tsv.gz", 7, TimeUnit.DAYS);
@@ -136,7 +143,6 @@ class ImdbRating {
   static synchronized void shutdown() {
     try {
       if (mvStore != null && !mvStore.isClosed()) {
-        mvStore.compactMoveChunks();
         mvStore.close();
       }
     }

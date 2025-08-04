@@ -32,9 +32,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStore;
+import org.h2.mvstore.MVStoreException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.Globals;
+import org.tinymediamanager.UpgradeTasks;
 import org.tinymediamanager.core.Constants;
 import org.tinymediamanager.core.CustomNullStringSerializerProvider;
 import org.tinymediamanager.core.ITmmModule;
@@ -199,6 +201,54 @@ public final class TvShowModuleManager implements ITmmModule {
       return;
     }
     catch (Exception e) {
+      if (e instanceof MVStoreException && e.getMessage().contains("format 1 is smaller")) {
+        // this is a special case - we try to load the dbmigrator plugin
+        // to migrate the old database
+        LOGGER.warn("Database file '{}' contains an old format - trying to import via dbmigrator.jar", databaseFile);
+
+        try {
+          Path databaseBackup = Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".oldv1");
+
+          Utils.deleteFileSafely(databaseBackup);
+          Utils.moveFileSafe(databaseFile, databaseBackup);
+
+          Map<?, ?> oldDatabase = UpgradeTasks.loadOldDatabase(databaseBackup);
+          loadDatabase(databaseFile);
+
+          tvShowMap = mvStore.openMap("tvshows");
+          seasonMap = mvStore.openMap("seasons");
+          episodeMap = mvStore.openMap("episodes");
+
+          Map<UUID, String> oldTvShowsMap = (Map<UUID, String>) oldDatabase.get("tvshows");
+          if (oldTvShowsMap != null) {
+            tvShowMap.putAll(oldTvShowsMap);
+          }
+
+          Map<UUID, String> oldSeasonsMap = (Map<UUID, String>) oldDatabase.get("seasons");
+          if (oldSeasonsMap != null) {
+            seasonMap.putAll(oldSeasonsMap);
+          }
+
+          Map<UUID, String> oldEpisodesMap = (Map<UUID, String>) oldDatabase.get("episodes");
+          if (oldEpisodesMap != null) {
+            episodeMap.putAll(oldEpisodesMap);
+          }
+
+          Map<String, String> oldMetadataMap = (Map<String, String>) oldDatabase.get("metadata");
+          if (oldMetadataMap != null) {
+            metadataMap.putAll(oldMetadataMap);
+          }
+
+          getTvShowList().loadTvShowsFromDatabase(tvShowMap, seasonMap, episodeMap);
+          getTvShowList().initDataAfterLoading();
+
+          return;
+        }
+        catch (Exception ex) {
+          LOGGER.error("Could not load old database - '{}'", ex.getMessage());
+        }
+      }
+
       // look if the file is locked by another process (rethrow rather than delete the db file)
       if (e instanceof IllegalStateException && e.getMessage().contains("file is locked")) {
         throw e;
@@ -211,8 +261,9 @@ public final class TvShowModuleManager implements ITmmModule {
     }
 
     try {
-      Utils.deleteFileSafely(Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted"));
-      Utils.moveFileSafe(databaseFile, Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted"));
+      Path corruptedFile = Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted");
+      Utils.deleteFileSafely(corruptedFile);
+      Utils.moveFileSafe(databaseFile, corruptedFile);
     }
     catch (Exception e) {
       LOGGER.error("Could not move corrupted database to '{}' - '{}", TV_SHOW_DB + ".corrupted", e.getMessage());
@@ -284,8 +335,9 @@ public final class TvShowModuleManager implements ITmmModule {
           mvStore.close();
 
           try {
-            Utils.deleteFileSafely(Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted"));
-            Utils.moveFileSafe(databaseFile, Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted"));
+            Path corruptedFile = Paths.get(Globals.BACKUP_FOLDER, TV_SHOW_DB + ".corrupted");
+            Utils.deleteFileSafely(corruptedFile);
+            Utils.moveFileSafe(databaseFile, corruptedFile);
           }
           catch (Exception e1) {
             LOGGER.error("Could not move corrupted database to '{}' - '{}", TV_SHOW_DB + ".corrupted", e1.getMessage());
@@ -356,8 +408,6 @@ public final class TvShowModuleManager implements ITmmModule {
     if (mvStore != null && !mvStore.isClosed()) {
       writePendingChanges(true);
       mvStore.commit();
-
-      mvStore.compactMoveChunks();
       mvStore.close();
     }
 

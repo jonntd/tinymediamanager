@@ -162,7 +162,14 @@ public class ImdbDatasetUtils {
           // as HASHMAP: ~60sec/270mb compressHigh / ~30sec/470mb compress / ~25sec/1600mb w/o compress)
           // as TREEMAP: ~8sec/43mb compressHigh / ~3sec/76mb compress / ~xxsec/250mb w/o compress)
           LOGGER.debug("Copying map to database...");
-          mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compress().autoCommitDisabled().open();
+          try {
+            mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compress().autoCommitDisabled().open();
+          }
+          catch (Exception e) {
+            LOGGER.debug("Could not open IMDB episode database - '{}'", e.getMessage());
+            Utils.deleteFileSafely(databaseFile);
+            mvStore = new MVStore.Builder().fileName(databaseFile.toString()).compress().autoCommitDisabled().open();
+          }
           dbEpisodeMap = mvStore.openMap("imdbEpisodes");
           dbEpisodeMap.putAll(javaEpisodeMap);
           mvStore.commit();
@@ -195,7 +202,6 @@ public class ImdbDatasetUtils {
   private static synchronized void shutdown() {
     try {
       if (mvStore != null && !mvStore.isClosed()) {
-        mvStore.compactMoveChunks();
         mvStore.close();
       }
     }

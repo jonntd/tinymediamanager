@@ -41,5 +41,9 @@
             <destName>tmm.jar</destName>
             <outputDirectory>/</outputDirectory>
         </file>
+        <file>
+            <source>dbmigrator.jar</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
     </files>
 </assembly>
