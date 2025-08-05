@@ -32,7 +32,9 @@ import org.tinymediamanager.scraper.thesportsdb.services.v2.All;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -90,7 +92,19 @@ class TheSportsDbController {
     builder.connectTimeout(30, TimeUnit.SECONDS);
     builder.writeTimeout(30, TimeUnit.SECONDS);
     builder.readTimeout(30, TimeUnit.SECONDS);
-    builder.addInterceptor(new TheSportsDbInterceptor(this));
+
+    builder.addInterceptor(chain -> {
+      Request originalRequest = chain.request();
+      HttpUrl.Builder urlBuilder = originalRequest.url().newBuilder();
+      java.util.List<String> segments = originalRequest.url().pathSegments();
+      for (int i = 0; i < segments.size(); i++) {
+        if ("{api_key}".equalsIgnoreCase(segments.get(i))) {
+          urlBuilder.setPathSegment(i, getApiKey());
+        }
+      }
+      Request request = originalRequest.newBuilder().url(urlBuilder.build()).build();
+      return chain.proceed(request);
+    });
     return builder.build();
   }
 
