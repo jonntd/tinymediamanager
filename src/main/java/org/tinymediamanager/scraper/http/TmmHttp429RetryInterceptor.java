@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 - 2025 Manuel Laggner
+ * Copyright 2012 - 2024 Manuel Laggner
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package org.tinymediamanager.scraper.tvmaze.service;
+package org.tinymediamanager.scraper.http;
 
 import java.io.IOException;
 
-import javax.annotation.Nonnull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -28,27 +29,16 @@ import okhttp3.Response;
  * {@link Interceptor} to add the API key query parameter and if available session information. As it modifies the URL and may retry requests, ensure
  * this is added as an application interceptor (never a network interceptor), otherwise caching will be broken and requests will fail.
  */
-public class TvMazeInterceptor implements Interceptor {
+public class TmmHttp429RetryInterceptor implements Interceptor {
+  private static final Logger LOGGER = LoggerFactory.getLogger(TmmHttp429RetryInterceptor.class);
 
-  private final TvMazeController controller;
-
-  public TvMazeInterceptor(TvMazeController tmdbController) {
-    this.controller = tmdbController;
+  public Response intercept(Chain chain) throws IOException {
+    return handleIntercept(chain);
   }
 
-  @Override
-  public Response intercept(@Nonnull Chain chain) throws IOException {
-    return handleIntercept(chain, controller);
-  }
-
-  public static Response handleIntercept(Chain chain, TvMazeController controller) throws IOException {
+  public Response handleIntercept(Chain chain) throws IOException {
     Request request = chain.request();
     Response response = chain.proceed(request);
-
-    // TmmHttpHeaderLoggerInterceptor:48 - <- Headers: {cache-control=[private], content-type=[application/json; charset=UTF-8], date=[Sat, 28 Sep
-    // 2024 11:10:14 GMT], retry-after=[3], server=[nginx/1.24.0 (Ubuntu)]}
-    // TmmHttpLoggingInterceptor:139 - <-- 429 https://api.tvmaze.com/shows/434?embed[]=seasons&embed[]=crew&embed[]=cast&embed[]=images (35ms,
-    // unknown-length body)
 
     if (!response.isSuccessful()) {
       // re-try if the server indicates we should
@@ -56,6 +46,7 @@ public class TvMazeInterceptor implements Interceptor {
       if (retryHeader != null) {
         try {
           int retry = Integer.parseInt(retryHeader);
+          LOGGER.debug("Hold your horses! The server is asking us to wait {} seconds before retrying", retry);
           Thread.sleep((int) ((retry + 0.5) * 1000));
 
           // close body of unsuccessful response
@@ -63,9 +54,10 @@ public class TvMazeInterceptor implements Interceptor {
             response.body().close();
           }
           // is fine because, unlike a network interceptor, an application interceptor can re-try requests
-          return handleIntercept(chain, controller);
+          return handleIntercept(chain);
         }
         catch (NumberFormatException | InterruptedException ignored) {
+          LOGGER.warn("Invalid Retry-After header: {}", retryHeader);
         }
       }
     }

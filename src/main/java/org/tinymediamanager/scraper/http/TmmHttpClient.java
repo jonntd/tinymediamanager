@@ -65,6 +65,8 @@ public class TmmHttpClient {
   private static OkHttpClient createHttpClient() {
     OkHttpClient.Builder builder = new OkHttpClient.Builder();
 
+    // add an own retry interceptor when we get a 429 http error
+    builder.addInterceptor(new TmmHttp429RetryInterceptor());
     // add an own logging interceptor to only log text responses
     builder.addInterceptor(new TmmHttpLoggingInterceptor());
     // NEEDS TO BE SECOND LAST, TO AUTO DECODE BROTLI & GZIP

@@ -31,3 +31,4 @@ x [UI] fixed filtering on season artwork #2957
 x [Mediainfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998
 x [Trailer] activated yt-dlp as a default trailer downloader
+x [http] adhere globally to 429 retry headers, not per scraper

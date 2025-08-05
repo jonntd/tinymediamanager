@@ -50,7 +50,6 @@ public class TvMazeController {
   public TvMazeController(String apiKey) {
     this.apiKey = apiKey;
     OkHttpClient.Builder builder = TmmHttpClient.newBuilderWithForcedCache(15, TimeUnit.MINUTES);
-    builder.addInterceptor(new TvMazeInterceptor(this));
     retrofit = buildRetrofitInstance(builder.build());
   }
 
