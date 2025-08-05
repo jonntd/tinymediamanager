@@ -44,6 +44,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.h2.mvstore.MVStoreException;
 import org.jdesktop.beansbinding.ELProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -248,8 +249,8 @@ public final class TinyMediaManager {
                 }
               });
             }
-            catch (IllegalStateException e) {
-              LOGGER.error("IllegalStateException", e);
+            catch (IllegalStateException | MVStoreException e) {
+              LOGGER.error("MVStoreException", e);
               if (e.getMessage().contains("file is locked")) {
                 JOptionPane.showMessageDialog(null,
                     TmmResourceBundle.getString("tmm.nostart") + "\n" + TmmResourceBundle.getString("tmm.nostart.instancerunning"),
@@ -282,8 +283,8 @@ public final class TinyMediaManager {
       try {
         startup();
       }
-      catch (IllegalStateException e) {
-        LOGGER.error("IllegalStateException", e);
+      catch (IllegalStateException | MVStoreException e) {
+        LOGGER.error("MVStoreException", e);
         shutdownLogger();
         System.exit(1);
       }

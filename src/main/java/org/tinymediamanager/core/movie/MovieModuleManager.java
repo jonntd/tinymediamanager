@@ -233,7 +233,7 @@ public final class MovieModuleManager implements ITmmModule {
       }
 
       // look if the file is locked by another process (rethrow rather than delete the db file)
-      if (e instanceof IllegalStateException && e.getMessage().contains("file is locked")) {
+      if ((e instanceof IllegalStateException || e instanceof MVStoreException) && e.getMessage().contains("file is locked")) {
         throw e;
       }
 
@@ -304,7 +304,7 @@ public final class MovieModuleManager implements ITmmModule {
 
       @Override
       public void uncaughtException(Thread t, Throwable e) {
-        if (e instanceof IllegalStateException) {
+        if (e instanceof IllegalStateException || e instanceof MVStoreException) {
           // wait up to 10 times, then try to recover
           if (counter < 10) {
             counter++;
