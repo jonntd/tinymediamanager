@@ -15,7 +15,6 @@
  */
 package org.tinymediamanager.ui.panels;
 
-import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.util.Map;
@@ -68,16 +67,16 @@ public class MediaScraperConfigurationPanel extends JPanel {
   public MediaScraperConfigurationPanel(IMediaProvider mediaProvider) {
     this.mediaProvider = mediaProvider;
 
-    setLayout(new BorderLayout());
+    setLayout(new MigLayout("insets 0", "[grow]", "20lp![]10lp![grow]"));
 
-    JPanel panelHead = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
-    add(panelHead, BorderLayout.NORTH);
+    JPanel panelHead = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    add(panelHead, "cell 0 0, growx, wmin 0");
 
     JLabel lblScraperOptions = new TmmLabel(TmmResourceBundle.getString("Settings.scraper.options"), 1.2);
     panelHead.add(lblScraperOptions);
 
     configPanel = createConfigPanel();
-    add(configPanel, BorderLayout.CENTER);
+    add(configPanel, "cell 0 1, grow, wmin 0");
 
     // add a listener to determine when to save the settings
     addAncestorListener(new AncestorListener() {
@@ -102,7 +101,7 @@ public class MediaScraperConfigurationPanel extends JPanel {
   }
 
   private JPanel createConfigPanel() {
-    JPanel panel = new JPanel(new MigLayout("gapy 2lp", "[][20lp!][200lp,grow]", ""));
+    JPanel panel = new JPanel(new MigLayout("gapy 2lp, insets 0", "[][20lp!][200lp,grow]", ""));
 
     int row = 0;
 

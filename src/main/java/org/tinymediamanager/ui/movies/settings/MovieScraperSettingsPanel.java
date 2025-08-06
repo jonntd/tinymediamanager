@@ -17,9 +17,9 @@ package org.tinymediamanager.ui.movies.settings;
 
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -151,7 +151,7 @@ class MovieScraperSettingsPanel extends JPanel {
       if (index > -1) {
         panelScraperOptions.removeAll();
         if (scrapers.get(index).getMediaProvider().getProviderInfo().getConfig().hasConfig()) {
-          panelScraperOptions.add(new MediaScraperConfigurationPanel(scrapers.get(index).getMediaProvider()));
+          panelScraperOptions.add(new MediaScraperConfigurationPanel(scrapers.get(index).getMediaProvider()), BorderLayout.CENTER);
         }
         scrollPaneScraperDetails.revalidate();
         scrollPaneScraperDetails.repaint();
@@ -197,15 +197,15 @@ class MovieScraperSettingsPanel extends JPanel {
         scrollPaneScraperDetails.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         JPanel panelScraperDetails = new ScrollablePanel();
-        scrollPaneScraperDetails.setViewportView(panelScraperDetails);
         panelScraperDetails.setLayout(new MigLayout("insets 0", "[grow]", "[][grow]"));
+        scrollPaneScraperDetails.setViewportView(panelScraperDetails);
 
         tpScraperDescription = new ReadOnlyTextPane();
         tpScraperDescription.setEditorKit(new HTMLEditorKit());
         panelScraperDetails.add(tpScraperDescription, "cell 0 0,grow");
 
         panelScraperOptions = new JPanel();
-        panelScraperOptions.setLayout(new FlowLayout(FlowLayout.LEFT));
+        panelScraperOptions.setLayout(new BorderLayout());
         panelScraperDetails.add(panelScraperOptions, "cell 0 1,grow");
       }
     }
