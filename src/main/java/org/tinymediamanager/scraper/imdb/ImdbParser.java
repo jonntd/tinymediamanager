@@ -1282,6 +1282,9 @@ public abstract class ImdbParser {
               if (imdbPerson.isCast && !imdbPerson.characters.isEmpty()) {
                 // actors
                 p.setRole(String.join(" / ", imdbPerson.characters));
+                if (StringUtils.isNotBlank(imdbPerson.attributes)) {
+                  p.setRole(p.getRole() + " " + imdbPerson.attributes); // append (voice)
+                }
               }
               else {
                 // crew

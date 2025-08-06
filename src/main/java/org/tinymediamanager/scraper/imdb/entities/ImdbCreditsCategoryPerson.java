@@ -11,7 +11,7 @@ public class ImdbCreditsCategoryPerson extends BaseJsonEntity {
   public boolean        isSeries   = false;
   public boolean        isCast     = false;
   public Object         refTagSuffix;                        // can be either STRING "cr" or JSON "{t="type",n=1}"
-  public String         attributes = "";
+  public String         attributes = "";                     // like (voice), (Synchronisation) or similar
   public List<String>   characters = Collections.emptyList();
   public ImdbImageProps imageProps;
 }
