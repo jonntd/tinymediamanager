@@ -35,4 +35,5 @@ x [http] adhere globally to 429 retry headers, not per scraper
 x [Library] upgraded to the latest version of H2 MVStore
 x [Library] upgraded libmediainfo to 25.07
 x [IMDB] also scrape actor attributes #3007
+x [IMDB] fix generating actor profile url #3005
 

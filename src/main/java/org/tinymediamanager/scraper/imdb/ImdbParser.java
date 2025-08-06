@@ -1279,6 +1279,7 @@ public abstract class ImdbParser {
               Person p = new Person(pt);
               p.setId(MediaMetadata.IMDB, imdbPerson.id);
               p.setName(imdbPerson.rowTitle);
+              p.setProfileUrl("https://www.imdb.com/name/" + imdbPerson.id);
               if (imdbPerson.isCast && !imdbPerson.characters.isEmpty()) {
                 // actors
                 p.setRole(String.join(" / ", imdbPerson.characters));
