@@ -345,7 +345,7 @@ public final class AutocompleteSupport<E> {
     try {
       // build the ComboBoxModel capable of filtering its values
       this.filterMatcherEditor = new TextMatcherEditor<>(filterator == null ? new DefaultTextFilterator() : filterator);
-      this.filterMatcherEditor.setMode(TextMatcherEditor.STARTS_WITH);
+      this.filterMatcherEditor.setMode(TextMatcherEditor.CONTAINS);
       this.filteredItems = new FilterList<>(items, this.filterMatcherEditor);
       this.firstItem = new BasicEventList<>(items.getPublisher(), items.getReadWriteLock());
 
@@ -1133,7 +1133,7 @@ public final class AutocompleteSupport<E> {
     final boolean prefixIsEmpty = "".equals(value);
 
     final Matcher<String> valueMatcher = new TextMatcher<>(new SearchTerm[] { new SearchTerm<>(value) }, GlazedLists.toStringTextFilterator(),
-        TextMatcherEditor.STARTS_WITH, getTextMatchingStrategy());
+        TextMatcherEditor.CONTAINS, getTextMatchingStrategy());
 
     Object partialMatchItem = NOT_FOUND;
 
