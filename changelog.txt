@@ -22,6 +22,7 @@ x [Movies, TV shows] added a NFO option to suppress writing of artwork URLs #298
   ATTENTION: Jellyfin users should revisit their NFO settings
 x [TV shows] fixed scraping multiple trailers
 x [TV shows] fixed a problem when exchanging the video file of a TV show episode #2963
+x [TV shows] added enhanced quickfilter, same as for movies #3001
 x [Renamer] fixed using ${originalFilename} in the renamer filename pattern #2966
 x [Scraper] do not overwrite existing fields with empty values #2947
 x [UI] some UI fixes
