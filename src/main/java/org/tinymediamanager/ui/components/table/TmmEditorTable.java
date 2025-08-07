@@ -151,6 +151,20 @@ public abstract class TmmEditorTable extends TmmTable {
   }
 
   /**
+   * callback if another link has been clicked
+   *
+   * @param row
+   *          the row index
+   * @param column
+   *          the column index
+   * @param mouseEvent
+   *          the mouse event
+   */
+  protected void linkClicked(int row, int column, MouseEvent mouseEvent) {
+    // empty default impl.
+  }
+
+  /**
    * helper class for listening to the edit button
    */
   private class TableButtonListener extends MouseAdapter {
@@ -175,7 +189,7 @@ public abstract class TmmEditorTable extends TmmTable {
       }
       else if (isLinkCell(row, col)) {
         row = table.convertRowIndexToModel(row);
-        linkClicked(row, col);
+        linkClicked(row, col, arg0);
       }
     }
 

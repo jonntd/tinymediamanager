@@ -16,10 +16,13 @@
 
 package org.tinymediamanager.ui.components.table;
 
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -28,6 +31,7 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.dialogs.ImagePreviewDialog;
@@ -139,7 +143,7 @@ public class PersonTable extends TmmEditorTable {
    * @return true if a profile url is available, false otherwise
    */
   private boolean isProfileAvailable(int row) {
-    return StringUtils.isNotBlank(getPerson(row).getProfileUrl());
+    return hasProfileUrl(getPerson(row));
   }
 
   /**
@@ -169,25 +173,104 @@ public class PersonTable extends TmmEditorTable {
   }
 
   @Override
-  protected void linkClicked(int row, int column) {
+  protected void linkClicked(int row, int column, MouseEvent mou) {
     Person person = getPerson(row);
 
     if (person != null) {
-      if (isProfileColumn(column) && StringUtils.isNotBlank(person.getProfileUrl())) {
-        try {
-          TmmUIHelper.browseUrl(person.getProfileUrl());
+      JPopupMenu popupMenu = new JPopupMenu();
+
+      if (isProfileColumn(column)) {
+        int linksAdded = 0;
+        String profileUrl = person.getProfileUrl();
+
+        if (StringUtils.isNotBlank(profileUrl)) {
+          String title;
+
+          if (profileUrl.contains("imdb.com")) {
+            title = "IMDb";
+          }
+          else if (profileUrl.contains("themoviedb.org")) {
+            title = "TMDB";
+          }
+          else if (profileUrl.contains("wikipedia.org")) {
+            title = "Wikipedia";
+          }
+          else if (profileUrl.contains("tvmaze.com")) {
+            title = "TVmaze";
+          }
+          else if (profileUrl.contains("thetvdb.com")) {
+            title = "TVDB";
+          }
+          else {
+            title = TmmResourceBundle.getString("profile.url");
+          }
+
+          JMenuItem item = new JMenuItem(title, IconManager.LINK);
+          item.addActionListener(e -> browseUrl(profileUrl));
+          popupMenu.add(item);
+
+          linksAdded++;
         }
-        catch (Exception ex) {
-          LOGGER.error("Could not open actor profile in browser - '{}'", ex.getMessage());
-          MessageManager.getInstance()
-              .pushMessage(new Message(Message.MessageLevel.ERROR, person.getProfileUrl(), "message.erroropenurl",
-                  new String[] { ":", ex.getLocalizedMessage() }));
+
+        String imdbId = person.getIdAsString(MediaMetadata.IMDB);
+        if (StringUtils.isNotBlank(imdbId) && !profileUrl.contains("imdb.com")) {
+          JMenuItem item = new JMenuItem("IMDb", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.imdb.com/de/name/" + imdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
+        if (tmdbId > 0 && !profileUrl.contains("themoviedb.org")) {
+          JMenuItem item = new JMenuItem("TMDB", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.themoviedb.org/person/" + tmdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
+        if (tvdbId > 0 && !profileUrl.contains("thetvdb.com")) {
+          JMenuItem item = new JMenuItem("TVDB", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://thetvdb.com/people/" + tvdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tvmazeId = person.getIdAsInt(MediaMetadata.TVMAZE);
+        if (tvmazeId > 0 && !profileUrl.contains("tvmaze.com")) {
+          JMenuItem item = new JMenuItem("TVmaze", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.tvmaze.com/people/" + tvmazeId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        if (linksAdded == 1) {
+          JMenuItem firstItem = (JMenuItem) popupMenu.getComponent(0);
+          firstItem.doClick();
+        }
+        else if (linksAdded > 1) {
+          popupMenu.show(mou.getComponent(), mou.getX(), mou.getY());
         }
       }
       else if (isImageColumn(column) && StringUtils.isNotBlank(person.getThumbUrl())) {
         ImagePreviewDialog dialog = new ImagePreviewDialog(person.getThumbUrl());
         dialog.setVisible(true);
       }
+    }
+  }
+
+  private void browseUrl(String url) {
+    try {
+      TmmUIHelper.browseUrl(url);
+    }
+    catch (Exception ex) {
+      LOGGER.error("Could not open url in browser - '{}'", ex.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 
@@ -288,6 +371,27 @@ public class PersonTable extends TmmEditorTable {
     iModalPopupPanelProvider.showModalPopupPanel(popupPanel);
   }
 
+  private static boolean hasProfileUrl(Person person) {
+    if (person != null) {
+      if (StringUtils.isNotBlank(person.getThumbUrl())) {
+        return true;
+      }
+      if (StringUtils.isNotBlank(person.getIdAsString(MediaMetadata.IMDB))) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TMDB) > 0) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TVDB) > 0) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TVMAZE) > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * helper classes
    */
@@ -324,7 +428,7 @@ public class PersonTable extends TmmEditorTable {
        * profile
        */
       col = new Column(TmmResourceBundle.getString("profile.url"), "profileUrl", person -> {
-        if (StringUtils.isNotBlank(person.getProfileUrl())) {
+        if (hasProfileUrl(person)) {
           return IconManager.TABLE_OK;
         }
         return IconManager.TABLE_NOT_OK;

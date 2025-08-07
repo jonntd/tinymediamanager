@@ -122,6 +122,7 @@ public class IconManager {
   public static final ImageIcon              HINT                         = createMenuIcon("circle-info.svg");
   public static final ImageIcon              IMAGE                        = createMenuIcon("image.svg");
   public static final ImageIcon              KODI                         = createMenuIcon("kodi.svg");
+  public static final ImageIcon              LINK                         = createMenuIcon("arrow-up-right-from-square.svg");
   public static final ImageIcon              LIST                         = createMenuIcon("list.svg");
   public static final ImageIcon              LOCK_BLUE                    = createMenuIcon("lock-alt.svg");
   public static final ImageIcon              MEDIAINFO                    = createMenuIcon("info.svg");
