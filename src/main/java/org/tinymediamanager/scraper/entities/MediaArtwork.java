@@ -716,6 +716,9 @@ public class MediaArtwork {
       if (b == preferred) {
         return 1;
       }
+      if (a == 0 || b == 0) {
+        return 1; // always sort 0 last!
+      }
 
       int indexA = indices.indexOf(a);
       int indexB = indices.indexOf(b);
