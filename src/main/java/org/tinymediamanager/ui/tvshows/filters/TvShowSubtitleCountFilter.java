@@ -20,7 +20,6 @@ import static org.tinymediamanager.core.MediaFileType.VIDEO;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
@@ -44,7 +43,7 @@ public class TvShowSubtitleCountFilter extends AbstractCheckComboBoxTvShowUIFilt
 
   public TvShowSubtitleCountFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2));
     buildSubtitleCountArray();
     tvShowList.addPropertyChangeListener(Constants.SUBTITLES_COUNT, evt -> SwingUtilities.invokeLater(this::buildSubtitleCountArray));
   }

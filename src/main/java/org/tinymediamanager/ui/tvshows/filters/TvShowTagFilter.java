@@ -46,7 +46,7 @@ public class TvShowTagFilter extends AbstractCheckComboBoxTvShowUIFilter<String>
 
   public TvShowTagFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     comparator = new TmmTableFormat.StringComparator();
     buildAndInstallTagsArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallTagsArray();

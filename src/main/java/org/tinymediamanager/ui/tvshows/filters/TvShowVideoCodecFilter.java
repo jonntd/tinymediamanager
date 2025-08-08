@@ -43,7 +43,7 @@ public class TvShowVideoCodecFilter extends AbstractCheckComboBoxTvShowUIFilter<
 
   public TvShowVideoCodecFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAndInstallCodecArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallCodecArray();
     tvShowList.addPropertyChangeListener(Constants.VIDEO_CODEC, propertyChangeListener);

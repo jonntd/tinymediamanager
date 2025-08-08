@@ -20,6 +20,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import javax.swing.JLabel;
 
@@ -41,7 +42,7 @@ public class TvShowHDRFormatFilter extends AbstractCheckComboBoxTvShowUIFilter<S
 
   public TvShowHDRFormatFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.contains(s2));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildHdrArray();
     PropertyChangeListener propertyChangeListener = evt -> buildHdrArray();
     tvShowList.addPropertyChangeListener(Constants.HDR_FORMAT, propertyChangeListener);

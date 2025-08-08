@@ -41,7 +41,7 @@ public class TvShowSubtitleLanguageFilter extends AbstractCheckComboBoxTvShowUIF
 
   public TvShowSubtitleLanguageFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildSubtitleLanguageArray();
     tvShowList.addPropertyChangeListener(Constants.SUBTITLE_LANGUAGES, evt -> SwingUtilities.invokeLater(this::buildSubtitleLanguageArray));
 

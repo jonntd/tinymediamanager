@@ -43,7 +43,7 @@ public class MovieAudioLanguageFilter extends AbstractCheckComboBoxMovieUIFilter
 
   public MovieAudioLanguageFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.contains(s2.toLowerCase(Locale.ROOT)));
     buildAudioLanguageArray();
     movieList.addPropertyChangeListener(Constants.AUDIO_LANGUAGES, evt -> SwingUtilities.invokeLater(this::buildAudioLanguageArray));
   }

@@ -40,7 +40,7 @@ public class MovieVideoCodecFilter extends AbstractCheckComboBoxMovieUIFilter<St
 
   public MovieVideoCodecFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAndInstallCodecArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallCodecArray();
     movieList.addPropertyChangeListener(Constants.VIDEO_CODEC, propertyChangeListener);

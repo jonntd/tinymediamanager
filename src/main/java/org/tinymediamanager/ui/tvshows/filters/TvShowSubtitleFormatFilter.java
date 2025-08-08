@@ -42,7 +42,7 @@ public class TvShowSubtitleFormatFilter extends AbstractCheckComboBoxTvShowUIFil
 
   public TvShowSubtitleFormatFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildSubtitleFormatArray();
     tvShowList.addPropertyChangeListener(Constants.SUBTITLE_FORMATS, evt -> SwingUtilities.invokeLater(this::buildSubtitleFormatArray));
 

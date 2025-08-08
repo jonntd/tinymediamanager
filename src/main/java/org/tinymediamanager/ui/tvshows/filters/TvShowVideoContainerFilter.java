@@ -41,7 +41,7 @@ public class TvShowVideoContainerFilter extends AbstractCheckComboBoxTvShowUIFil
 
   public TvShowVideoContainerFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAndInstallContainerArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallContainerArray();
     tvShowList.addPropertyChangeListener(Constants.VIDEO_CONTAINER, propertyChangeListener);

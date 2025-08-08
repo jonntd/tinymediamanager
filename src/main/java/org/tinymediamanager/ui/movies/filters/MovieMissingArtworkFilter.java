@@ -42,7 +42,7 @@ public class MovieMissingArtworkFilter extends AbstractCheckComboBoxMovieUIFilte
     super();
     movieList = MovieModuleManager.getInstance().getMovieList();
 
-    checkComboBox.enableFilter((s, s2) -> s.toString().toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toString().toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
 
     // initial filling
     List<MovieMissingArtworkFilter.MetadataField> values = new ArrayList<>();

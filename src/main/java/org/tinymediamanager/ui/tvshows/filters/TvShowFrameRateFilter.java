@@ -19,7 +19,6 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.JLabel;
 
@@ -41,7 +40,7 @@ public class TvShowFrameRateFilter extends AbstractCheckComboBoxTvShowUIFilter<D
 
   public TvShowFrameRateFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2));
     buildAndInstallCodecArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallCodecArray();
     tvShowList.addPropertyChangeListener(Constants.FRAME_RATE, propertyChangeListener);

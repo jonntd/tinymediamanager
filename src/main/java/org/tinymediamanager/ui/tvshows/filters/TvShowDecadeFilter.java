@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import javax.swing.JLabel;
@@ -44,7 +43,7 @@ public class TvShowDecadeFilter extends AbstractCheckComboBoxTvShowUIFilter<Stri
 
   public TvShowDecadeFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.startsWith(s2));
     buildYearArray();
     tvShowList.addPropertyChangeListener(Constants.YEAR, evt -> SwingUtilities.invokeLater(this::buildYearArray));
   }

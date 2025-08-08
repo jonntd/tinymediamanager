@@ -19,7 +19,6 @@ package org.tinymediamanager.ui.movies.filters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
@@ -43,7 +42,7 @@ public class MovieCountSubtitleFilter extends AbstractCheckComboBoxMovieUIFilter
 
   public MovieCountSubtitleFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2));
     buildCountSubtitleArray();
     movieList.addPropertyChangeListener(Constants.SUBTITLES_COUNT, evt -> SwingUtilities.invokeLater(this::buildCountSubtitleArray));
   }

@@ -40,7 +40,7 @@ public class MovieVideoContainerFilter extends AbstractCheckComboBoxMovieUIFilte
 
   public MovieVideoContainerFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAndInstallContainerArray();
     PropertyChangeListener propertyChangeListener = evt -> buildAndInstallContainerArray();
     movieList.addPropertyChangeListener(Constants.VIDEO_CONTAINER, propertyChangeListener);

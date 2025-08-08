@@ -44,7 +44,7 @@ public class TvShowMissingMetadataFilter extends AbstractCheckComboBoxTvShowUIFi
     super();
     tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
-    checkComboBox.enableFilter((s, s2) -> s.toString().toLowerCase(Locale.ROOT).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toString().toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
 
     // initial filling
     List<MetadataField> values = new ArrayList<>();

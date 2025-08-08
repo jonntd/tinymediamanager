@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ResourceBundle;
 import java.util.function.BiPredicate;
 
 import javax.swing.BorderFactory;
@@ -58,8 +57,6 @@ import org.tinymediamanager.ui.components.button.FlatButton;
  * @param <E>
  */
 public class TmmCheckComboBox<E> extends JComboBox<TmmCheckComboBoxItem<E>> {
-  protected static final ResourceBundle                         BUNDLE           = ResourceBundle.getBundle("messages");
-
   protected final DefaultComboBoxModel<TmmCheckComboBoxItem<E>> model;
   protected final List<TmmCheckComboBoxItem<E>>                 checkComboBoxItems;
   // for faster lookup usage

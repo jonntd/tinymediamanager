@@ -46,7 +46,7 @@ public class TvShowAudioTitleFilter extends AbstractCheckComboBoxTvShowUIFilter<
 
   public TvShowAudioTitleFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAudioTitleArray();
     tvShowList.addPropertyChangeListener(Constants.AUDIO_TITLE, evt -> SwingUtilities.invokeLater(this::buildAudioTitleArray));
   }

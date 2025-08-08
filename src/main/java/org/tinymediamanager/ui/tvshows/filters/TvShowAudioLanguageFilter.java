@@ -45,7 +45,7 @@ public class TvShowAudioLanguageFilter extends AbstractCheckComboBoxTvShowUIFilt
 
   public TvShowAudioLanguageFilter() {
     super();
-    checkComboBox.enableFilter((s, s2) -> String.valueOf(s).startsWith(s2.toLowerCase(Locale.ROOT)));
+    checkComboBox.enableFilter((s, s2) -> s.toLowerCase(Locale.ROOT).contains(s2.toLowerCase(Locale.ROOT)));
     buildAudioLanguageArray();
     tvShowList.addPropertyChangeListener(Constants.AUDIO_LANGUAGES, evt -> SwingUtilities.invokeLater(this::buildAudioLanguageArray));
 
