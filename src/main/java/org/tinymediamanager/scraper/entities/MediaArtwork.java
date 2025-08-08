@@ -705,6 +705,7 @@ public class MediaArtwork {
       indices.add(newOrder);
       newOrder /= 2; // Halve the order for each step
     }
+    indices.add(0); // also add 0, as we would omit all artworks with unset sizeOrder
 
     int indexP = indices.indexOf(preferred);
 
