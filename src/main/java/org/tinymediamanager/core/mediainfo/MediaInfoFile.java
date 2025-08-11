@@ -202,7 +202,7 @@ public class MediaInfoFile implements Comparable<MediaInfoFile> {
     }
 
     try (MediaInfo mediaInfo = new MediaInfo()) {
-      if (!mediaInfo.open(file)) {
+      if (mediaInfo.Open(file.toAbsolutePath().toString()) == 0) {
         LOGGER.error("MediaInfo could not open file  '{}'", file);
       }
       else {

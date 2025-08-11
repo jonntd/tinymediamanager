@@ -446,40 +446,40 @@ public class MediaInfoTest extends BasicTest {
     MediaInfo MI = new MediaInfo();
 
     To_Display += "\r\n\r\nOpen\r\n";
-    if (MI.open(Paths.get(FileName)))
+    if (MI.Open(Paths.get(FileName).toAbsolutePath().toString()) == 1)
       To_Display += "is OK\r\n";
     else
       To_Display += "has a problem\r\n";
 
     To_Display += "\r\n\r\nInform with Complete=false\r\n";
-    MI.option("Complete", "");
-    To_Display += MI.inform();
+    MI.Option("Complete", "");
+    To_Display += MI.Inform();
 
     To_Display += "\r\n\r\nInform with Complete=true\r\n";
-    MI.option("Complete", "1");
-    To_Display += MI.inform();
+    MI.Option("Complete", "1");
+    To_Display += MI.Inform();
 
     To_Display += "\r\n\r\nCustom Inform\r\n";
-    MI.option("Inform", "General;Example : FileSize=%FileSize%");
-    To_Display += MI.inform();
+    MI.Option("Inform", "General;Example : FileSize=%FileSize%");
+    To_Display += MI.Inform();
 
     To_Display += "\r\n\r\nGetI with Stream=General and Parameter=2\r\n";
-    To_Display += MI.get(MediaInfo.StreamKind.General, 0, 2, MediaInfo.InfoKind.Text);
+    To_Display += MI.Get(MediaInfo.StreamKind.General, 0, 2, MediaInfo.InfoKind.Text);
 
     To_Display += "\r\n\r\nCount_Get with StreamKind=Stream_Audio\r\n";
-    To_Display += MI.parameterCount(MediaInfo.StreamKind.Audio, -1);
+    To_Display += MI.Count_Get(MediaInfo.StreamKind.Audio, -1);
 
     To_Display += "\r\n\r\nGet with Stream=General and Parameter=\"AudioCount\"\r\n";
-    To_Display += MI.get(MediaInfo.StreamKind.General, 0, "AudioCount", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
+    To_Display += MI.Get(MediaInfo.StreamKind.General, 0, "AudioCount", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
 
     To_Display += "\r\n\r\nGet with Stream=Audio and Parameter=\"StreamCount\"\r\n";
-    To_Display += MI.get(MediaInfo.StreamKind.Audio, 0, "StreamCount", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
+    To_Display += MI.Get(MediaInfo.StreamKind.Audio, 0, "StreamCount", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
 
     To_Display += "\r\n\r\nGet with Stream=General and Parameter=\"FileSize\"\r\n";
-    To_Display += MI.get(MediaInfo.StreamKind.General, 0, "FileSize", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
+    To_Display += MI.Get(MediaInfo.StreamKind.General, 0, "FileSize", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
 
     To_Display += "\r\n\r\nGet with Stream=General and Parameter=\"File_Modified_Date_Local\"\r\n";
-    To_Display += MI.get(MediaInfo.StreamKind.General, 0, "File_Modified_Date_Local", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
+    To_Display += MI.Get(MediaInfo.StreamKind.General, 0, "File_Modified_Date_Local", MediaInfo.InfoKind.Text, MediaInfo.InfoKind.Name);
 
     To_Display += "\r\n\r\nClose\r\n";
     MI.close();

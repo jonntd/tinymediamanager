@@ -26,7 +26,7 @@ import org.tinymediamanager.scraper.util.StrgUtils;
 public class ITChecksumPerformanceTest { // NOSONAR squid:S5786
 
   private static final int  BUFFER_SIZE = 1024 * 1024;
-  private static final Path BIG_FILE    = Paths.get("C:\\Users\\mmahnig\\Videos\\TMM\\MI2_ISO\\MI2.iso");
+  private static final Path BIG_FILE    = Paths.get("some_8gb.iso");
 
   @Test
   public void testDifferentCRCs() {
