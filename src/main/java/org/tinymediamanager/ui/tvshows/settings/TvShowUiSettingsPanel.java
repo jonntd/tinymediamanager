@@ -100,6 +100,7 @@ class TvShowUiSettingsPanel extends JPanel {
   private JCheckBox                                                chckbxNode;
   private JCheckBox                                                chckbxTitle;
   private JCheckBox                                                chckbxOriginalTitle;
+  private JCheckBox                                                chckbxEnglishTitle;
 
   private JCheckBox                                                chckbxUniversalNote;
   private JCheckBox                                                chckbxUniversalFilename;
@@ -869,15 +870,18 @@ class TvShowUiSettingsPanel extends JPanel {
       JLabel lblTvShowFilter = new JLabel(TmmResourceBundle.getString("Settings.tvshowquickfilter"));
       panelFilter.add(lblTvShowFilter, "cell 1 0 2 1");
 
-      chckbxNode = new JCheckBox(TmmResourceBundle.getString("metatag.node"));
-      panelFilter.add(chckbxNode, "flowx,cell 2 1");
-
-      chckbxTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title"));
-      panelFilter.add(chckbxTitle, "cell 2 1");
       {
+        chckbxNode = new JCheckBox(TmmResourceBundle.getString("metatag.node"));
+        panelFilter.add(chckbxNode, "flowx,cell 2 1");
+
+        chckbxTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title"));
+        panelFilter.add(chckbxTitle, "cell 2 1");
 
         chckbxOriginalTitle = new JCheckBox(TmmResourceBundle.getString("metatag.originaltitle"));
         panelFilter.add(chckbxOriginalTitle, "cell 2 1");
+
+        chckbxEnglishTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title.english"));
+        panelFilter.add(chckbxEnglishTitle, "cell 2 1");
       }
       JHintLabel lblUniversalFilter = new JHintLabel(TmmResourceBundle.getString("filter.universal"));
       panelFilter.add(lblUniversalFilter, "cell 1 2 2 1");
@@ -917,7 +921,7 @@ class TvShowUiSettingsPanel extends JPanel {
         chckbxStoreFilter = new JCheckBox(TmmResourceBundle.getString("Settings.movie.persistuifilter"));
         panelFilter.add(chckbxStoreFilter, "cell 1 6 2 1");
       }
-      collapsiblePanel.addExtraTitleComponent(new DocsButton("/tvshows/settings#filter"));
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/tvshows/settings#filters"));
       add(collapsiblePanel, "cell 0 2,growx,wmin 0");
     }
 
@@ -990,6 +994,11 @@ class TvShowUiSettingsPanel extends JPanel {
         jCheckBoxBeanProperty);
     autoBinding_23.bind();
     //
+    Property tvShowSettingsBeanProperty_24 = BeanProperty.create("englishTitle");
+    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_24, chckbxEnglishTitle,
+        jCheckBoxBeanProperty);
+    autoBinding_24.bind();
+    //
     Property tvShowSettingsBeanProperty_15 = BeanProperty.create("tvShowDisplayAllMissingMetadata");
     AutoBinding autoBinding_25 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_15,
         chckbxTvShowDisplayAllMissingMetadata, jCheckBoxBeanProperty);
@@ -1020,10 +1029,10 @@ class TvShowUiSettingsPanel extends JPanel {
         chckbxEpisodeSpecialsCheckMissingMetadata, jCheckBoxBeanProperty);
     autoBinding_9.bind();
     //
-    Property tvShowSettingsBeanProperty_24 = BeanProperty.create("episodeSpecialsCheckMissingArtwork");
-    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_24,
+    Property tvShowSettingsBeanProperty_30 = BeanProperty.create("episodeSpecialsCheckMissingArtwork");
+    AutoBinding autoBinding_30 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_30,
         chckbxEpisodeSpecialsCheckMissingArtwork, jCheckBoxBeanProperty);
-    autoBinding_24.bind();
+    autoBinding_30.bind();
     //
     AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxShowMissingEpisodes, jCheckBoxBeanProperty, chckbxIncludeNotAired,
         jCheckBoxBeanProperty_1);

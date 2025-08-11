@@ -231,9 +231,10 @@ public final class MovieSettings extends AbstractSettings {
 
   boolean                                   title                                  = true;
   boolean                                   sortableTitle                          = false;
-  boolean                                   originalTitle                          = false;
+  boolean                                   originalTitle                          = true;
   boolean                                   sortableOriginalTitle                  = false;
   boolean                                   sortTitle                              = false;
+  boolean                                   englishTitle                           = true;
   final List<PostProcess>                   postProcess                            = ObservableCollections.observableList(new ArrayList<>());
   final List<PostProcess>                   movieSetPostProcess                    = ObservableCollections.observableList(new ArrayList<>());
 
@@ -1350,6 +1351,12 @@ public final class MovieSettings extends AbstractSettings {
     firePropertyChange("sortTitle", oldValue, newValue);
   }
 
+  public void setEnglishTitle(boolean newValue) {
+    boolean oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
+  }
+
   public boolean getTitle() {
     return this.title;
   }
@@ -1368,6 +1375,10 @@ public final class MovieSettings extends AbstractSettings {
 
   public boolean getSortTitle() {
     return this.sortTitle;
+  }
+
+  public boolean getEnglishTitle() {
+    return this.englishTitle;
   }
 
   public boolean isIncludeExternalAudioStreams() {

@@ -94,12 +94,15 @@ public class MovieTextMatcherEditor extends AbstractMatcherEditor<Movie> {
         return true;
       }
 
+      // filter on title
       if (settings.getTitle() && StringUtils.isNotBlank(movie.getTitle())) {
         java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getTitle()));
         if (matcher.find()) {
           return true;
         }
       }
+
+      // filter on sortable title
       if (settings.getSortableTitle() && StringUtils.isNotBlank(movie.getTitleSortable())) {
         java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getTitleSortable()));
         if (matcher.find()) {
@@ -107,24 +110,38 @@ public class MovieTextMatcherEditor extends AbstractMatcherEditor<Movie> {
         }
       }
 
+      // filter on original title
       if (settings.getOriginalTitle() && StringUtils.isNotBlank(movie.getOriginalTitle())) {
         java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getOriginalTitle()));
         if (matcher.find()) {
           return true;
         }
       }
+
+      // filter on original sortable title
       if (settings.getSortableOriginalTitle() && StringUtils.isNotBlank(movie.getOriginalTitleSortable())) {
         java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getOriginalTitleSortable()));
         if (matcher.find()) {
           return true;
         }
       }
+
+      // filter on sort title
       if (settings.getSortTitle() && StringUtils.isNotBlank(movie.getSortTitle())) {
         java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getSortTitle()));
         if (matcher.find()) {
           return true;
         }
       }
+
+      // filter on english title
+      if (settings.getEnglishTitle() && StringUtils.isNotBlank(movie.getEnglishTitle())) {
+        java.util.regex.Matcher matcher = filterPattern.matcher(StrgUtils.normalizeString(movie.getEnglishTitle()));
+        if (matcher.find()) {
+          return true;
+        }
+      }
+
       // match by field:value (eg search by ids:160, actors:mel gibson))
       if (normalizedFilterText.matches("\\w+:\\w[\\w\\s]+")) {
         String[] kv = normalizedFilterText.split(":");

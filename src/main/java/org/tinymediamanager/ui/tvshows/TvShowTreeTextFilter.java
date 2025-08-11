@@ -90,9 +90,9 @@ public class TvShowTreeTextFilter<E extends TmmTreeNode> extends TmmTreeTextFilt
         }
       }
 
-      // Note
-      if (settings.getNote()) {
-        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.getNote()));
+      // filter on english title
+      if (settings.getEnglishTitle()) {
+        matcher = filterPattern.matcher(StrgUtils.normalizeString(treeNode.getEnglishTitle()));
         if (matcher.find()) {
           return true;
         }

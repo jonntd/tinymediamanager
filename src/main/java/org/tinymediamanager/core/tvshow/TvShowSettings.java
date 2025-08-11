@@ -121,11 +121,6 @@ public final class TvShowSettings extends AbstractSettings {
   static final String                            EPISODE_CHECK_METADATA                 = "episodeCheckMetadata";
   static final String                            EPISODE_CHECK_ARTWORK                  = "episodeCheckArtwork";
 
-  static final String                            NODE                                   = "node";
-  static final String                            TITLE                                  = "title";
-  static final String                            ORIGINAL_TITLE                         = "originalTitle";
-  static final String                            NOTE                                   = "note";
-
   final List<String>                             tvShowDataSources                      = ObservableCollections.observableList(new ArrayList<>());
   final List<String>                             badWords                               = ObservableCollections.observableList(new ArrayList<>());
   final List<String>                             artworkScrapers                        = ObservableCollections.observableList(new ArrayList<>());
@@ -273,7 +268,7 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        node                                   = true;
   boolean                                        title                                  = true;
   boolean                                        originalTitle                          = true;
-  boolean                                        note                                   = false;
+  boolean                                        englishTitle                           = true;
   final List<String>                             ratingSources                          = ObservableCollections.observableList(new ArrayList<>());
 
   public TvShowSettings() {
@@ -1083,7 +1078,7 @@ public final class TvShowSettings extends AbstractSettings {
   public void setNode(boolean newValue) {
     boolean oldValue = this.node;
     this.node = newValue;
-    firePropertyChange(NODE, oldValue, newValue);
+    firePropertyChange("node", oldValue, newValue);
   }
 
   public boolean getNode() {
@@ -1093,7 +1088,7 @@ public final class TvShowSettings extends AbstractSettings {
   public void setTitle(boolean newValue) {
     boolean oldValue = this.node;
     this.node = newValue;
-    firePropertyChange(TITLE, oldValue, newValue);
+    firePropertyChange("title", oldValue, newValue);
   }
 
   public boolean getTitle() {
@@ -1103,21 +1098,21 @@ public final class TvShowSettings extends AbstractSettings {
   public void setOriginalTitle(boolean newValue) {
     boolean oldValue = this.originalTitle;
     this.originalTitle = newValue;
-    firePropertyChange(ORIGINAL_TITLE, oldValue, newValue);
+    firePropertyChange("originalTitle", oldValue, newValue);
   }
 
   public boolean getOriginalTitle() {
     return this.originalTitle;
   }
 
-  public void setNote(boolean newValue) {
-    boolean oldValue = this.note;
-    this.note = newValue;
-    firePropertyChange(NOTE, oldValue, newValue);
+  public void setEnglishTitle(boolean newValue) {
+    boolean oldValue = this.englishTitle;
+    this.englishTitle = newValue;
+    firePropertyChange("englishTitle", oldValue, newValue);
   }
 
-  public boolean getNote() {
-    return this.note;
+  public boolean getEnglishTitle() {
+    return this.englishTitle;
   }
 
   /**

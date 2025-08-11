@@ -62,7 +62,6 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.MovieSettings;
-import org.tinymediamanager.core.movie.MovieTextMatcherList;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.components.button.DocsButton;
@@ -105,6 +104,7 @@ class MovieUiSettingsPanel extends JPanel {
   private JCheckBox                                        chckbxOriginalTitle;
   private JCheckBox                                        chckbxSortableOriginalTitle;
   private JCheckBox                                        chckbxSortTitle;
+  private JCheckBox                                        chckbxEnglishTitle;
 
   private JCheckBox                                        chckbxUniversalNote;
   private JCheckBox                                        chckbxUniversalFilename;
@@ -547,29 +547,32 @@ class MovieUiSettingsPanel extends JPanel {
       JLabel lblMovieFilter = new JLabel(TmmResourceBundle.getString("Settings.movietitlefilter"));
       panelFilter.add(lblMovieFilter, "cell 1 0 2 1");
 
-      chckbxTitle = new JCheckBox(MovieTextMatcherList.TITLE.toString());
-      panelFilter.add(chckbxTitle, "flowx,cell 2 1");
-
-      chckbxSortableTitle = new JCheckBox(MovieTextMatcherList.TITLE_SORTABLE.toString());
-      panelFilter.add(chckbxSortableTitle, "cell 2 1");
-
-      JLabel lblSortableTitleHint = new JLabel(IconManager.HINT);
-      panelFilter.add(lblSortableTitleHint, "cell 2 1");
-      lblSortableTitleHint.setToolTipText(TmmResourceBundle.getString("Settings.movie.renamer.${titleSortable}"));
-
-      chckbxOriginalTitle = new JCheckBox(MovieTextMatcherList.ORIGINAL_TITLE.toString());
-      panelFilter.add(chckbxOriginalTitle, "cell 2 1");
-
-      chckbxSortableOriginalTitle = new JCheckBox(MovieTextMatcherList.ORIGINAL_TITLE_SORTABLE.toString());
-      panelFilter.add(chckbxSortableOriginalTitle, "cell 2 1");
-
-      JLabel lblSortableOriginalTitleHint = new JLabel(IconManager.HINT);
-      panelFilter.add(lblSortableOriginalTitleHint, "cell 2 1");
-      lblSortableOriginalTitleHint.setToolTipText(TmmResourceBundle.getString("Settings.movie.renamer.${titleSortable}"));
       {
+        chckbxTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title"));
+        panelFilter.add(chckbxTitle, "flowx,cell 2 1");
 
-        chckbxSortTitle = new JCheckBox(MovieTextMatcherList.SORTED_TITLE.toString());
+        chckbxSortableTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title.sortable"));
+        panelFilter.add(chckbxSortableTitle, "cell 2 1");
+
+        JLabel lblSortableTitleHint = new JLabel(IconManager.HINT);
+        panelFilter.add(lblSortableTitleHint, "cell 2 1");
+        lblSortableTitleHint.setToolTipText(TmmResourceBundle.getString("Settings.movie.renamer.${titleSortable}"));
+
+        chckbxOriginalTitle = new JCheckBox(TmmResourceBundle.getString("metatag.originaltitle"));
+        panelFilter.add(chckbxOriginalTitle, "cell 2 1");
+
+        chckbxSortableOriginalTitle = new JCheckBox(TmmResourceBundle.getString("metatag.originaltitle.sortable"));
+        panelFilter.add(chckbxSortableOriginalTitle, "cell 2 1");
+
+        JLabel lblSortableOriginalTitleHint = new JLabel(IconManager.HINT);
+        panelFilter.add(lblSortableOriginalTitleHint, "cell 2 1");
+        lblSortableOriginalTitleHint.setToolTipText(TmmResourceBundle.getString("Settings.movie.renamer.${titleSortable}"));
+
+        chckbxSortTitle = new JCheckBox(TmmResourceBundle.getString("metatag.sorttitle"));
         panelFilter.add(chckbxSortTitle, "cell 2 1");
+
+        chckbxEnglishTitle = new JCheckBox(TmmResourceBundle.getString("metatag.title.english"));
+        panelFilter.add(chckbxEnglishTitle, "cell 2 1");
       }
       JHintLabel lblUniversalFilter = new JHintLabel(TmmResourceBundle.getString("filter.universal"));
       panelFilter.add(lblUniversalFilter, "cell 1 2 2 1");
@@ -618,7 +621,7 @@ class MovieUiSettingsPanel extends JPanel {
         chckbxStoreFilter = new JCheckBox(TmmResourceBundle.getString("Settings.movie.persistuifilter"));
         panelFilter.add(chckbxStoreFilter, "cell 1 6 2 1");
       }
-      collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#filter"));
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/movies/settings#filters"));
       add(collapsiblePanel, "cell 0 2,growx,wmin 0");
     }
   }
@@ -671,6 +674,11 @@ class MovieUiSettingsPanel extends JPanel {
     AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_17, chckbxSortTitle,
         jCheckBoxBeanProperty);
     autoBinding_17.bind();
+    //
+    Property movieSettingsBeanProperty_18 = BeanProperty.create("englishTitle");
+    AutoBinding autoBinding_18 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_18, chckbxEnglishTitle,
+        jCheckBoxBeanProperty);
+    autoBinding_18.bind();
     //
     Property movieSettingsBeanProperty = BeanProperty.create("ratingSources");
     JListBinding jListBinding = SwingBindings.createJListBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty, listRatings);

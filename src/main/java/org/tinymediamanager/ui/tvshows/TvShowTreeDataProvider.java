@@ -423,7 +423,7 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
 
     abstract String getOriginalTitle();
 
-    abstract String getNote();
+    abstract String getEnglishTitle();
   }
 
   public static class TvShowTreeNode extends AbstractTvShowTreeNode {
@@ -472,7 +472,11 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     }
 
     @Override
-    String getNote() {
+    String getEnglishTitle() {
+      if (getUserObject() instanceof TvShow tvShow) {
+        return tvShow.getEnglishTitle();
+      }
+
       return toString();
     }
   }
@@ -529,7 +533,7 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     }
 
     @Override
-    String getNote() {
+    String getEnglishTitle() {
       return toString();
     }
   }
@@ -585,9 +589,9 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     }
 
     @Override
-    String getNote() {
+    String getEnglishTitle() {
       if (getUserObject() instanceof TvShowEpisode episode) {
-        return episode.getNote();
+        return episode.getEnglishTitle();
       }
 
       return toString();
