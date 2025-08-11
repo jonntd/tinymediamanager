@@ -7,7 +7,6 @@
 
 ## libtinyfiledialogs
 
-* Windows - Windows x64 - https://sourceforge.net/projects/tinyfiledialogs/files/
 * Linux - self compiled - https://sourceforge.net/projects/tinyfiledialogs/files/
 
 Linux x64:

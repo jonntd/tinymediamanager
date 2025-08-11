@@ -49,7 +49,6 @@ resource = [linux-arm] jre/linux_aarch64.tar.xz
 resource = [windows-amd64] native/windows/MediaInfo.dll
 
 # tiny file dialogs native libs
-resource = [windows-amd64] native/windows/tinyfiledialogs.dll
 resource = [linux-amd64] native/linux/libtinyfiledialogs.so
 resource = [linux-aarch64] native/arm/libtinyfiledialogs.so
 
