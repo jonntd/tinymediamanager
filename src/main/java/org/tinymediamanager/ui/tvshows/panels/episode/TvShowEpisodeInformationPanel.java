@@ -395,6 +395,10 @@ public class TvShowEpisodeInformationPanel extends InformationPanel {
   }
 
   private void setSeasonPoster(TvShowEpisode episode) {
+    if (episode == null || episode.getTvShowSeason() == null) {
+      // eg. happens when you highlight a season/episode node, but remove the show on right-click
+      return;
+    }
     String posterPath = episode.getTvShowSeason().getArtworkFilename(MediaFileType.SEASON_POSTER);
     Dimension posterSize = episode.getTvShowSeason().getArtworkDimension(MediaFileType.SEASON_POSTER);
 
