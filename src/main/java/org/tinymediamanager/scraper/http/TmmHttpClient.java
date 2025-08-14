@@ -154,6 +154,19 @@ public class TmmHttpClient {
   /**
    * create a new OkHttpClient.Builder WITH cache along with all our settings set
    * 
+   * @param ownCache
+   *          supply your own sized cache, if you want to use a different one than the default
+   * @return the newly created builder
+   */
+  public static OkHttpClient.Builder newBuilder(Cache ownCache) {
+    OkHttpClient.Builder builder = client.newBuilder();
+    builder = builder.cache(ownCache);
+    return builder;
+  }
+
+  /**
+   * create a new OkHttpClient.Builder WITH cache along with all our settings set
+   * 
    * @param withCache
    *          create the builder with a cache set, if the server allows to cache it
    * @return the newly created builder
@@ -179,6 +192,19 @@ public class TmmHttpClient {
    */
   public static OkHttpClient.Builder newBuilderWithForcedCache(final int timeToLive, final TimeUnit timeUnit) {
     return newBuilder(true).addNetworkInterceptor(provideCacheInterceptor(timeToLive, timeUnit));
+  }
+
+  /**
+   * create a new OkHttpClient.Builder with a FORCED cache (overwriting any cache response headers of the HTTP request)
+   * 
+   * @param timeToLive
+   *          the time to live
+   * @param timeUnit
+   *          the time unit for the TTL
+   * @return a new {@link OkHttpClient.Builder} with the given TTL settings
+   */
+  public static OkHttpClient.Builder newBuilderWithForcedCache(Cache ownCache, final int timeToLive, final TimeUnit timeUnit) {
+    return newBuilder(ownCache).addNetworkInterceptor(provideCacheInterceptor(timeToLive, timeUnit));
   }
 
   /**

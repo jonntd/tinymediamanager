@@ -19,6 +19,8 @@ package org.tinymediamanager.scraper.http;
 import java.net.MalformedURLException;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Cache;
+
 /**
  * an implementation of the url to use a local disk cache
  * 
@@ -48,5 +50,17 @@ public class OnDiskCachedUrl extends Url {
   public OnDiskCachedUrl(String url, int timeToLive, TimeUnit timeUnit) throws MalformedURLException {
     super(url);
     client = TmmHttpClient.newBuilderWithForcedCache(timeToLive, timeUnit).build();
+  }
+
+  /**
+   * create an instance of the {@link Url} using the given caching values (overwriting any available response headers of the HTTP request)
+   * 
+   * @param url
+   *          the url to fetch
+   * @throws MalformedURLException
+   */
+  public OnDiskCachedUrl(String url, Cache ownCache, int timeToLive, TimeUnit timeUnit) throws MalformedURLException {
+    super(url);
+    client = TmmHttpClient.newBuilderWithForcedCache(ownCache, timeToLive, timeUnit).build();
   }
 }
