@@ -145,18 +145,6 @@ public abstract class TmmEditorTable extends TmmTable {
    *          the row index
    * @param column
    *          the column index
-   */
-  protected void linkClicked(int row, int column) {
-    // empty default impl.
-  }
-
-  /**
-   * callback if another link has been clicked
-   *
-   * @param row
-   *          the row index
-   * @param column
-   *          the column index
    * @param mouseEvent
    *          the mouse event
    */

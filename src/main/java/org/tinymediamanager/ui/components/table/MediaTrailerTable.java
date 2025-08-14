@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.ui.components.table;
 
+import java.awt.event.MouseEvent;
 import java.util.Comparator;
 import java.util.Locale;
 
@@ -212,7 +213,7 @@ public class MediaTrailerTable extends TmmEditorTable {
   }
 
   @Override
-  protected void linkClicked(int row, int column) {
+  protected void linkClicked(int row, int column, MouseEvent mouseEvent) {
     MediaTrailer trailer = getTrailer(row);
 
     if (trailer != null) {
