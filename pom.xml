@@ -52,10 +52,6 @@
             <post>https://www.reddit.com/r/tinyMediaManager/</post>
         </mailingList>
     </mailingLists>
-    <prerequisites>
-        <maven>3.3.9</maven> <!-- although it should not be used here, it is needed for version update
-      plugin -->
-    </prerequisites>
     <scm>
         <url>https://gitlab.com/tinyMediaManager/${project.artifactId}</url>
         <connection>scm:git:git@gitlab.com:tinyMediaManager/${project.artifactId}.git</connection>
@@ -76,15 +72,15 @@
         <skipSign>true</skipSign> <!-- to override on command line -->
         <tier>GIT</tier> <!-- we replace this with nightly/prerel, but if not set, keep snapshot -->
 
-        <jar.version>3.3.0</jar.version>
-        <surefire.version>3.0.0-M7</surefire.version>
-        <compiler.version>3.10.1</compiler.version>
-        <enforcer.version>3.1.0</enforcer.version>
+        <jar.version>3.4.2</jar.version>
+        <surefire.version>3.5.3</surefire.version>
+        <compiler.version>3.14.0</compiler.version>
+        <enforcer.version>3.6.1</enforcer.version>
         <animal-sniffer.version>1.17</animal-sniffer.version>
         <wagon-webdav-jackrabbit.version>3.0.0</wagon-webdav-jackrabbit.version>
         <okhttp.version>4.12.0</okhttp.version>
         <slf4j.version>2.0.9</slf4j.version>
-        <release.version>2.5.3</release.version>
+        <release.version>3.1.1</release.version>
         <jre.version>21.0.8-b1038</jre.version>
         <launcher.version>5.0.11</launcher.version>
         <flatlaf.version>3.6.1</flatlaf.version>
@@ -441,7 +437,7 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>3.5.0</version>
                     <executions>
                         <execution>
                             <id>default-clean</id>
@@ -514,10 +510,14 @@
                             </includes>
                         </artifactSet>
                         <extraJars>${maven.shade.extra}</extraJars>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
+                        </transformers>
                         <filters>
                             <filter>
                                 <artifact>*:*</artifact>
                                 <excludes>
+                                    <exclude>META-INF/*.MF</exclude>
                                     <exclude>META-INF/*.SF</exclude>
                                     <exclude>META-INF/*.DSA</exclude>
                                     <exclude>META-INF/*.RSA</exclude>
@@ -593,7 +593,7 @@
                 <!-- get SVN/GIT revision numbers -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <phase>generate-resources</phase>
@@ -610,7 +610,7 @@
                 <!-- generate a timestamp -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <id>timestamp-property</id>
@@ -621,7 +621,8 @@
                         <configuration>
                             <name>timestamp</name>
                             <pattern>yyyy-MM-dd HH:mm</pattern>
-                            <timeZone>GMT+1</timeZone>
+                            <timeZone>UTC</timeZone>
+                            <locale>en,US</locale>
                         </configuration>
                     </execution>
                     <execution>
@@ -693,7 +694,7 @@
                         <configuration>
                             <rules>
                                 <requireMavenVersion>
-                                    <version>3.3.9</version>
+                                    <version>3.6.3</version>
                                 </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>${maven.compiler.release}</version>
@@ -707,18 +708,27 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.2.1</version>
+                <version>12.1.3</version>
                 <configuration>
                     <formats>
                         <format>html</format>
                         <format>json</format>
                     </formats>
                 </configuration>
+                <!-- deactivated, activate with
+                <executions>
+                    <execution>
+                        <goals>
+                          <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions> -->
             </plugin>
             <plugin>
+                <!-- https://docs.sonarsource.com/sonarqube-server/latest/analyzing-source-code/scanners/sonarscanner-for-maven/ -->
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
-                <version>3.9.1.2184</version>
+                <version>5.1.0.4751</version>
             </plugin>
         </plugins>
         <extensions>
@@ -739,7 +749,7 @@
                         <!-- get SVN/GIT revision numbers -->
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>buildnumber-maven-plugin</artifactId>
-                        <version>3.0.0</version>
+                        <version>3.2.0</version>
                         <executions>
                             <execution>
                                 <phase>none</phase>
@@ -768,7 +778,7 @@
                     <plugin>
                         <groupId>de.thetaphi</groupId>
                         <artifactId>forbiddenapis</artifactId>
-                        <version>3.5.1</version>
+                        <version>3.9</version>
                         <configuration>
                             <targetVersion>${maven.compiler.release}</targetVersion>
                             <!-- if the used Java version is too new, don't fail, just do nothing: -->
@@ -799,10 +809,12 @@
                     <plugin>
                         <groupId>org.gaul</groupId>
                         <artifactId>modernizer-maven-plugin</artifactId>
-                        <version>2.6.0</version>
+                        <version>3.1.0</version>
                         <configuration>
                             <failOnViolations>false</failOnViolations>
+                            <includeTestClasses>false</includeTestClasses>
                             <javaVersion>${maven.compiler.release}</javaVersion>
+                            <outputFormat>CODE_CLIMATE</outputFormat>
                         </configuration>
                         <executions>
                             <execution>
@@ -839,7 +851,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jarsigner-plugin</artifactId>
-                        <version>3.0.0</version>
+                        <version>3.1.0</version>
                         <executions>
                             <execution>
                                 <id>sign</id>
@@ -865,7 +877,7 @@
                         packaging -->
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-dependency-plugin</artifactId>
-                        <version>3.3.0</version>
+                        <version>3.8.1</version>
                         <executions>
                             <execution>
                                 <id>copy-tmm-dependencies</id>
@@ -1038,7 +1050,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>
-                        <!-- do not upgrade due to https://issues.apache.org/jira/browse/MASSEMBLY-965 -->
                         <version>3.7.1</version>
                         <executions>
                             <execution>

@@ -57,11 +57,14 @@ sonarqube-qa:
     - tmm # force running on own runners
   allow_failure: true
   script:
-    - mvn $MAVEN_CLI_OPTS clean compile sonar:sonar -Dsonar.projectKey=org.tinymediamanager:tinyMediaManager -Dsonar.organization=tinymediamanager -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${SONARCLOUD_API_TOKEN}
+    - mvn $MAVEN_CLI_OPTS clean verify -Pqa sonar:sonar -Dsonar.projectKey=org.tinymediamanager:tinyMediaManager -Dsonar.organization=tinymediamanager -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${SONARCLOUD_API_TOKEN}
   artifacts:
     expire_in: 1 days
     paths:
       - target/dependency-check-report.html
+    reports:
+      codequality:
+        path: target/code-quality.json
 
 ##########################################
 # nightly
