@@ -447,7 +447,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details1Panel.add(lblTitle, "cell 0 0,alignx right");
 
         tfTitle = new TmmObligatoryTextArea();
-        details1Panel.add(tfTitle, "cell 1 0 6 1,growx");
+        details1Panel.add(tfTitle, "cell 1 0 6 1,growx,wmin 0");
       }
       {
         lblPoster = new ImageLabel();
@@ -488,28 +488,28 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details1Panel.add(lblOriginalTitleT, "cell 0 1,alignx right");
 
         tfOriginalTitle = new TmmRoundTextArea();
-        details1Panel.add(tfOriginalTitle, "cell 1 1 6 1,growx");
+        details1Panel.add(tfOriginalTitle, "cell 1 1 6 1,growx,wmin 0");
       }
       {
         JLabel lblTitleEnglish = new TmmLabel(TmmResourceBundle.getString("metatag.title.english"));
         details1Panel.add(lblTitleEnglish, "cell 0 2,alignx right");
 
         tfEnglishTitle = new TmmRoundTextArea();
-        details1Panel.add(tfEnglishTitle, "cell 1 2 6 1,growx");
+        details1Panel.add(tfEnglishTitle, "cell 1 2 6 1,growx,wmin 0");
       }
       {
         JLabel lblSortTitle = new TmmLabel(TmmResourceBundle.getString("metatag.sorttitle"));
         details1Panel.add(lblSortTitle, "cell 0 3,alignx right");
 
         tfSorttitle = new TmmRoundTextArea();
-        details1Panel.add(tfSorttitle, "cell 1 3 6 1,growx");
+        details1Panel.add(tfSorttitle, "cell 1 3 6 1,growx,wmin 0");
       }
       {
         JLabel lblPlot = new TmmLabel(TmmResourceBundle.getString("metatag.plot"));
         details1Panel.add(lblPlot, "cell 0 4,alignx right,aligny top");
 
         JScrollPane scrollPanePlot = new JScrollPane();
-        details1Panel.add(scrollPanePlot, "cell 1 4 6 1,grow");
+        details1Panel.add(scrollPanePlot, "cell 1 4 6 1,grow,wmin 0");
 
         taPlot = new JTextArea();
         taPlot.setLineWrap(true);
@@ -538,14 +538,14 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details1Panel.add(lblStudio, "cell 0 6,alignx right");
 
         tfStudio = new TmmRoundTextArea();
-        details1Panel.add(tfStudio, "cell 1 6 6 1,growx");
+        details1Panel.add(tfStudio, "cell 1 6 6 1,growx,wmin 0");
       }
       {
         JLabel lblCountryT = new TmmLabel(TmmResourceBundle.getString("metatag.country"));
         details1Panel.add(lblCountryT, "cell 0 7,alignx trailing");
 
         tfCountry = new TmmRoundTextArea();
-        details1Panel.add(tfCountry, "cell 1 7 6 1,growx");
+        details1Panel.add(tfCountry, "cell 1 7 6 1,growx,wmin 0");
       }
       {
         JLabel lblRuntime = new TmmLabel(TmmResourceBundle.getString("metatag.runtime"));
@@ -594,7 +594,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         details1Panel.add(lblRatingsT, "flowy,cell 0 11,alignx right,aligny top");
 
         JScrollPane scrollPaneRatings = new JScrollPane();
-        details1Panel.add(scrollPaneRatings, "cell 1 11 4 1,grow");
+        details1Panel.add(scrollPaneRatings, "cell 1 11 4 1,grow,wmin 0");
 
         tableRatings = new MediaRatingTable(ratings);
         tableRatings.configureScrollPane(scrollPaneRatings);
