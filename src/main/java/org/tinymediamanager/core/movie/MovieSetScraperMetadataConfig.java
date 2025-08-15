@@ -32,7 +32,7 @@ public enum MovieSetScraperMetadataConfig implements ScraperMetadataConfig {
   // meta data
   ID(Type.METADATA),
   TITLE(Type.METADATA),
-  ENGLISH_TITLE(Type.METADATA, "metatag.englishTitle"),
+  ENGLISH_TITLE(Type.METADATA, "metatag.title.english"),
   PLOT(Type.METADATA),
   RATING(Type.DEPRECATED), // not available at the moment
 
