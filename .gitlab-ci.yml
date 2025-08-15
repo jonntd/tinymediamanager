@@ -64,7 +64,7 @@ sonarqube-qa:
       - target/dependency-check-report.html
     reports:
       codequality:
-        path: target/code-quality.json
+        - target/code-quality.json
 
 ##########################################
 # nightly
