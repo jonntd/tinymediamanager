@@ -57,6 +57,7 @@ import org.tinymediamanager.core.movie.MovieSetArtworkHelper;
 import org.tinymediamanager.core.movie.MovieSetScraperMetadataConfig;
 import org.tinymediamanager.core.movie.connector.IMovieSetConnector;
 import org.tinymediamanager.core.movie.connector.MovieSetToEmbyConnector;
+import org.tinymediamanager.core.movie.connector.MovieSetToKodiConnector;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
@@ -690,8 +691,13 @@ public class MovieSet extends MediaEntity {
 
     switch (MovieModuleManager.getInstance().getSettings().getMovieSetConnector()) {
       case EMBY:
-      default:
         connector = new MovieSetToEmbyConnector(this);
+        break;
+
+      case KODI:
+      default:
+        connector = new MovieSetToKodiConnector(this);
+        break;
     }
 
     connector.write(MovieModuleManager.getInstance().getSettings().getMovieSetNfoFilenames());

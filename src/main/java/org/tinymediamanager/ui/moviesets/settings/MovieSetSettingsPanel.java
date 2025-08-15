@@ -77,6 +77,7 @@ public class MovieSetSettingsPanel extends JPanel {
   private JCheckBox                                           cbMovieNfoFilename1;
   private JCheckBox                                           cbMovieNfoFilename2;
   private JCheckBox                                           cbMovieNfoFilename3;
+  private JCheckBox                                           cbMovieNfoFilename4;
 
   private JCheckBox                                           chckbxStoreFilter;
 
@@ -138,6 +139,9 @@ public class MovieSetSettingsPanel extends JPanel {
     if (cbMovieNfoFilename3.isSelected()) {
       settings.addMovieSetNfoFilename(MovieSetNfoNaming.EMBY_NFO);
     }
+    if (cbMovieNfoFilename4.isSelected()) {
+      settings.addMovieSetNfoFilename(MovieSetNfoNaming.KODI2_NFO);
+    }
   }
 
   private void buildCheckBoxes() {
@@ -152,10 +156,14 @@ public class MovieSetSettingsPanel extends JPanel {
     if (movieSetNfoFilenames.contains(MovieSetNfoNaming.EMBY_NFO)) {
       cbMovieNfoFilename3.setSelected(true);
     }
+    if (movieSetNfoFilenames.contains(MovieSetNfoNaming.KODI2_NFO)) {
+      cbMovieNfoFilename4.setSelected(true);
+    }
 
     cbMovieNfoFilename1.addItemListener(checkBoxListener);
     cbMovieNfoFilename2.addItemListener(checkBoxListener);
     cbMovieNfoFilename3.addItemListener(checkBoxListener);
+    cbMovieNfoFilename4.addItemListener(checkBoxListener);
 
     // metadata
     for (MovieSetScraperMetadataConfig value : settings.getMovieSetCheckMetadata()) {
@@ -243,20 +251,23 @@ public class MovieSetSettingsPanel extends JPanel {
 
         JPanel panelNfoFilenames = new JPanel();
         panelData.add(panelNfoFilenames, "cell 1 4 2 1,grow");
-        panelNfoFilenames.setLayout(new MigLayout("insets 0", "[][]", "[][][]"));
+        panelNfoFilenames.setLayout(new MigLayout("insets 0", "[][]", "[][][][]"));
 
         JLabel lblNewLabel = new JLabel(TmmResourceBundle.getString("Settings.nofFileNaming"));
         panelNfoFilenames.add(lblNewLabel, "cell 0 0");
 
+        cbMovieNfoFilename4 = new JCheckBox(TmmResourceBundle.getString("Settings.movieset.moviesetname") + "/set.nfo");
+        panelNfoFilenames.add(cbMovieNfoFilename4, "cell 1 0");
+
         cbMovieNfoFilename1 = new JCheckBox(TmmResourceBundle.getString("Settings.movieset.moviesetname") + "/"
             + TmmResourceBundle.getString("Settings.movieset.moviesetname") + ".nfo");
-        panelNfoFilenames.add(cbMovieNfoFilename1, "cell 1 0");
+        panelNfoFilenames.add(cbMovieNfoFilename1, "cell 1 1");
 
         cbMovieNfoFilename2 = new JCheckBox(TmmResourceBundle.getString("Settings.movieset.moviesetname") + ".nfo");
-        panelNfoFilenames.add(cbMovieNfoFilename2, "cell 1 1");
+        panelNfoFilenames.add(cbMovieNfoFilename2, "cell 1 2");
 
         cbMovieNfoFilename3 = new JCheckBox(TmmResourceBundle.getString("Settings.movieset.moviesetname") + "/collection.nfo");
-        panelNfoFilenames.add(cbMovieNfoFilename3, "cell 1 2");
+        panelNfoFilenames.add(cbMovieNfoFilename3, "cell 1 3");
       }
     }
     {

@@ -216,8 +216,14 @@ public class MovieSetNfoParser {
    */
   private Void parsePlot() {
     supportedElements.add("plot");
+    supportedElements.add("overview");
 
     Element element = getSingleElement(root, "plot");
+    if (element != null) {
+      plot = element.wholeText();
+    }
+
+    element = getSingleElement(root, "overview");
     if (element != null) {
       plot = element.wholeText();
     }

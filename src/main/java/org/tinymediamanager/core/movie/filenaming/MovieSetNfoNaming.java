@@ -38,6 +38,19 @@ public enum MovieSetNfoNaming implements IMovieSetFileNaming {
     }
   },
 
+  /** [movie set name]/set.nfo */
+  KODI2_NFO {
+    @Override
+    public String getFilename(String basename, String extension) {
+      return "set.nfo";
+    }
+
+    @Override
+    public Location getFolderLocation() {
+      return Location.KODI_STYLE_FOLDER;
+    }
+  },
+
   /** [movie set name].nfo */
   AUTOMATOR_NFO {
     @Override

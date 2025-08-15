@@ -20,29 +20,27 @@ import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.w3c.dom.Element;
 
 /**
- * the class {@link MovieSetToEmbyConnector} is used to write a most recent Emby compatible NFO file
+ * the class {@link MovieSetToKodiConnector} is used to write a most recent Kodi compatible NFO file
  *
  * @author Manuel Laggner
  */
-public class MovieSetToEmbyConnector extends MovieSetGenericXmlConnector {
-  public MovieSetToEmbyConnector(MovieSet movieSet) {
+public class MovieSetToKodiConnector extends MovieSetGenericXmlConnector {
+  public MovieSetToKodiConnector(MovieSet movieSet) {
     super(movieSet);
+  }
+
+  /**
+   * add the plot in the form <overview>xxx</overview>
+   */
+  @Override
+  protected void addPlot() {
+    Element plot = document.createElement("overview");
+    plot.setTextContent(movieSet.getPlot());
+    root.appendChild(plot);
   }
 
   @Override
   protected void addOwnTags() {
     // nothing to add yet
-  }
-
-  @Override
-  protected void addIds() {
-    // write a <tmdbid> tag for emby
-    Element tmdbid = document.createElement("tmdbid");
-    if (movieSet.getTmdbId() > 0) {
-      tmdbid.setTextContent(Integer.toString(movieSet.getTmdbId()));
-    }
-    root.appendChild(tmdbid);
-
-    super.addIds();
   }
 }

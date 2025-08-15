@@ -17,6 +17,7 @@ package org.tinymediamanager.core.movie;
 
 import org.tinymediamanager.core.CertificationStyle;
 import org.tinymediamanager.core.movie.connector.MovieConnectors;
+import org.tinymediamanager.core.movie.connector.MovieSetConnectors;
 import org.tinymediamanager.core.movie.filenaming.MovieBannerNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieClearartNaming;
 import org.tinymediamanager.core.movie.filenaming.MovieClearlogoNaming;
@@ -206,7 +207,7 @@ public class MovieSettingsDefaults {
     movieSettings.addKeyartFilename(MovieKeyartNaming.FILENAME_KEYART);
 
     movieSettings.movieSetNfoFilenames.clear();
-    movieSettings.addMovieSetNfoFilename(MovieSetNfoNaming.KODI_NFO);
+    movieSettings.addMovieSetNfoFilename(MovieSetNfoNaming.KODI2_NFO);
 
     movieSettings.movieSetPosterFilenames.clear();
     movieSettings.addMovieSetPosterFilename(MovieSetPosterNaming.KODI_POSTER);
@@ -234,6 +235,7 @@ public class MovieSettingsDefaults {
 
     // other settings
     movieSettings.setMovieConnector(MovieConnectors.KODI);
+    movieSettings.setMovieSetConnector(MovieSetConnectors.KODI);
     movieSettings.setCertificationStyle(CertificationStyle.LARGE);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);
@@ -530,6 +532,7 @@ public class MovieSettingsDefaults {
 
     // other settings
     movieSettings.setMovieConnector(MovieConnectors.EMBY);
+    movieSettings.setMovieSetConnector(MovieSetConnectors.EMBY);
     movieSettings.setCertificationStyle(CertificationStyle.SHORT);
     movieSettings.setNfoDiscFolderInside(true);
     movieSettings.setTrailerDiscFolderInside(true);

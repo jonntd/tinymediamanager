@@ -23,6 +23,7 @@ import java.nio.file.Path;
  * @author Manuel Laggner
  */
 public enum MovieSetConnectors {
+  KODI("Kodi"),
   EMBY("Emby");
 
   private final String title;
