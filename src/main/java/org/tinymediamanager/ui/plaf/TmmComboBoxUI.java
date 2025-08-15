@@ -23,6 +23,7 @@ import javax.swing.JComponent;
 import javax.swing.plaf.ComponentUI;
 
 import com.formdev.flatlaf.ui.FlatComboBoxUI;
+import com.formdev.flatlaf.util.UIScale;
 
 /**
  * Provides the Flat LaF UI delegate for {@link javax.swing.JComboBox}.
@@ -74,7 +75,8 @@ public class TmmComboBoxUI extends FlatComboBoxUI {
   @Override
   public Dimension getMinimumSize(JComponent c) {
     Dimension minimumSize = super.getMinimumSize(c);
-    minimumSize.width += 3;
+    // add additional space between the button and the text
+    minimumSize.width += UIScale.scale(arrowButton.getPreferredSize().width / 2);
     return minimumSize;
   }
 
