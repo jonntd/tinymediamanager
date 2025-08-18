@@ -2,42 +2,43 @@ Version 5.2.0
 =======================
 + [Performance] completely reworked internal eventing
 + [Metadata] fetching "English/International title" from supported scrapers for being used in NFO/renaming
-+ [Persons] refactored crew management - merged directors, producers, writers, and others into a unified list
-+ [Renamer] enhanced renamer preview
-+ [Ratings] added new setting options to specify which ratings should be fetched while scraping
-+ [Kodi] added a Kodi conform mapping of mediainfo values for the NFO export #2473 #2940 #2991
++ [Metadata] refactored crew management - merged directors, producers, writers, and others into a unified list
++ [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
++ [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
++ [Scraper] added new setting options to specify which ratings should be fetched while scraping
++ [NFO] added a Kodi conform mapping of mediainfo values for the NFO export #2473 #2940 #2991
   ATTENTION: You need to re-write your NFO files to get the new values
++ [NFO] added an action to force re-writing of season NFO files #2654
 + [UI] added an action to copy movies and TV shows to external folders #2731
 + [UI] added a new column displaying the amount of audio streams #2990
 + [UI] added a column to display the amount of missing movies in a set #2915
 + [UI] created an "Activity log" to track all tasks and their results/messages #2914
 + [UI] offering multiple profile links for actors and crew members based on their IDs
-+ [Movie sets] added the post processing framework to movie sets too #2901
++ [UI] changed hotkey modifier to comply with macOS standards
++ [Renamer] enhanced renamer preview
 + [Renamer] added an optional Unicode replacement for forbidden filesystem characters
-+ [macOS] changed hotkey modifier to comply with macOS standards
++ [Movie sets] added the post processing framework to movie sets too #2901
 + [Subtitles] re-added OpenSubtitles.org support, since they haven't shut down their API yet and some users still rely on it
-+ [Scraper] add new "Fernsehserien.de" scraper, mainly for German hard-to-find series
-+ [Scraper] add new "TheSportsDB" scraper for sporting events - be sure to read the documentation!
-+ [NFO] added an action to force re-writing of season NFO files #2654
+---
 x [NFO] added a NFO option to suppress writing of artwork URLs #2982 #2518
   ATTENTION: Jellyfin users should revisit their NFO settings
 x [TV shows] fixed scraping multiple trailers
 x [TV shows] fixed a problem when exchanging the video file of a TV show episode #2963
-x [TV shows] added enhanced quickfilter, same as for movies #3001
+x [TV shows] added enhanced quick filter, same as for movies #3001
 x [Renamer] fixed using ${originalFilename} in the renamer filename pattern #2966
 x [Scraper] do not overwrite existing fields with empty values #2947
+x [IMDB] also scrape actor attributes #3007
+x [IMDB] fix generating actor profile url #3005
 x [UI] some UI fixes
 x [UI] increased quality level of the scaling algorithm for better image quality
 x [UI] re-layout all visible dialogs when changing the font size #2970
 x [UI] fixed filtering on season artwork #2957
 x [UI] changed filter behavior in the image chooser - you may now filter while images are loading #2889 #3019
-x [Mediainfo] corrected the format detection for some cropped 540p resolutions
+x [Images] fixed choosing of images of unspecified sizes #3010
+x [MediaInfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998
 x [Trailer] activated yt-dlp as a default trailer downloader
 x [HTTP] adhere globally to 429 retry headers, not per scraper
 x [Library] upgraded Java to 21.0.8
 x [Library] upgraded to the latest version of H2 MVStore
 x [Library] upgraded libmediainfo to 25.07
-x [IMDB] also scrape actor attributes #3007
-x [IMDB] fix generating actor profile url #3005
-x [Images] fixed choosing of images of unspecified sizes #3010
