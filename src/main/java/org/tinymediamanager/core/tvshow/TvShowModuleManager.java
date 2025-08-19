@@ -692,5 +692,4 @@ public final class TvShowModuleManager implements ITmmModule {
   public void setDbVersion(int ver) {
     metadataMap.put(METADATA_VERSION, String.valueOf(ver));
   }
-
 }

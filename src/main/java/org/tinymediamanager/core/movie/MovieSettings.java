@@ -139,6 +139,8 @@ public final class MovieSettings extends AbstractSettings {
   final List<String>                        subtitleScrapers                       = ObservableCollections.observableList(new ArrayList<>());
   final List<String>                        skipFolders                            = ObservableCollections.observableList(new ArrayList<>());
 
+  int                                       version;
+
   // data sources / NFO settings
   boolean                                   skipFoldersWithNomedia                 = true;
   boolean                                   buildImageCacheOnImport                = true;
@@ -427,7 +429,7 @@ public final class MovieSettings extends AbstractSettings {
 
   /**
    * removes the active instance <br>
-   * <b>Should only be used for unit testing et all!</b><br>
+   * <b>Should only be used for unit testing et al.!</b><br>
    */
   static void clearInstance() {
     instance = null;
@@ -446,6 +448,15 @@ public final class MovieSettings extends AbstractSettings {
   @Override
   protected void afterLoading() {
     // nothing to do here
+  }
+
+  public int getVersion() {
+    return version;
+  }
+
+  public void setVersion(int version) {
+    this.version = version;
+    setDirty();
   }
 
   /**

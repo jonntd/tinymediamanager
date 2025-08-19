@@ -151,6 +151,8 @@ public final class TvShowSettings extends AbstractSettings {
 
   final Map<String, List<UIFilters>>             uiFilterPresets                        = new HashMap<>();
 
+  int                                            version;
+
   // data sources / NFO settings
   boolean                                        skipFoldersWithNomedia                 = true;
   TvShowConnectors                               tvShowConnector                        = TvShowConnectors.KODI;
@@ -439,6 +441,15 @@ public final class TvShowSettings extends AbstractSettings {
   @Override
   protected void afterLoading() {
     // nothing to do here
+  }
+
+  public int getVersion() {
+    return version;
+  }
+
+  public void setVersion(int version) {
+    this.version = version;
+    setDirty();
   }
 
   /**
@@ -2115,5 +2126,4 @@ public final class TvShowSettings extends AbstractSettings {
     ratingSources.set(pos2, tmp);
     firePropertyChange("ratingSources", null, ratingSources);
   }
-
 }

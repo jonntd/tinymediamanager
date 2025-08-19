@@ -15,6 +15,10 @@
  */
 package org.tinymediamanager.core.movie;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +39,33 @@ public class MovieUpgradeTasks extends UpgradeTasks {
 
   public MovieUpgradeTasks() {
     super();
+  }
+
+  @Override
+  public void performSettingsUpgrades() {
+    MovieSettings settings = MovieModuleManager.getInstance().getSettings();
+    if (settings.getVersion() == 0) {
+      settings.setVersion(5000);
+    }
+
+    LOGGER.info("Current movie settings version: {}", settings.getVersion());
+
+    if (settings.getVersion() < 5201) {
+      LOGGER.info("performing upgrade to ver: {}", 5201);
+      // activate english title (scraper and quickfilter) and remove duplicates. Re-order in the right order
+      Set<MovieScraperMetadataConfig> metadataConfig = new LinkedHashSet<>();
+      for (MovieScraperMetadataConfig config : MovieScraperMetadataConfig.values()) {
+        if (config == MovieScraperMetadataConfig.ENGLISH_TITLE || settings.getScraperMetadataConfig().contains(config)) {
+          metadataConfig.add(config);
+        }
+      }
+      settings.setScraperMetadataConfig(new ArrayList<>(metadataConfig));
+      settings.setEnglishTitle(true);
+
+      settings.setVersion(5201);
+    }
+
+    settings.saveSettings();
   }
 
   /**

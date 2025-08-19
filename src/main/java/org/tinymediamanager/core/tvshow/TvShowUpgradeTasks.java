@@ -17,7 +17,9 @@ package org.tinymediamanager.core.tvshow;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -42,6 +44,41 @@ public class TvShowUpgradeTasks extends UpgradeTasks {
 
   public TvShowUpgradeTasks() {
     super();
+  }
+
+  @Override
+  public void performSettingsUpgrades() {
+    TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
+    if (settings.getVersion() == 0) {
+      settings.setVersion(5000);
+    }
+
+    LOGGER.info("Current TV show settings version: {}", settings.getVersion());
+
+    if (settings.getVersion() < 5201) {
+      LOGGER.info("performing upgrade to ver: {}", 5201);
+      // activate english title (scraper and quickfilter) and remove duplicates. Re-order in the right order
+      Set<TvShowScraperMetadataConfig> tvShowMetadataConfig = new LinkedHashSet<>();
+      for (TvShowScraperMetadataConfig config : TvShowScraperMetadataConfig.values()) {
+        if (config == TvShowScraperMetadataConfig.ENGLISH_TITLE || settings.getTvShowScraperMetadataConfig().contains(config)) {
+          tvShowMetadataConfig.add(config);
+        }
+      }
+      settings.setTvShowScraperMetadataConfig(new ArrayList<>(tvShowMetadataConfig));
+      settings.setEnglishTitle(true);
+
+      Set<TvShowEpisodeScraperMetadataConfig> episodeMetadataConfig = new LinkedHashSet<>();
+      for (TvShowEpisodeScraperMetadataConfig config : TvShowEpisodeScraperMetadataConfig.values()) {
+        if (config == TvShowEpisodeScraperMetadataConfig.ENGLISH_TITLE || settings.getEpisodeScraperMetadataConfig().contains(config)) {
+          episodeMetadataConfig.add(config);
+        }
+      }
+      settings.setEpisodeScraperMetadataConfig(new ArrayList<>(episodeMetadataConfig));
+
+      settings.setVersion(5201);
+    }
+
+    settings.saveSettings();
   }
 
   /**

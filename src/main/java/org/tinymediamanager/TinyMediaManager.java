@@ -572,8 +572,14 @@ public final class TinyMediaManager {
 
     // do upgrade tasks after database loading
     updateProgress("splash.upgrade2", 80);
-    new MovieUpgradeTasks().performDbUpgrades();
-    new TvShowUpgradeTasks().performDbUpgrades();
+
+    MovieUpgradeTasks movieUpgradeTasks = new MovieUpgradeTasks();
+    movieUpgradeTasks.performSettingsUpgrades();
+    movieUpgradeTasks.performDbUpgrades();
+
+    TvShowUpgradeTasks tvShowUpgradeTasks = new TvShowUpgradeTasks();
+    tvShowUpgradeTasks.performSettingsUpgrades();
+    tvShowUpgradeTasks.performDbUpgrades();
   }
 
   /**

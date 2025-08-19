@@ -233,7 +233,7 @@ public abstract class AbstractSettings extends AbstractModelObject {
         Files.createDirectories(cfgFolder);
       }
       catch (IOException e) {
-        LOGGER.error("Could not create config folder '{}' - '{}'", e.getMessage());
+        LOGGER.error("Could not create config folder '{}' - '{}'", cfgFolder, e.getMessage());
       }
     }
 

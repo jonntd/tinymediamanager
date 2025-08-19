@@ -71,6 +71,11 @@ public abstract class UpgradeTasks {
   }
 
   /**
+   * perform all settings related upgrades
+   */
+  public abstract void performSettingsUpgrades();
+
+  /**
    * perform all DB related upgrades
    */
   public abstract void performDbUpgrades();
