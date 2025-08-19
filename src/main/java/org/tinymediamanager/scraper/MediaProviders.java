@@ -82,6 +82,7 @@ import org.tinymediamanager.scraper.tvmaze.TvMazeTvShowMetadataProvider;
 import org.tinymediamanager.scraper.universal_movie.UniversalMovieMetadataProvider;
 import org.tinymediamanager.scraper.universal_tvshow.UniversalTvShowMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.yifysubtitles.YifySubtitlesProvider;
 
 /**
  * the class {@link MediaProviders} is used to manage all loaded {@link IMediaProvider}s.
@@ -175,6 +176,7 @@ public class MediaProviders {
     /////////////////////////////////////////////
     loadProvider(OpenSubtitlesComMovieSubtitleProvider.class);
     loadProvider(OpenSubtitlesMovieSubtitleProvider.class); // obsolete as of 2024-01-01, but still working
+    loadProvider(YifySubtitlesProvider.class);
 
     // addons
     loadAddonsForInterface(addons, IMovieSubtitleProvider.class);

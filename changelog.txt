@@ -19,6 +19,7 @@ Version 5.2.0
 + [Renamer] added an optional Unicode replacement for forbidden filesystem characters
 + [Movie sets] added the post processing framework to movie sets too #2901
 + [Subtitles] re-added OpenSubtitles.org support, since they haven't shut down their API yet and some users still rely on it
++ [Subtitles] added Yifysubtitles.com support, a new subtitle provider
 ---
 x [NFO] added a NFO option to suppress writing of artwork URLs #2982 #2518
   ATTENTION: Jellyfin users should revisit their NFO settings
