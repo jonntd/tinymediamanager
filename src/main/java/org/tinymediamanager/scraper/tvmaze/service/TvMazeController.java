@@ -38,14 +38,14 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class TvMazeController {
 
-  Retrofit       retrofit;
-  private String apiKey;
+  private final Retrofit retrofit;
+  private final String   apiKey;
 
   /**
    * setting up the retrofit object with further debugging options if needed
    *
-   * @param debug
-   *          true or false
+   * @param apiKey
+   *          the api key to use for the tvmaze api
    */
   public TvMazeController(String apiKey) {
     this.apiKey = apiKey;

@@ -61,7 +61,10 @@ public class FernsehserienParser {
   private static final Pattern                               TVMAZE_ID_PATTERN      = Pattern.compile("tvmaze\\.com/shows/([0-9]+)");
   private static final CacheMap<String, List<MediaMetadata>> EPISODE_LIST_CACHE_MAP = new CacheMap<>(60, 10);
 
+  private final IMediaProvider                               mediaProvider;
+
   FernsehserienParser(IMediaProvider mediaProvider, ExecutorService executor) {
+    this.mediaProvider = mediaProvider;
   }
 
   protected SortedSet<MediaSearchResult> search(MediaSearchAndScrapeOptions options) throws ScrapeException {
@@ -77,10 +80,10 @@ public class FernsehserienParser {
     LOGGER.debug("========= BEGIN Fernsehserien Scraper Search for: {}", searchTerm);
     try {
       Document doc = null;
-      Url url = new InMemoryCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/suche/" + URLEncoder.encode(searchTerm, StandardCharsets.UTF_8));
+      Url url = new InMemoryCachedUrl(mediaProvider.getApiKey() + "/suche/" + URLEncoder.encode(searchTerm, StandardCharsets.UTF_8));
       InputStream is = url.getInputStream();
       doc = Jsoup.parse(is, UrlUtil.UTF_8, "");
-      doc.setBaseUri(FernsehserienMetadataProvider.BASE_URL);
+      doc.setBaseUri(mediaProvider.getApiKey());
 
       Element ul = doc.getElementsByClass("suchergebnisse").first(); // there should be one, else nothing found
       if (ul != null) {
@@ -141,7 +144,7 @@ public class FernsehserienParser {
         Element ogurl = doc.getElementsByAttributeValue("property", "og:url").first();
         if (ogurl != null) {
           String id = ogurl.attr("content");
-          id = id.replace(FernsehserienMetadataProvider.BASE_URL + "/", "");
+          id = id.replace(mediaProvider.getApiKey() + "/", "");
           if (!id.startsWith("suche")) {
             options.setId(FernsehserienMetadataProvider.ID, id);
             MediaMetadata md = getMetadata(options);
@@ -223,8 +226,7 @@ public class FernsehserienParser {
     Url url;
     try {
       // cache this on disk because that will be called multiple times
-      url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + showUrl + "/episodenguide/staffel-" + seasonNr + "/" + SeasonID, 1,
-          TimeUnit.DAYS);
+      url = new OnDiskCachedUrl(mediaProvider.getApiKey() + "/" + showUrl + "/episodenguide/staffel-" + seasonNr + "/" + SeasonID, 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
       LOGGER.debug("problem scraping: {}", e.getMessage());
@@ -312,7 +314,7 @@ public class FernsehserienParser {
     Url url;
     try {
       // cache this on disk because that may be called multiple times
-      url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id, 1, TimeUnit.DAYS);
+      url = new OnDiskCachedUrl(mediaProvider.getApiKey() + "/" + id, 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
       LOGGER.debug("problem scraping: {}", e.getMessage());
@@ -498,7 +500,7 @@ public class FernsehserienParser {
       if (type == MediaType.MOVIE) {
         postfix = ""; // cast is on same page
       }
-      url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id + postfix, 1, TimeUnit.DAYS);
+      url = new OnDiskCachedUrl(mediaProvider.getApiKey() + "/" + id + postfix, 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
       LOGGER.debug("problem scraping: {}", e.getMessage());
@@ -579,7 +581,7 @@ public class FernsehserienParser {
       Element profile = p.getElementsByAttributeValue("itemprop", "url").first();
       if (profile != null) {
         String href = profile.attr("href");
-        cm.setProfileUrl(FernsehserienMetadataProvider.BASE_URL + href);
+        cm.setProfileUrl(mediaProvider.getApiKey() + href);
       }
       Element role = p.getElementsByTag("dd").first();
       if (role != null) {
@@ -616,7 +618,7 @@ public class FernsehserienParser {
     Url url;
     try {
       // cache this on disk because that may be called multiple times
-      url = new OnDiskCachedUrl(FernsehserienMetadataProvider.BASE_URL + "/" + id + "/episodenguide", 1, TimeUnit.DAYS);
+      url = new OnDiskCachedUrl(mediaProvider.getApiKey() + "/" + id + "/episodenguide", 1, TimeUnit.DAYS);
     }
     catch (Exception e) {
       LOGGER.debug("problem scraping: {}", e.getMessage());

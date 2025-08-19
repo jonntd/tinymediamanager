@@ -12,7 +12,6 @@ abstract class FernsehserienMetadataProvider implements IMediaProvider {
 
   protected static final ExecutorService EXECUTOR = new ThreadPoolExecutor(5, 10, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
   static final String                    ID       = "fernsehserien";
-  static final String                    BASE_URL = "https://www.fernsehserien.de";
   private final MediaProviderInfo        providerInfo;
 
   FernsehserienMetadataProvider() {
