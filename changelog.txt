@@ -35,6 +35,7 @@ x [UI] increased quality level of the scaling algorithm for better image quality
 x [UI] re-layout all visible dialogs when changing the font size #2970
 x [UI] fixed filtering on season artwork #2957
 x [UI] changed filter behavior in the image chooser - you may now filter while images are loading #2889 #3019
+x [UI] enhanced loading actor images in the UI
 x [Images] fixed choosing of images of unspecified sizes #3010
 x [MediaInfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998

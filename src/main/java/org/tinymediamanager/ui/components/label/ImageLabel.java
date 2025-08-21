@@ -90,6 +90,7 @@ public class ImageLabel extends JComponent {
   protected boolean                 drawBorder;
   protected boolean                 drawFullWidth;
   protected boolean                 drawShadow;
+  protected boolean                 drawNoImage            = true;
 
   protected boolean                 enabledLightbox        = false;
   protected boolean                 preferCache            = true;
@@ -502,7 +503,7 @@ public class ImageLabel extends JComponent {
         }
       }
       // do not draw the "no image found" icon if the worker is loading or in lightbox usage
-      else if (!isLoading() && !isLightBox) {
+      else if (!isLoading() && !isLightBox && drawNoImage) {
         // nothing to draw; draw the _no image found_ indicator
         Rectangle rectangle = new Rectangle();
 

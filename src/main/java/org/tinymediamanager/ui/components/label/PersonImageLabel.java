@@ -15,7 +15,6 @@
  */
 package org.tinymediamanager.ui.components.label;
 
-import java.awt.Graphics;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,18 +23,36 @@ import javax.swing.SwingWorker;
 
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.core.ImageCache;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.Person;
 
 /**
- * The Class PersonImageLabel.
- * 
+ * A label component for displaying a person's image.
+ * <p>
+ * This class extends {@link ImageLabel} and provides functionality to load and display images for a given {@link Person} entity.
+ * </p>
+ *
  * @author Manuel Laggner
  */
 public class PersonImageLabel extends ImageLabel {
   private SwingWorker<Void, Void> personWorker = null;
   private Person                  person       = null;
 
+  public PersonImageLabel() {
+    super();
+    drawNoImage = false;
+    cacheUrl = true;
+  }
+
+  /**
+   * Sets the person and media entity for which the image should be displayed.
+   *
+   * @param mediaEntity
+   *          the media entity associated with the person
+   * @param person
+   *          the person whose image should be shown
+   */
   public void setPerson(MediaEntity mediaEntity, Person person) {
     clearImage();
 
@@ -50,39 +67,19 @@ public class PersonImageLabel extends ImageLabel {
   }
 
   @Override
-  protected void paintComponent(Graphics g) {
-    // refetch the image if its visible now
-    if (isShowing() && !isLoading() && scaledImage == null) {
-      if (StringUtils.isNotBlank(imagePath)) {
-        if (worker != null && !worker.isDone()) {
-          worker.cancel(true);
-        }
-        worker = new ImageLoader(this.imagePath, this.getSize());
-        worker.execute();
-        return;
-      }
-      else if (StringUtils.isNotBlank(imageUrl)) {
-        worker = new ImageFetcher(imageUrl, this.getSize());
-        worker.execute();
-        return;
-      }
-    }
-
-    super.paintComponent(g);
+  public void clearImage() {
+    super.clearImage();
+    this.person = null;
   }
 
-  @Override
-  protected boolean isLoading() {
-    return (worker != null && !worker.isDone()) || (personWorker != null && !personWorker.isDone());
-  }
-
-  /*
-   * inner class for loading the actor images
+  /**
+   * Inner class for loading actor images asynchronously.
    */
   protected class ActorImageLoader extends SwingWorker<Void, Void> {
     private final Person      actor;
     private final MediaEntity mediaEntity;
     private Path              imagePath = null;
+    private String            imageUrl  = null;
 
     private ActorImageLoader(Person actor, MediaEntity mediaEntity) {
       this.actor = actor;
@@ -119,10 +116,15 @@ public class PersonImageLabel extends ImageLabel {
       }
 
       // no file found, try to cache url (if visible, otherwise load on demand in paintComponent)
-      if (isShowing()) {
-        Path p = ImageCache.getCachedFile(actor.getThumbUrl());
-        if (p != null) {
-          imagePath = p;
+      if (StringUtils.isNotBlank(actor.getThumbUrl())) {
+        if (!Settings.getInstance().isImageCache()) {
+          Path p = ImageCache.getCachedFile(actor.getThumbUrl());
+          if (p != null) {
+            imagePath = p;
+          }
+        }
+        else {
+          imageUrl = actor.getThumbUrl();
         }
       }
 
@@ -137,6 +139,10 @@ public class PersonImageLabel extends ImageLabel {
 
       if (imagePath != null) {
         setImagePath(imagePath.toString());
+      }
+      else if (StringUtils.isNotBlank(imageUrl)) {
+        // we have a url, but no imagePath
+        setImageUrl(imageUrl);
       }
       else {
         clearImage();
