@@ -42,6 +42,7 @@ x [MediaInfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998
 x [Trailer] activated yt-dlp as a default trailer downloader
 x [HTTP] adhere globally to 429 retry headers, not per scraper
+X [UPNP] fixed a problem with UPNP connections
 x [Library] upgraded Java to 21.0.8
 x [Library] upgraded to the latest version of H2 MVStore
 x [Library] upgraded libmediainfo to 25.07
