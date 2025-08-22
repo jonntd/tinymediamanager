@@ -15,6 +15,7 @@ Version 5.2.0
 + [UI] created an "Activity log" to track all tasks and their results/messages #2914
 + [UI] offering multiple profile links for actors and crew members based on their IDs
 + [UI] changed hotkey modifier to comply with macOS standards
++ [UI] added the search result score to the movie/TV show chooser dialogs #3023
 + [Renamer] enhanced renamer preview
 + [Renamer] added an optional Unicode replacement for forbidden filesystem characters
 + [Movie sets] added the post processing framework to movie sets too #2901

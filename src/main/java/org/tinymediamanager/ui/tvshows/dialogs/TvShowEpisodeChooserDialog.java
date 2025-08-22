@@ -133,7 +133,7 @@ public class TvShowEpisodeChooserDialog extends TmmDialog implements ActionListe
 
     JPanel contentPanel = new JPanel();
     getContentPane().add(contentPanel, BorderLayout.CENTER);
-    contentPanel.setLayout(new MigLayout("", "[700lp:900lp,grow]", "[500lp,grow]"));
+    contentPanel.setLayout(new MigLayout("", "[500lp:600lp,grow]", "[500lp,grow]"));
 
     {
       JSplitPane splitPane = new JSplitPane();

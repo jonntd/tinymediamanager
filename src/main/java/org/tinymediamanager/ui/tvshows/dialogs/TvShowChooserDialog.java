@@ -196,7 +196,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
    */
   public TvShowChooserDialog(TvShow tvShow, int queueIndex, int queueSize) {
     super(TmmResourceBundle.getString("tvshowchooser.search") + (queueSize > 1 ? " " + (queueIndex + 1) + "/" + queueSize : ""), "tvShowChooser");
-    setMinimumSize(new Dimension(800, 600));
+    setMinimumSize(new Dimension(1000, 650));
 
     mediaScraper = tvShowList.getDefaultMediaScraper();
     artworkScrapers = tvShowList.getDefaultArtworkScrapers();
@@ -232,7 +232,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
     /* UI components */
     JPanel contentPanel = new JPanel();
     getContentPane().add(contentPanel, BorderLayout.CENTER);
-    contentPanel.setLayout(new MigLayout("insets 0 n n n", "[600lp:900lp,grow]", "[][shrink 0][250lp:300lp,grow][shrink 0][]"));
+    contentPanel.setLayout(new MigLayout("insets 0 n n n", "[500lp:600lp,grow]", "[][shrink 0][250lp:300lp,grow][shrink 0][]"));
     {
       JPanel panelSearchField = new JPanel();
       contentPanel.add(panelSearchField, "cell 0 0,grow");
@@ -290,7 +290,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       {
         JPanel panelSearchResults = new JPanel();
         splitPane.setLeftComponent(panelSearchResults);
-        panelSearchResults.setLayout(new MigLayout("", "[200lp:300lp,grow]", "[150lp:300lp,grow]"));
+        panelSearchResults.setLayout(new MigLayout("", "[350lp:400lp,grow]", "[150lp:300lp,grow]"));
         {
           JScrollPane scrollPane = new JScrollPane();
           panelSearchResults.add(scrollPane, "cell 0 0,grow");
@@ -1135,6 +1135,18 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       col.setCellRenderer(new RightAlignTableCellRenderer());
       col.setMinWidth(fontMetrics.stringWidth("tt7830912") + getCellPadding());
       col.setMaxWidth(fontMetrics.stringWidth("tt7830912") + getCellPadding());
+      addColumn(col);
+
+      /*
+       * score
+       */
+      col = new Column(TmmResourceBundle.getString("tmm.similarityscore"), "score", result -> String.format("%d%%", (int) (result.getScore() * 100)),
+          String.class);
+      col.setColumnResizeable(false);
+      col.setHeaderIcon(IconManager.VIDEO_BITRATE);
+      col.setCellRenderer(new RightAlignTableCellRenderer());
+      col.setMinWidth(fontMetrics.stringWidth("100%") + getCellPadding());
+      col.setMaxWidth(fontMetrics.stringWidth("100%") + getCellPadding());
       addColumn(col);
     }
   }
