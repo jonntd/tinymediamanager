@@ -62,6 +62,8 @@ import org.fourthline.cling.support.model.ProtocolInfos;
 import org.fourthline.cling.support.model.dlna.DLNAProfiles;
 import org.fourthline.cling.support.model.dlna.DLNAProtocolInfo;
 import org.fourthline.cling.transport.RouterException;
+import org.fourthline.cling.transport.impl.StreamClientConfigurationImpl;
+import org.fourthline.cling.transport.spi.StreamClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.ReleaseInfo;
@@ -117,7 +119,12 @@ public class Upnp {
    */
   public void createUpnpService() {
     if (this.upnpService == null) {
-      this.upnpService = new UpnpServiceImpl(new DefaultUpnpServiceConfiguration(UPNP_PORT), UpnpListener.getListener());
+      this.upnpService = new UpnpServiceImpl(new DefaultUpnpServiceConfiguration(UPNP_PORT) {
+        @Override
+        public StreamClient createStreamClient() {
+          return new TmmStreamClientImpl(new StreamClientConfigurationImpl(getSyncProtocolExecutorService()));
+        }
+      }, UpnpListener.getListener());
     }
   }
 
