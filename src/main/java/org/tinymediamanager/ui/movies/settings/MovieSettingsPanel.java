@@ -77,6 +77,7 @@ public class MovieSettingsPanel extends JPanel {
   private JButton             btnPresetEmby;
   private JCheckBox           chckbxResetNewFlag;
   private JCheckBox           chckbxReadNomedia;
+  private JCheckBox           chckbxFetchVideoInfoOnUpdate;
 
   public MovieSettingsPanel() {
     // UI initializations
@@ -251,6 +252,13 @@ public class MovieSettingsPanel extends JPanel {
 
         chckbxIncludeExternalAudioStreams = new JCheckBox(TmmResourceBundle.getString("Settings.includeexternalstreamsinnfo"));
         panelMisc.add(chckbxIncludeExternalAudioStreams, "cell 1 6 2 1");
+
+        chckbxFetchVideoInfoOnUpdate = new JCheckBox(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate"));
+        panelMisc.add(chckbxFetchVideoInfoOnUpdate, "cell 1 7 2 1");
+
+        JLabel lblFetchVideoInfoOnUpdateHint = new JLabel(IconManager.HINT);
+        lblFetchVideoInfoOnUpdateHint.setToolTipText(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate.desc"));
+        panelMisc.add(lblFetchVideoInfoOnUpdateHint, "cell 1 7 2 1");
       }
     }
   }
@@ -334,5 +342,10 @@ public class MovieSettingsPanel extends JPanel {
     AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_5, chckbxReadNomedia,
         jCheckBoxBeanProperty);
     autoBinding_8.bind();
+    //
+    Property movieSettingsBeanProperty_19 = BeanProperty.create("fetchVideoInfoOnUpdate");
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_19, chckbxFetchVideoInfoOnUpdate,
+        jCheckBoxBeanProperty);
+    autoBinding_21.bind();
   }
 }

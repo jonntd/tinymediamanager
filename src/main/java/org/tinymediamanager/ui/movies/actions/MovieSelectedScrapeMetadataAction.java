@@ -63,9 +63,9 @@ public class MovieSelectedScrapeMetadataAction extends TmmAction {
 
     // do we want to scrape?
     if (dialog.shouldStartScrape()) {
-      // scrape
+      // scrape - 现在也使用批量识别来提高效率
       TmmThreadPool scrapeTask = new MovieScrapeTask(
-          new MovieScrapeTask.MovieScrapeParams(selectedMovies, options, config).setDoSearch(false).setOverwriteExistingItems(overwrite));
+          new MovieScrapeTask.MovieScrapeParams(selectedMovies, options, config).setDoSearch(true).setOverwriteExistingItems(overwrite));
       TmmTaskManager.getInstance().addMainTask(scrapeTask);
     }
   }

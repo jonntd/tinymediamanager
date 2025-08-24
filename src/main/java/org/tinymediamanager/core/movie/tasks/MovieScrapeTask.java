@@ -19,6 +19,7 @@ import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.swing.SwingUtilities;
@@ -58,8 +59,12 @@ import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.scraper.util.ParserUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 import org.tinymediamanager.ui.movies.dialogs.MovieChooserDialog;
+import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService;
 
 /**
  * The Class MovieScrapeTask.
@@ -94,10 +99,52 @@ public class MovieScrapeTask extends TmmThreadPool {
     LOGGER.info("Scraping {} movies with '{}'", movieScrapeParams.moviesToScrape.size(),
         mediaMetadataScraper.getMediaProvider().getProviderInfo().getId());
 
+    // 添加详细的调试信息
+    LOGGER.debug("MovieScrapeTask parameters:");
+    LOGGER.debug("  doSearch: {}", movieScrapeParams.doSearch);
+    LOGGER.debug("  moviesToScrape.size(): {}", movieScrapeParams.moviesToScrape.size());
+    LOGGER.debug("  overwriteExistingItems: {}", movieScrapeParams.overwriteExistingItems);
+
+    // 列出前几个电影的信息
+    if (!movieScrapeParams.moviesToScrape.isEmpty()) {
+      LOGGER.debug("Movies to scrape:");
+      for (int i = 0; i < Math.min(movieScrapeParams.moviesToScrape.size(), 3); i++) {
+        Movie movie = movieScrapeParams.moviesToScrape.get(i);
+        LOGGER.debug("  [{}] Title: '{}', ID: {}", i, movie.getTitle(), movie.getDbId());
+      }
+      if (movieScrapeParams.moviesToScrape.size() > 3) {
+        LOGGER.debug("  ... and {} more movies", movieScrapeParams.moviesToScrape.size() - 3);
+      }
+    }
+
+    // 批量AI识别优化：在启动线程池前统一处理
+    Map<String, String> aiRecognitionResults = null;
+    if (movieScrapeParams.doSearch && !movieScrapeParams.moviesToScrape.isEmpty()) {
+      // 检查是否配置了 OpenAI API Key
+      String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+      LOGGER.debug("OpenAI API Key check: {}", apiKey != null && !apiKey.trim().isEmpty() ? "configured" : "not configured");
+
+      if (apiKey != null && !apiKey.trim().isEmpty()) {
+        try {
+          LOGGER.info("Starting batch AI recognition for {} movies", movieScrapeParams.moviesToScrape.size());
+          BatchChatGPTMovieRecognitionService batchService = new BatchChatGPTMovieRecognitionService();
+          aiRecognitionResults = batchService.batchRecognizeMovieTitles(movieScrapeParams.moviesToScrape);
+          LOGGER.info("Batch AI recognition completed for {} movies", aiRecognitionResults.size());
+        } catch (Exception e) {
+          LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+        }
+      } else {
+        LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
+      }
+    } else {
+      LOGGER.debug("Batch AI recognition skipped: doSearch={}, movieCount={}",
+                   movieScrapeParams.doSearch, movieScrapeParams.moviesToScrape.size());
+    }
+
     initThreadPool(3, "scrape");
 
     for (Movie movie : movieScrapeParams.moviesToScrape) {
-      submitTask(new Worker(movie));
+      submitTask(new Worker(movie, aiRecognitionResults));
     }
     waitForCompletionOrCancel();
 
@@ -156,9 +203,15 @@ public class MovieScrapeTask extends TmmThreadPool {
   private class Worker implements Runnable {
     private MovieList   movieList;
     private final Movie movie;
+    private final Map<String, String> aiRecognitionResults;
 
     public Worker(Movie movie) {
+      this(movie, null);
+    }
+
+    public Worker(Movie movie, Map<String, String> aiRecognitionResults) {
       this.movie = movie;
+      this.aiRecognitionResults = aiRecognitionResults;
     }
 
     @Override
@@ -310,7 +363,95 @@ public class MovieScrapeTask extends TmmThreadPool {
     }
 
     private MediaSearchResult searchForMovie(MediaScraper mediaMetadataProvider) throws ScrapeException {
-      List<MediaSearchResult> results = movieList.searchMovie(movie.getTitle(), movie.getYear(), movie.getIds(), mediaMetadataProvider);
+      // 处理电影标题，提取干净的标题和年份
+      String processedTitle = movie.getTitle();
+      Integer processedYear = movie.getYear();
+      
+      String[] parserInfo = ParserUtils.detectCleanTitleAndYear(movie.getTitle(), Collections.emptyList());
+      if (parserInfo != null && parserInfo.length >= 2) {
+        processedTitle = parserInfo[0];
+        if (StringUtils.isNotBlank(parserInfo[1])) {
+          try {
+            processedYear = Integer.parseInt(parserInfo[1]);
+          } catch (NumberFormatException e) {
+            LOGGER.debug("Could not parse year: {}", parserInfo[1]);
+          }
+        }
+        LOGGER.debug("Processed title '{}' -> '{}' (year: {})", movie.getTitle(), processedTitle, processedYear);
+      }
+      
+      // 使用批量AI识别结果
+      MediaSearchResult aiResult = null;
+      String recognizedTitle = null;
+      
+      // 首先尝试使用批量识别结果
+      if (aiRecognitionResults != null && aiRecognitionResults.containsKey(movie.getDbId().toString())) {
+        recognizedTitle = aiRecognitionResults.get(movie.getDbId().toString());
+        LOGGER.info("Using batch AI recognition result: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+      } else {
+        // 检查是否应该进行单个识别回退
+        String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+        if (apiKey != null && !apiKey.trim().isEmpty()) {
+          if (aiRecognitionResults != null) {
+            LOGGER.debug("Movie '{}' (ID: {}) not found in batch results, falling back to individual recognition",
+                        movie.getTitle(), movie.getDbId());
+          } else {
+            LOGGER.debug("Batch recognition was not performed, using individual recognition for movie '{}'", movie.getTitle());
+          }
+
+          // 回退到单个识别（兼容旧逻辑）
+          try {
+            ChatGPTMovieRecognitionService chatGPTService = new ChatGPTMovieRecognitionService();
+            recognizedTitle = chatGPTService.recognizeMovieTitle(movie);
+            if (recognizedTitle != null) {
+              LOGGER.info("Individual ChatGPT recognition: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+            }
+          } catch (Exception e) {
+            LOGGER.warn("Individual ChatGPT movie recognition failed: {}", e.getMessage());
+          }
+        } else {
+          LOGGER.debug("OpenAI API key not configured, skipping AI recognition for movie '{}'", movie.getTitle());
+        }
+      }
+      
+      // 使用AI识别的标题重新搜索
+      if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+        String[] aiParserInfo = ParserUtils.detectCleanTitleAndYear(recognizedTitle, Collections.emptyList());
+        String aiProcessedTitle = recognizedTitle;
+        Integer aiProcessedYear = movie.getYear();
+        
+        if (aiParserInfo != null && aiParserInfo.length >= 2) {
+          aiProcessedTitle = aiParserInfo[0];
+          if (StringUtils.isNotBlank(aiParserInfo[1])) {
+            try {
+              aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
+            } catch (NumberFormatException e) {
+              LOGGER.debug("Could not parse year from AI result: {}", aiParserInfo[1]);
+            }
+          }
+          LOGGER.debug("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
+        }
+        
+        List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, aiProcessedYear, movie.getIds(), mediaMetadataProvider);
+        
+        if (ListUtils.isNotEmpty(aiResults)) {
+          aiResult = aiResults.get(0);
+          final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
+          
+          if (aiResult.getScore() >= scraperTreshold) {
+            LOGGER.info("AI recognition successful! Found match with score: {}", aiResult.getScore());
+            return aiResult;
+          } else {
+            LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold ({})", aiResult.getScore(), scraperTreshold);
+            aiResult = null; // 重置结果，继续常规搜索
+          }
+        } else {
+          LOGGER.info("No results found for AI recognized title: '{}'", aiProcessedTitle);
+        }
+      }
+      
+      // 如果AI识别失败或分数不足，进行常规搜索
+      List<MediaSearchResult> results = movieList.searchMovie(processedTitle, processedYear, movie.getIds(), mediaMetadataProvider);
       MediaSearchResult result = null;
 
       if (ListUtils.isNotEmpty(results)) {

@@ -23,6 +23,7 @@ import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,8 +32,10 @@ import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JSlider;
@@ -41,6 +44,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.AutoBinding;
@@ -54,6 +58,10 @@ import org.tinymediamanager.Globals;
 import org.tinymediamanager.LauncherExtraConfig;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+
+
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -89,6 +97,14 @@ class SystemSettingsPanel extends JPanel {
   private JTextField           tfHttpApiKey;
   private JCheckBox            chkbxEnableHttpServer;
 
+  // OpenAI API settings
+  private JTextField           tfOpenAiApiKey;
+  private JTextField           tfOpenAiApiUrl;
+  private JTextField           tfOpenAiModel;
+  private JTextArea           taOpenAiExtractionPrompt;
+  private JButton             btnTestOpenAiPrompt;
+  private JTextField           tfOpenAiTestPath;
+
   /**
    * Instantiates a new general settings panel.
    */
@@ -118,7 +134,7 @@ class SystemSettingsPanel extends JPanel {
   }
 
   private void initComponents() {
-    setLayout(new MigLayout("", "[600lp,grow]", "[][15lp!][][15lp!][][15lp!][]"));
+    setLayout(new MigLayout("", "[600lp,grow]", "[][15lp!][][15lp!][][15lp!][][15lp!]"));
     {
       JPanel panelMemory = new JPanel(new MigLayout("hidemode 1, insets 0", "[20lp!][][300lp][grow]", ""));
 
@@ -239,6 +255,61 @@ class SystemSettingsPanel extends JPanel {
       add(collapsiblePanel, "cell 0 4,growx,wmin 0");
     }
     {
+      JPanel panelOpenAI = new JPanel();
+      panelOpenAI.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][][grow]", "[][][][][][grow]"));
+
+      JLabel lblOpenAiT = new TmmLabel(TmmResourceBundle.getString("Settings.openai"), H3);
+       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOpenAI, lblOpenAiT, true);
+
+      JLabel lblOpenAiApiKey = new JLabel(TmmResourceBundle.getString("Settings.openai.apikey"));
+      panelOpenAI.add(lblOpenAiApiKey, "cell 1 0,alignx trailing");
+
+      tfOpenAiApiKey = new JTextField();
+      panelOpenAI.add(tfOpenAiApiKey, "cell 2 0");
+      tfOpenAiApiKey.setColumns(50);
+
+      JLabel lblOpenAiApiUrl = new JLabel(TmmResourceBundle.getString("Settings.openai.apiurl"));
+      panelOpenAI.add(lblOpenAiApiUrl, "cell 1 1,alignx trailing");
+
+      tfOpenAiApiUrl = new JTextField();
+      panelOpenAI.add(tfOpenAiApiUrl, "cell 2 1");
+      tfOpenAiApiUrl.setColumns(50);
+
+      JLabel lblOpenAiModel = new JLabel(TmmResourceBundle.getString("Settings.openai.model"));
+      panelOpenAI.add(lblOpenAiModel, "cell 1 2,alignx trailing");
+
+      tfOpenAiModel = new JTextField();
+      panelOpenAI.add(tfOpenAiModel, "cell 2 2");
+      tfOpenAiModel.setColumns(50);
+
+      JLabel lblOpenAiExtractionPrompt = new JLabel(TmmResourceBundle.getString("Settings.openai.extractionprompt"));
+      panelOpenAI.add(lblOpenAiExtractionPrompt, "cell 1 3,alignx trailing,aligny top");
+
+      taOpenAiExtractionPrompt = new JTextArea();
+      taOpenAiExtractionPrompt.setLineWrap(true);
+      taOpenAiExtractionPrompt.setWrapStyleWord(true);
+      TmmFontHelper.changeFont(taOpenAiExtractionPrompt, TmmFontHelper.L2);
+      panelOpenAI.add(taOpenAiExtractionPrompt, "cell 2 3,grow");
+
+      // Add test file path input for OpenAI testing
+      JLabel lblOpenAiTestPath = new JLabel(TmmResourceBundle.getString("Settings.openai.testpath"));
+      panelOpenAI.add(lblOpenAiTestPath, "cell 1 4,alignx trailing");
+
+      tfOpenAiTestPath = new JTextField();
+      tfOpenAiTestPath.setColumns(50);
+      tfOpenAiTestPath.setText("/Users/jonntd/Movies/Test Movie/Test Movie.mkv");
+      panelOpenAI.add(tfOpenAiTestPath, "cell 2 4,growx");
+
+      // Add test button for OpenAI prompt testing (now includes batch testing)
+      btnTestOpenAiPrompt = new JButton("Test OpenAI Recognition");
+      btnTestOpenAiPrompt.addActionListener(e -> testOpenAiPrompt());
+      panelOpenAI.add(btnTestOpenAiPrompt, "cell 2 5,alignx right");
+
+
+
+      add(collapsiblePanel, "cell 0 6,growx,wmin 0");
+    }
+    {
       JPanel panelMisc = new JPanel();
       panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][]")); // 16lp ~ width of the
 
@@ -246,7 +317,7 @@ class SystemSettingsPanel extends JPanel {
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMisc, lblMiscT, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#misc-settings-1"));
 
-      add(collapsiblePanel, "cell 0 6,growx,wmin 0");
+      add(collapsiblePanel, "cell 0 8,growx,wmin 0");
       {
         JLabel lblParallelDownloadCountT = new JLabel(TmmResourceBundle.getString("Settings.paralleldownload"));
         panelMisc.add(lblParallelDownloadCountT, "cell 1 0 2 1");
@@ -416,5 +487,176 @@ class SystemSettingsPanel extends JPanel {
     AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_11, tfHttpApiKey,
         jTextFieldBeanProperty_6);
     autoBinding_12.bind();
+
+    // OpenAI API settings bindings
+    Property settingsBeanProperty_12 = BeanProperty.create("openAiApiKey");
+    Property jTextFieldBeanProperty_7 = BeanProperty.create("text");
+    AutoBinding autoBinding_13 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_12, tfOpenAiApiKey,
+        jTextFieldBeanProperty_7);
+    autoBinding_13.bind();
+    //
+    Property settingsBeanProperty_13 = BeanProperty.create("openAiApiUrl");
+    Property jTextFieldBeanProperty_8 = BeanProperty.create("text");
+    AutoBinding autoBinding_14 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_13, tfOpenAiApiUrl,
+        jTextFieldBeanProperty_8);
+    autoBinding_14.bind();
+    //
+    Property settingsBeanProperty_14 = BeanProperty.create("openAiModel");
+    Property jTextFieldBeanProperty_9 = BeanProperty.create("text");
+    AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_14, tfOpenAiModel,
+        jTextFieldBeanProperty_9);
+    autoBinding_15.bind();
+    //
+    Property settingsBeanProperty_15 = BeanProperty.create("openAiExtractionPrompt");
+    Property jTextAreaBeanProperty = BeanProperty.create("text");
+    AutoBinding autoBinding_16 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_15, taOpenAiExtractionPrompt,
+        jTextAreaBeanProperty);
+    autoBinding_16.bind();
+    //
+    Property settingsBeanProperty_16 = BeanProperty.create("openAiTestPath");
+    Property jTextFieldBeanProperty_10 = BeanProperty.create("text");
+    AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_16, tfOpenAiTestPath,
+        jTextFieldBeanProperty_10);
+    autoBinding_17.bind();
   }
+
+  /**
+   * Test the OpenAI prompt by calling ChatGPTMovieRecognitionService with a test movie
+   */
+  private void testOpenAiPrompt() {
+    try {
+      // Create a test movie object to simulate recognition
+      Movie testMovie = new Movie();
+      testMovie.setTitle("Test Movie");
+
+      // Use the user-provided test path from the text field
+      String testPath = tfOpenAiTestPath.getText().trim();
+      if (testPath.isEmpty()) {
+        // 使用更通用的测试路径，或者提示用户输入
+        testPath = System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv";
+        // 设置回文本框以便用户可以看到和修改
+        tfOpenAiTestPath.setText(testPath);
+      }
+      //打印testPath
+      System.out.println("testPath: " + testPath);
+      // Add a mock media file path for testing
+      org.tinymediamanager.core.entities.MediaFile mockFile = new org.tinymediamanager.core.entities.MediaFile();
+      mockFile.setFile(java.nio.file.Paths.get(testPath));
+      testMovie.addToMediaFiles(mockFile);
+
+      // Test both individual and batch recognition
+      StringBuilder resultText = new StringBuilder();
+
+      // 1. Test individual recognition
+      ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
+      String individualResult = individualService.recognizeMovieTitle(testMovie);
+      resultText.append("Individual Recognition: ").append(individualResult != null ? individualResult : "Failed").append("\n\n");
+
+      // 2. Test batch recognition
+      try {
+        java.util.List<Movie> testMovies = new java.util.ArrayList<>();
+        // UUID is automatically generated in constructor, no need to set manually
+        testMovies.add(testMovie);
+
+        org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
+            new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+        java.util.Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(testMovies);
+
+        if (batchResults.isEmpty()) {
+          resultText.append("Batch Recognition: No results returned");
+        } else {
+          resultText.append("Batch Recognition: ");
+          for (java.util.Map.Entry<String, String> entry : batchResults.entrySet()) {
+            resultText.append(entry.getValue());
+          }
+        }
+      } catch (Exception batchError) {
+        resultText.append("Batch Recognition: Error - ").append(batchError.getMessage());
+      }
+
+      // Show the result in a message dialog
+      if (individualResult == null && resultText.toString().contains("No results")) {
+        JOptionPane.showMessageDialog(this,
+            "Both individual and batch recognition failed.\n" +
+            "Please check your API key and configuration.\n\n" + resultText.toString(),
+            "OpenAI Test Results",
+            JOptionPane.WARNING_MESSAGE);
+      } else {
+        JOptionPane.showMessageDialog(this,
+            "OpenAI Test Results:\n\n" + resultText.toString(),
+            "OpenAI Test Results",
+            JOptionPane.INFORMATION_MESSAGE);
+      }
+    } catch (Exception e) {
+      LOGGER.error("Error testing OpenAI prompt", e);
+      JOptionPane.showMessageDialog(this,
+          "Error testing OpenAI:\n" + e.getMessage(),
+          "OpenAI Test Error",
+          JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  /**
+   * Test the batch OpenAI recognition service
+   */
+  private void testBatchOpenAiRecognition() {
+    try {
+      // Create test movies list
+      java.util.List<Movie> testMovies = new java.util.ArrayList<>();
+
+      // Create a test movie object
+      Movie testMovie = new Movie();
+      testMovie.setTitle("Test Movie");
+
+      // Use the user-provided test path from the text field
+      String testPath = tfOpenAiTestPath.getText().trim();
+      if (testPath.isEmpty()) {
+        testPath = System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv";
+        tfOpenAiTestPath.setText(testPath);
+      }
+
+      // Add a mock media file path for testing
+      org.tinymediamanager.core.entities.MediaFile mockFile = new org.tinymediamanager.core.entities.MediaFile();
+      mockFile.setFile(java.nio.file.Paths.get(testPath));
+      testMovie.addToMediaFiles(mockFile);
+
+      testMovies.add(testMovie);
+
+      // Create BatchChatGPTMovieRecognitionService instance
+      org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
+          new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+
+      // Test the batch recognition
+      java.util.Map<String, String> results = batchService.batchRecognizeMovieTitles(testMovies);
+
+      // Show the result in a message dialog
+      if (results.isEmpty()) {
+        JOptionPane.showMessageDialog(this,
+            "Batch recognition test completed but no results returned.\n" +
+            "Please check your API key and configuration.",
+            "Batch OpenAI Test",
+            JOptionPane.WARNING_MESSAGE);
+      } else {
+        StringBuilder resultText = new StringBuilder("Batch recognition test results:\n");
+        for (java.util.Map.Entry<String, String> entry : results.entrySet()) {
+          resultText.append("Movie ID: ").append(entry.getKey())
+                   .append(" -> Title: ").append(entry.getValue()).append("\n");
+        }
+        JOptionPane.showMessageDialog(this,
+            resultText.toString(),
+            "Batch OpenAI Test",
+            JOptionPane.INFORMATION_MESSAGE);
+      }
+    } catch (Exception e) {
+      LOGGER.error("Error testing batch OpenAI recognition", e);
+      JOptionPane.showMessageDialog(this,
+          "Error testing batch OpenAI recognition:\n" + e.getMessage(),
+          "Batch OpenAI Test",
+          JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+
+
+
 }

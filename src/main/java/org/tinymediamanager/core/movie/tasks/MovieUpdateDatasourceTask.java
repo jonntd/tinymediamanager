@@ -1641,6 +1641,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
    * gather mediainfo for ungathered movies
    */
   private void gatherMediainfo(String datasource) {
+    // check if we should fetch video information
+    if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      LOGGER.info("Skipping mediainfo fetching as per configuration");
+      return;
+    }
+
     // start MI
     setTaskName(TmmResourceBundle.getString("update.mediainfo"));
     publishState();
@@ -1687,6 +1693,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   }
 
   private void gatherMediainfo(List<Movie> movies) {
+    // check if we should fetch video information
+    if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      LOGGER.info("Skipping mediainfo fetching as per configuration");
+      return;
+    }
+
     // start MI
     setTaskName(TmmResourceBundle.getString("update.mediainfo"));
     publishState();

@@ -85,6 +85,7 @@ import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
 import org.tinymediamanager.core.movie.tasks.MovieRenameTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle;
@@ -238,7 +239,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     {
       JPanel panelSearchField = new JPanel();
       contentPanel.add(panelSearchField, "cell 0 0,grow");
-      panelSearchField.setLayout(new MigLayout("insets 0", "[][][grow][]", "[]2lp[]"));
+      panelSearchField.setLayout(new MigLayout("insets 0", "[][][grow][][]", "[]2lp[]"));
       {
         JLabel lblScraper = new TmmLabel(TmmResourceBundle.getString("scraper"));
         panelSearchField.add(lblScraper, "cell 0 0,alignx right");
@@ -266,6 +267,11 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         panelSearchField.add(btnSearch, "cell 3 0");
         btnSearch.setIcon(IconManager.SEARCH_INV);
         btnSearch.addActionListener(searchAction);
+
+        JButton btnAiFix = new JButton("AI fix");
+        btnAiFix.setToolTipText("Use AI to analyze movie file and fill search terms");
+        btnAiFix.addActionListener(e -> aiFixSearchTerms());
+        panelSearchField.add(btnAiFix, "cell 4 0");
       }
       {
         JLabel lblLanguage = new TmmLabel(TmmResourceBundle.getString("metatag.language"));
@@ -491,6 +497,16 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       lblPath.setText(movieToScrape.getPathNIO().resolve(movieToScrape.getMainFile().getFilename()).toString());
       // initial search with IDs
       searchMovie(textFieldSearchString.getText(), true);
+      
+      // automatically trigger AI fix on startup
+      SwingUtilities.invokeLater(() -> {
+        try {
+          aiFixSearchTerms();
+        } catch (Exception e) {
+          LOGGER.error("Failed to auto-trigger AI fix: {}", e.getMessage());
+          // fallback to manual mode - user can still click AI fix button
+        }
+      });
     }
   }
 
@@ -817,6 +833,33 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
 
   public boolean isNavigateBack() {
     return navigateBack;
+  }
+
+  private void aiFixSearchTerms() {
+    try {
+      setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+      
+      // Use ChatGPTMovieRecognitionService to analyze the movie
+      ChatGPTMovieRecognitionService recognitionService = new ChatGPTMovieRecognitionService();
+      String recognizedTitle = recognitionService.recognizeMovieTitle(movieToScrape);
+      
+      if (StringUtils.isNotBlank(recognizedTitle)) {
+        // Set the recognized title to the search text field
+        textFieldSearchString.setText(recognizedTitle);
+        
+        // Optionally, trigger a search with the new title
+        searchMovie(recognizedTitle, false);
+      } else {
+        MessageManager.getInstance().pushMessage(
+            new Message(MessageLevel.ERROR, "MovieChooser", "Failed to recognize movie title from file path"));
+      }
+    } catch (Exception e) {
+      LOGGER.error("Error during AI movie recognition: {}", e.getMessage());
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.ERROR, "MovieChooser", "Error during AI analysis: " + e.getMessage()));
+    } finally {
+      setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    }
   }
 
   /******************************************************************************

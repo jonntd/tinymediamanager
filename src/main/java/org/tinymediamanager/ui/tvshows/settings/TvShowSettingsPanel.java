@@ -80,7 +80,8 @@ class TvShowSettingsPanel extends JPanel {
   private JCheckBox            chckbxTraktWatched;
   private JCheckBox            chckbxTraktRating;
   private JCheckBox            chckbxSpecialSeason;
-  private JCheckBox            chckbxCreateMissingSeasonItems;
+  private JCheckBox           chckbxCreateMissingSeasonItems;
+  private JCheckBox           chckbxFetchVideoInfoOnUpdate;
   private JCheckBox            chckbxResetNewFlag;
   private JCheckBox            chckbxReadNomedia;
 
@@ -275,6 +276,13 @@ class TvShowSettingsPanel extends JPanel {
         JLabel lblCreateMissingSeasonItemsHint = new JLabel(IconManager.HINT);
         lblCreateMissingSeasonItemsHint.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.writemissingitems.hint"));
         panelMisc.add(lblCreateMissingSeasonItemsHint, "cell 1 8 2 1");
+
+        chckbxFetchVideoInfoOnUpdate = new JCheckBox(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate"));
+        panelMisc.add(chckbxFetchVideoInfoOnUpdate, "cell 1 9 2 1");
+
+        JLabel lblFetchVideoInfoOnUpdateHint = new JLabel(IconManager.HINT);
+        lblFetchVideoInfoOnUpdateHint.setToolTipText(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate.desc"));
+        panelMisc.add(lblFetchVideoInfoOnUpdateHint, "cell 1 9 2 1");
       }
     }
   }
@@ -384,5 +392,10 @@ class TvShowSettingsPanel extends JPanel {
     AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6, chckbxReadNomedia,
         jCheckBoxBeanProperty);
     autoBinding_7.bind();
+    //
+    Property tvShowSettingsBeanProperty_14 = BeanProperty.create("fetchVideoInfoOnUpdate");
+    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_14, chckbxFetchVideoInfoOnUpdate,
+        jCheckBoxBeanProperty);
+    autoBinding_19.bind();
   }
 }

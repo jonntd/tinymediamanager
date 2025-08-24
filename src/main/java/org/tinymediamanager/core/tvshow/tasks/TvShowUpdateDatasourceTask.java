@@ -672,6 +672,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * detect which mediafiles has to be parsed and start a thread to do that
    */
   private void gatherMediaInformationForUngatheredMediaFiles(TvShow tvShow) {
+    // check if we should fetch video information
+    if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      LOGGER.debug("Skipping media information fetching for TV show '{}' - fetchVideoInfoOnUpdate is disabled", tvShow.getTitle());
+      return;
+    }
+    
     // get mediainfo for tv show (fanart/poster..)
     for (MediaFile mf : tvShow.getMediaFiles()) {
       if (StringUtils.isBlank(mf.getContainerFormat())) {

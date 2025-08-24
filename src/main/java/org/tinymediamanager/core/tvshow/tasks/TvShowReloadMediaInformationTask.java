@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.tasks.MediaFileInformationFetcherTask;
@@ -60,6 +61,12 @@ public class TvShowReloadMediaInformationTask extends TmmThreadPool {
   @Override
   protected void doInBackground() {
     try {
+      // check if we should fetch video information
+      if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+        LOGGER.info("Skipping media information fetching - fetchVideoInfoOnUpdate is disabled");
+        return;
+      }
+      
       LOGGER.info("Getting MediaInfo for '{}' movies", tvShows.size());
       // update MediaInfo
 

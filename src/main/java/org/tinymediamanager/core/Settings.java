@@ -134,6 +134,9 @@ public final class Settings extends AbstractSettings {
 
   private boolean                                          writeMediaInfoXml            = false;
 
+  // whether to fetch video information during library updates
+  private boolean                                          fetchVideoInfoOnUpdate       = true;
+
   // aspect ratio detector
   boolean                                                  ardEnabled                   = false;
   private ArdSettings.Mode                                 ardMode                      = ArdSettings.Mode.DEFAULT;
@@ -155,6 +158,13 @@ public final class Settings extends AbstractSettings {
   private boolean                                          enableAutomaticUpdate        = true;
   private int                                              automaticUpdateInterval      = 1;
   private String                                           mdbListApiKey                = "";
+
+  // OpenAI API settings
+  private String                                           openAiApiKey                 = "";
+  private String                                           openAiApiUrl                 = "https://api.openai.com/v1/chat/completions";
+  private String                                           openAiModel                  = "gpt-3.5-turbo";
+  private String                                           openAiExtractionPrompt       = "Extract the movie title from the provided file path context. Analyze the directory structure and file name to identify the actual movie title. Return only the clean movie title. If uncertain, make an educated guess based on common movie naming patterns. Prioritize the most specific directory name that resembles a movie title.";
+  private String                                           openAiTestPath               = "/Users/jonntd/Movies/Test Movie/Test Movie.mkv";
 
   /**
    * Instantiates a new settings.
@@ -1177,6 +1187,27 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("writeMediaInfoXml", oldValue, newValue);
   }
 
+  /**
+   * should we fetch video information during library updates?
+   * 
+   * @return true/false
+   */
+  public boolean isFetchVideoInfoOnUpdate() {
+    return fetchVideoInfoOnUpdate;
+  }
+
+  /**
+   * should we fetch video information during library updates?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setFetchVideoInfoOnUpdate(boolean newValue) {
+    boolean oldValue = this.fetchVideoInfoOnUpdate;
+    this.fetchVideoInfoOnUpdate = newValue;
+    firePropertyChange("fetchVideoInfoOnUpdate", oldValue, newValue);
+  }
+
   // aspect ratio detector
   public void setArdEnabled(boolean newValue) {
     boolean oldValue = this.ardEnabled;
@@ -1443,5 +1474,59 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.mdbListApiKey;
     this.mdbListApiKey = mdbListApiKey;
     firePropertyChange("mdbListApiKey", oldValue, mdbListApiKey);
+  }
+
+  // OpenAI API Key
+  public String getOpenAiApiKey() {
+    return openAiApiKey;
+  }
+
+  public void setOpenAiApiKey(String newValue) {
+    String oldValue = this.openAiApiKey;
+    this.openAiApiKey = newValue;
+    firePropertyChange("openAiApiKey", oldValue, newValue);
+  }
+
+  // OpenAI API URL
+  public String getOpenAiApiUrl() {
+    return openAiApiUrl;
+  }
+
+  public void setOpenAiApiUrl(String newValue) {
+    String oldValue = this.openAiApiUrl;
+    this.openAiApiUrl = newValue;
+    firePropertyChange("openAiApiUrl", oldValue, newValue);
+  }
+
+  // OpenAI Extraction Prompt
+  public String getOpenAiExtractionPrompt() {
+    return openAiExtractionPrompt;
+  }
+
+  public void setOpenAiExtractionPrompt(String newValue) {
+    String oldValue = this.openAiExtractionPrompt;
+    this.openAiExtractionPrompt = newValue;
+    firePropertyChange("openAiExtractionPrompt", oldValue, newValue);
+  }
+
+  public String getOpenAiModel() {
+    return openAiModel;
+  }
+
+  public void setOpenAiModel(String newValue) {
+    String oldValue = this.openAiModel;
+    this.openAiModel = newValue;
+    firePropertyChange("openAiModel", oldValue, newValue);
+  }
+
+  // OpenAI Test Path
+  public String getOpenAiTestPath() {
+    return openAiTestPath;
+  }
+
+  public void setOpenAiTestPath(String newValue) {
+    String oldValue = this.openAiTestPath;
+    this.openAiTestPath = newValue;
+    firePropertyChange("openAiTestPath", oldValue, newValue);
   }
 }
