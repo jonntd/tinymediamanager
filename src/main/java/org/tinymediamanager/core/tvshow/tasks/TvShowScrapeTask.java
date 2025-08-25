@@ -45,6 +45,14 @@ import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.services.ChatGPTTvShowRecognitionService;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTTvShowRecognitionService;
+import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.MediaSearchResult;
+import org.tinymediamanager.scraper.entities.MediaType;
+import java.util.Map;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
@@ -99,9 +107,33 @@ public class TvShowScrapeTask extends TmmThreadPool {
     LOGGER.debug("start scraping tv shows...");
     start();
 
+    // 批量AI识别优化：在启动线程池前统一处理
+    Map<String, String> aiRecognitionResults = null;
+    if (tvShowScrapeParams.doSearch && !tvShowScrapeParams.tvShowsToScrape.isEmpty()) {
+      // 检查是否配置了 OpenAI API Key
+      String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+      LOGGER.debug("OpenAI API Key check: {}", apiKey != null && !apiKey.trim().isEmpty() ? "configured" : "not configured");
+
+      if (apiKey != null && !apiKey.trim().isEmpty()) {
+        try {
+          LOGGER.info("Starting batch AI recognition for {} TV shows", tvShowScrapeParams.tvShowsToScrape.size());
+          BatchChatGPTTvShowRecognitionService batchService = new BatchChatGPTTvShowRecognitionService();
+          aiRecognitionResults = batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape);
+          LOGGER.info("Batch AI recognition completed for {} TV shows", aiRecognitionResults.size());
+        } catch (Exception e) {
+          LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+        }
+      } else {
+        LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
+      }
+    } else {
+      LOGGER.debug("Batch AI recognition skipped: doSearch={}, tvShowCount={}",
+                   tvShowScrapeParams.doSearch, tvShowScrapeParams.tvShowsToScrape.size());
+    }
+
     initThreadPool(3, "scrape");
     for (TvShow tvShow : tvShowScrapeParams.tvShowsToScrape) {
-      submitTask(new Worker(tvShow));
+      submitTask(new Worker(tvShow, aiRecognitionResults));
     }
 
     waitForCompletionOrCancel();
@@ -121,9 +153,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
   private class Worker implements Runnable {
     private final TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
     private final TvShow     tvShow;
+    private final Map<String, String> aiRecognitionResults;
 
-    private Worker(TvShow tvShow) {
+    private Worker(TvShow tvShow, Map<String, String> aiRecognitionResults) {
       this.tvShow = tvShow;
+      this.aiRecognitionResults = aiRecognitionResults;
     }
 
     @Override
@@ -138,31 +172,38 @@ public class TvShowScrapeTask extends TmmThreadPool {
         // search for tv show
         MediaSearchResult result1 = null;
         if (tvShowScrapeParams.doSearch) {
-          List<MediaSearchResult> results = tvShowList.searchTvShow(tvShow.getTitle(), tvShow.getYear(), tvShow.getIds(), mediaMetadataScraper);
-          if (ListUtils.isNotEmpty(results)) {
-            result1 = results.get(0);
-            // check if there is another result with 100% score
-            if (results.size() > 1) {
-              MediaSearchResult result2 = results.get(1);
-              // if both results have the same score - do not take any result
-              if (result1.getScore() == result2.getScore()) {
-                LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", tvShow.getTitle());
-                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
-                return;
-              }
+          // 首先尝试使用AI识别结果进行搜索
+          MediaSearchResult aiResult = tryAIRecognition(tvShow, mediaMetadataScraper);
+          if (aiResult != null) {
+            result1 = aiResult;
+          } else {
+            // 如果AI识别失败，使用原始标题搜索
+            List<MediaSearchResult> results = tvShowList.searchTvShow(tvShow.getTitle(), tvShow.getYear(), tvShow.getIds(), mediaMetadataScraper);
+            if (ListUtils.isNotEmpty(results)) {
+              result1 = results.get(0);
+              // check if there is another result with 100% score
+              if (results.size() > 1) {
+                MediaSearchResult result2 = results.get(1);
+                // if both results have the same score - do not take any result
+                if (result1.getScore() == result2.getScore()) {
+                  LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", tvShow.getTitle());
+                  MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                  return;
+                }
 
-              // create a threshold of 0.75 - to minimize false positives
-              if (result1.getScore() < 0.75) {
-                LOGGER.warn("Score ({}) is lower than minimum score (0.75) for '{}' - ignore result", result1.getScore(), tvShow.getTitle());
-                MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
-                return;
+                // create a threshold of 0.75 - to minimize false positives
+                if (result1.getScore() < 0.75) {
+                  LOGGER.warn("Score ({}) is lower than minimum score (0.75) for '{}' - ignore result", result1.getScore(), tvShow.getTitle());
+                  MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                  return;
+                }
               }
             }
-          }
-          else {
-            LOGGER.info("No result found for {}", tvShow.getTitle());
-            MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
-            return;
+            else {
+              LOGGER.info("No result found for {}", tvShow.getTitle());
+              MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+              return;
+            }
           }
         }
 
@@ -487,6 +528,104 @@ public class TvShowScrapeTask extends TmmThreadPool {
       });
 
       return trailers;
+    }
+
+    /**
+     * 尝试使用AI识别结果进行搜索
+     */
+    private MediaSearchResult tryAIRecognition(TvShow tvShow, MediaScraper mediaMetadataScraper) {
+      String recognizedTitle = null;
+
+      LOGGER.info("=== TV Show AI Recognition in Scrape Task ===");
+      LOGGER.info("TV Show: {} (ID: {})", tvShow.getTitle(), tvShow.getDbId());
+      LOGGER.info("Batch results available: {}", aiRecognitionResults != null);
+      if (aiRecognitionResults != null) {
+        LOGGER.info("Batch results count: {}", aiRecognitionResults.size());
+        LOGGER.info("Looking for TV show ID: {}", tvShow.getDbId().toString());
+      }
+
+      // 首先尝试使用批量识别结果
+      if (aiRecognitionResults != null && aiRecognitionResults.containsKey(tvShow.getDbId().toString())) {
+        recognizedTitle = aiRecognitionResults.get(tvShow.getDbId().toString());
+        LOGGER.info("=== Using Batch AI Result ===");
+        LOGGER.info("Batch AI result: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
+      } else {
+        // 检查是否应该进行单个识别回退
+        String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+        if (apiKey != null && !apiKey.trim().isEmpty()) {
+          if (aiRecognitionResults != null) {
+            LOGGER.debug("TV show '{}' (ID: {}) not found in batch results, falling back to individual recognition",
+                        tvShow.getTitle(), tvShow.getDbId());
+          } else {
+            LOGGER.debug("Batch recognition was not performed, using individual recognition for TV show '{}'", tvShow.getTitle());
+          }
+
+          // 回退到单个识别（兼容旧逻辑）
+          LOGGER.info("=== Falling back to Individual AI Recognition ===");
+          try {
+            ChatGPTTvShowRecognitionService chatGPTService = new ChatGPTTvShowRecognitionService();
+            recognizedTitle = chatGPTService.recognizeTvShowTitle(tvShow);
+            if (recognizedTitle != null) {
+              LOGGER.info("=== Individual AI Result ===");
+              LOGGER.info("Individual AI result: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
+            } else {
+              LOGGER.warn("Individual AI recognition returned null");
+            }
+          } catch (Exception e) {
+            LOGGER.error("Individual ChatGPT TV show recognition failed: {}", e.getMessage(), e);
+          }
+        } else {
+          LOGGER.debug("OpenAI API key not configured, skipping AI recognition for TV show '{}'", tvShow.getTitle());
+        }
+      }
+
+      // 使用AI识别的标题重新搜索
+      LOGGER.info("=== Processing AI Recognition Result ===");
+      LOGGER.info("Final AI result: '{}'", recognizedTitle);
+
+      if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+        // 现在AI只返回 "标题 年份" 格式，不再返回数据库ID
+        LOGGER.info("=== Using AI Title for Search ===");
+        LOGGER.info("AI returned title format: {}", recognizedTitle);
+
+        // 标准的标题年份格式处理
+        String[] aiParserInfo = ParserUtils.detectCleanTitleAndYear(recognizedTitle, java.util.Collections.emptyList());
+        String aiProcessedTitle = recognizedTitle;
+        Integer aiProcessedYear = tvShow.getYear();
+
+        if (aiParserInfo != null && aiParserInfo.length >= 2) {
+          aiProcessedTitle = aiParserInfo[0];
+          if (org.apache.commons.lang3.StringUtils.isNotBlank(aiParserInfo[1])) {
+            try {
+              aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
+            } catch (NumberFormatException e) {
+              LOGGER.debug("Could not parse year from AI result: {}", aiParserInfo[1]);
+            }
+          }
+          LOGGER.debug("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
+        }
+
+        try {
+          List<MediaSearchResult> aiResults = tvShowList.searchTvShow(aiProcessedTitle, aiProcessedYear, tvShow.getIds(), mediaMetadataScraper);
+
+          if (ListUtils.isNotEmpty(aiResults)) {
+            MediaSearchResult aiResult = aiResults.get(0);
+
+            if (aiResult.getScore() >= 0.75) {
+              LOGGER.info("AI recognition successful! Found match with score: {}", aiResult.getScore());
+              return aiResult;
+            } else {
+              LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold (0.75)", aiResult.getScore());
+            }
+          } else {
+            LOGGER.info("No results found for AI recognized title: '{}'", aiProcessedTitle);
+          }
+        } catch (Exception e) {
+          LOGGER.warn("Error during AI search for TV show '{}': {}", aiProcessedTitle, e.getMessage());
+        }
+      }
+
+      return null; // AI识别失败，返回null让调用者使用原始搜索
     }
   }
 

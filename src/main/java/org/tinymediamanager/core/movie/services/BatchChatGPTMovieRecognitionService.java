@@ -515,27 +515,28 @@ public class BatchChatGPTMovieRecognitionService {
     }
     
     /**
-     * 从电影对象中提取文件路径（增强版，带默认值处理）
+     * 从电影对象中提取文件路径（倒数三层，与单个识别保持一致）
      */
     private String extractMoviePath(Movie movie) {
         if (movie == null) {
             LOGGER.warn("Movie object is null");
             return "unknown_movie";
         }
-        
+
         // 优先使用主要视频文件路径
         org.tinymediamanager.core.entities.MediaFile mainFile = movie.getMainFile();
         if (mainFile != null && mainFile != org.tinymediamanager.core.entities.MediaFile.EMPTY_MEDIAFILE) {
             try {
                 String mainFilePath = mainFile.getFileAsPath().toString();
                 if (mainFilePath != null && !mainFilePath.trim().isEmpty()) {
-                    return mainFilePath;
+                    // 提取倒数三层目录，与单个识别保持一致
+                    return extractLastThreeDirectoryNames(mainFilePath);
                 }
             } catch (Exception e) {
                 LOGGER.warn("Failed to get main file path for movie {}: {}", movie.getTitle(), e.getMessage());
             }
         }
-        
+
         // 如果没有有效的主要文件，尝试使用第一个有效的媒体文件
         List<org.tinymediamanager.core.entities.MediaFile> mediaFiles = movie.getMediaFiles();
         for (org.tinymediamanager.core.entities.MediaFile mediaFile : mediaFiles) {
@@ -543,24 +544,49 @@ public class BatchChatGPTMovieRecognitionService {
                 try {
                     String mediaFilePath = mediaFile.getFileAsPath().toString();
                     if (mediaFilePath != null && !mediaFilePath.trim().isEmpty()) {
-                        return mediaFilePath;
+                        // 提取倒数三层目录，与单个识别保持一致
+                        return extractLastThreeDirectoryNames(mediaFilePath);
                     }
                 } catch (Exception e) {
                     LOGGER.debug("Failed to get media file path: {}", e.getMessage());
                 }
             }
         }
-        
+
         // 如果所有文件路径都无效，使用电影标题作为备用方案
         String movieTitle = movie.getTitle();
         if (movieTitle != null && !movieTitle.trim().isEmpty()) {
             LOGGER.info("Using movie title as fallback path: {}", movieTitle);
             return movieTitle;
         }
-        
+
         // 最终回退方案
         LOGGER.warn("No valid path found for movie, using default identifier");
         return "movie_" + movie.getDbId();
+    }
+
+    /**
+     * 提取路径倒数三层（与单个识别服务保持一致）
+     */
+    private String extractLastThreeDirectoryNames(String filePath) {
+        try {
+            java.nio.file.Path path = java.nio.file.Paths.get(filePath);
+
+            // 获取路径的所有部分
+            int nameCount = path.getNameCount();
+            if (nameCount <= 3) {
+                // 如果路径层级不超过3层，返回相对路径
+                return "/" + path.toString();
+            }
+
+            // 取倒数三层：倒数第三层目录/倒数第二层目录/文件名
+            java.nio.file.Path lastThreeLayers = path.subpath(nameCount - 3, nameCount);
+            return "/" + lastThreeLayers.toString();
+
+        } catch (Exception e) {
+            LOGGER.warn("Failed to extract last three layers from path: {}", e.getMessage());
+            return filePath; // 回退到原始路径
+        }
     }
     
     /**

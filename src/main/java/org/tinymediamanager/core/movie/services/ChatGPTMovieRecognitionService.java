@@ -75,15 +75,23 @@ public class ChatGPTMovieRecognitionService {
                 return null;
             }
 
-            LOGGER.debug("Extracted directory context: {}", pathContext);
-            LOGGER.debug("Full movie path: {}", moviePath);
+            LOGGER.info("=== Path Processing ===");
+            LOGGER.info("Full movie path: {}", moviePath);
+            LOGGER.info("Extracted directory context: {}", pathContext);
 
             // 调用ChatGPT API，传递倒数三层目录信息
             String recognizedTitle = callChatGPTAPI(pathContext);
+
+            LOGGER.info("=== AI Recognition Complete ===");
+            LOGGER.info("Raw AI response: '{}'", recognizedTitle);
             
             if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
                 // 清理和验证识别结果
-                return cleanAndValidateTitle(recognizedTitle);
+                String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
+                LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
+                return cleanedTitle;
+            } else {
+                LOGGER.warn("AI returned empty or null result");
             }
             
         } catch (Exception e) {
@@ -160,21 +168,44 @@ public class ChatGPTMovieRecognitionService {
                 return null;
             }
             
-            // 构建请求JSON - 使用用户配置的system提示词
+            // 构建请求JSON - 使用电影专用提示词（保留主人的联网搜索功能）
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 默认提示词
-        systemPrompt = "\n你是一个专业的媒体元数据查询引擎。你的唯一任务是**通过联网搜索**，为每个文件名找到其最准确的官方信息，然后严格按照 `标题 年份` 格式输出结果。\n\n**输入：**\n一个文件名列表，每行一个。\n\n**输出：**\n一个匹配后的字符串列表，每行一个。**除 `标题 年份` 格式的字符串外，不要输出任何其他内容。**\n\n---\n\n**处理流程：**\n\n**步骤 1：解析文件名**\n*   从文件名中提取出干净的标题和年份，移除所有技术规格和发布组等无关信息。\n    *   例如，从 `The.Shawshank.Redemption.1994.iNTERNAL.1080p.BluRay.x264-MANiC` 中提取出 `The Shawshank Redemption` 和 `1994`。\n\n**步骤 2：强制联网搜索**\n*   **这是最关键的一步，必须执行。**\n*   **如果文件名包含 `[tmdbid=数字]`**，请直接使用该ID在 The Movie Database (TMDB) 上查询。这是最高优先级。\n*   **否则，** 使用你的**搜索工具**，以\"`解析出的标题 年份 TMDB`\"为关键词进行搜索，找到最匹配的 TMDB 或豆瓣页面。\n\n**步骤 3：提取与格式化输出**\n*   从搜索结果中，获取该影视作品的**官方标题**和**官方发行年份**。\n*   **中文优先：** 必须优先使用官方的中文标题。如果TMDB没有中文标题，才使用其英文标题。\n*   将获取到的官方标题和官方年份组合成 **`标题 年份`** 的格式并输出。\n*   **如果搜索失败**或无法找到任何确切的匹配项，则直接返回**原始文件名**作为该行的结果。\n\n---\"\n\n### 示例\n\n**输入：**\n```\nTaken.2.2012.BluRay.1080p.DTS.x264-CtrlHD.mkv\nThe.Shawshank.Redemption.1994.iNTERNAL.1080p.BluRay.x264-MANiC\n[tmdbid=278]/movie/肖申克的救赎.mkv\n一部不存在的电影文件.mkv\n```\n\n**你的输出必须是：**\n```\n飓风营救2 2012\n肖申克的救赎 1994\n肖申克的救赎 1994\n一部不存在的电影文件.mkv\n```\n";
+                // 电影专用的默认提示词 - 单个识别，保留完整的联网搜索功能
+                systemPrompt = "你是一个专业的媒体元数据查询引擎。你的唯一任务是**通过联网搜索**，为文件路径找到其最准确的官方信息，然后严格按照 `标题 年份` 格式输出结果。\n\n" +
+                              "**输入：**\n一个电影文件路径。\n\n" +
+                              "**输出：**\n一个匹配后的字符串。**除 `标题 年份` 格式的字符串外，不要输出任何其他内容。**\n\n" +
+                              "---\n\n" +
+                              "**处理流程：**\n\n" +
+                              "**步骤 1：解析文件路径**\n" +
+                              "*   从文件路径中提取出干净的标题和年份，移除所有技术规格和发布组等无关信息。\n" +
+                              "    *   例如，从 `The.Shawshank.Redemption.1994.iNTERNAL.1080p.BluRay.x264-MANiC` 中提取出 `The Shawshank Redemption` 和 `1994`。\n\n" +
+                              "**步骤 2：强制联网搜索**\n" +
+                              "*   **这是最关键的一步，必须执行。**\n" +
+                              "*   **如果文件路径包含 `{tmdb-数字}`**，请直接使用该ID在 The Movie Database (TMDB) 上查询。这是最高优先级。\n" +
+                              "*   **否则，** 使用你的**搜索工具**，以\"`解析出的标题 年份 TMDB`\"为关键词进行搜索，找到最匹配的 TMDB 或豆瓣页面。\n\n" +
+                              "**步骤 3：提取与格式化输出**\n" +
+                              "*   从搜索结果中，获取该影视作品的**官方标题**和**官方发行年份**。\n" +
+                              "*   **中文优先：** 必须优先使用官方的中文标题。如果TMDB没有中文标题，才使用其英文标题。\n" +
+                              "*   将获取到的官方标题和官方年份组合成 **`标题 年份`** 的格式并输出。\n" +
+                              "*   **如果搜索失败**或无法找到任何确切的匹配项，则直接返回**原始文件名**作为该行的结果。\n\n" +
+                              "---";
             }
             
+            LOGGER.info("=== Movie AI Recognition Debug ===");
+            LOGGER.info("Input movie path: {}", moviePath);
+            LOGGER.info("API URL: {}", apiUrl);
+            LOGGER.info("Model: {}", model);
+            LOGGER.info("System prompt length: {} characters", systemPrompt.length());
+
             String requestBody = String.format(
                 "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.3}",
                 model,
                 systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"),
                 moviePath.replace("\"", "\\\"").replace("\n", "\\n")
             );
-            
-            LOGGER.debug("API request body: {}", requestBody);
+
+            LOGGER.info("API request body: {}", requestBody);
             
             // 创建HTTP请求
             HttpRequest request = HttpRequest.newBuilder()
@@ -190,7 +221,9 @@ public class ChatGPTMovieRecognitionService {
             
             if (response.statusCode() == 200) {
                 String responseBody = response.body();
-                LOGGER.debug("ChatGPT API response: {}", responseBody);
+                LOGGER.info("=== AI API Response ===");
+                LOGGER.info("Response status: {}", response.statusCode());
+                LOGGER.info("Response body: {}", responseBody);
                 
                 // 改进的JSON响应解析，支持多种API格式
                 try {
@@ -240,108 +273,37 @@ public class ChatGPTMovieRecognitionService {
     }
     
     /**
-     * 清理和验证识别结果
+     * 清理和验证识别结果（增强版，参考电视剧AI识别）
      */
     String cleanAndValidateTitle(String recognizedTitle) {
         if (recognizedTitle == null || recognizedTitle.trim().isEmpty()) {
             return null;
         }
-        
-        String cleaned = recognizedTitle;
-        
-        // 首先尝试解析JSON格式响应（如{"title": "电影名称"}）
-        if (cleaned.contains("\"title\":")) {
-            try {
-                // 使用简单的JSON解析提取title字段
-                int titleIndex = cleaned.indexOf("\"title\":");
-                int colonIndex = cleaned.indexOf(':', titleIndex);
-                int valueStart = colonIndex + 1;
-                
-                // 跳过空格
-                while (valueStart < cleaned.length() && Character.isWhitespace(cleaned.charAt(valueStart))) {
-                    valueStart++;
-                }
-                
-                if (valueStart < cleaned.length()) {
-                    char firstChar = cleaned.charAt(valueStart);
-                    if (firstChar == '\"') {
-                        // 引号包裹的值
-                        valueStart++;
-                        int valueEnd = valueStart;
-                        boolean escape = false;
-                        
-                        // 正确处理转义字符
-                        while (valueEnd < cleaned.length()) {
-                            char c = cleaned.charAt(valueEnd);
-                            if (escape) {
-                                escape = false;
-                                valueEnd++;
-                                continue;
-                            }
-                            if (c == '\\') {
-                                escape = true;
-                                valueEnd++;
-                                continue;
-                            }
-                            if (c == '"') {
-                                break;
-                            }
-                            valueEnd++;
-                        }
-                        
-                        if (valueEnd < cleaned.length()) {
-                            cleaned = cleaned.substring(valueStart, valueEnd)
-                                .replace("\\\"", "\"")
-                                .replace("\\n", "\n")
-                                .trim();
-                        }
-                    } else {
-                        // 直接值（无引号），找到下一个逗号或结束括号
-                        int valueEnd = valueStart;
-                        while (valueEnd < cleaned.length()) {
-                            char c = cleaned.charAt(valueEnd);
-                            if (c == ',' || c == '}' || Character.isWhitespace(c)) {
-                                break;
-                            }
-                            valueEnd++;
-                        }
-                        cleaned = cleaned.substring(valueStart, valueEnd).trim();
-                    }
-                }
-                
-                // 调试日志
-                LOGGER.debug("After JSON parsing: '{}'", cleaned);
-                
-            } catch (Exception e) {
-                LOGGER.warn("Failed to parse JSON title field: {}", e.getMessage());
-            }
-        }
-        
-        // 移除引号、括号等特殊字符
-        cleaned = cleaned
-            .replaceAll("[\\\"\\[\\](){}\"]", "")
-            .replaceAll("^[\\s\\p{Punct}]+", "")
-            .replaceAll("[\\s\\p{Punct}]+$", "")
+
+        // 清理逻辑 - 移除标点符号和规范化空格
+        String cleaned = recognizedTitle
+            .replaceAll("^[\\s\\p{Punct}]+", "")  // 移除开头的标点符号
+            .replaceAll("[\\s\\p{Punct}]+$", "")  // 移除结尾的标点符号
+            .replaceAll("\\s+", " ")              // 规范化空格
             .trim();
-        
-        // 检查是否包含明显的电影名特征
-        if (isValidMovieTitle(cleaned)) {
+
+        // 验证结果不为空且不是明显的错误（参考电视剧AI识别）
+        if (cleaned.isEmpty() ||
+            cleaned.toLowerCase().contains("error") ||
+            cleaned.toLowerCase().contains("failed") ||
+            cleaned.toLowerCase().contains("unknown")) {
+            LOGGER.warn("Invalid recognition result: {}", recognizedTitle);
+            return null;
+        }
+
+        // 基本验证：长度合理
+        if (cleaned.length() >= 2 && cleaned.length() <= 100) {
+            LOGGER.debug("Cleaned title: '{}' -> '{}'", recognizedTitle, cleaned);
             return cleaned;
         }
-        
+
+        LOGGER.warn("Invalid title length: {}", cleaned.length());
         return null;
     }
-    
-    /**
-     * 验证是否为有效的电影名称
-     */
-    private boolean isValidMovieTitle(String title) {
-        if (title == null || title.trim().isEmpty()) {
-            return false;
-        }
-        
-        // 基本验证：长度合理，允许中文字符和其他常见字符
-        return title.length() >= 2 && 
-               title.length() <= 100;
-    }
+
 }

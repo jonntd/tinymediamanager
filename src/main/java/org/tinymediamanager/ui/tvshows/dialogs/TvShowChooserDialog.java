@@ -90,6 +90,12 @@ import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
+import org.tinymediamanager.core.tvshow.services.ChatGPTTvShowRecognitionService;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.apache.commons.lang3.StringUtils;
+import java.awt.Cursor;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.tasks.TvShowEpisodeScrapeTask;
@@ -259,6 +265,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         textFieldSearchString.addActionListener(searchAction);
         panelSearchField.add(textFieldSearchString, "cell 2 0,growx");
         textFieldSearchString.setColumns(10);
+
+        JButton btnAiFix = new JButton("AI fix");
+        btnAiFix.setToolTipText("Use AI to analyze TV show file and fill search terms");
+        btnAiFix.addActionListener(e -> aiFixSearchTerms());
+        panelSearchField.add(btnAiFix, "cell 3 0");
 
         JButton btnSearch = new JButton(TmmResourceBundle.getString("Button.search"));
         btnSearch.setIcon(IconManager.SEARCH_INV);
@@ -536,6 +547,16 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       textFieldSearchString.setText(tvShowToScrape.getTitle());
       // initial search with IDs
       searchTvShow(textFieldSearchString.getText(), true);
+
+      // automatically trigger AI fix on startup
+      SwingUtilities.invokeLater(() -> {
+        try {
+          aiFixSearchTerms();
+        } catch (Exception e) {
+          LOGGER.error("Failed to auto-trigger AI fix: {}", e.getMessage());
+          // fallback to manual mode - user can still click AI fix button
+        }
+      });
     }
   }
 
@@ -949,6 +970,11 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
     return navigateBack;
   }
 
+  @Override
+  public void setVisible(boolean visible) {
+    super.setVisible(visible);
+  }
+
   private void searchTvShow(String searchTerm, boolean withIds) {
     if (activeSearchTask != null && !activeSearchTask.isDone()) {
       activeSearchTask.cancel();
@@ -1086,6 +1112,58 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
   public boolean showDialog() {
     setVisible(true);
     return continueQueue;
+  }
+
+  private void aiFixSearchTerms() {
+    // 检查API Key配置
+    String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+    if (apiKey == null || apiKey.trim().isEmpty()) {
+      LOGGER.warn("OpenAI API key not configured - AI recognition skipped");
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.WARN, "TvShowChooser", "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
+      return;
+    }
+
+    LOGGER.info("Starting AI recognition for TV show: {}", tvShowToScrape.getTitle());
+
+    // 在后台线程中执行AI识别，避免阻塞UI线程
+    SwingWorker<String, Void> aiWorker = new SwingWorker<String, Void>() {
+      @Override
+      protected String doInBackground() throws Exception {
+        // Use ChatGPTTvShowRecognitionService to analyze the TV show
+        ChatGPTTvShowRecognitionService recognitionService = new ChatGPTTvShowRecognitionService();
+        return recognitionService.recognizeTvShowTitle(tvShowToScrape);
+      }
+
+      @Override
+      protected void done() {
+        try {
+          String recognizedTitle = get();
+
+          if (StringUtils.isNotBlank(recognizedTitle)) {
+            // Set the recognized title to the search text field
+            textFieldSearchString.setText(recognizedTitle);
+
+            // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
+            searchTvShow(recognizedTitle, true);
+          } else {
+            LOGGER.warn("AI recognition returned empty result, falling back to original title");
+            // AI识别失败，使用原始标题进行搜索
+            searchTvShow(textFieldSearchString.getText(), true);
+          }
+        } catch (Exception e) {
+          LOGGER.error("Error during AI TV show recognition: {}", e.getMessage());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.ERROR, "TvShowChooser", "Error during AI analysis: " + e.getMessage()));
+        } finally {
+          setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        }
+      }
+    };
+
+    // 设置等待光标并启动后台任务
+    setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+    aiWorker.execute();
   }
 
   private class ChangeScraperAction extends AbstractAction {

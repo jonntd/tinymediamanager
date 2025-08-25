@@ -75,9 +75,10 @@ public class TvShowSelectedScrapeAction extends TmmAction {
     List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig = dialog.getTvShowEpisodeScraperMetadataConfig();
     boolean overwrite = dialog.getOverwriteExistingItems();
 
-    // scrape
+    // scrape - 明确启用搜索和AI识别
     TmmThreadPool scrapeTask = new TvShowScrapeTask(
         new TvShowScrapeTask.TvShowScrapeParams(selectedTvShows, options, tvShowScraperMetadataConfig, episodeScraperMetadataConfig)
+            .setDoSearch(true)  // 明确启用搜索和AI识别
             .setOverwriteExistingItems(overwrite));
     TmmTaskManager.getInstance().addMainTask(scrapeTask);
   }

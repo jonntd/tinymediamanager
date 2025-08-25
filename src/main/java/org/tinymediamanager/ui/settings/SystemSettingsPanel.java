@@ -524,76 +524,98 @@ class SystemSettingsPanel extends JPanel {
    * Test the OpenAI prompt by calling ChatGPTMovieRecognitionService with a test movie
    */
   private void testOpenAiPrompt() {
-    try {
-      // Create a test movie object to simulate recognition
-      Movie testMovie = new Movie();
-      testMovie.setTitle("Test Movie");
+    // 禁用测试按钮，防止重复点击
+    btnTestOpenAiPrompt.setEnabled(false);
+    btnTestOpenAiPrompt.setText("Testing...");
 
-      // Use the user-provided test path from the text field
-      String testPath = tfOpenAiTestPath.getText().trim();
-      if (testPath.isEmpty()) {
-        // 使用更通用的测试路径，或者提示用户输入
-        testPath = System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv";
-        // 设置回文本框以便用户可以看到和修改
-        tfOpenAiTestPath.setText(testPath);
-      }
-      //打印testPath
-      System.out.println("testPath: " + testPath);
-      // Add a mock media file path for testing
-      org.tinymediamanager.core.entities.MediaFile mockFile = new org.tinymediamanager.core.entities.MediaFile();
-      mockFile.setFile(java.nio.file.Paths.get(testPath));
-      testMovie.addToMediaFiles(mockFile);
+    // 使用SwingWorker在后台线程中执行测试，避免阻塞UI
+    javax.swing.SwingWorker<String, Void> testWorker = new javax.swing.SwingWorker<String, Void>() {
+      @Override
+      protected String doInBackground() throws Exception {
+        // Create a test movie object to simulate recognition
+        Movie testMovie = new Movie();
+        testMovie.setTitle("Test Movie");
 
-      // Test both individual and batch recognition
-      StringBuilder resultText = new StringBuilder();
-
-      // 1. Test individual recognition
-      ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
-      String individualResult = individualService.recognizeMovieTitle(testMovie);
-      resultText.append("Individual Recognition: ").append(individualResult != null ? individualResult : "Failed").append("\n\n");
-
-      // 2. Test batch recognition
-      try {
-        java.util.List<Movie> testMovies = new java.util.ArrayList<>();
-        // UUID is automatically generated in constructor, no need to set manually
-        testMovies.add(testMovie);
-
-        org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
-            new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
-        java.util.Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(testMovies);
-
-        if (batchResults.isEmpty()) {
-          resultText.append("Batch Recognition: No results returned");
-        } else {
-          resultText.append("Batch Recognition: ");
-          for (java.util.Map.Entry<String, String> entry : batchResults.entrySet()) {
-            resultText.append(entry.getValue());
-          }
+        // Use the user-provided test path from the text field
+        String testPath = tfOpenAiTestPath.getText().trim();
+        if (testPath.isEmpty()) {
+          // 使用更通用的测试路径，或者提示用户输入
+          testPath = System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv";
+          // 设置回文本框以便用户可以看到和修改
+          final String finalTestPath = testPath;
+          javax.swing.SwingUtilities.invokeLater(() -> tfOpenAiTestPath.setText(finalTestPath));
         }
-      } catch (Exception batchError) {
-        resultText.append("Batch Recognition: Error - ").append(batchError.getMessage());
+
+        // Add a mock media file path for testing
+        org.tinymediamanager.core.entities.MediaFile mockFile = new org.tinymediamanager.core.entities.MediaFile();
+        mockFile.setFile(java.nio.file.Paths.get(testPath));
+        testMovie.addToMediaFiles(mockFile);
+
+        // Test both individual and batch recognition
+        StringBuilder resultText = new StringBuilder();
+
+        // 1. Test individual recognition
+        ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
+        String individualResult = individualService.recognizeMovieTitle(testMovie);
+        resultText.append("Individual Recognition: ").append(individualResult != null ? individualResult : "Failed").append("\n\n");
+
+        // 2. Test batch recognition
+        try {
+          java.util.List<Movie> testMovies = new java.util.ArrayList<>();
+          testMovies.add(testMovie);
+
+          org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
+              new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+          java.util.Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(testMovies);
+
+          if (batchResults.isEmpty()) {
+            resultText.append("Batch Recognition: No results returned");
+          } else {
+            resultText.append("Batch Recognition: ");
+            for (java.util.Map.Entry<String, String> entry : batchResults.entrySet()) {
+              resultText.append(entry.getValue());
+            }
+          }
+        } catch (Exception batchError) {
+          resultText.append("Batch Recognition: Error - ").append(batchError.getMessage());
+        }
+
+        return resultText.toString();
       }
 
-      // Show the result in a message dialog
-      if (individualResult == null && resultText.toString().contains("No results")) {
-        JOptionPane.showMessageDialog(this,
-            "Both individual and batch recognition failed.\n" +
-            "Please check your API key and configuration.\n\n" + resultText.toString(),
-            "OpenAI Test Results",
-            JOptionPane.WARNING_MESSAGE);
-      } else {
-        JOptionPane.showMessageDialog(this,
-            "OpenAI Test Results:\n\n" + resultText.toString(),
-            "OpenAI Test Results",
-            JOptionPane.INFORMATION_MESSAGE);
+      @Override
+      protected void done() {
+        try {
+          String resultText = get();
+
+          // Show the result in a message dialog
+          if (resultText.contains("Failed") && resultText.contains("No results")) {
+            javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
+                "Both individual and batch recognition failed.\n" +
+                "Please check your API key and configuration.\n\n" + resultText,
+                "OpenAI Test Results",
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+          } else {
+            javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
+                "OpenAI Test Results:\n\n" + resultText,
+                "OpenAI Test Results",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+          }
+        } catch (Exception e) {
+          org.slf4j.LoggerFactory.getLogger(SystemSettingsPanel.class).error("Error testing OpenAI prompt", e);
+          javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
+              "Error testing OpenAI:\n" + e.getMessage(),
+              "OpenAI Test Error",
+              javax.swing.JOptionPane.ERROR_MESSAGE);
+        } finally {
+          // 恢复测试按钮状态
+          btnTestOpenAiPrompt.setEnabled(true);
+          btnTestOpenAiPrompt.setText("Test OpenAI Recognition");
+        }
       }
-    } catch (Exception e) {
-      LOGGER.error("Error testing OpenAI prompt", e);
-      JOptionPane.showMessageDialog(this,
-          "Error testing OpenAI:\n" + e.getMessage(),
-          "OpenAI Test Error",
-          JOptionPane.ERROR_MESSAGE);
-    }
+    };
+
+    testWorker.execute();
   }
 
   /**

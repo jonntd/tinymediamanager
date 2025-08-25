@@ -1039,11 +1039,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             try {
               TvShowEpisodeNfoParser parser = TvShowEpisodeNfoParser.parseNfo(epNfo.getFileAsPath());
 
-              // ALL episodes detected with -1? try to parse from filename...
+              // ALL episodes detected with -1? try to parse from filename (with AI fallback)...
               boolean allUnknown = !parser.episodes.isEmpty() && parser.episodes.stream().allMatch(ep -> ep.episode == -1);
               if (allUnknown) {
                 EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser
-                    .detectEpisodeFromFilename(showDir.relativize(epNfo.getFileAsPath()).toString(), tvShow.getTitle());
+                    .detectEpisodeHybrid(showDir.relativize(epNfo.getFileAsPath()).toString(), tvShow.getTitle());
                 if (parser.episodes.size() == result.episodes.size()) {
                   int i = 0;
                   for (Episode ep : parser.episodes) {
@@ -1124,10 +1124,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           } // end parse NFO
 
           // ******************************
-          // STEP 2.1.2 - no NFO? try to parse episode/season
+          // STEP 2.1.2 - no NFO? try to parse episode/season (with AI fallback)
           // ******************************
           String relativePath = showDir.relativize(vid.getFileAsPath()).toString();
-          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(relativePath, tvShow.getTitle());
+          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
 
           // second check: is the detected episode (>-1; season >-1) already in
           // tmm and any valid stacking markers found?
@@ -1371,7 +1371,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
 
         String relativePath = showDir.relativize(mf.getFileAsPath()).toString();
-        EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(relativePath, tvShow.getTitle());
+        EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
         if (result.season > -1 && !result.episodes.isEmpty()) {
           for (int epnr : result.episodes) {
             // get any assigned episode

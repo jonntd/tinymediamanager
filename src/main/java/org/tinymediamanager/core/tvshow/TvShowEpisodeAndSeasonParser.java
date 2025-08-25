@@ -38,6 +38,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.core.tvshow.services.ChatGPTEpisodeRecognitionService;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -184,6 +185,50 @@ public class TvShowEpisodeAndSeasonParser {
       ret = new StringBuilder(backup.toString().strip());
     }
     return ret.toString();
+  }
+
+  /**
+   * 使用AI辅助识别剧集文件名（当传统解析失败时的补充方案）
+   *
+   * @param filename 剧集文件名
+   * @param tvShowTitle 电视剧标题
+   * @return EpisodeMatchingResult AI识别结果
+   */
+  public static EpisodeMatchingResult detectEpisodeWithAI(String filename, String tvShowTitle) {
+    LOGGER.info("Attempting AI-assisted episode recognition for: {}", filename);
+    return ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
+  }
+
+  /**
+   * 混合识别方法：先尝试传统解析，失败时使用AI辅助
+   *
+   * @param filename 剧集文件名
+   * @param tvShowTitle 电视剧标题
+   * @return EpisodeMatchingResult 识别结果
+   */
+  public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle) {
+    // 首先尝试传统解析
+    EpisodeMatchingResult traditionalResult = detectEpisodeFromFilename(filename, tvShowTitle);
+
+    // 检查传统解析是否成功
+    if (traditionalResult.season != -1 && !traditionalResult.episodes.isEmpty()) {
+      LOGGER.debug("Traditional parsing successful for: {}", filename);
+      return traditionalResult;
+    }
+
+    // 传统解析失败，尝试AI识别
+    LOGGER.info("Traditional parsing failed, trying AI recognition for: {}", filename);
+    EpisodeMatchingResult aiResult = detectEpisodeWithAI(filename, tvShowTitle);
+
+    // 如果AI识别成功，使用AI结果
+    if (aiResult.season != -1 && !aiResult.episodes.isEmpty()) {
+      LOGGER.info("AI recognition successful for: {}", filename);
+      return aiResult;
+    }
+
+    // 两种方法都失败，返回传统解析结果（可能包含部分信息）
+    LOGGER.warn("Both traditional and AI recognition failed for: {}", filename);
+    return traditionalResult;
   }
 
   /**

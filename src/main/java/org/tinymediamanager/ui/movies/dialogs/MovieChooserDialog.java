@@ -836,30 +836,51 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
   }
 
   private void aiFixSearchTerms() {
-    try {
-      setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-      
-      // Use ChatGPTMovieRecognitionService to analyze the movie
-      ChatGPTMovieRecognitionService recognitionService = new ChatGPTMovieRecognitionService();
-      String recognizedTitle = recognitionService.recognizeMovieTitle(movieToScrape);
-      
-      if (StringUtils.isNotBlank(recognizedTitle)) {
-        // Set the recognized title to the search text field
-        textFieldSearchString.setText(recognizedTitle);
-        
-        // Optionally, trigger a search with the new title
-        searchMovie(recognizedTitle, false);
-      } else {
-        MessageManager.getInstance().pushMessage(
-            new Message(MessageLevel.ERROR, "MovieChooser", "Failed to recognize movie title from file path"));
-      }
-    } catch (Exception e) {
-      LOGGER.error("Error during AI movie recognition: {}", e.getMessage());
+    // 检查API Key配置
+    String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
+    if (apiKey == null || apiKey.trim().isEmpty()) {
+      LOGGER.warn("OpenAI API key not configured - AI recognition skipped");
       MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.ERROR, "MovieChooser", "Error during AI analysis: " + e.getMessage()));
-    } finally {
-      setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+          new Message(MessageLevel.WARN, "MovieChooser", "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
+      return;
     }
+
+    LOGGER.info("Starting AI recognition for movie: {}", movieToScrape.getTitle());
+
+    // 在后台线程中执行AI识别，避免阻塞UI线程
+    SwingWorker<String, Void> aiWorker = new SwingWorker<String, Void>() {
+      @Override
+      protected String doInBackground() throws Exception {
+        // Use ChatGPTMovieRecognitionService to analyze the movie
+        ChatGPTMovieRecognitionService recognitionService = new ChatGPTMovieRecognitionService();
+        return recognitionService.recognizeMovieTitle(movieToScrape);
+      }
+
+      @Override
+      protected void done() {
+        try {
+          String recognizedTitle = get();
+
+          if (StringUtils.isNotBlank(recognizedTitle)) {
+            // Set the recognized title to the search text field
+            textFieldSearchString.setText(recognizedTitle);
+
+            // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
+            searchMovie(recognizedTitle, true);
+          } else {
+            LOGGER.warn("AI recognition returned empty result, falling back to original title");
+            // AI识别失败，使用原始标题进行搜索
+            searchMovie(textFieldSearchString.getText(), true);
+          }
+        } catch (Exception e) {
+          LOGGER.error("Error during AI movie recognition: {}", e.getMessage());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.ERROR, "MovieChooser", "Error during AI analysis: " + e.getMessage()));
+        }
+      }
+    };
+
+    aiWorker.execute();
   }
 
   /******************************************************************************

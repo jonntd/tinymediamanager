@@ -63,6 +63,7 @@ import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadActorImagesAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadMissingArtworkAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowDownloadThemeAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowEditAction;
+import org.tinymediamanager.ui.tvshows.actions.TvShowEpisodeBatchAiRecognitionAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowExportAction;
 import org.tinymediamanager.ui.tvshows.actions.TvShowFetchImdbTop250;
 import org.tinymediamanager.ui.tvshows.actions.TvShowFetchRatingsAction;
@@ -395,6 +396,8 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     popupMenu.add(createAndRegisterAction(TvShowScrapeEpisodesAction.class));
     popupMenu.add(createAndRegisterAction(TvShowScrapeNewItemsAction.class));
     popupMenu.add(createAndRegisterAction(TvShowScrapeMissingEpisodesAction.class));
+    popupMenu.addSeparator();
+    popupMenu.add(createAndRegisterAction(TvShowEpisodeBatchAiRecognitionAction.class));
     popupMenu.add(createAndRegisterAction(TvShowMissingEpisodeListAction.class));
 
     popupMenu.addSeparator();

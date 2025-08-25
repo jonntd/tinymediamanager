@@ -114,6 +114,7 @@ import org.tinymediamanager.ui.ShadowLayerUI;
 import org.tinymediamanager.ui.TmmUIHelper;
 import org.tinymediamanager.ui.components.button.FlatButton;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
+import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
 import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
 import org.tinymediamanager.ui.components.combobox.MediaScraperComboBox;
@@ -359,6 +360,10 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
 
         JButton btnRemoveEpisodeNumber = new SquareIconButton(new RemoveEpisodeNumberAction());
         detailsPanel.add(btnRemoveEpisodeNumber, "cell 0 3,alignx right");
+
+        JButton btnAiRecognition = new SquareIconButton(new AiEpisodeRecognitionAction());
+        btnAiRecognition.setToolTipText("AI识别季数集数");
+        detailsPanel.add(btnAiRecognition, "cell 0 3,alignx right");
       }
       {
         JLabel lblFirstAired = new TmmLabel(TmmResourceBundle.getString("metatag.aired"));
@@ -1161,6 +1166,73 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
     @Override
     public void actionPerformed(ActionEvent e) {
       TmmUIHelper.removeSelectedRowsFromJTable(tableEpisodeNumbers, episodeNumbers);
+    }
+  }
+
+  private class AiEpisodeRecognitionAction extends AbstractAction {
+    AiEpisodeRecognitionAction() {
+      putValue(SHORT_DESCRIPTION, "使用AI识别季数和集数");
+      putValue(SMALL_ICON, IconManager.SEARCH); // 使用搜索图标
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      // 获取剧集文件名
+      String filename = episodeToEdit.getMainFile() != null ?
+          episodeToEdit.getMainFile().getFilename() :
+          episodeToEdit.getTitle();
+
+      // 获取电视剧标题
+      String tvShowTitle = episodeToEdit.getTvShow().getTitle();
+
+      if (filename == null || filename.trim().isEmpty()) {
+        JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
+            "无法获取剧集文件名", "AI识别失败", JOptionPane.WARNING_MESSAGE);
+        return;
+      }
+
+      // 在后台线程中执行AI识别
+      SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void> worker =
+          new SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void>() {
+
+        @Override
+        protected TvShowEpisodeAndSeasonParser.EpisodeMatchingResult doInBackground() throws Exception {
+          return TvShowEpisodeAndSeasonParser.detectEpisodeWithAI(filename, tvShowTitle);
+        }
+
+        @Override
+        protected void done() {
+          try {
+            TvShowEpisodeAndSeasonParser.EpisodeMatchingResult result = get();
+
+            if (result != null && result.season != -1 && !result.episodes.isEmpty()) {
+              // AI识别成功，更新UI
+              int season = result.season;
+              int episode = result.episodes.get(0); // 取第一个集数
+
+              // 创建新的剧集编号
+              MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(
+                  MediaEpisodeGroup.DEFAULT_AIRED, season, episode);
+
+              // 清除现有的剧集编号并添加新的
+              episodeNumbers.clear();
+              episodeNumbers.add(newEpisodeNumber);
+
+              JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
+                  String.format("AI识别成功！\n季数: %d\n集数: %d", season, episode),
+                  "AI识别结果", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+              JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
+                  "AI无法识别该剧集的季数和集数", "AI识别失败", JOptionPane.WARNING_MESSAGE);
+            }
+          } catch (Exception ex) {
+            JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
+                "AI识别过程中发生错误: " + ex.getMessage(), "AI识别错误", JOptionPane.ERROR_MESSAGE);
+          }
+        }
+      };
+
+      worker.execute();
     }
   }
 
