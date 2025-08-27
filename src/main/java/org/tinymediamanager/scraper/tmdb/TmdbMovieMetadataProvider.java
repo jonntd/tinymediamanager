@@ -204,18 +204,43 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
         int page = 1;
         int maxPage = 1;
 
-        // get all result pages
+        // get all result pages (with reasonable limits to prevent infinite loops)
+        final int MAX_PAGES = 20; // Limit to first 20 pages to prevent infinite loops
+        final float MIN_SCORE_THRESHOLD = 0.3f; // Stop if no results above this threshold
+        boolean foundGoodMatch = false;
+
         do {
           Response<MovieResultsPage> httpResponse = api.searchService().movie(searchString, page, language, null, adult, null, null).execute();
           if (!httpResponse.isSuccessful() || httpResponse.body() == null) {
             throw new HttpException(httpResponse.code(), httpResponse.message());
           }
+
+          int resultsBeforeThisPage = results.size();
           for (BaseMovie movie : ListUtils.nullSafe(httpResponse.body().results)) {
-            results.add(morphMovieToSearchResult(movie, options));
+            MediaSearchResult searchResult = morphMovieToSearchResult(movie, options);
+            results.add(searchResult);
+
+            // Check if we found a good match
+            if (searchResult.getScore() >= MIN_SCORE_THRESHOLD) {
+              foundGoodMatch = true;
+            }
           }
 
-          maxPage = httpResponse.body().total_pages;
+          maxPage = Math.min(httpResponse.body().total_pages, MAX_PAGES);
           page++;
+
+          // Stop early if we have enough good results
+          if (foundGoodMatch && results.size() >= 50) {
+            LOGGER.debug("Found good matches, stopping search early at page {}", page - 1);
+            break;
+          }
+
+          // Stop if we're getting too many pages with poor results
+          if (page > 10 && !foundGoodMatch) {
+            LOGGER.warn("No good matches found after 10 pages for query '{}', stopping search", searchString);
+            break;
+          }
+
         } while (page <= maxPage);
 
         LOGGER.debug("found {} results with search string", results.size());

@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.utils.FixStatistics;
 import org.tinymediamanager.scraper.util.ParserUtils;
 
 import java.net.URI;
@@ -79,6 +80,9 @@ public class ChatGPTMovieRecognitionService {
             LOGGER.info("Full movie path: {}", moviePath);
             LOGGER.info("Extracted directory context: {}", pathContext);
 
+            // 记录AI识别尝试
+            FixStatistics.recordAIRecognitionAttempt();
+
             // 调用ChatGPT API，传递倒数三层目录信息
             String recognizedTitle = callChatGPTAPI(pathContext);
 
@@ -89,6 +93,31 @@ public class ChatGPTMovieRecognitionService {
                 // 清理和验证识别结果
                 String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
                 LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
+
+                // 验证是否包含年份
+                if (cleanedTitle != null && !containsValidYear(cleanedTitle)) {
+                    LOGGER.warn("AI response does not contain valid year: '{}'", cleanedTitle);
+                    LOGGER.warn("Attempting to retry with explicit year requirement...");
+
+                    // 记录重试统计
+                    FixStatistics.recordAIRecognitionRetry();
+
+                    // 重试一次，明确要求年份
+                    String retryResult = retryWithYearRequirement(pathContext);
+                    if (retryResult != null && containsValidYear(retryResult)) {
+                        LOGGER.info("Retry successful with year: '{}'", retryResult);
+                        FixStatistics.recordAIRecognitionRetrySuccess();
+                        FixStatistics.recordAIRecognitionWithYear();
+                        return retryResult;
+                    } else {
+                        LOGGER.warn("Retry failed, returning original result: '{}'", cleanedTitle);
+                        return cleanedTitle;
+                    }
+                } else if (cleanedTitle != null && containsValidYear(cleanedTitle)) {
+                    // 第一次就包含年份，记录成功
+                    FixStatistics.recordAIRecognitionWithYear();
+                }
+
                 return cleanedTitle;
             } else {
                 LOGGER.warn("AI returned empty or null result");
@@ -188,7 +217,9 @@ public class ChatGPTMovieRecognitionService {
                               "```\n标题 年份\n```\n" +
                               "- 标题使用官方中文名称（如果有），否则使用英文原名\n" +
                               "- 标题和年份之间用一个空格分隔\n" +
-                              "- 年份使用4位数字格式\n" +
+                              "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
+                              "- 如果文件名中没有年份，必须通过搜索找到正确的发行年份\n" +
+                              "- 年份不能为空，不能省略，这是强制要求\n" +
                               "- 不包含任何其他符号、括号或额外信息\n\n" +
                               "### 4. 示例\n" +
                               "输入：`Inception.2010.1080p.BluRay.mkv` → 输出：`盗梦空间 2010`\n" +
@@ -306,6 +337,102 @@ public class ChatGPTMovieRecognitionService {
         }
 
         LOGGER.warn("Invalid title length: {}", cleaned.length());
+        return null;
+    }
+
+    /**
+     * 检查字符串是否包含有效年份
+     */
+    private boolean containsValidYear(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+
+        // 查找4位数字年份
+        java.util.regex.Pattern yearPattern = java.util.regex.Pattern.compile("\\b(\\d{4})\\b");
+        java.util.regex.Matcher matcher = yearPattern.matcher(text);
+
+        while (matcher.find()) {
+            try {
+                int year = Integer.parseInt(matcher.group(1));
+                int currentYear = java.time.Year.now().getValue();
+                if (year >= 1888 && year <= currentYear + 2) {
+                    LOGGER.debug("Found valid year in text: {}", year);
+                    return true;
+                }
+            } catch (NumberFormatException e) {
+                // 忽略解析错误
+            }
+        }
+
+        LOGGER.debug("No valid year found in text: '{}'", text);
+        return false;
+    }
+
+    /**
+     * 重试AI识别，明确要求年份
+     */
+    private String retryWithYearRequirement(String pathContext) {
+        try {
+            String apiKey = settings.getOpenAiApiKey();
+            String apiUrl = settings.getOpenAiApiUrl();
+            String model = settings.getOpenAiModel();
+
+            // 更强烈的年份要求提示词
+            String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，识别出正确的电影标题和发行年份。\n\n" +
+                                 "**关键要求**：\n" +
+                                 "1. 你的回答必须包含4位数字的年份\n" +
+                                 "2. 格式：电影标题 年份（用空格分隔）\n" +
+                                 "3. 年份范围：1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
+                                 "4. 如果不确定年份，请搜索确认\n" +
+                                 "5. 绝对不能省略年份\n\n" +
+                                 "示例：\n" +
+                                 "输入：`Inception.2010.mkv` → 输出：`盗梦空间 2010`\n" +
+                                 "输入：`Avatar.mkv` → 输出：`阿凡达 2009`";
+
+            String requestBody = String.format(
+                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.1}",
+                model,
+                systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"),
+                pathContext.replace("\"", "\\\"").replace("\n", "\\n")
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .timeout(Duration.ofSeconds(30))
+                .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                LOGGER.debug("Retry API response: {}", responseBody);
+
+                // 解析响应
+                int contentStart = responseBody.indexOf("\"content\":\"");
+                if (contentStart != -1) {
+                    contentStart += "\"content\":\"".length();
+                    int contentEnd = responseBody.indexOf('"', contentStart);
+                    if (contentEnd != -1) {
+                        String content = responseBody.substring(contentStart, contentEnd)
+                            .replace("\\\"", "\"")
+                            .replace("\\n", "\n")
+                            .trim();
+                        LOGGER.debug("Retry extracted content: {}", content);
+                        return cleanAndValidateTitle(content);
+                    }
+                }
+            } else {
+                LOGGER.warn("Retry API request failed with status: {}", response.statusCode());
+            }
+
+        } catch (Exception e) {
+            LOGGER.warn("Retry AI recognition failed: {}", e.getMessage());
+        }
+
         return null;
     }
 

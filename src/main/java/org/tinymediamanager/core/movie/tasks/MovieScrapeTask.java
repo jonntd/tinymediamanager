@@ -465,29 +465,43 @@ public class MovieScrapeTask extends TmmThreadPool {
 
         // 验证年份是否合理，如果不合理则重试AI识别
         if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
-          LOGGER.warn("AI returned invalid year: {} for movie '{}', attempting retry", aiProcessedYear, movie.getTitle());
+          LOGGER.error("=== INVALID YEAR DETECTED ===");
+          LOGGER.error("AI returned invalid year: {} for movie '{}'", aiProcessedYear, movie.getTitle());
+          LOGGER.error("Original AI response: '{}'", recognizedTitle);
+          LOGGER.error("Parsed title: '{}', Parsed year: '{}'", aiProcessedTitle, aiProcessedYear);
+          LOGGER.error("Valid year range: 1888-{}", java.time.Year.now().getValue() + 2);
+          LOGGER.error("Attempting retry with year validation...");
 
           // 重试AI识别，要求明确包含年份信息
           String retryRecognizedTitle = retryAIRecognitionWithYearValidation(movie);
           if (retryRecognizedTitle != null && !retryRecognizedTitle.trim().isEmpty()) {
+            LOGGER.info("AI retry response: '{}'", retryRecognizedTitle);
             String[] retryParserInfo = ParserUtils.detectCleanTitleAndYear(retryRecognizedTitle, Collections.emptyList());
             if (retryParserInfo != null && retryParserInfo.length >= 2) {
               String retryTitle = retryParserInfo[0];
               String retryYearStr = retryParserInfo[1];
+              LOGGER.info("Retry parsed - Title: '{}', Year string: '{}'", retryTitle, retryYearStr);
               if (StringUtils.isNotBlank(retryYearStr)) {
                 try {
                   Integer retryYear = Integer.parseInt(retryYearStr);
+                  LOGGER.info("Retry parsed year: {}", retryYear);
                   if (isValidMovieYear(retryYear)) {
                     LOGGER.info("AI retry successful! Updated: '{}' -> '{}' (year: {} -> {})",
                                aiProcessedTitle, retryTitle, aiProcessedYear, retryYear);
                     aiProcessedTitle = retryTitle;
                     aiProcessedYear = retryYear;
+                  } else {
+                    LOGGER.error("Retry year {} is still invalid!", retryYear);
                   }
                 } catch (NumberFormatException e) {
-                  LOGGER.debug("Could not parse year from AI retry result: {}", retryYearStr);
+                  LOGGER.error("Could not parse year from AI retry result: '{}' - {}", retryYearStr, e.getMessage());
                 }
               }
+            } else {
+              LOGGER.warn("Retry response could not be parsed into title/year");
             }
+          } else {
+            LOGGER.warn("AI retry returned empty or null response");
           }
         }
 
@@ -675,6 +689,7 @@ public class MovieScrapeTask extends TmmThreadPool {
    */
   private boolean isValidMovieYear(Integer year) {
     if (year == null) {
+      LOGGER.debug("Year validation: null year is invalid");
       return false;
     }
 
@@ -686,7 +701,20 @@ public class MovieScrapeTask extends TmmThreadPool {
     boolean isValid = year >= minYear && year <= maxYear;
 
     if (!isValid) {
-      LOGGER.debug("Invalid movie year detected: {} (valid range: {}-{})", year, minYear, maxYear);
+      LOGGER.error("=== YEAR VALIDATION FAILED ===");
+      LOGGER.error("Invalid movie year detected: {}", year);
+      LOGGER.error("Valid range: {}-{}", minYear, maxYear);
+      LOGGER.error("Current year: {}", currentYear);
+
+      // 特别检查2139这样的异常年份
+      if (year > 2100) {
+        LOGGER.error("Year {} is far in the future - possible AI parsing error!", year);
+      }
+      if (year < 1800) {
+        LOGGER.error("Year {} is too old - possible AI parsing error!", year);
+      }
+    } else {
+      LOGGER.debug("Year validation passed: {} (range: {}-{})", year, minYear, maxYear);
     }
 
     return isValid;

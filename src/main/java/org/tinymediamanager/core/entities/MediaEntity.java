@@ -84,6 +84,7 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.utils.FixStatistics;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.util.ListUtils;
@@ -1498,11 +1499,15 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
                        mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
             mediaFile.setFilesize(actualSize);
             LOGGER.info("=== DEBUGGING: File size updated! New size: {} ===", mediaFile.getFilesize());
+
+            // 记录统计信息
+            FixStatistics.recordFileSizeUpdate(actualSize);
           } else {
             LOGGER.info("=== DEBUGGING: File size unchanged: {} ===", actualSize);
           }
         } else {
           LOGGER.error("=== DEBUGGING: File does not exist: {} ===", filePath);
+          FixStatistics.recordFileSizeUpdateFailure();
         }
       }
       catch (IOException e) {

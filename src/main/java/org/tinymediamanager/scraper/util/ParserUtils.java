@@ -180,6 +180,7 @@ public class ParserUtils {
     for (int i = s.length - 1; i > 0; i--) {
       if (s[i].matches("\\d{4}")) {
         int parsedYear = Integer.parseInt(s[i]);
+        LOGGER.trace("Found 4-digit number: {} at position {}", parsedYear, i);
         if (parsedYear > 1800 && parsedYear < currentYear + 5) {
           // well, limit the year a bit...
           LOGGER.trace("removed token '{}'- seems to be year", s[i]);
@@ -188,6 +189,14 @@ public class ParserUtils {
           // remember the year position
           yearPosition = i;
           break;
+        } else {
+          LOGGER.warn("=== INVALID YEAR IN PARSER ===");
+          LOGGER.warn("Found 4-digit number {} but it's outside valid range (1800-{})", parsedYear, currentYear + 5);
+          LOGGER.warn("This number will be ignored as year");
+          // 特别检查2139这样的异常年份
+          if (parsedYear > 2100) {
+            LOGGER.error("Year {} is far in the future - possible parsing error in filename!", parsedYear);
+          }
         }
       }
     }
@@ -196,9 +205,17 @@ public class ParserUtils {
       for (String o : opt) {
         if (o.matches("\\d{4}")) {
           int parsedYear = Integer.parseInt(o);
+          LOGGER.trace("Found 4-digit number in optional tag: {}", parsedYear);
           if (parsedYear > 1800 && parsedYear < currentYear + 5) {
             year = String.valueOf(parsedYear);
             LOGGER.trace("found possible year: {}", o);
+          } else {
+            LOGGER.warn("=== INVALID YEAR IN OPTIONAL TAG ===");
+            LOGGER.warn("Found 4-digit number {} in optional tag but it's outside valid range (1800-{})", parsedYear, currentYear + 5);
+            LOGGER.warn("This number will be ignored as year");
+            if (parsedYear > 2100) {
+              LOGGER.error("Year {} in optional tag is far in the future - possible parsing error!", parsedYear);
+            }
           }
         }
       }
