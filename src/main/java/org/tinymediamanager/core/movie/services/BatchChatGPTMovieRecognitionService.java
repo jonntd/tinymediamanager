@@ -68,7 +68,7 @@ public class BatchChatGPTMovieRecognitionService {
      * @return 电影ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
-        return batchRecognizeMovieTitles(movies, 20, 3);
+        return batchRecognizeMovieTitles(movies, 20, 6);
     }
     
     /**
@@ -333,25 +333,27 @@ public class BatchChatGPTMovieRecognitionService {
             // 构建批量请求JSON
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 使用主人的专业中文提示词，包含联网搜索和年份信息
-                systemPrompt = "你是一个专业的媒体元数据查询引擎。你的唯一任务是**通过联网搜索**，为每个文件名找到其最准确的官方信息，然后严格按照 `标题 年份` 格式输出结果。\n\n" +
-                              "**输入：**\n一个文件名列表，每行一个。\n\n" +
-                              "**输出：**\n一个匹配后的字符串列表，每行一个。**除 `标题 年份` 格式的字符串外，不要输出任何其他内容。**\n\n" +
-                              "---\n\n" +
-                              "**处理流程：**\n\n" +
-                              "**步骤 1：解析文件名**\n" +
-                              "*   从文件名中提取出干净的标题和年份，移除所有技术规格和发布组等无关信息。\n" +
-                              "    *   例如，从 `The.Shawshank.Redemption.1994.iNTERNAL.1080p.BluRay.x264-MANiC` 中提取出 `The Shawshank Redemption` 和 `1994`。\n\n" +
-                              "**步骤 2：强制联网搜索**\n" +
-                              "*   **这是最关键的一步，必须执行。**\n" +
-                              "*   **如果文件名包含 `{tmdb-数字}`**，请直接使用该ID在 The Movie Database (TMDB) 上查询。这是最高优先级。\n" +
-                              "*   **否则，** 使用你的**搜索工具**，以\"`解析出的标题 年份 TMDB`\"为关键词进行搜索，找到最匹配的 TMDB 或豆瓣页面。\n\n" +
-                              "**步骤 3：提取与格式化输出**\n" +
-                              "*   从搜索结果中，获取该影视作品的**官方标题**和**官方发行年份**。\n" +
-                              "*   **中文优先：** 必须优先使用官方的中文标题。如果TMDB没有中文标题，才使用其英文标题。\n" +
-                              "*   将获取到的官方标题和官方年份组合成 **`标题 年份`** 的格式并输出。\n" +
-                              "*   **如果搜索失败**或无法找到任何确切的匹配项，则直接返回**原始文件名**作为该行的结果。\n\n" +
-                              "---";
+                // 使用专业的批量电影AI识别提示词
+                systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径列表，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" +
+                              "## 核心要求\n\n" +
+                              "### 1. 输入处理\n" +
+                              "- 接收电影文件路径列表作为输入，每行一个\n" +
+                              "- 从每个文件名中提取电影标题、年份等信息\n" +
+                              "- 忽略文件扩展名和技术标记\n\n" +
+                              "### 2. 搜索策略\n" +
+                              "- 对每个文件进行独立的精确搜索\n" +
+                              "- 查找官方来源：IMDb、豆瓣电影、TMDb等\n" +
+                              "- 验证搜索结果的准确性\n\n" +
+                              "### 3. 输出格式要求\n" +
+                              "**严格按照以下格式输出，每行一个结果：**\n" +
+                              "```\n标题 年份\n```\n" +
+                              "- 标题使用官方中文名称（如果有），否则使用英文原名\n" +
+                              "- 标题和年份之间用一个空格分隔\n" +
+                              "- 年份使用4位数字格式\n" +
+                              "- 输出行数必须与输入行数完全一致\n\n" +
+                              "### 4. 示例\n" +
+                              "输入：\n```\nInception.2010.1080p.mkv\nAvatar.2009.4K.mkv\n```\n" +
+                              "输出：\n```\n盗梦空间 2010\n阿凡达 2009\n```";
                 LOGGER.debug("Using professional Chinese extraction prompt with search capabilities");
             }
             

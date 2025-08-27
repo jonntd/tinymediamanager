@@ -31,6 +31,10 @@ import org.tinymediamanager.core.ImageUtils;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.entities.TvShow;
 
 /**
  * The class MediaEntityActorImageFetcherTask.
@@ -123,10 +127,12 @@ public abstract class MediaEntityActorImageFetcherTask implements Runnable {
       return;
     }
 
-    Path actorsDir = mediaEntity.getPathNIO().resolve(Person.ACTOR_DIR);
+    // Determine destination folder based on settings
+    Path destinationFolder = getDestinationFolderForActors(mediaEntity);
+    Path actorsDir = destinationFolder.resolve(Person.ACTOR_DIR);
     // create the actors dir if needed
     if (!Files.isDirectory(actorsDir)) {
-      Files.createDirectory(actorsDir);
+      Files.createDirectories(actorsDir);
     }
 
     Path actorImage = actorsDir.resolve(actorImageFilename);
@@ -160,5 +166,54 @@ public abstract class MediaEntityActorImageFetcherTask implements Runnable {
 
   public void setOverwriteExistingItems(boolean overwriteExistingItems) {
     this.overwriteExistingItems = overwriteExistingItems;
+  }
+
+  /**
+   * Get the destination folder for actor images based on settings
+   *
+   * @param entity the media entity
+   * @return the destination folder path
+   */
+  private Path getDestinationFolderForActors(MediaEntity entity) {
+    boolean saveToCache = false;
+
+    // Check settings based on entity type
+    if (entity instanceof Movie) {
+      saveToCache = MovieModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+    } else if (entity instanceof TvShow) {
+      saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+    }
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/movies or cache/artwork/tvshows
+      String entityType = (entity instanceof Movie) ? "movies" : "tvshows";
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve(entityType);
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = entity.getTitle();
+      if (entity.getYear() > 0) {
+        folderName += " (" + entity.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for actor images '{}': {}", entity.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return entity.getPathNIO();
+      }
+
+      LOGGER.info("Using cache artwork folder for actor images '{}': {}", entity.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for actor images '{}': {}", entity.getTitle(), entity.getPathNIO());
+      return entity.getPathNIO();
+    }
   }
 }

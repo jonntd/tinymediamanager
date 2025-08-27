@@ -744,7 +744,9 @@ public class TvShowRenamer {
                 filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
                 if (StringUtils.isNotBlank(filename)) {
                   MediaFile newMf = new MediaFile(artworkFile);
-                  newMf.setFile(Paths.get(tvShow.getPath(), filename));
+                  // Determine destination folder based on settings
+                  Path destinationFolder = getDestinationFolderForTvShowRename(tvShow);
+                  newMf.setFile(destinationFolder.resolve(filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
                     filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
@@ -758,7 +760,9 @@ public class TvShowRenamer {
                 filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
                 if (StringUtils.isNotBlank(filename)) {
                   MediaFile newMf = new MediaFile(artworkFile);
-                  newMf.setFile(Paths.get(tvShow.getPath(), filename));
+                  // Determine destination folder based on settings
+                  Path destinationFolder = getDestinationFolderForTvShowRename(tvShow);
+                  newMf.setFile(destinationFolder.resolve(filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
                     filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
@@ -772,7 +776,9 @@ public class TvShowRenamer {
                 filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
                 if (StringUtils.isNotBlank(filename)) {
                   MediaFile newMf = new MediaFile(artworkFile);
-                  newMf.setFile(Paths.get(tvShow.getPath(), filename));
+                  // Determine destination folder based on settings
+                  Path destinationFolder = getDestinationFolderForTvShowRename(tvShow);
+                  newMf.setFile(destinationFolder.resolve(filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
                     filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
@@ -786,7 +792,9 @@ public class TvShowRenamer {
                 filename = naming.getFilename(tvShowSeason, artworkFile.getExtension());
                 if (StringUtils.isNotBlank(filename)) {
                   MediaFile newMf = new MediaFile(artworkFile);
-                  newMf.setFile(Paths.get(tvShow.getPath(), filename));
+                  // Determine destination folder based on settings
+                  Path destinationFolder = getDestinationFolderForTvShowRename(tvShow);
+                  newMf.setFile(destinationFolder.resolve(filename));
                   boolean ok = copyFile(artworkFile.getFileAsPath(), newMf.getFileAsPath());
                   if (ok) {
                     filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, artworkFile.getFileAsPath(), newMf.getFileAsPath()));
@@ -1182,7 +1190,14 @@ public class TvShowRenamer {
         e.removeAllMediaFiles();
         e.addToMediaFiles(needed);
         e.setPath(episode.getPath());
-        e.gatherMediaFileInformation(false);
+
+        // Always update file size information after rename (regardless of settings)
+        e.updateFileSizeInformation();
+
+        // Only gather full media information if enabled in settings
+        if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+          e.gatherMediaFileInformation(false);
+        }
 
         // rename history
         e.setRenameHistory(fileNameHistory);
@@ -1413,7 +1428,14 @@ public class TvShowRenamer {
     ThreadUtils.sleep(250);
 
     tvShow.addToMediaFiles(needed);
-    tvShow.gatherMediaFileInformation(false);
+
+    // Always update file size information after rename (regardless of settings)
+    tvShow.updateFileSizeInformation();
+
+    // Only gather full media information if enabled in settings
+    if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      tvShow.gatherMediaFileInformation(false);
+    }
 
     tvShow.setRenameHistory(null);
   }
@@ -1461,7 +1483,14 @@ public class TvShowRenamer {
     ThreadUtils.sleep(250);
 
     season.addToMediaFiles(needed);
-    season.gatherMediaFileInformation(false);
+
+    // Always update file size information after rename (regardless of settings)
+    season.updateFileSizeInformation();
+
+    // Only gather full media information if enabled in settings
+    if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      season.gatherMediaFileInformation(false);
+    }
 
     season.setRenameHistory(null);
   }
@@ -1559,7 +1588,14 @@ public class TvShowRenamer {
     ThreadUtils.sleep(250);
 
     episode.addToMediaFiles(needed);
-    episode.gatherMediaFileInformation(false);
+
+    // Always update file size information after rename (regardless of settings)
+    episode.updateFileSizeInformation();
+
+    // Only gather full media information if enabled in settings
+    if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      episode.gatherMediaFileInformation(false);
+    }
 
     // remove history
     episode.setRenameHistory(null);
@@ -2791,6 +2827,47 @@ public class TvShowRenamer {
     @Override
     public Class<?>[] getSupportedClasses() {
       return new Class[] { Date.class, String.class, Integer.class, Long.class };
+    }
+  }
+
+  /**
+   * Get the destination folder for TV show artwork during rename based on settings
+   *
+   * @param tvShow the TV show entity
+   * @return the destination folder path
+   */
+  private static Path getDestinationFolderForTvShowRename(TvShow tvShow) {
+    boolean saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/tvshows
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve("tvshows");
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = tvShow.getTitle();
+      if (tvShow.getYear() > 0) {
+        folderName += " (" + tvShow.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for TV show rename '{}': {}", tvShow.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return tvShow.getPathNIO();
+      }
+
+      LOGGER.info("Using cache artwork folder for TV show rename '{}': {}", tvShow.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for TV show rename '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
+      return tvShow.getPathNIO();
     }
   }
 }

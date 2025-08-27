@@ -734,7 +734,9 @@ public class TvShowArtworkHelper {
           continue;
         }
 
-        Path destFile = tvShowSeason.getTvShow().getPathNIO().resolve(filename);
+        // Determine destination folder based on settings
+        Path destinationFolder = getDestinationFolderForTvShow(tvShowSeason.getTvShow());
+        Path destFile = destinationFolder.resolve(filename);
 
         // check if the parent exist and create if needed
         if (!Files.exists(destFile.getParent())) {
@@ -748,7 +750,7 @@ public class TvShowArtworkHelper {
           }
         }
 
-        SeasonArtworkImageFetcher task = new SeasonArtworkImageFetcher(tvShowSeason, destFile, seasonArtworkUrl, mediaFileType);
+        SeasonArtworkImageFetcher task = new SeasonArtworkImageFetcher(tvShowSeason, destinationFolder, filename, seasonArtworkUrl, mediaFileType);
         TmmTaskManager.getInstance().addImageDownloadTask(task);
       }
 
@@ -766,10 +768,10 @@ public class TvShowArtworkHelper {
     private final String        filename;
     private final String        url;
 
-    SeasonArtworkImageFetcher(TvShowSeason tvShowSeason, Path destFile, String url, MediaFileType mediaFileType) {
+    SeasonArtworkImageFetcher(TvShowSeason tvShowSeason, Path destinationFolder, String filename, String url, MediaFileType mediaFileType) {
       this.tvShowSeason = tvShowSeason;
-      this.destinationPath = destFile.getParent();
-      this.filename = destFile.getFileName().toString();
+      this.destinationPath = destinationFolder;
+      this.filename = filename;
       this.mediaFileType = mediaFileType;
       this.url = url;
     }
@@ -1097,5 +1099,46 @@ public class TvShowArtworkHelper {
     }
 
     return -1;
+  }
+
+  /**
+   * Get the destination folder for TV show artwork based on settings
+   *
+   * @param tvShow the TV show entity
+   * @return the destination folder path
+   */
+  private static Path getDestinationFolderForTvShow(TvShow tvShow) {
+    boolean saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/tvshows
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve("tvshows");
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = tvShow.getTitle();
+      if (tvShow.getYear() > 0) {
+        folderName += " (" + tvShow.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return tvShow.getPathNIO();
+      }
+
+      LOGGER.info("Using cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for TV show '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
+      return tvShow.getPathNIO();
+    }
   }
 }

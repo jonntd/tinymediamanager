@@ -56,6 +56,7 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
   private final TvShowSettings      settings = TvShowModuleManager.getInstance().getSettings();
 
   private JCheckBox                 chckbxAutomaticallyScrapeImages;
+  private JCheckBox                 chckbxSaveArtworkToCache;
   private JComboBox                 cbImagePosterSize;
   private JComboBox                 cbImageFanartSize;
   private JComboBox                 cbImageThumbSize;
@@ -132,30 +133,33 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
         chckbxAutomaticallyScrapeImages = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape"));
         panelOptions.add(chckbxAutomaticallyScrapeImages, "cell 1 0 2 1");
 
+        chckbxSaveArtworkToCache = new JCheckBox("Save artwork to cache folder");
+        panelOptions.add(chckbxSaveArtworkToCache, "cell 1 1 2 1");
+
         JLabel lblImageTmdbPosterSize = new JLabel(TmmResourceBundle.getString("image.poster.size"));
-        panelOptions.add(lblImageTmdbPosterSize, "cell 1 1 2 1");
+        panelOptions.add(lblImageTmdbPosterSize, "cell 1 2 2 1");
 
         cbImagePosterSize = new JComboBox(MediaArtwork.PosterSizes.values());
-        panelOptions.add(cbImagePosterSize, "cell 1 1 2 1");
+        panelOptions.add(cbImagePosterSize, "cell 1 2 2 1");
 
         JLabel lblImageTmdbFanartSize = new JLabel(TmmResourceBundle.getString("image.fanart.size"));
-        panelOptions.add(lblImageTmdbFanartSize, "cell 1 2 2 1");
+        panelOptions.add(lblImageTmdbFanartSize, "cell 1 3 2 1");
 
         cbImageFanartSize = new JComboBox(MediaArtwork.FanartSizes.values());
-        panelOptions.add(cbImageFanartSize, "cell 1 2 2 1");
+        panelOptions.add(cbImageFanartSize, "cell 1 3 2 1");
 
         JLabel lblImageTmdbThumbSize = new JLabel(TmmResourceBundle.getString("image.thumb.size"));
-        panelOptions.add(lblImageTmdbThumbSize, "cell 1 3 2 1");
+        panelOptions.add(lblImageTmdbThumbSize, "cell 1 4 2 1");
 
         cbImageThumbSize = new JComboBox(MediaArtwork.ThumbSizes.values());
-        panelOptions.add(cbImageThumbSize, "cell 1 3 2 1");
+        panelOptions.add(cbImageThumbSize, "cell 1 4 2 1");
       }
       {
         JLabel lblScraperLanguage = new JLabel(TmmResourceBundle.getString("Settings.preferredLanguage"));
-        panelOptions.add(lblScraperLanguage, "cell 1 5 2 1");
+        panelOptions.add(lblScraperLanguage, "cell 1 6 2 1");
 
         JPanel panelLanguagegSource = new JPanel();
-        panelOptions.add(panelLanguagegSource, "cell 2 6,grow");
+        panelOptions.add(panelLanguagegSource, "cell 2 7,grow");
         panelLanguagegSource.setLayout(new MigLayout("insets 0", "[100lp][]", "[grow][]"));
 
         listLanguages = new JList();
@@ -186,17 +190,17 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
       }
 
       chckbxFanartWoText = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape.fanartwotext"));
-      panelOptions.add(chckbxFanartWoText, "cell 1 7 2 1");
+      panelOptions.add(chckbxFanartWoText, "cell 1 8 2 1");
 
       chckbxResolutions = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape.resolutions"));
-      panelOptions.add(chckbxResolutions, "cell 1 9 2 1");
+      panelOptions.add(chckbxResolutions, "cell 1 10 2 1");
 
       chckbxFallback = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape.fallback"));
-      panelOptions.add(chckbxFallback, "cell 1 10 2 1");
+      panelOptions.add(chckbxFallback, "cell 1 11 2 1");
 
       chckbxEpisodeFetchAllThumbs = new JHintCheckBox(TmmResourceBundle.getString("Settings.tvshow.episode.fetchallsources"));
       chckbxEpisodeFetchAllThumbs.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.episode.fetchallsources.hint"));
-      panelOptions.add(chckbxEpisodeFetchAllThumbs, "cell 1 12 2 1");
+      panelOptions.add(chckbxEpisodeFetchAllThumbs, "cell 1 13 2 1");
     }
   }
 
@@ -241,6 +245,11 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty, chckbxAutomaticallyScrapeImages,
         jCheckBoxBeanProperty);
     autoBinding_6.bind();
+    //
+    Property tvShowSettingsBeanProperty_6 = BeanProperty.create("saveArtworkToCache");
+    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6, chckbxSaveArtworkToCache,
+        jCheckBoxBeanProperty);
+    autoBinding_8.bind();
     //
     Property tvShowSettingsBeanProperty_5 = BeanProperty.create("imageEpisodeScrapeAllSources");
     AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_5,

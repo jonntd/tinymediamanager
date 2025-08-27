@@ -31,6 +31,7 @@ import org.jdesktop.beansbinding.Property;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.MovieSettingsDefaults;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
@@ -53,6 +54,7 @@ public class MovieSettingsPanel extends JPanel {
   private static final int    COL_COUNT = 7;
 
   private final MovieSettings settings  = MovieModuleManager.getInstance().getSettings();
+  private final Settings      globalSettings = Settings.getInstance();
 
   private JButton             btnClearTraktData;
   private JCheckBox           chckbxTraktSync;
@@ -343,8 +345,8 @@ public class MovieSettingsPanel extends JPanel {
         jCheckBoxBeanProperty);
     autoBinding_8.bind();
     //
-    Property movieSettingsBeanProperty_19 = BeanProperty.create("fetchVideoInfoOnUpdate");
-    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_19, chckbxFetchVideoInfoOnUpdate,
+    Property globalSettingsBeanProperty_1 = BeanProperty.create("fetchVideoInfoOnUpdate");
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_1, chckbxFetchVideoInfoOnUpdate,
         jCheckBoxBeanProperty);
     autoBinding_21.bind();
   }

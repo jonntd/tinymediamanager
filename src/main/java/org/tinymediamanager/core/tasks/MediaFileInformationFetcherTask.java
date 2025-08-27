@@ -126,7 +126,9 @@ public class MediaFileInformationFetcherTask implements Runnable {
       }
 
       // add the -mediainfo.xml if it has been written (only for MAIN video files, not trailers et all)
-      if (Settings.getInstance().isWriteMediaInfoXml() && mediaFile.getType() == MediaFileType.VIDEO) {
+      // but only if video info fetching is enabled
+      if (Settings.getInstance().isWriteMediaInfoXml() && Settings.getInstance().isFetchVideoInfoOnUpdate()
+          && mediaFile.getType() == MediaFileType.VIDEO) {
         Path xmlFile = Paths.get(mediaFile.getPath(), mediaFile.getMediaInfoXmlFilename());
         if (Files.exists(xmlFile)) {
           MediaFile xmlMf = new MediaFile(xmlFile);

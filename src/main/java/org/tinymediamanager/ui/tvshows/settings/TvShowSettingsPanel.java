@@ -38,6 +38,7 @@ import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.tvshow.TvShowSettingsDefaults;
 import org.tinymediamanager.thirdparty.trakttv.TvShowClearTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
@@ -58,6 +59,7 @@ class TvShowSettingsPanel extends JPanel {
   private static final int     COL_COUNT = 7;
 
   private final TvShowSettings settings  = TvShowModuleManager.getInstance().getSettings();
+  private final Settings       globalSettings = Settings.getInstance();
 
   private JCheckBox            chckbxImageCache;
   private JCheckBox            chckbxExtractArtworkFromVsmeta;
@@ -393,8 +395,8 @@ class TvShowSettingsPanel extends JPanel {
         jCheckBoxBeanProperty);
     autoBinding_7.bind();
     //
-    Property tvShowSettingsBeanProperty_14 = BeanProperty.create("fetchVideoInfoOnUpdate");
-    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_14, chckbxFetchVideoInfoOnUpdate,
+    Property globalSettingsBeanProperty_1 = BeanProperty.create("fetchVideoInfoOnUpdate");
+    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_1, chckbxFetchVideoInfoOnUpdate,
         jCheckBoxBeanProperty);
     autoBinding_19.bind();
   }

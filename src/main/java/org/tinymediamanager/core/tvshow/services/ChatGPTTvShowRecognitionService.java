@@ -9,6 +9,8 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -27,7 +29,11 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 public class ChatGPTTvShowRecognitionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatGPTTvShowRecognitionService.class);
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
-    
+
+    // 简单的内存缓存，避免重复识别相同电视剧
+    private static final Map<String, String> recognitionCache = new ConcurrentHashMap<>();
+    private static final int MAX_CACHE_SIZE = 500; // 最大缓存条目数
+
     private HttpClient httpClient;
     private final Settings settings;
     
@@ -84,6 +90,15 @@ public class ChatGPTTvShowRecognitionService {
             LOGGER.info("Full TV show path: {}", tvShowPath);
             LOGGER.info("Extracted directory context: {}", pathContext);
 
+            // 检查缓存，避免重复识别
+            String cacheKey = pathContext;
+            String cachedResult = recognitionCache.get(cacheKey);
+            if (cachedResult != null) {
+                LOGGER.info("=== Cache Hit ===");
+                LOGGER.info("Using cached result: '{}'", cachedResult);
+                return cachedResult;
+            }
+
             // 调用ChatGPT API，传递倒数三层目录信息
             String recognizedTitle = callChatGPTAPI(pathContext, tvShowPath);
 
@@ -94,6 +109,20 @@ public class ChatGPTTvShowRecognitionService {
                 // 清理和验证识别结果
                 String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
                 LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
+
+                // 缓存成功的识别结果
+                if (cleanedTitle != null && !cleanedTitle.trim().isEmpty()) {
+                    // 如果缓存过大，清理一半
+                    if (recognitionCache.size() >= MAX_CACHE_SIZE) {
+                        LOGGER.info("Cache size limit reached, clearing half of the cache");
+                        recognitionCache.entrySet().removeIf(entry ->
+                            recognitionCache.size() > MAX_CACHE_SIZE / 2);
+                    }
+                    recognitionCache.put(cacheKey, cleanedTitle);
+                    LOGGER.debug("Cached recognition result for: {} (cache size: {})",
+                        cacheKey, recognitionCache.size());
+                }
+
                 return cleanedTitle;
             } else {
                 LOGGER.warn("AI returned empty or null result");
@@ -185,7 +214,7 @@ public class ChatGPTTvShowRecognitionService {
             LOGGER.info("System prompt length: {} characters", systemPrompt.length());
 
             String requestBody = String.format(
-                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.3}",
+                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 50, \"temperature\": 0.1}",
                 model,
                 escapeJsonString(systemPrompt),
                 escapeJsonString(tvShowPath)
@@ -433,37 +462,25 @@ public class ChatGPTTvShowRecognitionService {
             return customPrompt;
         }
 
-        // 电视剧专用的默认提示词 - 只输出标题，不要年份
-        return "你是一个专业的媒体元数据查询引擎。你的唯一任务是**通过联网搜索**，为电视剧文件路径找到其最准确的官方信息，然后严格按照 `标题` 格式输出结果。\n\n" +
-               "**输入：**\n一个电视剧文件路径。\n\n" +
-               "**输出：**\n一个匹配后的字符串。**除电视剧标题外，不要输出任何其他内容（不要年份、不要解释）。**\n\n" +
-               "---\n\n" +
-               "**处理流程：**\n\n" +
-               "**步骤 1：解析文件路径**\n" +
-               "*   从文件路径中提取出干净的电视剧标题，移除所有技术规格、季数、集数和发布组等无关信息。\n" +
-               "    *   例如，从 `/TV Shows/Breaking.Bad.S01E01.1080p.BluRay.x264-DEMAND/` 中提取出 `Breaking Bad`。\n" +
-               "    *   例如，从 `/电视剧/庆余年.第一季.2019.4K.国语中字/` 中提取出 `庆余年`。\n\n" +
-               "**步骤 2：强制联网搜索**\n" +
-               "*   **这是最关键的一步，必须执行。**\n" +
-               "*   **如果文件路径包含 `{tmdb-数字}` 或 `{tvdb-数字}`**，请直接使用该ID在相应数据库上查询。这是最高优先级。\n" +
-               "*   **否则，** 使用你的**搜索工具**，以\"`解析出的标题 电视剧 TMDB`\"或\"`解析出的标题 电视剧 TVDB`\"为关键词进行搜索，找到最匹配的 TMDB、TVDB 或豆瓣页面。\n\n" +
-               "**步骤 3：提取与格式化输出**\n" +
-               "*   从搜索结果中，获取该电视剧的**官方标题**。\n" +
-               "*   **中文优先：** 必须优先使用官方的中文标题。如果TMDB/TVDB没有中文标题，才使用其英文标题。\n" +
-               "*   将获取到的官方标题直接输出，**不要年份，不要任何额外信息**。\n" +
-               "*   **如果搜索失败**或无法找到任何确切的匹配项，则直接返回**从路径提取的标题**作为结果。\n\n" +
-               "**输出示例：**\n" +
-               "庆余年\n" +
-               "权力的游戏\n" +
-               "绝命毒师\n" +
-               "怪奇物语\n" +
-               "三体\n\n" +
-               "**错误的输出示例（绝对不要这样做）：**\n" +
-               "❌ The TV show is 怪奇物语\n" +
-               "❌ 庆余年 (中国电视剧)\n" +
-               "❌ 庆余年 2019\n" +
-               "❌ 任何解释性文字或年份\n\n" +
-               "---";
+        // 电视剧专用的优化提示词 - 简洁高效
+        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径，联网搜索并找到最准确的官方电视剧信息，然后严格按照指定格式输出结果。\n\n" +
+               "## 核心要求\n\n" +
+               "### 1. 输入处理\n" +
+               "- 接收电视剧文件路径作为输入\n" +
+               "- 从路径中提取电视剧标题\n" +
+               "- 忽略季数、集数、分辨率、发布组等技术信息\n\n" +
+               "### 2. 搜索策略\n" +
+               "- 使用提取的标题进行精确搜索\n" +
+               "- 查找官方来源：TMDB、TVDB、豆瓣等\n" +
+               "- 验证搜索结果的准确性\n\n" +
+               "### 3. 输出格式要求\n" +
+               "**只输出电视剧标题，不包含任何其他信息：**\n" +
+               "- 使用官方中文名称（如果有），否则使用英文原名\n" +
+               "- 不包含年份、括号、解释文字\n" +
+               "- 不包含任何符号或额外信息\n\n" +
+               "### 4. 示例\n" +
+               "输入：`/TV Shows/Breaking.Bad.S01/` → 输出：`绝命毒师`\n" +
+               "输入：`/电视剧/庆余年.第一季/` → 输出：`庆余年`";
     }
     
     /**

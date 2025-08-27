@@ -366,6 +366,10 @@ public class MovieRenamer {
           movie.setPath(oldPathname);
         }
 
+        // Even if rename failed, try to update file size information for existing files
+        LOGGER.info("=== DEBUGGING: Rename failed, but updating file size information anyway ===");
+        movie.updateFileSizeInformation();
+
         return;
       }
       needed.add(vid); // add vid, since we're updating existing MF object
@@ -548,7 +552,13 @@ public class MovieRenamer {
     movie.addToMediaFiles(needed);
     movie.setPath(newPathname);
 
-    movie.gatherMediaFileInformation(false);
+    // Always update file size information after rename (regardless of settings)
+    movie.updateFileSizeInformation();
+
+    // Only gather full media information if enabled in settings
+    if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      movie.gatherMediaFileInformation(false);
+    }
 
     // rewrite NFO if it's a MP NFO and there was a change with poster/fanart
     if (MovieModuleManager.getInstance().getSettings().getMovieConnector() == MovieConnectors.MP && (posterRenamed || fanartRenamed)) {
@@ -721,7 +731,14 @@ public class MovieRenamer {
 
     movie.addToMediaFiles(needed);
     movie.setPath(movie.getRenameHistory().getOldPath());
-    movie.gatherMediaFileInformation(false);
+
+    // Always update file size information after rename (regardless of settings)
+    movie.updateFileSizeInformation();
+
+    // Only gather full media information if enabled in settings
+    if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
+      movie.gatherMediaFileInformation(false);
+    }
 
     // remove history
     movie.setRenameHistory(null);
@@ -1184,55 +1201,65 @@ public class MovieRenamer {
         break;
 
       case POSTER:
+        // Determine destination folder based on settings for artwork
+        Path artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MoviePosterNaming name : MovieArtworkHelper.getPosterNamesForMovie(movie)) {
           String newPosterName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newPosterName)) {
             MediaFile pos = new MediaFile(mf);
-            pos.setFile(newMovieDir.resolve(newPosterName));
+            pos.setFile(artworkDir.resolve(newPosterName));
             newFiles.add(pos);
           }
         }
         break;
 
       case FANART:
+        // Use artwork directory for fanart
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieFanartNaming name : MovieArtworkHelper.getFanartNamesForMovie(movie)) {
           String newFanartName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newFanartName)) {
             MediaFile fan = new MediaFile(mf);
-            fan.setFile(newMovieDir.resolve(newFanartName));
+            fan.setFile(artworkDir.resolve(newFanartName));
             newFiles.add(fan);
           }
         }
         break;
 
       case BANNER:
+        // Use artwork directory for banner
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieBannerNaming name : MovieArtworkHelper.getBannerNamesForMovie(movie)) {
           String newBannerName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newBannerName)) {
             MediaFile banner = new MediaFile(mf);
-            banner.setFile(newMovieDir.resolve(newBannerName));
+            banner.setFile(artworkDir.resolve(newBannerName));
             newFiles.add(banner);
           }
         }
         break;
 
       case CLEARART:
+        // Use artwork directory for clearart
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieClearartNaming name : MovieArtworkHelper.getClearartNamesForMovie(movie)) {
           String newClearartName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newClearartName)) {
             MediaFile clearart = new MediaFile(mf);
-            clearart.setFile(newMovieDir.resolve(newClearartName));
+            clearart.setFile(artworkDir.resolve(newClearartName));
             newFiles.add(clearart);
           }
         }
         break;
 
       case DISC:
+        // Use artwork directory for disc art
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieDiscartNaming name : MovieArtworkHelper.getDiscartNamesForMovie(movie)) {
           String newDiscartName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newDiscartName)) {
             MediaFile discart = new MediaFile(mf);
-            discart.setFile(newMovieDir.resolve(newDiscartName));
+            discart.setFile(artworkDir.resolve(newDiscartName));
             newFiles.add(discart);
           }
         }
@@ -1240,33 +1267,39 @@ public class MovieRenamer {
 
       case CLEARLOGO:
       case LOGO:
+        // Use artwork directory for logo
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieClearlogoNaming name : MovieArtworkHelper.getClearlogoNamesForMovie(movie)) {
           String newClearlogoName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newClearlogoName)) {
             MediaFile clearlogo = new MediaFile(mf);
-            clearlogo.setFile(newMovieDir.resolve(newClearlogoName));
+            clearlogo.setFile(artworkDir.resolve(newClearlogoName));
             newFiles.add(clearlogo);
           }
         }
         break;
 
       case THUMB:
+        // Use artwork directory for thumb
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieThumbNaming name : MovieArtworkHelper.getThumbNamesForMovie(movie)) {
           String newThumbName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newThumbName)) {
             MediaFile thumb = new MediaFile(mf);
-            thumb.setFile(newMovieDir.resolve(newThumbName));
+            thumb.setFile(artworkDir.resolve(newThumbName));
             newFiles.add(thumb);
           }
         }
         break;
 
       case KEYART:
+        // Use artwork directory for keyart
+        artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
         for (MovieKeyartNaming name : MovieArtworkHelper.getKeyartNamesForMovie(movie)) {
           String newKeyartName = name.getFilename(newFilename, getArtworkExtension(mf));
           if (StringUtils.isNotBlank(newKeyartName)) {
             MediaFile key = new MediaFile(mf);
-            key.setFile(newMovieDir.resolve(newKeyartName));
+            key.setFile(artworkDir.resolve(newKeyartName));
             newFiles.add(key);
           }
         }
@@ -1289,12 +1322,14 @@ public class MovieRenamer {
               newExtraFanartFilename = basename + index + "." + getArtworkExtension(mf);
 
               // create an empty extrafanarts folder if the right naming has been chosen
+              // Use artwork directory for extra fanart
+              artworkDir = getDestinationFolderForMovieArtwork(movie, newMovieDir);
               Path folder;
               if (fileNaming == MovieExtraFanartNaming.FOLDER_EXTRAFANART) {
-                folder = newMovieDir.resolve("extrafanart");
+                folder = artworkDir.resolve("extrafanart");
                 try {
                   if (!Files.exists(folder)) {
-                    Files.createDirectory(folder);
+                    Files.createDirectories(folder);
                   }
                 }
                 catch (IOException e) {
@@ -1302,7 +1337,7 @@ public class MovieRenamer {
                 }
               }
               else {
-                folder = newMovieDir;
+                folder = artworkDir;
               }
 
               MediaFile extrafanart = new MediaFile(mf);
@@ -1744,5 +1779,47 @@ public class MovieRenamer {
   public static String replacePathSeparators(String source) {
     String result = source.replaceAll("\\/", " "); // NOSONAR
     return result.replaceAll("\\\\", " "); // NOSONAR
+  }
+
+  /**
+   * Get the destination folder for movie artwork during rename based on settings
+   *
+   * @param movie the movie entity
+   * @param originalMovieDir the original movie directory (for non-artwork files)
+   * @return the destination folder path for artwork
+   */
+  private static Path getDestinationFolderForMovieArtwork(Movie movie, Path originalMovieDir) {
+    boolean saveToCache = MovieModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/movies
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve("movies");
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = movie.getTitle();
+      if (movie.getYear() > 0) {
+        folderName += " (" + movie.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for movie rename '{}': {}", movie.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return originalMovieDir;
+      }
+
+      LOGGER.info("Using cache artwork folder for movie rename '{}': {}", movie.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for movie rename '{}': {}", movie.getTitle(), originalMovieDir);
+      return originalMovieDir;
+    }
   }
 }

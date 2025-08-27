@@ -1462,6 +1462,60 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     firePropertyChange(MEDIA_INFORMATION, false, true);
   }
 
+  /**
+   * Update file size information for all media files (without full media information gathering)
+   * This method always runs regardless of fetchVideoInfoOnUpdate setting
+   */
+  public void updateFileSizeInformation() {
+    LOGGER.info("=== DEBUGGING: updateFileSizeInformation() called for entity: {} ===", this.getTitle());
+    List<MediaFile> mfs = new ArrayList<>();
+
+    try {
+      readWriteLock.readLock().lock();
+      mfs.addAll(this.mediaFiles);
+    }
+    finally {
+      readWriteLock.readLock().unlock();
+    }
+
+    LOGGER.info("=== DEBUGGING: Found {} media files to update ===", mfs.size());
+
+    for (MediaFile mediaFile : mfs) {
+      LOGGER.info("=== DEBUGGING: Processing file: {} (current size: {}) ===",
+                  mediaFile.getFilename(), mediaFile.getFilesize());
+
+      // Force file size update even if file size was previously 0
+      try {
+        Path filePath = mediaFile.getFileAsPath();
+        LOGGER.info("=== DEBUGGING: File path: {} ===", filePath);
+
+        if (Files.exists(filePath)) {
+          long actualSize = Files.size(filePath);
+          LOGGER.info("=== DEBUGGING: Actual file size: {} bytes ===", actualSize);
+
+          if (actualSize != mediaFile.getFilesize()) {
+            LOGGER.info("=== DEBUGGING: Updating file size for '{}': {} -> {} ===",
+                       mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
+            mediaFile.setFilesize(actualSize);
+            LOGGER.info("=== DEBUGGING: File size updated! New size: {} ===", mediaFile.getFilesize());
+          } else {
+            LOGGER.info("=== DEBUGGING: File size unchanged: {} ===", actualSize);
+          }
+        } else {
+          LOGGER.error("=== DEBUGGING: File does not exist: {} ===", filePath);
+        }
+      }
+      catch (IOException e) {
+        LOGGER.error("=== DEBUGGING: IOException getting file size for '{}': {} ===",
+                    mediaFile.getFileAsPath(), e.getMessage());
+        // Fallback to the original method
+        MediaFileHelper.gatherFileInformation(mediaFile);
+      }
+    }
+
+    LOGGER.info("=== DEBUGGING: updateFileSizeInformation() completed ===");
+  }
+
   public void fireEventForChangedMediaInformation() {
     firePropertyChange(MEDIA_INFORMATION, false, true);
   }

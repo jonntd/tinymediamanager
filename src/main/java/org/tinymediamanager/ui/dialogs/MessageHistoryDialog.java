@@ -94,6 +94,9 @@ public class MessageHistoryDialog extends TmmDialog implements ListEventListener
     lblClearAll.addActionListener(arg0 -> {
       messageMap.clear();
       messagesPanel.removeAll();
+      // Fix: Also clear the underlying message list to prevent messages from reappearing
+      // when new messages are added during AI scraping
+      TmmUIMessageCollector.instance.getMessages().clear();
       messagesPanel.revalidate();
       messagesPanel.repaint();
     });

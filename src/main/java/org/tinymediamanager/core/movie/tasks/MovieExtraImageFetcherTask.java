@@ -36,6 +36,7 @@ import org.tinymediamanager.core.movie.MovieArtworkHelper;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.filenaming.MovieExtraFanartNaming;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 
 /**
@@ -145,7 +146,9 @@ public class MovieExtraImageFetcherTask implements Runnable {
         String basename = FilenameUtils.getBaseName(filename);
         filename = basename + i + "." + extension;
 
-        Path destFile = ImageUtils.downloadImage(urlAsString, folder, filename);
+        // Determine destination folder based on settings
+        Path destinationFolder = getDestinationFolderForExtraImages(movie, folder);
+        Path destFile = ImageUtils.downloadImage(urlAsString, destinationFolder, filename);
 
         MediaFile mf = new MediaFile(destFile, MediaFileType.EXTRAFANART);
         mf.gatherMediaInformation();
@@ -182,13 +185,15 @@ public class MovieExtraImageFetcherTask implements Runnable {
       return false;
     }
 
-    Path folder = movie.getPathNIO().resolve("extrathumbs");
+    // Determine destination folder based on settings
+    Path destinationFolder = getDestinationFolderForExtraImages(movie, movie.getPathNIO());
+    Path folder = destinationFolder.resolve("extrathumbs");
     try {
       if (Files.isDirectory(folder)) {
         Utils.deleteDirectorySafely(folder, movie.getDataSource());
         movie.removeAllMediaFiles(MediaFileType.EXTRATHUMB);
       }
-      Files.createDirectory(folder);
+      Files.createDirectories(folder);
     }
     catch (IOException e) {
       LOGGER.error("Could not create extrathumbs folder for movie '{}' - '{}'", movie.getTitle(), e.getMessage());
@@ -231,5 +236,52 @@ public class MovieExtraImageFetcherTask implements Runnable {
     }
 
     return true;
+  }
+
+  /**
+   * Get the destination folder for extra images based on settings
+   *
+   * @param movie the movie entity
+   * @param originalFolder the original folder path
+   * @return the destination folder path
+   */
+  private Path getDestinationFolderForExtraImages(Movie movie, Path originalFolder) {
+    boolean saveToCache = MovieModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/movies
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve("movies");
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = movie.getTitle();
+      if (movie.getYear() > 0) {
+        folderName += " (" + movie.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      // Preserve the subfolder structure (e.g., "extrafanart", "extrathumbs")
+      if (!originalFolder.equals(movie.getPathNIO())) {
+        entityFolder = entityFolder.resolve(originalFolder.getFileName());
+      }
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for movie extra images '{}': {}", movie.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return originalFolder;
+      }
+
+      LOGGER.info("Using cache artwork folder for movie extra images '{}': {}", movie.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for movie extra images '{}': {}", movie.getTitle(), movie.getPathNIO());
+      return originalFolder;
+    }
   }
 }

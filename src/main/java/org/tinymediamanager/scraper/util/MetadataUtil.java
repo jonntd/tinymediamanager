@@ -143,6 +143,7 @@ public class MetadataUtil {
   /**
    * parse a String for its integer value<br />
    * this method can parse normal integer values (e.g. 2001) as well as the style with digit separators (e.g. 2.001 or 2,001 or 2 001)
+   * and scientific notation (e.g. 2019E, 1.5E3)
    *
    * @param intAsString
    *          the String to be parsed
@@ -157,8 +158,33 @@ public class MetadataUtil {
     }
     catch (NumberFormatException e) {
       // did not work; try to remove digit separators
-      // since we do not know for which locale the separators has been written, remove . and , and all whitespaces
-      return Integer.parseInt(intAsString.replaceAll("[,\\.\\s]*", ""));
+      try {
+        // since we do not know for which locale the separators has been written, remove . and , and all whitespaces
+        return Integer.parseInt(intAsString.replaceAll("[,\\.\\s]*", ""));
+      }
+      catch (NumberFormatException e2) {
+        // still did not work; try to parse as scientific notation
+        try {
+          // handle incomplete scientific notation like "2019E" (missing exponent)
+          String cleanedString = intAsString;
+          if (cleanedString.matches(".*[Ee]$")) {
+            // if string ends with E or e without exponent, assume exponent is 0
+            cleanedString = cleanedString + "0";
+          }
+
+          // use Double.parseDouble to handle scientific notation, then convert to int
+          double doubleValue = Double.parseDouble(cleanedString);
+          // check if the value is within integer range
+          if (doubleValue > Integer.MAX_VALUE || doubleValue < Integer.MIN_VALUE) {
+            throw new NumberFormatException("Value out of integer range: " + doubleValue);
+          }
+          return (int) doubleValue;
+        }
+        catch (NumberFormatException e3) {
+          // all parsing attempts failed, re-throw the original exception
+          throw e;
+        }
+      }
     }
   }
 
@@ -166,7 +192,8 @@ public class MetadataUtil {
     if (intObj == null) {
       return defaultValue;
     }
-    return parseInt(intObj.toString());
+    // Use the safe version that handles empty strings and exceptions
+    return parseInt(intObj.toString(), defaultValue);
   }
 
   /**

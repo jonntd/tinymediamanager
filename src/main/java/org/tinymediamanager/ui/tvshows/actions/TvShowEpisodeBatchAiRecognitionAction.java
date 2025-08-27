@@ -6,6 +6,9 @@ import java.util.List;
 
 import javax.swing.JOptionPane;
 
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
@@ -94,17 +97,14 @@ public class TvShowEpisodeBatchAiRecognitionAction extends TmmAction {
         // 启动批量识别任务
         TvShowEpisodeBatchAiRecognitionTask task = new TvShowEpisodeBatchAiRecognitionTask(
             episodesToProcess, useHybridMode);
-        
+
         TmmTaskManager.getInstance().addUnnamedTask(task);
-        
-        // 显示开始消息
-        JOptionPane.showMessageDialog(MainWindow.getInstance(), 
-            String.format("批量AI识别任务已启动！\n" +
-                         "模式: %s\n" +
-                         "剧集数量: %d\n\n" +
-                         "请在任务管理器中查看进度。", 
+
+        // 发送启动消息到消息历史记录（无弹窗打断）
+        String startMsg = String.format("批量AI识别任务已启动 - 模式: %s, 剧集数量: %d",
                          useHybridMode ? "混合模式" : "纯AI模式",
-                         episodesToProcess.size()), 
-            "批量AI识别", JOptionPane.INFORMATION_MESSAGE);
+                         episodesToProcess.size());
+        MessageManager.getInstance().pushMessage(
+            new Message(MessageLevel.INFO, "批量AI识别", startMsg));
     }
 }

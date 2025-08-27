@@ -131,7 +131,9 @@ public class TvShowExtraImageFetcherTask implements Runnable {
         String basename = FilenameUtils.getBaseName(filename);
         filename = basename + i + "." + extension;
 
-        Path destFile = ImageUtils.downloadImage(urlAsString, folder, filename);
+        // Determine destination folder based on settings
+        Path destinationFolder = getDestinationFolderForExtraImages(tvShow, folder);
+        Path destFile = ImageUtils.downloadImage(urlAsString, destinationFolder, filename);
 
         MediaFile mf = new MediaFile(destFile, MediaFileType.EXTRAFANART);
         mf.gatherMediaInformation();
@@ -153,5 +155,52 @@ public class TvShowExtraImageFetcherTask implements Runnable {
     }
 
     return true;
+  }
+
+  /**
+   * Get the destination folder for extra images based on settings
+   *
+   * @param tvShow the TV show entity
+   * @param originalFolder the original folder path
+   * @return the destination folder path
+   */
+  private Path getDestinationFolderForExtraImages(TvShow tvShow, Path originalFolder) {
+    boolean saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/tvshows
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve("tvshows");
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = tvShow.getTitle();
+      if (tvShow.getYear() > 0) {
+        folderName += " (" + tvShow.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      // Preserve the subfolder structure (e.g., "extrafanart")
+      if (!originalFolder.equals(tvShow.getPathNIO())) {
+        entityFolder = entityFolder.resolve(originalFolder.getFileName());
+      }
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for extra images '{}': {}", tvShow.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return originalFolder;
+      }
+
+      LOGGER.info("Using cache artwork folder for extra images '{}': {}", tvShow.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for extra images '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
+      return originalFolder;
+    }
   }
 }

@@ -212,6 +212,7 @@ public final class TvShowSettings extends AbstractSettings {
   MediaArtwork.FanartSizes                       imageFanartSize                        = MediaArtwork.FanartSizes.LARGE;
   MediaArtwork.ThumbSizes                        imageThumbSize                         = MediaArtwork.ThumbSizes.MEDIUM;
   boolean                                        scrapeBestImage                        = true;
+  boolean                                        saveArtworkToCache                     = false;
   boolean                                        writeActorImages                       = false;
   boolean                                        imageExtraFanart                       = false;
   int                                            imageExtraFanartCount                  = 5;
@@ -655,6 +656,22 @@ public final class TvShowSettings extends AbstractSettings {
     boolean oldValue = this.scrapeBestImage;
     this.scrapeBestImage = newValue;
     firePropertyChange("scrapeBestImage", oldValue, newValue);
+  }
+
+  /**
+   * Save artwork to cache folder instead of video folder?
+   *
+   * @return true = save to cache folder<br>
+   *         false = save to video folder (default)
+   */
+  public boolean isSaveArtworkToCache() {
+    return saveArtworkToCache;
+  }
+
+  public void setSaveArtworkToCache(boolean newValue) {
+    boolean oldValue = this.saveArtworkToCache;
+    this.saveArtworkToCache = newValue;
+    firePropertyChange("saveArtworkToCache", oldValue, newValue);
   }
 
   public MediaLanguages getScraperLanguage() {

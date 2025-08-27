@@ -47,6 +47,9 @@ import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.services.ChatGPTTvShowRecognitionService;
 import org.tinymediamanager.core.tvshow.services.BatchChatGPTTvShowRecognitionService;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.MediaMetadata;
@@ -117,11 +120,32 @@ public class TvShowScrapeTask extends TmmThreadPool {
       if (apiKey != null && !apiKey.trim().isEmpty()) {
         try {
           LOGGER.info("Starting batch AI recognition for {} TV shows", tvShowScrapeParams.tvShowsToScrape.size());
+
+          // 发送批量AI识别开始消息到Message history
+          String startMsg = String.format("批量电视剧AI识别开始: %d 部电视剧", tvShowScrapeParams.tvShowsToScrape.size());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.INFO, "批量电视剧AI识别", startMsg));
+
           BatchChatGPTTvShowRecognitionService batchService = new BatchChatGPTTvShowRecognitionService();
           aiRecognitionResults = batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape);
+
           LOGGER.info("Batch AI recognition completed for {} TV shows", aiRecognitionResults.size());
+
+          // 发送批量AI识别完成消息到Message history
+          int successCount = aiRecognitionResults.size();
+          int totalCount = tvShowScrapeParams.tvShowsToScrape.size();
+          String completeMsg = String.format("批量电视剧AI识别完成: 成功 %d/%d (%.1f%%)",
+              successCount, totalCount, (successCount * 100.0 / totalCount));
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.INFO, "批量电视剧AI识别", completeMsg));
+
         } catch (Exception e) {
           LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+
+          // 发送批量AI识别失败消息到Message history
+          String failMsg = String.format("批量电视剧AI识别失败: %s", e.getMessage());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.WARN, "批量电视剧AI识别", failMsg));
         }
       } else {
         LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
@@ -549,6 +573,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
         recognizedTitle = aiRecognitionResults.get(tvShow.getDbId().toString());
         LOGGER.info("=== Using Batch AI Result ===");
         LOGGER.info("Batch AI result: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
+
+        // 发送单个电视剧识别成功消息到Message history
+        String successMsg = String.format("批量AI识别: %s → %s", tvShow.getTitle(), recognizedTitle);
+        MessageManager.getInstance().pushMessage(
+            new Message(MessageLevel.INFO, "批量电视剧AI识别", successMsg));
       } else {
         // 检查是否应该进行单个识别回退
         String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -568,6 +597,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
             if (recognizedTitle != null) {
               LOGGER.info("=== Individual AI Result ===");
               LOGGER.info("Individual AI result: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
+
+              // 发送单个电视剧识别成功消息到Message history
+              String successMsg = String.format("单个AI识别: %s → %s", tvShow.getTitle(), recognizedTitle);
+              MessageManager.getInstance().pushMessage(
+                  new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
             } else {
               LOGGER.warn("Individual AI recognition returned null");
             }

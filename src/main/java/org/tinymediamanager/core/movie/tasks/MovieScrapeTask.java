@@ -59,6 +59,7 @@ import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
@@ -127,11 +128,32 @@ public class MovieScrapeTask extends TmmThreadPool {
       if (apiKey != null && !apiKey.trim().isEmpty()) {
         try {
           LOGGER.info("Starting batch AI recognition for {} movies", movieScrapeParams.moviesToScrape.size());
+
+          // 发送批量AI识别开始消息到Message history
+          String startMsg = String.format("批量电影AI识别开始: %d 部电影", movieScrapeParams.moviesToScrape.size());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.INFO, "批量电影AI识别", startMsg));
+
           BatchChatGPTMovieRecognitionService batchService = new BatchChatGPTMovieRecognitionService();
           aiRecognitionResults = batchService.batchRecognizeMovieTitles(movieScrapeParams.moviesToScrape);
+
           LOGGER.info("Batch AI recognition completed for {} movies", aiRecognitionResults.size());
+
+          // 发送批量AI识别完成消息到Message history
+          int successCount = aiRecognitionResults.size();
+          int totalCount = movieScrapeParams.moviesToScrape.size();
+          String completeMsg = String.format("批量电影AI识别完成: 成功 %d/%d (%.1f%%)",
+              successCount, totalCount, (successCount * 100.0 / totalCount));
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.INFO, "批量电影AI识别", completeMsg));
+
         } catch (Exception e) {
           LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+
+          // 发送批量AI识别失败消息到Message history
+          String failMsg = String.format("批量电影AI识别失败: %s", e.getMessage());
+          MessageManager.getInstance().pushMessage(
+              new Message(MessageLevel.WARN, "批量电影AI识别", failMsg));
         }
       } else {
         LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
@@ -388,6 +410,11 @@ public class MovieScrapeTask extends TmmThreadPool {
       if (aiRecognitionResults != null && aiRecognitionResults.containsKey(movie.getDbId().toString())) {
         recognizedTitle = aiRecognitionResults.get(movie.getDbId().toString());
         LOGGER.info("Using batch AI recognition result: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+
+        // 发送单个电影识别成功消息到Message history
+        String successMsg = String.format("批量AI识别: %s → %s", movie.getTitle(), recognizedTitle);
+        MessageManager.getInstance().pushMessage(
+            new Message(MessageLevel.INFO, "批量电影AI识别", successMsg));
       } else {
         // 检查是否应该进行单个识别回退
         String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -405,6 +432,11 @@ public class MovieScrapeTask extends TmmThreadPool {
             recognizedTitle = chatGPTService.recognizeMovieTitle(movie);
             if (recognizedTitle != null) {
               LOGGER.info("Individual ChatGPT recognition: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+
+              // 发送单个电影识别成功消息到Message history
+              String successMsg = String.format("单个AI识别: %s → %s", movie.getTitle(), recognizedTitle);
+              MessageManager.getInstance().pushMessage(
+                  new Message(MessageLevel.INFO, "电影AI识别", successMsg));
             }
           } catch (Exception e) {
             LOGGER.warn("Individual ChatGPT movie recognition failed: {}", e.getMessage());
@@ -418,8 +450,8 @@ public class MovieScrapeTask extends TmmThreadPool {
       if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
         String[] aiParserInfo = ParserUtils.detectCleanTitleAndYear(recognizedTitle, Collections.emptyList());
         String aiProcessedTitle = recognizedTitle;
-        Integer aiProcessedYear = movie.getYear();
-        
+        Integer aiProcessedYear = null;
+
         if (aiParserInfo != null && aiParserInfo.length >= 2) {
           aiProcessedTitle = aiParserInfo[0];
           if (StringUtils.isNotBlank(aiParserInfo[1])) {
@@ -429,8 +461,43 @@ public class MovieScrapeTask extends TmmThreadPool {
               LOGGER.debug("Could not parse year from AI result: {}", aiParserInfo[1]);
             }
           }
-          LOGGER.debug("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
         }
+
+        // 验证年份是否合理，如果不合理则重试AI识别
+        if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
+          LOGGER.warn("AI returned invalid year: {} for movie '{}', attempting retry", aiProcessedYear, movie.getTitle());
+
+          // 重试AI识别，要求明确包含年份信息
+          String retryRecognizedTitle = retryAIRecognitionWithYearValidation(movie);
+          if (retryRecognizedTitle != null && !retryRecognizedTitle.trim().isEmpty()) {
+            String[] retryParserInfo = ParserUtils.detectCleanTitleAndYear(retryRecognizedTitle, Collections.emptyList());
+            if (retryParserInfo != null && retryParserInfo.length >= 2) {
+              String retryTitle = retryParserInfo[0];
+              String retryYearStr = retryParserInfo[1];
+              if (StringUtils.isNotBlank(retryYearStr)) {
+                try {
+                  Integer retryYear = Integer.parseInt(retryYearStr);
+                  if (isValidMovieYear(retryYear)) {
+                    LOGGER.info("AI retry successful! Updated: '{}' -> '{}' (year: {} -> {})",
+                               aiProcessedTitle, retryTitle, aiProcessedYear, retryYear);
+                    aiProcessedTitle = retryTitle;
+                    aiProcessedYear = retryYear;
+                  }
+                } catch (NumberFormatException e) {
+                  LOGGER.debug("Could not parse year from AI retry result: {}", retryYearStr);
+                }
+              }
+            }
+          }
+        }
+
+        // 如果仍然没有合理的年份，使用null而不是错误的年份
+        if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
+          LOGGER.warn("Using null year instead of invalid year: {} for movie '{}'", aiProcessedYear, movie.getTitle());
+          aiProcessedYear = null;
+        }
+
+        LOGGER.debug("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
         
         List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, aiProcessedYear, movie.getIds(), mediaMetadataProvider);
         
@@ -599,5 +666,56 @@ public class MovieScrapeTask extends TmmThreadPool {
       this.overwriteExistingItems = overwriteExistingItems;
       return this;
     }
+  }
+
+  /**
+   * 验证电影年份是否合理
+   * @param year 年份
+   * @return true如果年份合理，false否则
+   */
+  private boolean isValidMovieYear(Integer year) {
+    if (year == null) {
+      return false;
+    }
+
+    // 电影年份应该在1888年（第一部电影）到当前年份+2年之间
+    int currentYear = java.time.Year.now().getValue();
+    int minYear = 1888;
+    int maxYear = currentYear + 2;
+
+    boolean isValid = year >= minYear && year <= maxYear;
+
+    if (!isValid) {
+      LOGGER.debug("Invalid movie year detected: {} (valid range: {}-{})", year, minYear, maxYear);
+    }
+
+    return isValid;
+  }
+
+  /**
+   * 重试AI识别，要求明确包含年份信息
+   * @param movie 电影对象
+   * @return 重新识别的标题，如果失败返回null
+   */
+  private String retryAIRecognitionWithYearValidation(Movie movie) {
+    try {
+      LOGGER.info("Retrying AI recognition with year validation for movie: {}", movie.getTitle());
+
+      // 使用单独的AI识别服务进行重试
+      ChatGPTMovieRecognitionService retryService = new ChatGPTMovieRecognitionService();
+      String retryResult = retryService.recognizeMovieTitle(movie);
+
+      if (retryResult != null && !retryResult.trim().isEmpty()) {
+        LOGGER.info("AI retry returned: '{}'", retryResult);
+        return retryResult;
+      } else {
+        LOGGER.warn("AI retry returned empty result");
+      }
+
+    } catch (Exception e) {
+      LOGGER.error("Error during AI recognition retry: {}", e.getMessage());
+    }
+
+    return null;
   }
 }

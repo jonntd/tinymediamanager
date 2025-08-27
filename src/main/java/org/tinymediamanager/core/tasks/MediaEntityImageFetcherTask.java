@@ -16,6 +16,7 @@
 package org.tinymediamanager.core.tasks;
 
 import java.io.InterruptedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,10 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType;
 import org.tinymediamanager.scraper.util.ListUtils;
 
@@ -90,7 +95,10 @@ public class MediaEntityImageFetcherTask implements Runnable {
       // try to download the file to the first one
       String firstFilename = filenames.get(0);
       LOGGER.debug("writing {} - {}", type, firstFilename);
-      Path destFile = ImageUtils.downloadImage(url, entity.getPathNIO(), firstFilename);
+
+      // Determine destination folder based on settings
+      Path destinationFolder = getDestinationFolder(entity);
+      Path destFile = ImageUtils.downloadImage(url, destinationFolder, firstFilename);
 
       // downloading worked (no exception) - so let's remove all old artworks (except the just downloaded one)
       entity.removeAllMediaFiles(MediaFileType.getMediaFileType(type));
@@ -116,7 +124,7 @@ public class MediaEntityImageFetcherTask implements Runnable {
         }
 
         LOGGER.debug("writing {} - {}", type, filename);
-        Path destFile2 = entity.getPathNIO().resolve(filename);
+        Path destFile2 = destinationFolder.resolve(filename);
         Utils.copyFileSafe(destFile, destFile2, true);
 
         newMediaFiles.add(new MediaFile(destFile2, MediaFileType.getMediaFileType(type)));
@@ -150,6 +158,57 @@ public class MediaEntityImageFetcherTask implements Runnable {
       MessageManager.getInstance()
           .pushMessage(
               new Message(MessageLevel.ERROR, "ArtworkDownload", "message.artwork.threadcrashed", new String[] { ":", e.getLocalizedMessage() }));
+    }
+  }
+
+  /**
+   * Get the destination folder for artwork based on entity type and settings
+   *
+   * @param entity the media entity
+   * @return the destination folder path
+   */
+  private Path getDestinationFolder(MediaEntity entity) {
+    boolean saveToCache = false;
+
+    // Check settings based on entity type
+    if (entity instanceof Movie) {
+      saveToCache = MovieModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+      LOGGER.debug("Movie '{}' - saveArtworkToCache setting: {}", entity.getTitle(), saveToCache);
+    } else if (entity instanceof TvShow) {
+      saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+      LOGGER.debug("TV Show '{}' - saveArtworkToCache setting: {}", entity.getTitle(), saveToCache);
+    }
+
+    if (saveToCache) {
+      // Create a structured cache folder: cache/artwork/movies or cache/artwork/tvshows
+      String entityType = (entity instanceof Movie) ? "movies" : "tvshows";
+      Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve(entityType);
+
+      // Create entity-specific subfolder using title and year for uniqueness
+      String folderName = entity.getTitle();
+      if (entity.getYear() > 0) {
+        folderName += " (" + entity.getYear() + ")";
+      }
+      // Sanitize folder name for filesystem compatibility
+      folderName = folderName.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+      Path entityFolder = cacheArtworkDir.resolve(folderName);
+
+      try {
+        Files.createDirectories(entityFolder);
+        LOGGER.info("Created cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
+      } catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
+                   entityFolder, e.getMessage());
+        return entity.getPathNIO();
+      }
+
+      LOGGER.info("Using cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
+      return entityFolder;
+    } else {
+      // Default behavior: save to video folder
+      LOGGER.debug("Using default video folder for '{}': {}", entity.getTitle(), entity.getPathNIO());
+      return entity.getPathNIO();
     }
   }
 }

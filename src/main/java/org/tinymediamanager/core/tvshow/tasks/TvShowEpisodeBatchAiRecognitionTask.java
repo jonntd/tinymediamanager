@@ -230,6 +230,12 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
                     publishState(String.format("处理中: %s S%02dE%02d",
                         episode.getTvShow().getTitle(), newSeason, newEpisode));
 
+                    // 发送单个识别成功消息到Message history
+                    String successMsg = String.format("AI识别: %s → S%02dE%02d",
+                        filename, newSeason, newEpisode);
+                    MessageManager.getInstance().pushMessage(
+                        new Message(MessageLevel.INFO, "批量AI识别", successMsg));
+
                     // 更新剧集信息 - 使用正确的API
                     MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(
                         MediaEpisodeGroup.DEFAULT_AIRED, newSeason, newEpisode);
@@ -254,6 +260,11 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
                     publishState(String.format("失败: %s",
                         episode.getMainVideoFile() != null ?
                         episode.getMainVideoFile().getFilename() : episode.getTitle()));
+
+                    // 发送单个识别失败消息到Message history
+                    String failMsg = String.format("AI识别失败: %s", filename);
+                    MessageManager.getInstance().pushMessage(
+                        new Message(MessageLevel.WARN, "批量AI识别", failMsg));
                 }
                 
             } catch (Exception e) {

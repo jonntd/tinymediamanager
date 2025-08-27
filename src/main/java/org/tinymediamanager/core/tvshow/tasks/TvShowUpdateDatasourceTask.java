@@ -1370,32 +1370,44 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           continue;
         }
 
-        String relativePath = showDir.relativize(mf.getFileAsPath()).toString();
-        EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
-        if (result.season > -1 && !result.episodes.isEmpty()) {
-          for (int epnr : result.episodes) {
-            // get any assigned episode
-            List<TvShowEpisode> eps = tvShow.getEpisode(result.season, epnr);
-            if (eps.size() == 1) {
-              // just one episode for that S/E found -> we can blindly assign it
-              eps.get(0).addToMediaFiles(mf);
-            }
-            else if (eps.size() > 1) {
-              for (TvShowEpisode ep : eps) {
-                String episodeBasenameWoStackingMarker = FilenameUtils.getBaseName(Utils.cleanStackingMarkers(ep.getMainVideoFile().getFilename()));
-                // okay, at least one existing episode found... just check if there is the same base name without stacking markers
-                if (FilenameUtils.getBaseName(Utils.cleanStackingMarkers(mf.getFilename())).startsWith(episodeBasenameWoStackingMarker)) {
-                  ep.addToMediaFiles(mf);
-                  break;
-                }
-                // or if the mf is in a subfolder with the base name of the video file
-                if (episodeBasenameWoStackingMarker.equals(mf.getFileAsPath().getParent().getFileName().toString())) {
-                  ep.addToMediaFiles(mf);
-                  break;
+        // Only perform AI episode recognition for video files to avoid unnecessary processing of metadata files
+        // (poster.jpg, theme.mp3, tvshow.nfo, etc.)
+        if (mf.getType() == MediaFileType.VIDEO) {
+          String relativePath = showDir.relativize(mf.getFileAsPath()).toString();
+          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
+          if (result.season > -1 && !result.episodes.isEmpty()) {
+            for (int epnr : result.episodes) {
+              // get any assigned episode
+              List<TvShowEpisode> eps = tvShow.getEpisode(result.season, epnr);
+              if (eps.size() == 1) {
+                // just one episode for that S/E found -> we can blindly assign it
+                eps.get(0).addToMediaFiles(mf);
+              }
+              else if (eps.size() > 1) {
+                for (TvShowEpisode ep : eps) {
+                  String episodeBasenameWoStackingMarker = FilenameUtils.getBaseName(Utils.cleanStackingMarkers(ep.getMainVideoFile().getFilename()));
+                  // okay, at least one existing episode found... just check if there is the same base name without stacking markers
+                  if (FilenameUtils.getBaseName(Utils.cleanStackingMarkers(mf.getFilename())).startsWith(episodeBasenameWoStackingMarker)) {
+                    ep.addToMediaFiles(mf);
+                    break;
+                  }
+                  // or if the mf is in a subfolder with the base name of the video file
+                  if (episodeBasenameWoStackingMarker.equals(mf.getFileAsPath().getParent().getFileName().toString())) {
+                    ep.addToMediaFiles(mf);
+                    break;
+                  }
                 }
               }
             }
           }
+          else {
+            // Video file but no episode match found, add to TV show
+            tvShow.addToMediaFiles(mf);
+          }
+        }
+        else {
+          // Non-video files (poster, fanart, nfo, theme, etc.) - add directly to TV show without AI recognition
+          tvShow.addToMediaFiles(mf);
         }
       }
 

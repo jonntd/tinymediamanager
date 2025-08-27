@@ -55,6 +55,7 @@ class MovieImageOptionsSettingsPanel extends JPanel {
   private final MovieSettings       settings = MovieModuleManager.getInstance().getSettings();
 
   private JCheckBox                 chckbxAutomaticallyScrapeImages;
+  private JCheckBox                 chckbxSaveArtworkToCache;
   private JComboBox                 cbImagePosterSize;
   private JComboBox                 cbImageFanartSize;
 
@@ -130,14 +131,17 @@ class MovieImageOptionsSettingsPanel extends JPanel {
         chckbxAutomaticallyScrapeImages = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape"));
         panelOptions.add(chckbxAutomaticallyScrapeImages, "cell 1 0 2 1");
 
+        chckbxSaveArtworkToCache = new JCheckBox("Save artwork to cache folder");
+        panelOptions.add(chckbxSaveArtworkToCache, "cell 1 1 2 1");
+
         JLabel lblImageTmdbPosterSize = new JLabel(TmmResourceBundle.getString("image.poster.size"));
-        panelOptions.add(lblImageTmdbPosterSize, "cell 1 1 2 1");
+        panelOptions.add(lblImageTmdbPosterSize, "cell 1 2 2 1");
 
         cbImagePosterSize = new JComboBox(MediaArtwork.PosterSizes.values());
-        panelOptions.add(cbImagePosterSize, "cell 1 1 2 1");
+        panelOptions.add(cbImagePosterSize, "cell 1 2 2 1");
 
         JLabel lblImageTmdbFanartSize = new JLabel(TmmResourceBundle.getString("image.fanart.size"));
-        panelOptions.add(lblImageTmdbFanartSize, "cell 1 2 2 1");
+        panelOptions.add(lblImageTmdbFanartSize, "cell 1 3 2 1");
 
         cbImageFanartSize = new JComboBox(MediaArtwork.FanartSizes.values());
         panelOptions.add(cbImageFanartSize, "cell 1 2 2 1");
@@ -224,6 +228,11 @@ class MovieImageOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty, chckbxAutomaticallyScrapeImages,
         jCheckBoxBeanProperty);
     autoBinding_3.bind();
+    //
+    Property movieSettingsBeanProperty_7 = BeanProperty.create("saveArtworkToCache");
+    AutoBinding autoBinding_7 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_7, chckbxSaveArtworkToCache,
+        jCheckBoxBeanProperty);
+    autoBinding_7.bind();
     //
   }
 }

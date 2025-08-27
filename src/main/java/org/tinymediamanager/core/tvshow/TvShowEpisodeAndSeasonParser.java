@@ -39,6 +39,9 @@ import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.core.tvshow.services.ChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.core.MessageManager;
 
 /**
  * The Class TvShowEpisodeAndSeasonParser.
@@ -223,6 +226,13 @@ public class TvShowEpisodeAndSeasonParser {
     // 如果AI识别成功，使用AI结果
     if (aiResult.season != -1 && !aiResult.episodes.isEmpty()) {
       LOGGER.info("AI recognition successful for: {}", filename);
+
+      // 发送AI识别成功消息到Message history
+      String successMsg = String.format("自动AI识别: %s → S%02dE%02d",
+          filename, aiResult.season, aiResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, "自动AI识别", successMsg));
+
       return aiResult;
     }
 

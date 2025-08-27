@@ -1144,10 +1144,23 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             // Set the recognized title to the search text field
             textFieldSearchString.setText(recognizedTitle);
 
+            // 发送成功消息到Message history
+            String originalTitle = tvShowToScrape.getTitle();
+            String successMsg = String.format("电视剧AI识别成功: %s → %s", originalTitle, recognizedTitle);
+            MessageManager.getInstance().pushMessage(
+                new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
+
             // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
             searchTvShow(recognizedTitle, true);
           } else {
             LOGGER.warn("AI recognition returned empty result, falling back to original title");
+
+            // 发送失败消息到Message history
+            String originalTitle = tvShowToScrape.getTitle();
+            String failMsg = String.format("电视剧AI识别失败: %s - 无法识别标题", originalTitle);
+            MessageManager.getInstance().pushMessage(
+                new Message(MessageLevel.WARN, "电视剧AI识别", failMsg));
+
             // AI识别失败，使用原始标题进行搜索
             searchTvShow(textFieldSearchString.getText(), true);
           }

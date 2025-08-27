@@ -117,6 +117,9 @@ import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser;
 import org.tinymediamanager.ui.components.combobox.AutocompleteComboBox;
 import org.tinymediamanager.ui.components.combobox.AutocompleteSupport;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.ui.components.combobox.MediaScraperComboBox;
 import org.tinymediamanager.ui.components.datepicker.DatePicker;
 import org.tinymediamanager.ui.components.label.ImageLabel;
@@ -1218,12 +1221,17 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
               episodeNumbers.clear();
               episodeNumbers.add(newEpisodeNumber);
 
-              JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
-                  String.format("AI识别成功！\n季数: %d\n集数: %d", season, episode),
-                  "AI识别结果", JOptionPane.INFORMATION_MESSAGE);
+              // 发送成功消息到Message history
+              String successMessage = String.format("AI识别成功: %s → S%02dE%02d",
+                  filename, season, episode);
+              MessageManager.getInstance().pushMessage(
+                  new Message(MessageLevel.INFO, "剧集AI识别", successMessage));
+
             } else {
-              JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
-                  "AI无法识别该剧集的季数和集数", "AI识别失败", JOptionPane.WARNING_MESSAGE);
+              // 发送失败消息到Message history
+              String failMessage = String.format("AI识别失败: %s - 无法识别季数和集数", filename);
+              MessageManager.getInstance().pushMessage(
+                  new Message(MessageLevel.WARN, "剧集AI识别", failMessage));
             }
           } catch (Exception ex) {
             JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
