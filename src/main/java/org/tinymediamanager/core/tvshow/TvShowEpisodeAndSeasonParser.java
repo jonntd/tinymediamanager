@@ -53,29 +53,53 @@ public class TvShowEpisodeAndSeasonParser {
 
   private static final Logger  LOGGER              = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
 
-  // 解析结果缓存，避免重复解析同一文件
-  private static final ConcurrentHashMap<String, CachedEpisodeResult> PARSING_CACHE = new ConcurrentHashMap<>();
+  // 智能解析结果缓存，支持LRU和TTL
+  private static final ConcurrentHashMap<String, SmartCachedEpisodeResult> PARSING_CACHE = new ConcurrentHashMap<>();
   private static final int MAX_CACHE_SIZE = 10000; // 最大缓存条目数
   private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24小时TTL
+
+  // 缓存性能统计
+  private static final java.util.concurrent.atomic.AtomicLong cacheEvictions = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong hotDataHits = new java.util.concurrent.atomic.AtomicLong(0);
 
   // 缓存统计 - 使用原子操作保证线程安全
   private static final java.util.concurrent.atomic.AtomicLong cacheHits = new java.util.concurrent.atomic.AtomicLong(0);
   private static final java.util.concurrent.atomic.AtomicLong cacheMisses = new java.util.concurrent.atomic.AtomicLong(0);
 
   /**
-   * 带TTL的缓存条目
+   * 智能缓存条目（支持LRU和TTL）
    */
-  private static class CachedEpisodeResult {
+  private static class SmartCachedEpisodeResult {
     final EpisodeMatchingResult result;
     final long timestamp;
+    volatile long lastAccessTime;
+    volatile int accessCount;
 
-    CachedEpisodeResult(EpisodeMatchingResult result) {
+    SmartCachedEpisodeResult(EpisodeMatchingResult result) {
       this.result = result;
       this.timestamp = System.currentTimeMillis();
+      this.lastAccessTime = this.timestamp;
+      this.accessCount = 1;
     }
 
     boolean isExpired() {
       return System.currentTimeMillis() - timestamp > CACHE_TTL_MS;
+    }
+
+    void recordAccess() {
+      this.lastAccessTime = System.currentTimeMillis();
+      this.accessCount++;
+    }
+
+    double getAccessFrequency() {
+      long age = System.currentTimeMillis() - timestamp;
+      return age > 0 ? (accessCount * 1000.0 / age) : accessCount;
+    }
+
+    boolean isHotData() {
+      // 访问频率高或最近访问过的数据被认为是热点数据
+      long timeSinceLastAccess = System.currentTimeMillis() - lastAccessTime;
+      return accessCount >= 3 || timeSinceLastAccess < 60000; // 1分钟内访问过
     }
   }
 
@@ -172,14 +196,44 @@ public class TvShowEpisodeAndSeasonParser {
   }
 
   /**
+   * 获取缓存命中数
+   */
+  public static long getCacheHits() {
+    return cacheHits.get();
+  }
+
+  /**
+   * 获取缓存未命中数
+   */
+  public static long getCacheMisses() {
+    return cacheMisses.get();
+  }
+
+
+
+  /**
+   * 获取热点数据命中数
+   */
+  public static long getHotDataHits() {
+    return hotDataHits.get();
+  }
+
+  /**
+   * 获取缓存驱逐次数
+   */
+  public static long getCacheEvictions() {
+    return cacheEvictions.get();
+  }
+
+  /**
    * 清理AI相关的缓存条目
    */
   public static void clearAICache() {
     int removedCount = 0;
-    java.util.Iterator<java.util.Map.Entry<String, CachedEpisodeResult>> iterator = PARSING_CACHE.entrySet().iterator();
+    java.util.Iterator<java.util.Map.Entry<String, SmartCachedEpisodeResult>> iterator = PARSING_CACHE.entrySet().iterator();
 
     while (iterator.hasNext()) {
-      java.util.Map.Entry<String, CachedEpisodeResult> entry = iterator.next();
+      java.util.Map.Entry<String, SmartCachedEpisodeResult> entry = iterator.next();
       if (entry.getKey().startsWith("ai_") || entry.getKey().startsWith("hybrid_")) {
         iterator.remove();
         removedCount++;
@@ -187,6 +241,61 @@ public class TvShowEpisodeAndSeasonParser {
     }
 
     LOGGER.info("Cleared {} AI-related cache entries", removedCount);
+  }
+
+  /**
+   * 智能缓存存储（LRU + 热点数据保护）
+   */
+  private static void smartCacheStore(String cacheKey, EpisodeMatchingResult result) {
+    // 检查缓存大小，如果超出限制则进行LRU清理
+    if (PARSING_CACHE.size() >= MAX_CACHE_SIZE) {
+      performLRUEviction();
+    }
+
+    // 存储新的缓存条目
+    PARSING_CACHE.put(cacheKey, new SmartCachedEpisodeResult(result));
+  }
+
+  /**
+   * 执行LRU清理策略
+   */
+  private static void performLRUEviction() {
+    int targetSize = (int) (MAX_CACHE_SIZE * 0.8); // 清理到80%容量
+    int toRemove = PARSING_CACHE.size() - targetSize;
+
+    if (toRemove <= 0) return;
+
+    // 收集所有缓存条目并按LRU排序
+    java.util.List<java.util.Map.Entry<String, SmartCachedEpisodeResult>> entries =
+        new java.util.ArrayList<>(PARSING_CACHE.entrySet());
+
+    // 按最后访问时间排序（最久未访问的在前面）
+    entries.sort((e1, e2) -> {
+      SmartCachedEpisodeResult r1 = e1.getValue();
+      SmartCachedEpisodeResult r2 = e2.getValue();
+
+      // 保护热点数据：热点数据排在后面，不会被清理
+      if (r1.isHotData() && !r2.isHotData()) return 1;
+      if (!r1.isHotData() && r2.isHotData()) return -1;
+
+      // 按最后访问时间排序
+      return Long.compare(r1.lastAccessTime, r2.lastAccessTime);
+    });
+
+    // 移除最久未访问的条目（保护热点数据）
+    int removed = 0;
+    for (java.util.Map.Entry<String, SmartCachedEpisodeResult> entry : entries) {
+      if (removed >= toRemove) break;
+
+      // 不移除热点数据
+      if (!entry.getValue().isHotData()) {
+        PARSING_CACHE.remove(entry.getKey());
+        removed++;
+        cacheEvictions.incrementAndGet();
+      }
+    }
+
+    LOGGER.debug("LRU eviction completed: removed {} entries, protected hot data", removed);
   }
 
   /**
@@ -714,7 +823,7 @@ public class TvShowEpisodeAndSeasonParser {
     String aiCacheKey = generateCacheKey("ai", filename, tvShowTitle);
 
     // 检查AI缓存（带TTL验证）
-    CachedEpisodeResult cachedAiEntry = PARSING_CACHE.get(aiCacheKey);
+    SmartCachedEpisodeResult cachedAiEntry = PARSING_CACHE.get(aiCacheKey);
     if (cachedAiEntry != null) {
       if (!cachedAiEntry.isExpired()) {
         long hits = cacheHits.incrementAndGet();
@@ -733,8 +842,7 @@ public class TvShowEpisodeAndSeasonParser {
       LOGGER.info("Skipping AI recognition for: {}", filename);
       EpisodeMatchingResult emptyResult = new EpisodeMatchingResult();
       // 缓存空结果，避免重复检查
-      checkAndCleanCache();
-      PARSING_CACHE.put(aiCacheKey, new CachedEpisodeResult(emptyResult));
+      smartCacheStore(aiCacheKey, emptyResult);
       return emptyResult;
     }
 
@@ -742,8 +850,7 @@ public class TvShowEpisodeAndSeasonParser {
     EpisodeMatchingResult aiResult = ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
 
     // 缓存AI识别结果（无论成功还是失败）
-    checkAndCleanCache();
-    PARSING_CACHE.put(aiCacheKey, new CachedEpisodeResult(aiResult));
+    smartCacheStore(aiCacheKey, aiResult);
 
     return aiResult;
   }
@@ -771,7 +878,7 @@ public class TvShowEpisodeAndSeasonParser {
     String cacheKey = generateCacheKey("hybrid", filename, tvShowTitle);
 
     // 检查缓存（带TTL验证）
-    CachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
+    SmartCachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
     if (cachedEntry != null) {
       if (!cachedEntry.isExpired()) {
         long hits = cacheHits.incrementAndGet();
@@ -792,8 +899,7 @@ public class TvShowEpisodeAndSeasonParser {
     if (traditionalResult.season != -1 && !traditionalResult.episodes.isEmpty()) {
       LOGGER.debug("Traditional parsing successful for: {}", filename);
       // 缓存成功的传统解析结果
-      checkAndCleanCache();
-      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(traditionalResult));
+      smartCacheStore(cacheKey, traditionalResult);
       return traditionalResult;
     }
 
@@ -824,8 +930,7 @@ public class TvShowEpisodeAndSeasonParser {
     if (!enableAI) {
       LOGGER.debug("AI recognition disabled, returning Chinese parsing result for: {}", filename);
       // 缓存中文解析结果
-      checkAndCleanCache();
-      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(chineseResult));
+      smartCacheStore(cacheKey, chineseResult);
       return chineseResult;
     }
 
@@ -833,8 +938,7 @@ public class TvShowEpisodeAndSeasonParser {
     if (!SmartAIDecisionMaker.shouldUseAI(filename, tvShowTitle, chineseResult)) {
       LOGGER.debug("Smart AI decision: skipping AI for {} (low value)", filename);
       // 缓存中文解析结果
-      checkAndCleanCache();
-      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(chineseResult));
+      smartCacheStore(cacheKey, chineseResult);
       return chineseResult;
     }
 
@@ -853,16 +957,14 @@ public class TvShowEpisodeAndSeasonParser {
           new Message(MessageLevel.INFO, "自动AI识别", successMsg));
 
       // 缓存成功的AI识别结果
-      checkAndCleanCache();
-      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(aiResult));
+      smartCacheStore(cacheKey, aiResult);
       return aiResult;
     }
 
     // 所有方法都失败，返回传统解析结果（可能包含部分信息）
     LOGGER.warn("All parsing methods failed for: {}", filename);
     // 缓存失败的解析结果，避免重复尝试
-    checkAndCleanCache();
-    PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(traditionalResult));
+    smartCacheStore(cacheKey, traditionalResult);
     return traditionalResult;
   }
 
@@ -879,17 +981,28 @@ public class TvShowEpisodeAndSeasonParser {
     // 创建缓存键，包含文件名和剧集名
     String cacheKey = generateCacheKey("filename", name, showname);
 
-    // 检查缓存（带TTL验证）
-    CachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
+    // 检查智能缓存（TTL + LRU + 热点数据检测）
+    SmartCachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
     if (cachedEntry != null) {
       if (!cachedEntry.isExpired()) {
+        // 记录访问，更新LRU信息
+        cachedEntry.recordAccess();
         long hits = cacheHits.incrementAndGet();
-        LOGGER.debug("Using cached parsing result for: {} (Cache hits: {})", name, hits);
+
+        // 检查是否为热点数据
+        if (cachedEntry.isHotData()) {
+          hotDataHits.incrementAndGet();
+          LOGGER.debug("Using hot cached result for: {} (Cache hits: {}, Hot hits: {})",
+                      name, hits, hotDataHits.get());
+        } else {
+          LOGGER.debug("Using cached result for: {} (Cache hits: {})", name, hits);
+        }
+
         return cachedEntry.result;
       } else {
         // 缓存已过期，移除
         PARSING_CACHE.remove(cacheKey);
-        LOGGER.debug("Cache entry expired for: {}", name);
+        LOGGER.debug("Smart cache entry expired for: {}", name);
       }
     }
     cacheMisses.incrementAndGet();
@@ -948,9 +1061,8 @@ public class TvShowEpisodeAndSeasonParser {
       result.season = 1;
     }
 
-    // 检查缓存大小并缓存结果
-    checkAndCleanCache();
-    PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(result));
+    // 智能缓存存储（LRU + 热点数据保护）
+    smartCacheStore(cacheKey, result);
 
     return result;
   }

@@ -3,6 +3,8 @@ package org.tinymediamanager.core.tvshow.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
+import org.tinymediamanager.core.services.AdaptiveBatchProcessor;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 
@@ -143,6 +145,13 @@ public class BatchChatGPTEpisodeRecognitionService {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 LOGGER.debug("Batch episode API call attempt {}/{}", attempt, maxRetries);
+
+                // 检查API频率限制并记录统计
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("BatchChatGPTEpisodeRecognition")) {
+                    LOGGER.warn("API rate limit exceeded for batch episode recognition on attempt {}/{}", attempt, maxRetries);
+                    throw new RuntimeException("API rate limit exceeded");
+                }
                 Settings settings = Settings.getInstance();
                 String apiKey = settings.getOpenAiApiKey();
                 String apiUrl = settings.getOpenAiApiUrl();

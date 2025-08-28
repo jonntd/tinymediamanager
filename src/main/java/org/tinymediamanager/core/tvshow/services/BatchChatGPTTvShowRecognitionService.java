@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
+import org.tinymediamanager.core.services.AdaptiveBatchProcessor;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 
 /**
@@ -32,9 +34,15 @@ public class BatchChatGPTTvShowRecognitionService {
     
     private HttpClient httpClient;
     private final Settings settings;
-    
+
     // 缓存已识别的结果，避免重复调用
     private static final Map<String, String> recognitionCache = new ConcurrentHashMap<>();
+
+    // 自适应批量处理器
+    private final AdaptiveBatchProcessor adaptiveBatchProcessor = AdaptiveBatchProcessor.getInstance();
+
+    // 配置参数
+    private static final int MAX_RETRIES = 3; // 最大重试次数
     
     public BatchChatGPTTvShowRecognitionService() {
         this.settings = Settings.getInstance();
@@ -66,12 +74,15 @@ public class BatchChatGPTTvShowRecognitionService {
     }
     
     /**
-     * 批量识别电视剧标题（支持分组处理和重试机制）
+     * 批量识别电视剧标题（使用自适应批量大小）
      * @param tvShows 待识别的电视剧列表
      * @return 电视剧ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows) {
-        return batchRecognizeTvShowTitles(tvShows, 20, 6);
+        // 使用自适应批量大小
+        int adaptiveBatchSize = adaptiveBatchProcessor.getCurrentBatchSize();
+        LOGGER.info("Using adaptive batch size: {} for {} TV shows", adaptiveBatchSize, tvShows.size());
+        return batchRecognizeTvShowTitles(tvShows, adaptiveBatchSize, MAX_RETRIES);
     }
     
     /**
@@ -234,14 +245,25 @@ public class BatchChatGPTTvShowRecognitionService {
     }
 
     /**
-     * 带重试机制的批量API调用
+     * 带重试机制的批量API调用（支持自适应批量处理）
      */
     private String callBatchAPIWithRetry(String prompt, int maxRetries) {
         Exception lastException = null;
+        int currentBatchSize = adaptiveBatchProcessor.getCurrentBatchSize();
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            long startTime = System.currentTimeMillis();
+            boolean success = false;
+
             try {
-                LOGGER.debug("Batch TV show API call attempt {}/{}", attempt, maxRetries);
+                LOGGER.debug("Batch TV show API call attempt {}/{} with batch size {}", attempt, maxRetries, currentBatchSize);
+
+                // 检查API频率限制并记录统计
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("BatchChatGPTTvShowRecognition")) {
+                    LOGGER.warn("API rate limit exceeded for batch TV show recognition on attempt {}/{}", attempt, maxRetries);
+                    throw new RuntimeException("API rate limit exceeded");
+                }
             String apiKey = settings.getOpenAiApiKey();
             String apiUrl = settings.getOpenAiApiUrl();
             String model = settings.getOpenAiModel();
@@ -283,12 +305,23 @@ public class BatchChatGPTTvShowRecognitionService {
                                 .trim();
 
                             if (content != null && !content.isEmpty()) {
-                                LOGGER.info("=== Batch AI Recognition Result (Attempt {}) ===", attempt);
+                                success = true;
+                                long responseTime = System.currentTimeMillis() - startTime;
+
+                                // 记录成功的自适应批量处理统计
+                                adaptiveBatchProcessor.recordBatchResponse(responseTime, currentBatchSize, true);
+
+                                LOGGER.info("=== Batch AI Recognition Result (Attempt {}, {}ms) ===", attempt, responseTime);
                                 LOGGER.info("Raw extracted content: '{}'", content);
                                 LOGGER.info("Content length: {} characters", content.length());
                                 return content;
                             } else {
-                                LOGGER.warn("Batch TV show API returned empty content on attempt {}/{}", attempt, maxRetries);
+                                long responseTime = System.currentTimeMillis() - startTime;
+
+                                // 记录失败的自适应批量处理统计
+                                adaptiveBatchProcessor.recordBatchResponse(responseTime, currentBatchSize, false);
+
+                                LOGGER.warn("Batch TV show API returned empty content on attempt {}/{} ({}ms)", attempt, maxRetries, responseTime);
                             }
                         }
                     }
@@ -309,7 +342,12 @@ public class BatchChatGPTTvShowRecognitionService {
 
             } catch (Exception e) {
                 lastException = e;
-                LOGGER.warn("Batch TV show API failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+                long responseTime = System.currentTimeMillis() - startTime;
+
+                // 记录失败的自适应批量处理统计
+                adaptiveBatchProcessor.recordBatchResponse(responseTime, currentBatchSize, false);
+
+                LOGGER.warn("Batch TV show API failed on attempt {}/{} ({}ms): {}", attempt, maxRetries, responseTime, e.getMessage());
 
                 if (attempt < maxRetries) {
                     // 指数退避重试

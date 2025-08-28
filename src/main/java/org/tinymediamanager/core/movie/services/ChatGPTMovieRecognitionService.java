@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
 import org.tinymediamanager.core.utils.FixStatistics;
 import org.tinymediamanager.scraper.util.ParserUtils;
 
@@ -69,6 +70,13 @@ public class ChatGPTMovieRecognitionService {
         }
         
         try {
+            // 检查API频率限制并记录统计
+            AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+            if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
+                LOGGER.warn("API rate limit exceeded for movie recognition");
+                throw new RuntimeException("API rate limit exceeded");
+            }
+
             // 获取电影的主要媒体文件路径
             String moviePath = extractMoviePath(movie);
             if (moviePath == null || moviePath.trim().isEmpty()) {

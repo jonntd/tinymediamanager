@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
+import org.tinymediamanager.core.services.AIPerformanceMonitor;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,10 +50,19 @@ public class ChatGPTEpisodeRecognitionService {
         Exception lastException = null;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            long startTime = System.currentTimeMillis();
+
             try {
                 LOGGER.info("=== Starting Episode AI Recognition (Attempt {}/{}) ===", attempt, maxRetries);
                 LOGGER.info("Episode filename: {}", episodeFilename);
                 LOGGER.info("TV Show title: {}", tvShowTitle);
+
+                // 检查API频率限制并记录统计
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("ChatGPTEpisodeRecognition")) {
+                    LOGGER.warn("API rate limit exceeded for episode recognition on attempt {}/{}", attempt, maxRetries);
+                    throw new RuntimeException("API rate limit exceeded");
+                }
 
                 // 处理路径，提取倒数三层目录信息（参考电影AI识别）
                 String pathContext = extractPathContext(episodeFilename);
@@ -68,15 +79,24 @@ public class ChatGPTEpisodeRecognitionService {
 
                     // 验证结果是否有效
                     if (result != null && (result.season > 0 || !result.episodes.isEmpty())) {
-                        LOGGER.info("=== Episode AI Recognition Complete (Attempt {}) ===", attempt);
+                        long responseTime = System.currentTimeMillis() - startTime;
+                        // 记录成功的性能指标
+                        AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTEpisodeRecognition", responseTime, true);
+                        LOGGER.info("=== Episode AI Recognition Complete (Attempt {}, {}ms) ===", attempt, responseTime);
                         LOGGER.info("Raw AI response: '{}'", recognizedInfo);
                         LOGGER.info("Parsed result - Season: {}, Episodes: {}", result.season, result.episodes);
                         return result;
                     } else {
-                        LOGGER.warn("AI returned invalid result on attempt {}/{}", attempt, maxRetries);
+                        long responseTime = System.currentTimeMillis() - startTime;
+                        // 记录失败的性能指标
+                        AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTEpisodeRecognition", responseTime, false);
+                        LOGGER.warn("AI returned invalid result on attempt {}/{} ({}ms)", attempt, maxRetries, responseTime);
                     }
                 } else {
-                    LOGGER.warn("AI returned empty result on attempt {}/{}", attempt, maxRetries);
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    // 记录失败的性能指标
+                    AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTEpisodeRecognition", responseTime, false);
+                    LOGGER.warn("AI returned empty result on attempt {}/{} ({}ms)", attempt, maxRetries, responseTime);
                 }
 
                 if (attempt < maxRetries) {

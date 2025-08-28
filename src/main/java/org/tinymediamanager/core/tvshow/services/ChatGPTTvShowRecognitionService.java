@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
+import org.tinymediamanager.core.services.AIPerformanceMonitor;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 
 /**
@@ -74,19 +76,35 @@ public class ChatGPTTvShowRecognitionService {
         Exception lastException = null;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            long startTime = System.currentTimeMillis();
+            boolean success = false;
+
             try {
                 LOGGER.info("=== Starting TV Show AI Recognition (Attempt {}/{}) ===", attempt, maxRetries);
                 LOGGER.info("TV Show title: {}", tvShow.getTitle());
                 LOGGER.info("TV Show year: {}", tvShow.getYear());
                 LOGGER.info("TV Show DB ID: {}", tvShow.getDbId());
 
+                // 检查API频率限制并记录统计
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("ChatGPTTvShowRecognition")) {
+                    LOGGER.warn("API rate limit exceeded for TV show recognition on attempt {}/{}", attempt, maxRetries);
+                    throw new RuntimeException("API rate limit exceeded");
+                }
+
                 String result = performSingleRecognition(tvShow);
+                long responseTime = System.currentTimeMillis() - startTime;
 
                 if (result != null && !result.trim().isEmpty()) {
-                    LOGGER.info("AI recognition successful on attempt {}", attempt);
+                    success = true;
+                    // 记录成功的性能指标
+                    AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTTvShowRecognition", responseTime, true);
+                    LOGGER.info("AI recognition successful on attempt {} ({}ms)", attempt, responseTime);
                     return result;
                 } else {
-                    LOGGER.warn("AI recognition returned empty result on attempt {}/{}", attempt, maxRetries);
+                    // 记录失败的性能指标
+                    AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTTvShowRecognition", responseTime, false);
+                    LOGGER.warn("AI recognition returned empty result on attempt {}/{} ({}ms)", attempt, maxRetries, responseTime);
 
                     if (attempt < maxRetries) {
                         // 指数退避重试
@@ -98,7 +116,11 @@ public class ChatGPTTvShowRecognitionService {
 
             } catch (Exception e) {
                 lastException = e;
-                LOGGER.warn("AI recognition failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+                long responseTime = System.currentTimeMillis() - startTime;
+
+                // 记录失败的性能指标
+                AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTTvShowRecognition", responseTime, false);
+                LOGGER.warn("AI recognition failed on attempt {}/{} ({}ms): {}", attempt, maxRetries, responseTime, e.getMessage());
 
                 if (attempt < maxRetries) {
                     // 指数退避重试
@@ -116,7 +138,10 @@ public class ChatGPTTvShowRecognitionService {
         }
 
         // 所有重试都失败
-        LOGGER.error("AI recognition failed after {} attempts", maxRetries, lastException);
+        LOGGER.error("AI recognition failed after {} attempts", maxRetries);
+        if (lastException != null) {
+            LOGGER.error("Last exception: ", lastException);
+        }
         LOGGER.info("=== TV Show AI Recognition Failed ===");
         return null;
     }
