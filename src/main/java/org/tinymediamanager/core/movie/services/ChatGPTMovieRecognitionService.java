@@ -52,10 +52,17 @@ public class ChatGPTMovieRecognitionService {
     }
     
     /**
-     * 基于电影文件路径识别电影标题
+     * 基于电影文件路径识别电影标题（带重试机制）
      * 使用路径倒数三层目录名称作为识别依据
      */
     public String recognizeMovieTitle(Movie movie) {
+        return recognizeMovieTitleWithRetry(movie, 3);
+    }
+
+    /**
+     * 带重试机制的电影标题识别
+     */
+    private String recognizeMovieTitleWithRetry(Movie movie, int maxRetries) {
         if (httpClient == null) {
             LOGGER.warn("HTTP client is not initialized - please check OpenAI API key configuration");
             return null;

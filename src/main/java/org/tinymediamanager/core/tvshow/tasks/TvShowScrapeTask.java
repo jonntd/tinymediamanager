@@ -140,10 +140,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
               new Message(MessageLevel.INFO, "批量电视剧AI识别", completeMsg));
 
         } catch (Exception e) {
-          LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+          LOGGER.warn("Batch AI recognition failed, skipping individual fallback to prevent API spam: {}", e.getMessage());
 
-          // 发送批量AI识别失败消息到Message history
-          String failMsg = String.format("批量电视剧AI识别失败: %s", e.getMessage());
+          // 发送批量AI识别失败消息到Message history，但不回退到个体识别
+          String failMsg = String.format("批量电视剧AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
           MessageManager.getInstance().pushMessage(
               new Message(MessageLevel.WARN, "批量电视剧AI识别", failMsg));
         }
@@ -589,24 +589,18 @@ public class TvShowScrapeTask extends TmmThreadPool {
             LOGGER.debug("Batch recognition was not performed, using individual recognition for TV show '{}'", tvShow.getTitle());
           }
 
-          // 回退到单个识别（兼容旧逻辑）
-          LOGGER.info("=== Falling back to Individual AI Recognition ===");
+          // 统一AI调用逻辑：总是尝试个体AI识别（与批量处理保持一致）
+          LOGGER.debug("Attempting individual AI recognition for TV show '{}'", tvShow.getTitle());
           try {
-            ChatGPTTvShowRecognitionService chatGPTService = new ChatGPTTvShowRecognitionService();
-            recognizedTitle = chatGPTService.recognizeTvShowTitle(tvShow);
-            if (recognizedTitle != null) {
-              LOGGER.info("=== Individual AI Result ===");
-              LOGGER.info("Individual AI result: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
-
-              // 发送单个电视剧识别成功消息到Message history
-              String successMsg = String.format("单个AI识别: %s → %s", tvShow.getTitle(), recognizedTitle);
-              MessageManager.getInstance().pushMessage(
-                  new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
+            ChatGPTTvShowRecognitionService individualService = new ChatGPTTvShowRecognitionService();
+            recognizedTitle = individualService.recognizeTvShowTitle(tvShow);
+            if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+              LOGGER.info("Individual AI recognition successful: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
             } else {
-              LOGGER.warn("Individual AI recognition returned null");
+              LOGGER.warn("Individual AI recognition returned empty result for TV show '{}'", tvShow.getTitle());
             }
-          } catch (Exception e) {
-            LOGGER.error("Individual ChatGPT TV show recognition failed: {}", e.getMessage(), e);
+          } catch (Exception individualEx) {
+            LOGGER.warn("Individual AI recognition failed for TV show '{}': {}", tvShow.getTitle(), individualEx.getMessage());
           }
         } else {
           LOGGER.debug("OpenAI API key not configured, skipping AI recognition for TV show '{}'", tvShow.getTitle());

@@ -148,10 +148,10 @@ public class MovieScrapeTask extends TmmThreadPool {
               new Message(MessageLevel.INFO, "批量电影AI识别", completeMsg));
 
         } catch (Exception e) {
-          LOGGER.warn("Batch AI recognition failed, falling back to individual recognition: {}", e.getMessage());
+          LOGGER.warn("Batch AI recognition failed, skipping individual fallback to prevent API spam: {}", e.getMessage());
 
-          // 发送批量AI识别失败消息到Message history
-          String failMsg = String.format("批量电影AI识别失败: %s", e.getMessage());
+          // 发送批量AI识别失败消息到Message history，但不回退到个体识别
+          String failMsg = String.format("批量电影AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
           MessageManager.getInstance().pushMessage(
               new Message(MessageLevel.WARN, "批量电影AI识别", failMsg));
         }
@@ -426,20 +426,22 @@ public class MovieScrapeTask extends TmmThreadPool {
             LOGGER.debug("Batch recognition was not performed, using individual recognition for movie '{}'", movie.getTitle());
           }
 
-          // 回退到单个识别（兼容旧逻辑）
-          try {
-            ChatGPTMovieRecognitionService chatGPTService = new ChatGPTMovieRecognitionService();
-            recognizedTitle = chatGPTService.recognizeMovieTitle(movie);
-            if (recognizedTitle != null) {
-              LOGGER.info("Individual ChatGPT recognition: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
-
-              // 发送单个电影识别成功消息到Message history
-              String successMsg = String.format("单个AI识别: %s → %s", movie.getTitle(), recognizedTitle);
-              MessageManager.getInstance().pushMessage(
-                  new Message(MessageLevel.INFO, "电影AI识别", successMsg));
+          // 检查用户是否启用了个体回退
+          if (org.tinymediamanager.core.Settings.getInstance().isAiIndividualFallbackEnabled()) {
+            LOGGER.debug("Individual AI fallback enabled by user, attempting individual recognition for movie '{}'", movie.getTitle());
+            try {
+              ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
+              recognizedTitle = individualService.recognizeMovieTitle(movie);
+              if (recognizedTitle != null) {
+                LOGGER.info("Individual AI recognition successful: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+              }
+            } catch (Exception individualEx) {
+              LOGGER.warn("Individual AI recognition failed for movie '{}': {}", movie.getTitle(), individualEx.getMessage());
             }
-          } catch (Exception e) {
-            LOGGER.warn("Individual ChatGPT movie recognition failed: {}", e.getMessage());
+          } else {
+            // 默认禁用单个AI识别回退，避免频繁API调用
+            LOGGER.debug("Individual AI recognition disabled for movie '{}' to prevent frequent API calls", movie.getTitle());
+            LOGGER.debug("Enable 'AI Individual Fallback' in settings if you want automatic individual recognition");
           }
         } else {
           LOGGER.debug("OpenAI API key not configured, skipping AI recognition for movie '{}'", movie.getTitle());

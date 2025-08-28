@@ -19,6 +19,7 @@ import static org.tinymediamanager.ui.TmmFontHelper.H3;
 import static org.tinymediamanager.ui.TmmFontHelper.L2;
 
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
@@ -45,6 +46,7 @@ import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.jdesktop.beansbinding.AutoBinding;
@@ -60,6 +62,7 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
 
 
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -78,6 +81,8 @@ import net.miginfocom.swing.MigLayout;
  */
 class SystemSettingsPanel extends JPanel {
   private static final Logger  LOGGER           = LoggerFactory.getLogger(SystemSettingsPanel.class);
+
+  private Timer                aiStatisticsTimer;
   private static final Pattern MEMORY_PATTERN   = Pattern.compile("-Xmx([0-9]*)(.)");
   private static final Pattern DIRECT3D_PATTERN = Pattern.compile("-Dsun.java2d.d3d=(true|false)");
 
@@ -104,6 +109,15 @@ class SystemSettingsPanel extends JPanel {
   private JTextArea           taOpenAiExtractionPrompt;
   private JButton             btnTestOpenAiPrompt;
   private JTextField           tfOpenAiTestPath;
+
+  // AI Rate Limiting settings
+  private JCheckBox           chkAiRateLimitEnabled;
+  private JSpinner            spAiMaxCallsPerMinute;
+  private JSpinner            spAiMaxCallsPerHour;
+  private JSpinner            spAiMinIntervalSeconds;
+  private JCheckBox           chkAiIndividualFallbackEnabled;
+  private JLabel              lblAiStatistics;
+  private JButton             btnResetAiStatistics;
 
   /**
    * Instantiates a new general settings panel.
@@ -305,7 +319,41 @@ class SystemSettingsPanel extends JPanel {
       btnTestOpenAiPrompt.addActionListener(e -> testOpenAiPrompt());
       panelOpenAI.add(btnTestOpenAiPrompt, "cell 2 5,alignx right");
 
+      // AI Rate Limiting Controls
+      JLabel lblAiRateLimit = new JLabel("AI Rate Limiting");
+      lblAiRateLimit.setFont(lblAiRateLimit.getFont().deriveFont(Font.BOLD));
+      panelOpenAI.add(lblAiRateLimit, "cell 1 6,spanx 2");
 
+      chkAiRateLimitEnabled = new JCheckBox("Enable AI Rate Limiting");
+      panelOpenAI.add(chkAiRateLimitEnabled, "cell 1 7,spanx 2");
+
+      JLabel lblMaxCallsPerMinute = new JLabel("Max calls per minute:");
+      panelOpenAI.add(lblMaxCallsPerMinute, "cell 1 8,alignx trailing");
+      spAiMaxCallsPerMinute = new JSpinner(new SpinnerNumberModel(50, 1, 200, 1));
+      panelOpenAI.add(spAiMaxCallsPerMinute, "cell 2 8");
+
+      JLabel lblMaxCallsPerHour = new JLabel("Max calls per hour:");
+      panelOpenAI.add(lblMaxCallsPerHour, "cell 1 9,alignx trailing");
+      spAiMaxCallsPerHour = new JSpinner(new SpinnerNumberModel(1000, 10, 5000, 10));
+      panelOpenAI.add(spAiMaxCallsPerHour, "cell 2 9");
+
+      JLabel lblMinInterval = new JLabel("Min interval (seconds):");
+      panelOpenAI.add(lblMinInterval, "cell 1 10,alignx trailing");
+      spAiMinIntervalSeconds = new JSpinner(new SpinnerNumberModel(1, 0, 60, 1));
+      panelOpenAI.add(spAiMinIntervalSeconds, "cell 2 10");
+
+      chkAiIndividualFallbackEnabled = new JCheckBox("Enable individual AI fallback");
+      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 11,spanx 2");
+
+      // AI Statistics Display
+      JLabel lblAiStatsTitle = new JLabel("AI API Statistics:");
+      panelOpenAI.add(lblAiStatsTitle, "cell 1 12,alignx trailing");
+      lblAiStatistics = new JLabel("Loading...");
+      panelOpenAI.add(lblAiStatistics, "cell 2 12");
+
+      btnResetAiStatistics = new JButton("Reset Statistics");
+      btnResetAiStatistics.addActionListener(e -> resetAiStatistics());
+      panelOpenAI.add(btnResetAiStatistics, "cell 2 13,alignx right");
 
       add(collapsiblePanel, "cell 0 6,growx,wmin 0");
     }
@@ -518,6 +566,53 @@ class SystemSettingsPanel extends JPanel {
     AutoBinding autoBinding_17 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_16, tfOpenAiTestPath,
         jTextFieldBeanProperty_10);
     autoBinding_17.bind();
+
+    // AI Rate Limiting settings bindings
+    Property settingsBeanProperty_17 = BeanProperty.create("aiRateLimitEnabled");
+    Property jCheckBoxBeanProperty_1 = BeanProperty.create("selected");
+    AutoBinding autoBinding_18 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_17, chkAiRateLimitEnabled,
+        jCheckBoxBeanProperty_1);
+    autoBinding_18.bind();
+
+    Property settingsBeanProperty_18 = BeanProperty.create("aiMaxCallsPerMinute");
+    Property jSpinnerBeanProperty_1 = BeanProperty.create("value");
+    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_18, spAiMaxCallsPerMinute,
+        jSpinnerBeanProperty_1);
+    autoBinding_19.bind();
+
+    Property settingsBeanProperty_19 = BeanProperty.create("aiMaxCallsPerHour");
+    Property jSpinnerBeanProperty_2 = BeanProperty.create("value");
+    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_19, spAiMaxCallsPerHour,
+        jSpinnerBeanProperty_2);
+    autoBinding_20.bind();
+
+    Property settingsBeanProperty_20 = BeanProperty.create("aiMinIntervalSeconds");
+    Property jSpinnerBeanProperty_3 = BeanProperty.create("value");
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_20, spAiMinIntervalSeconds,
+        jSpinnerBeanProperty_3);
+    autoBinding_21.bind();
+
+    Property settingsBeanProperty_21 = BeanProperty.create("aiIndividualFallbackEnabled");
+    Property jCheckBoxBeanProperty_2 = BeanProperty.create("selected");
+    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_21, chkAiIndividualFallbackEnabled,
+        jCheckBoxBeanProperty_2);
+    autoBinding_22.bind();
+
+    // 启动统计更新定时器
+    updateAiStatistics();
+    startStatisticsTimer();
+
+    // 添加面板关闭监听器，确保定时器被正确停止
+    addHierarchyListener(new HierarchyListener() {
+      @Override
+      public void hierarchyChanged(HierarchyEvent e) {
+        if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
+          if (!isShowing()) {
+            stopStatisticsTimer();
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -678,7 +773,52 @@ class SystemSettingsPanel extends JPanel {
     }
   }
 
+  /**
+   * 更新AI统计信息显示
+   */
+  private void updateAiStatistics() {
+    try {
+      AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+      String statistics = rateLimiter.getStatistics();
+      lblAiStatistics.setText(statistics);
+    } catch (Exception e) {
+      lblAiStatistics.setText("Statistics unavailable");
+      LOGGER.warn("Failed to get AI statistics: {}", e.getMessage());
+    }
+  }
 
+  /**
+   * 启动统计更新定时器
+   */
+  private void startStatisticsTimer() {
+    if (aiStatisticsTimer == null) {
+      aiStatisticsTimer = new Timer(30000, e -> updateAiStatistics());
+      aiStatisticsTimer.start();
+    }
+  }
 
+  /**
+   * 停止统计更新定时器
+   */
+  private void stopStatisticsTimer() {
+    if (aiStatisticsTimer != null) {
+      aiStatisticsTimer.stop();
+      aiStatisticsTimer = null;
+    }
+  }
 
+  /**
+   * 重置AI统计信息
+   */
+  private void resetAiStatistics() {
+    try {
+      AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+      rateLimiter.reset();
+      updateAiStatistics();
+      JOptionPane.showMessageDialog(this, "AI API statistics have been reset.", "Statistics Reset", JOptionPane.INFORMATION_MESSAGE);
+    } catch (Exception e) {
+      LOGGER.error("Failed to reset AI statistics: {}", e.getMessage());
+      JOptionPane.showMessageDialog(this, "Failed to reset statistics: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+  }
 }

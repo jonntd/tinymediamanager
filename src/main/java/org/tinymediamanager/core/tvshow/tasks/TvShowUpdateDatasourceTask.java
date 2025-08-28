@@ -86,6 +86,13 @@ import org.tinymediamanager.core.tvshow.connector.TvShowSeasonNfoParser;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.Message.MessageLevel;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.apache.commons.io.FilenameUtils;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
@@ -128,6 +135,210 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private final Set<Path>                      filesFound     = new HashSet<>();
   private final Map<Path, BasicFileAttributes> fileAttributes = new HashMap<>();
   private final ReentrantReadWriteLock         fileLock       = new ReentrantReadWriteLock();
+
+  // 收集需要AI识别的文件信息，用于批量处理（轻量级）
+  private final List<PendingAIRecognition>     pendingAIRecognitions = new ArrayList<>();
+
+  // 批量处理状态跟踪
+  private volatile boolean                     batchProcessingInProgress = false;
+  private final Object                         batchProcessingLock = new Object();
+
+  // 性能指标收集
+  private final AIRecognitionMetrics          aiMetrics = new AIRecognitionMetrics();
+
+  // 实时进度反馈
+  private final ProgressReporter               progressReporter = new ProgressReporter();
+
+  // 配置热更新支持
+  private volatile AIConfigurationSnapshot    currentAIConfig = null;
+  private final Object                         configUpdateLock = new Object();
+
+  /**
+   * AI配置快照，用于热更新检测
+   */
+  private static class AIConfigurationSnapshot {
+    final String apiKey;
+    final String apiUrl;
+    final boolean aiEnabled;
+    final int maxRetries;
+    final long timestamp;
+
+    AIConfigurationSnapshot() {
+      Settings settings = Settings.getInstance();
+      this.apiKey = settings.getOpenAiApiKey();
+      this.apiUrl = settings.getOpenAiApiUrl();
+      this.aiEnabled = true; // 默认启用，可以从配置中读取
+      this.maxRetries = 3; // 可以从配置中读取
+      this.timestamp = System.currentTimeMillis();
+    }
+
+    boolean hasChanged(AIConfigurationSnapshot other) {
+      if (other == null) return true;
+      return !java.util.Objects.equals(this.apiKey, other.apiKey) ||
+             !java.util.Objects.equals(this.apiUrl, other.apiUrl) ||
+             this.aiEnabled != other.aiEnabled ||
+             this.maxRetries != other.maxRetries;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("AIConfig{enabled=%s, url=%s, retries=%d, timestamp=%d}",
+                          aiEnabled, apiUrl != null ? "***" : "null", maxRetries, timestamp);
+    }
+  }
+
+  /**
+   * 实时进度反馈器
+   */
+  private static class ProgressReporter {
+    private volatile int totalFiles = 0;
+    private volatile int processedFiles = 0;
+    private volatile int successfulFiles = 0;
+    private volatile int failedFiles = 0;
+    private volatile String currentFile = "";
+    private volatile String currentStage = "";
+    private volatile long startTime = 0;
+
+    void startBatchProcessing(int total) {
+      this.totalFiles = total;
+      this.processedFiles = 0;
+      this.successfulFiles = 0;
+      this.failedFiles = 0;
+      this.startTime = System.currentTimeMillis();
+      this.currentStage = "Initializing";
+      reportProgress();
+    }
+
+    void updateProgress(String filename, String stage) {
+      this.currentFile = filename;
+      this.currentStage = stage;
+      reportProgress();
+    }
+
+    void fileCompleted(String filename, boolean success) {
+      this.processedFiles++;
+      if (success) {
+        this.successfulFiles++;
+      } else {
+        this.failedFiles++;
+      }
+      this.currentFile = filename;
+      this.currentStage = success ? "Completed" : "Failed";
+      reportProgress();
+    }
+
+    void batchCompleted() {
+      this.currentStage = "Completed";
+      this.currentFile = "";
+      reportProgress();
+    }
+
+    private void reportProgress() {
+      double percentage = totalFiles > 0 ? (processedFiles * 100.0 / totalFiles) : 0.0;
+      long elapsedTime = System.currentTimeMillis() - startTime;
+      long estimatedTotal = processedFiles > 0 ? (elapsedTime * totalFiles / processedFiles) : 0;
+      long remainingTime = estimatedTotal - elapsedTime;
+
+      String progressMsg = String.format(
+          "AI Recognition Progress: %.1f%% (%d/%d) - %s: %s - ETA: %s",
+          percentage, processedFiles, totalFiles, currentStage,
+          currentFile.length() > 50 ? "..." + currentFile.substring(currentFile.length() - 47) : currentFile,
+          formatTime(remainingTime)
+      );
+
+      // 发送进度消息
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), progressMsg));
+
+      // 详细日志
+      LOGGER.debug("Progress: {:.1f}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]",
+                  percentage, processedFiles, totalFiles, successfulFiles, failedFiles, currentFile, currentStage);
+    }
+
+    private String formatTime(long milliseconds) {
+      if (milliseconds <= 0) return "Unknown";
+
+      long seconds = milliseconds / 1000;
+      long minutes = seconds / 60;
+      long hours = minutes / 60;
+
+      if (hours > 0) {
+        return String.format("%dh %dm", hours, minutes % 60);
+      } else if (minutes > 0) {
+        return String.format("%dm %ds", minutes, seconds % 60);
+      } else {
+        return String.format("%ds", seconds);
+      }
+    }
+
+    String getFinalReport() {
+      long totalTime = System.currentTimeMillis() - startTime;
+      return String.format(
+          "Batch AI Recognition Final Report: %d files processed in %s - Success: %d, Failed: %d",
+          processedFiles, formatTime(totalTime), successfulFiles, failedFiles
+      );
+    }
+  }
+
+  /**
+   * AI识别性能指标收集器
+   */
+  private static class AIRecognitionMetrics {
+    private volatile long totalFilesProcessed = 0;
+    private volatile long totalAICallsMade = 0;
+    private volatile long totalSuccessfulRecognitions = 0;
+    private volatile long totalFailedRecognitions = 0;
+    private volatile long totalProcessingTimeMs = 0;
+    private volatile long averageResponseTimeMs = 0;
+
+    void recordBatchProcessing(int filesCount, int aiCalls, int successes, int failures, long processingTimeMs) {
+      totalFilesProcessed += filesCount;
+      totalAICallsMade += aiCalls;
+      totalSuccessfulRecognitions += successes;
+      totalFailedRecognitions += failures;
+      totalProcessingTimeMs += processingTimeMs;
+
+      if (totalAICallsMade > 0) {
+        averageResponseTimeMs = totalProcessingTimeMs / totalAICallsMade;
+      }
+    }
+
+    String getMetricsReport() {
+      double successRate = totalFilesProcessed > 0 ?
+          (totalSuccessfulRecognitions * 100.0 / totalFilesProcessed) : 0.0;
+
+      return String.format(
+          "AI Recognition Metrics: Files=%d, AI Calls=%d, Success=%d (%.1f%%), Failed=%d, Avg Response=%dms",
+          totalFilesProcessed, totalAICallsMade, totalSuccessfulRecognitions,
+          successRate, totalFailedRecognitions, averageResponseTimeMs);
+    }
+
+    void reset() {
+      totalFilesProcessed = 0;
+      totalAICallsMade = 0;
+      totalSuccessfulRecognitions = 0;
+      totalFailedRecognitions = 0;
+      totalProcessingTimeMs = 0;
+      averageResponseTimeMs = 0;
+    }
+  }
+
+  /**
+   * 轻量级的待AI识别信息
+   */
+  private static class PendingAIRecognition {
+    final TvShow tvShow;
+    final String relativePath;
+    final MediaFile videoFile;
+    final String uniqueId;
+
+    PendingAIRecognition(TvShow tvShow, String relativePath, MediaFile videoFile) {
+      this.tvShow = tvShow;
+      this.relativePath = relativePath;
+      this.videoFile = videoFile;
+      this.uniqueId = tvShow.getDbId() + "_" + relativePath.hashCode();
+    }
+  }
 
   /**
    * Instantiates a new scrape task - to update all datasources
@@ -428,6 +639,18 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         if (!cancel) {
           cleanup(showsToCleanup);
           waitForCompletionOrCancel();
+
+          // 执行批量AI识别处理
+          if (!pendingAIRecognitions.isEmpty()) {
+            setTaskName(TmmResourceBundle.getString("Batch AI Recognition"));
+            setTaskDescription("Processing batch AI recognition...");
+            publishState();
+            processBatchAIRecognition();
+          }
+
+          // 清理解析缓存，防止内存泄漏
+          TvShowEpisodeAndSeasonParser.clearParsingCache();
+          LOGGER.debug("Parsing cache cleared after datasource update");
         }
       }
 
@@ -1039,11 +1262,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             try {
               TvShowEpisodeNfoParser parser = TvShowEpisodeNfoParser.parseNfo(epNfo.getFileAsPath());
 
-              // ALL episodes detected with -1? try to parse from filename (with AI fallback)...
+              // ALL episodes detected with -1? try to parse from filename (without AI first)...
               boolean allUnknown = !parser.episodes.isEmpty() && parser.episodes.stream().allMatch(ep -> ep.episode == -1);
               if (allUnknown) {
                 EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser
-                    .detectEpisodeHybrid(showDir.relativize(epNfo.getFileAsPath()).toString(), tvShow.getTitle());
+                    .detectEpisodeHybrid(showDir.relativize(epNfo.getFileAsPath()).toString(), tvShow.getTitle(), false);
                 if (parser.episodes.size() == result.episodes.size()) {
                   int i = 0;
                   for (Episode ep : parser.episodes) {
@@ -1124,10 +1347,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           } // end parse NFO
 
           // ******************************
-          // STEP 2.1.2 - no NFO? try to parse episode/season (with AI fallback)
+          // STEP 2.1.2 - no NFO? try to parse episode/season (without AI first)
           // ******************************
           String relativePath = showDir.relativize(vid.getFileAsPath()).toString();
-          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
+          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle(), false);
+
+          // 如果传统解析失败，收集这个文件用于后续批量AI识别
+          if (result.season == -1 || result.episodes.isEmpty()) {
+            synchronized (pendingAIRecognitions) {
+              pendingAIRecognitions.add(new PendingAIRecognition(tvShow, relativePath, vid));
+            }
+            LOGGER.debug("Added file for batch AI recognition: {}", relativePath);
+            continue; // 跳过当前文件，等待批量处理
+          }
 
           // second check: is the detected episode (>-1; season >-1) already in
           // tmm and any valid stacking markers found?
@@ -1370,11 +1602,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           continue;
         }
 
-        // Only perform AI episode recognition for video files to avoid unnecessary processing of metadata files
+        // Only perform episode recognition for video files to avoid unnecessary processing of metadata files
         // (poster.jpg, theme.mp3, tvshow.nfo, etc.)
         if (mf.getType() == MediaFileType.VIDEO) {
           String relativePath = showDir.relativize(mf.getFileAsPath()).toString();
-          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle());
+          EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle(), false);
           if (result.season > -1 && !result.episodes.isEmpty()) {
             for (int epnr : result.episodes) {
               // get any assigned episode
@@ -1855,6 +2087,579 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    */
   private static synchronized void incPostDir() {
     postDir++;
+  }
+
+  /**
+   * 处理批量AI识别
+   */
+  private void processBatchAIRecognition() {
+    // 并发安全检查
+    synchronized (batchProcessingLock) {
+      if (batchProcessingInProgress) {
+        LOGGER.warn("Batch AI recognition already in progress, skipping");
+        return;
+      }
+      batchProcessingInProgress = true;
+    }
+
+    try {
+      List<PendingAIRecognition> toProcess;
+
+      // 获取待处理列表的副本，避免长时间锁定
+      synchronized (pendingAIRecognitions) {
+        if (pendingAIRecognitions.isEmpty()) {
+          LOGGER.debug("No files need AI recognition");
+          return;
+        }
+
+        toProcess = new ArrayList<>(pendingAIRecognitions);
+        pendingAIRecognitions.clear(); // 立即清理，避免内存泄漏
+      }
+
+      // 配置一致性检查
+      if (!isAIConfigurationValid()) {
+        LOGGER.warn("AI configuration is invalid, falling back to traditional processing");
+        handleFailedAIRecognitions(toProcess);
+        return;
+      }
+
+      long startTime = System.currentTimeMillis();
+      processBatchAIRecognitionInternal(toProcess);
+      long endTime = System.currentTimeMillis();
+
+      // 记录性能指标
+      long processingTime = endTime - startTime;
+      LOGGER.info("Batch AI processing completed in {}ms", processingTime);
+      LOGGER.info(aiMetrics.getMetricsReport());
+
+    } finally {
+      synchronized (batchProcessingLock) {
+        batchProcessingInProgress = false;
+      }
+    }
+  }
+
+  /**
+   * 检查AI配置是否有效，支持热更新
+   */
+  private boolean isAIConfigurationValid() {
+    try {
+      // 检查配置是否有更新
+      AIConfigurationSnapshot newConfig = new AIConfigurationSnapshot();
+
+      synchronized (configUpdateLock) {
+        if (currentAIConfig == null || newConfig.hasChanged(currentAIConfig)) {
+          LOGGER.info("AI configuration updated: {} -> {}", currentAIConfig, newConfig);
+          currentAIConfig = newConfig;
+
+          // 配置更新时清理相关缓存
+          if (newConfig.hasChanged(currentAIConfig)) {
+            clearAIRelatedCaches();
+          }
+        }
+      }
+
+      return currentAIConfig.aiEnabled &&
+             currentAIConfig.apiKey != null && !currentAIConfig.apiKey.trim().isEmpty() &&
+             currentAIConfig.apiUrl != null && !currentAIConfig.apiUrl.trim().isEmpty();
+    } catch (Exception e) {
+      LOGGER.error("Failed to check AI configuration: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * 清理AI相关的缓存（配置更新时）
+   */
+  private void clearAIRelatedCaches() {
+    try {
+      // 清理AI识别相关的缓存条目
+      TvShowEpisodeAndSeasonParser.clearAICache();
+      LOGGER.info("AI-related caches cleared due to configuration update");
+    } catch (Exception e) {
+      LOGGER.warn("Failed to clear AI caches: {}", e.getMessage());
+    }
+  }
+
+  /**
+   * 内部批量AI识别处理
+   */
+  private void processBatchAIRecognitionInternal(List<PendingAIRecognition> toProcess) {
+
+    LOGGER.info("Starting batch AI recognition for {} files", toProcess.size());
+
+    // 启动进度反馈
+    progressReporter.startBatchProcessing(toProcess.size());
+
+    // 检查内存压力，自适应调整批量大小
+    int batchSize = calculateOptimalBatchSize(toProcess.size());
+    if (batchSize < toProcess.size()) {
+      LOGGER.info("Memory pressure detected, processing in batches of {}", batchSize);
+      processBatchesWithMemoryManagement(toProcess, batchSize);
+      return;
+    }
+
+    int successCount = 0;
+    int failureCount = 0;
+    List<PendingAIRecognition> failedRecognitions = new ArrayList<>();
+
+    try {
+      // 创建临时剧集对象用于批量AI识别
+      List<TvShowEpisode> tempEpisodes = createTempEpisodesForAI(toProcess);
+
+      // 调用批量AI识别服务，带重试机制
+      BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
+      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
+          callBatchAIWithRetry(batchService, tempEpisodes, 3);
+
+      // 处理批量AI识别的结果
+      for (int i = 0; i < toProcess.size(); i++) {
+        PendingAIRecognition pending = toProcess.get(i);
+        TvShowEpisode tempEpisode = tempEpisodes.get(i);
+
+        // 更新进度：正在处理文件
+        progressReporter.updateProgress(pending.relativePath, "Processing AI Result");
+
+        try {
+          String episodeId = tempEpisode.getDbId().toString();
+          TvShowEpisodeAndSeasonParser.EpisodeMatchingResult aiResult = results.get(episodeId);
+
+          if (aiResult != null && aiResult.season > 0 && !aiResult.episodes.isEmpty()) {
+            // AI识别成功，应用结果到实际的剧集处理
+            progressReporter.updateProgress(pending.relativePath, "Applying AI Result");
+            applyAIResultToEpisode(pending.tvShow, pending.relativePath, aiResult, pending.videoFile);
+            progressReporter.fileCompleted(pending.relativePath, true);
+            successCount++;
+          } else {
+            // AI识别失败，记录失败的文件
+            failedRecognitions.add(pending);
+            progressReporter.fileCompleted(pending.relativePath, false);
+            failureCount++;
+          }
+        } catch (Exception e) {
+          LOGGER.error("Failed to apply AI result for {}: {}", pending.relativePath, e.getMessage(), e);
+          failedRecognitions.add(pending);
+          progressReporter.fileCompleted(pending.relativePath, false);
+          failureCount++;
+        }
+      }
+
+    } catch (Exception e) {
+      LOGGER.error("Batch AI recognition service failed: {}", e.getMessage(), e);
+
+      // 如果批量服务完全失败，所有文件都算失败
+      failedRecognitions.addAll(toProcess);
+      failureCount = toProcess.size();
+    }
+
+    // 记录处理结果
+    LOGGER.info("Batch AI recognition completed: {} successful, {} failed", successCount, failureCount);
+
+    // 完成进度反馈
+    progressReporter.batchCompleted();
+
+    // 发送最终报告消息
+    String finalReport = progressReporter.getFinalReport();
+    MessageManager.getInstance().pushMessage(
+        new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), finalReport));
+
+    // 发送处理结果消息
+    if (successCount > 0) {
+      String successMsg = String.format("批量AI识别完成: 成功识别 %d 个文件", successCount);
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, "批量AI识别", successMsg));
+    }
+
+    if (failureCount > 0) {
+      String failureMsg = String.format("批量AI识别: %d 个文件识别失败", failureCount);
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.WARN, "批量AI识别", failureMsg));
+
+      // 对失败的文件进行回退处理
+      handleFailedAIRecognitions(failedRecognitions);
+    }
+  }
+
+  /**
+   * 为批量AI识别创建临时剧集对象
+   */
+  private List<TvShowEpisode> createTempEpisodesForAI(List<PendingAIRecognition> pendingList) {
+    List<TvShowEpisode> tempEpisodes = new ArrayList<>();
+
+    for (PendingAIRecognition pending : pendingList) {
+      TvShowEpisode tempEpisode = new TvShowEpisode();
+      tempEpisode.setTvShow(pending.tvShow);
+      tempEpisode.setPath(pending.videoFile.getPath());
+
+      // 确保正确设置媒体文件，BatchChatGPTEpisodeRecognitionService依赖getMainFile()
+      tempEpisode.addToMediaFiles(pending.videoFile);
+
+      // 验证主文件设置是否正确
+      if (tempEpisode.getMainFile() == null) {
+        LOGGER.warn("Main file not set correctly for: {}", pending.relativePath);
+        // 手动设置标题作为备用
+        tempEpisode.setTitle(pending.relativePath);
+      }
+
+      // 使用确定性的UUID生成，基于唯一ID
+      java.util.UUID deterministicId = java.util.UUID.nameUUIDFromBytes(pending.uniqueId.getBytes());
+      tempEpisode.setDbId(deterministicId);
+
+      tempEpisodes.add(tempEpisode);
+    }
+
+    return tempEpisodes;
+  }
+
+  /**
+   * 计算最优批量大小，基于内存压力
+   */
+  private int calculateOptimalBatchSize(int totalFiles) {
+    Runtime runtime = Runtime.getRuntime();
+    long maxMemory = runtime.maxMemory();
+    long totalMemory = runtime.totalMemory();
+    long freeMemory = runtime.freeMemory();
+    long usedMemory = totalMemory - freeMemory;
+
+    // 计算内存使用率
+    double memoryUsageRatio = (double) usedMemory / maxMemory;
+
+    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={:.1f}%",
+                usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
+                maxMemory / 1024 / 1024, memoryUsageRatio * 100);
+
+    // 根据内存压力调整批量大小
+    if (memoryUsageRatio > 0.8) {
+      // 高内存压力：小批量处理
+      return Math.min(totalFiles, 10);
+    } else if (memoryUsageRatio > 0.6) {
+      // 中等内存压力：中等批量
+      return Math.min(totalFiles, 25);
+    } else {
+      // 低内存压力：正常批量处理
+      return totalFiles;
+    }
+  }
+
+  /**
+   * 分批处理，带内存管理
+   */
+  private void processBatchesWithMemoryManagement(List<PendingAIRecognition> allFiles, int batchSize) {
+    int totalBatches = (int) Math.ceil((double) allFiles.size() / batchSize);
+    int successCount = 0;
+    int failureCount = 0;
+    List<PendingAIRecognition> allFailedRecognitions = new ArrayList<>();
+
+    for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      int startIndex = batchIndex * batchSize;
+      int endIndex = Math.min(startIndex + batchSize, allFiles.size());
+      List<PendingAIRecognition> batch = allFiles.subList(startIndex, endIndex);
+
+      LOGGER.info("Processing batch {}/{}: {} files", batchIndex + 1, totalBatches, batch.size());
+
+      // 在每个批次前进行垃圾回收，释放内存
+      if (batchIndex > 0) {
+        System.gc();
+        try {
+          Thread.sleep(100); // 给GC一些时间
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+
+      // 处理当前批次
+      int[] batchResults = processSingleBatch(batch);
+      successCount += batchResults[0];
+      failureCount += batchResults[1];
+
+      // 收集失败的识别
+      // 这里需要从batch中筛选失败的项目，简化处理
+    }
+
+    LOGGER.info("Batch processing completed: {} successful, {} failed", successCount, failureCount);
+
+    // 记录性能指标（在分批处理中会单独记录）
+
+    // 发送处理结果消息
+    if (successCount > 0) {
+      String successMsg = String.format(TmmResourceBundle.getString("ai.batch.recognition.completed"), successCount);
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), successMsg));
+    }
+
+    if (failureCount > 0) {
+      String failureMsg = String.format(TmmResourceBundle.getString("ai.batch.recognition.failed"), failureCount);
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.WARN, TmmResourceBundle.getString("ai.batch.recognition"), failureMsg));
+    }
+  }
+
+  /**
+   * 处理单个批次
+   * @return [成功数量, 失败数量]
+   */
+  private int[] processSingleBatch(List<PendingAIRecognition> batch) {
+    int successCount = 0;
+    int failureCount = 0;
+
+    try {
+      // 创建临时剧集对象用于批量AI识别
+      List<TvShowEpisode> tempEpisodes = createTempEpisodesForAI(batch);
+
+      // 调用批量AI识别服务
+      BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
+      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
+          callBatchAIWithRetry(batchService, tempEpisodes, 3);
+
+      // 处理批量AI识别的结果
+      for (int i = 0; i < batch.size(); i++) {
+        PendingAIRecognition pending = batch.get(i);
+        TvShowEpisode tempEpisode = tempEpisodes.get(i);
+
+        try {
+          String episodeId = tempEpisode.getDbId().toString();
+          TvShowEpisodeAndSeasonParser.EpisodeMatchingResult aiResult = results.get(episodeId);
+
+          if (aiResult != null && aiResult.season > 0 && !aiResult.episodes.isEmpty()) {
+            // AI识别成功，应用结果到实际的剧集处理
+            applyAIResultToEpisode(pending.tvShow, pending.relativePath, aiResult, pending.videoFile);
+            successCount++;
+          } else {
+            // AI识别失败
+            failureCount++;
+          }
+        } catch (Exception e) {
+          LOGGER.error("Failed to apply AI result for {}: {}", pending.relativePath, e.getMessage(), e);
+          failureCount++;
+        }
+      }
+
+    } catch (Exception e) {
+      LOGGER.error("Batch processing failed: {}", e.getMessage(), e);
+      failureCount = batch.size(); // 整个批次失败
+    }
+
+    return new int[]{successCount, failureCount};
+  }
+
+  /**
+   * 带重试机制的批量AI调用
+   */
+  private Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> callBatchAIWithRetry(
+      BatchChatGPTEpisodeRecognitionService batchService,
+      List<TvShowEpisode> tempEpisodes,
+      int maxRetries) {
+
+    Exception lastException = null;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        LOGGER.debug("Batch AI recognition attempt {}/{}", attempt, maxRetries);
+
+        Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
+            batchService.batchRecognizeEpisodes(tempEpisodes);
+
+        if (results != null && !results.isEmpty()) {
+          LOGGER.info("Batch AI recognition successful on attempt {}", attempt);
+          return results;
+        } else {
+          LOGGER.warn("Batch AI recognition returned empty results on attempt {}", attempt);
+        }
+
+      } catch (Exception e) {
+        lastException = e;
+
+        // 分析异常类型，决定是否重试
+        boolean shouldRetry = shouldRetryOnException(e);
+        if (!shouldRetry) {
+          LOGGER.error("Non-retryable error occurred: {}", e.getMessage());
+          break;
+        }
+
+        LOGGER.warn("Batch AI recognition failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+
+        if (attempt < maxRetries) {
+          // 根据异常类型调整重试延迟
+          long delayMs = calculateRetryDelay(e, attempt);
+          try {
+            LOGGER.debug("Retrying after {}ms delay", delayMs);
+            Thread.sleep(delayMs);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry delay interrupted");
+            break;
+          }
+        }
+      }
+    }
+
+    // 所有重试都失败
+    LOGGER.error("Batch AI recognition failed after {} attempts", maxRetries, lastException);
+    return new java.util.HashMap<>(); // 返回空结果
+  }
+
+  /**
+   * 判断异常是否应该重试
+   */
+  private boolean shouldRetryOnException(Exception e) {
+    String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+    String exceptionType = e.getClass().getSimpleName().toLowerCase();
+
+    // 网络相关异常，应该重试
+    if (exceptionType.contains("timeout") ||
+        exceptionType.contains("connect") ||
+        exceptionType.contains("socket") ||
+        errorMessage.contains("timeout") ||
+        errorMessage.contains("connection") ||
+        errorMessage.contains("network")) {
+      return true;
+    }
+
+    // HTTP状态码相关的临时错误，应该重试
+    if (errorMessage.contains("500") || // 服务器内部错误
+        errorMessage.contains("502") || // 网关错误
+        errorMessage.contains("503") || // 服务不可用
+        errorMessage.contains("504") || // 网关超时
+        errorMessage.contains("429")) { // 请求过多
+      return true;
+    }
+
+    // 认证错误、权限错误等，不应该重试
+    if (errorMessage.contains("401") || // 未授权
+        errorMessage.contains("403") || // 禁止访问
+        errorMessage.contains("400") || // 请求错误
+        errorMessage.contains("invalid") ||
+        errorMessage.contains("unauthorized")) {
+      return false;
+    }
+
+    // 默认重试其他未知错误
+    return true;
+  }
+
+  /**
+   * 根据异常类型计算重试延迟
+   */
+  private long calculateRetryDelay(Exception e, int attempt) {
+    String errorMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+
+    // 基础指数退避延迟
+    long baseDelay = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+
+    // 根据异常类型调整延迟
+    if (errorMessage.contains("429") || errorMessage.contains("rate limit")) {
+      // 频率限制错误，使用更长的延迟
+      return baseDelay * 3;
+    } else if (errorMessage.contains("timeout")) {
+      // 超时错误，使用中等延迟
+      return baseDelay * 2;
+    } else {
+      // 其他错误，使用标准延迟
+      return baseDelay;
+    }
+  }
+
+  /**
+   * 处理AI识别失败的文件
+   */
+  private void handleFailedAIRecognitions(List<PendingAIRecognition> failedRecognitions) {
+    if (failedRecognitions.isEmpty()) {
+      return;
+    }
+
+    LOGGER.info("Handling {} failed AI recognitions with fallback processing", failedRecognitions.size());
+
+    for (PendingAIRecognition failed : failedRecognitions) {
+      try {
+        // 回退到传统解析结果，即使不完整也要创建剧集
+        TvShowEpisodeAndSeasonParser.EpisodeMatchingResult fallbackResult =
+            TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(failed.relativePath, failed.tvShow.getTitle());
+
+        // 创建剧集，即使没有季数和集数信息
+        TvShowEpisode episode = new TvShowEpisode();
+        episode.setTvShow(failed.tvShow);
+        episode.setPath(failed.videoFile.getPath());
+        episode.addToMediaFiles(failed.videoFile);
+
+        // 设置标题
+        String title = !fallbackResult.name.isEmpty() ?
+            TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(fallbackResult.name, failed.tvShow.getTitle()) :
+            TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(failed.videoFile.getFilename()), failed.tvShow.getTitle());
+        episode.setTitle(title);
+
+        // 如果有部分信息，设置季数和集数
+        if (fallbackResult.season > 0 && !fallbackResult.episodes.isEmpty()) {
+          episode.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, fallbackResult.season, fallbackResult.episodes.get(0)));
+        }
+
+        // 添加到电视剧
+        failed.tvShow.addEpisode(episode);
+
+        LOGGER.debug("Created fallback episode for: {}", failed.relativePath);
+
+      } catch (Exception e) {
+        LOGGER.error("Failed to create fallback episode for {}: {}", failed.relativePath, e.getMessage(), e);
+      }
+    }
+  }
+
+  /**
+   * 将AI识别结果应用到实际的剧集处理（带事务保护）
+   */
+  private void applyAIResultToEpisode(TvShow tvShow, String relativePath,
+                                     TvShowEpisodeAndSeasonParser.EpisodeMatchingResult aiResult,
+                                     MediaFile videoFile) {
+    try {
+      LOGGER.info("Applying AI result for {}: S{}E{}", relativePath, aiResult.season, aiResult.episodes.get(0));
+
+      // 检查是否已存在相同的剧集（避免重复添加）
+      List<TvShowEpisode> existingEpisodes = tvShow.getEpisode(aiResult.season, aiResult.episodes.get(0));
+      if (!existingEpisodes.isEmpty()) {
+        LOGGER.warn("Episode S{}E{} already exists for {}, skipping AI result application",
+                   aiResult.season, aiResult.episodes.get(0), tvShow.getTitle());
+        return;
+      }
+
+      // 创建真正的剧集对象
+      TvShowEpisode episode = new TvShowEpisode();
+      episode.setTvShow(tvShow);
+      episode.setPath(videoFile.getPath());
+
+      // 设置季数和集数
+      episode.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, aiResult.season, aiResult.episodes.get(0)));
+
+      // 设置标题
+      if (!aiResult.name.isEmpty()) {
+        episode.setTitle(TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(aiResult.name, tvShow.getTitle()));
+      } else {
+        episode.setTitle(TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(videoFile.getFilename()), tvShow.getTitle()));
+      }
+
+      // 添加媒体文件
+      episode.addToMediaFiles(videoFile);
+
+      // 事务性添加到电视剧（同步操作，确保数据一致性）
+      synchronized (tvShow) {
+        tvShow.addEpisode(episode);
+        // 立即保存到数据库，确保数据持久化
+        episode.saveToDb();
+      }
+
+      // 发送AI识别成功消息
+      String successMsg = String.format(TmmResourceBundle.getString("ai.recognition.success"),
+          FilenameUtils.getBaseName(videoFile.getFilename()), aiResult.season, aiResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.recognition"), successMsg));
+
+    } catch (Exception e) {
+      LOGGER.error("Failed to apply AI result for {}: {}", relativePath, e.getMessage(), e);
+
+      // 发送错误消息
+      String errorMsg = String.format(TmmResourceBundle.getString("ai.recognition.apply.failed"),
+          FilenameUtils.getBaseName(videoFile.getFilename()), e.getMessage());
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.ERROR, TmmResourceBundle.getString("ai.recognition"), errorMsg));
+    }
   }
 
   /**

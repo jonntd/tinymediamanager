@@ -227,10 +227,21 @@ public class BatchChatGPTTvShowRecognitionService {
     }
     
     /**
-     * 调用批量API
+     * 调用批量API（带重试机制）
      */
     private String callBatchAPI(String prompt) {
-        try {
+        return callBatchAPIWithRetry(prompt, 3);
+    }
+
+    /**
+     * 带重试机制的批量API调用
+     */
+    private String callBatchAPIWithRetry(String prompt, int maxRetries) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                LOGGER.debug("Batch TV show API call attempt {}/{}", attempt, maxRetries);
             String apiKey = settings.getOpenAiApiKey();
             String apiUrl = settings.getOpenAiApiUrl();
             String model = settings.getOpenAiModel();
@@ -254,40 +265,69 @@ public class BatchChatGPTTvShowRecognitionService {
             
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             
-            if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                LOGGER.info("=== Batch AI API Response ===");
-                LOGGER.info("Response status: {}", response.statusCode());
-                LOGGER.info("Response body: {}", responseBody);
+                if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+                    LOGGER.info("=== Batch AI API Response (Attempt {}) ===", attempt);
+                    LOGGER.info("Response status: {}", response.statusCode());
+                    LOGGER.info("Response body: {}", responseBody);
 
-                // 解析响应
-                int contentStart = responseBody.indexOf("\"content\":\"");
-                if (contentStart != -1) {
-                    contentStart += "\"content\":\"".length();
-                    int contentEnd = responseBody.indexOf('"', contentStart);
-                    if (contentEnd != -1) {
-                        String content = responseBody.substring(contentStart, contentEnd)
-                            .replace("\\\"", "\"")
-                            .replace("\\n", "\n")
-                            .trim();
-                        LOGGER.info("=== Batch AI Recognition Result ===");
-                        LOGGER.info("Raw extracted content: '{}'", content);
-                        LOGGER.info("Content length: {} characters", content.length());
-                        return content;
+                    // 解析响应
+                    int contentStart = responseBody.indexOf("\"content\":\"");
+                    if (contentStart != -1) {
+                        contentStart += "\"content\":\"".length();
+                        int contentEnd = responseBody.indexOf('"', contentStart);
+                        if (contentEnd != -1) {
+                            String content = responseBody.substring(contentStart, contentEnd)
+                                .replace("\\\"", "\"")
+                                .replace("\\n", "\n")
+                                .trim();
+
+                            if (content != null && !content.isEmpty()) {
+                                LOGGER.info("=== Batch AI Recognition Result (Attempt {}) ===", attempt);
+                                LOGGER.info("Raw extracted content: '{}'", content);
+                                LOGGER.info("Content length: {} characters", content.length());
+                                return content;
+                            } else {
+                                LOGGER.warn("Batch TV show API returned empty content on attempt {}/{}", attempt, maxRetries);
+                            }
+                        }
+                    }
+                    LOGGER.warn("=== Batch AI Response Parse Failed (Attempt {}) ===", attempt);
+                    LOGGER.warn("Could not find content in response: {}", responseBody);
+                } else {
+                    LOGGER.warn("=== Batch AI API Request Failed (Attempt {}/{}) ===", attempt, maxRetries);
+                    LOGGER.warn("Status code: {}", response.statusCode());
+                    LOGGER.warn("Response body: {}", response.body());
+                }
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    LOGGER.info("Retrying batch TV show API after {}ms delay", delayMs);
+                    Thread.sleep(delayMs);
+                }
+
+            } catch (Exception e) {
+                lastException = e;
+                LOGGER.warn("Batch TV show API failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    try {
+                        LOGGER.info("Retrying batch TV show API after {}ms delay", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        LOGGER.warn("Batch TV show API retry delay interrupted");
+                        break;
                     }
                 }
-                LOGGER.error("=== Batch AI Response Parse Failed ===");
-                LOGGER.error("Could not find content in response: {}", responseBody);
-            } else {
-                LOGGER.error("=== Batch AI API Request Failed ===");
-                LOGGER.error("Status code: {}", response.statusCode());
-                LOGGER.error("Response body: {}", response.body());
             }
-            
-        } catch (Exception e) {
-            LOGGER.error("Error calling batch API: {}", e.getMessage());
         }
-        
+
+        // 所有重试都失败
+        LOGGER.error("Batch TV show API failed after {} attempts", maxRetries, lastException);
         return null;
     }
     

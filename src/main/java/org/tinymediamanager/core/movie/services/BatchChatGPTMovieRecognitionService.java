@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -190,11 +191,18 @@ public class BatchChatGPTMovieRecognitionService {
      */
     private Map<String, String> processBatchWithRetry(List<Movie> batch, int maxRetries) {
         Map<String, String> results = new HashMap<>();
-        
+
         if (batch == null || batch.isEmpty()) {
             return results;
         }
-        
+
+        // 检查API频率限制
+        AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+        if (!rateLimiter.requestPermission("BatchChatGPTMovieRecognition")) {
+            LOGGER.warn("API rate limit exceeded, skipping batch of {} movies", batch.size());
+            return results;
+        }
+
         int retryCount = 0;
         boolean success = false;
         
@@ -273,20 +281,13 @@ public class BatchChatGPTMovieRecognitionService {
             LOGGER.error("Batch processing failed after {} retries for {} movies", 
                         maxRetries, batch.size());
             
-            // 回退到逐个识别
-            LOGGER.info("Falling back to individual recognition for failed batch");
+            // 批量失败时，不再回退到逐个识别，避免频繁API调用
+            LOGGER.warn("Batch processing failed completely for {} movies, skipping individual fallback to prevent API spam", batch.size());
+            LOGGER.warn("Consider checking API connectivity or reducing batch size");
+
+            // 记录失败的电影信息用于调试
             for (Movie movie : batch) {
-                try {
-                    ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
-                    String title = individualService.recognizeMovieTitle(movie);
-                    if (title != null) {
-                        results.put(movie.getDbId().toString(), title);
-                        String cacheKey = generateCacheKey(movie);
-                        recognitionCache.put(cacheKey, title);
-                    }
-                } catch (Exception ex) {
-                    LOGGER.error("Individual recognition failed for movie {}: {}", movie.getTitle(), ex.getMessage());
-                }
+                LOGGER.debug("Failed to recognize movie: {} ({})", movie.getTitle(), movie.getPath());
             }
         }
         
@@ -317,10 +318,21 @@ public class BatchChatGPTMovieRecognitionService {
     }
     
     /**
-     * 调用ChatGPT批量API
+     * 调用ChatGPT批量API（带重试机制）
      */
     private String callChatGPTBatchAPI(String batchRequest) {
-        try {
+        return callChatGPTBatchAPIWithRetry(batchRequest, 3);
+    }
+
+    /**
+     * 带重试机制的批量API调用
+     */
+    private String callChatGPTBatchAPIWithRetry(String batchRequest, int maxRetries) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                LOGGER.debug("Batch movie API call attempt {}/{}", attempt, maxRetries);
             String apiKey = settings.getOpenAiApiKey();
             String apiUrl = settings.getOpenAiApiUrl();
             String model = settings.getOpenAiModel();
@@ -381,19 +393,50 @@ public class BatchChatGPTMovieRecognitionService {
             // 发送请求并获取响应
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             
-            if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                LOGGER.debug("Batch API response: {} characters", responseBody.length());
-                LOGGER.info("Batch API response content:\n{}", responseBody);
-                return responseBody;
-            } else {
-                LOGGER.error("Batch API request failed with status: {}, response: {}", response.statusCode(), response.body());
+                if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+                    LOGGER.debug("Batch movie API response (Attempt {}): {} characters", attempt, responseBody.length());
+                    LOGGER.info("Batch movie API response content:\n{}", responseBody);
+
+                    if (responseBody != null && !responseBody.trim().isEmpty()) {
+                        LOGGER.info("Batch movie API successful on attempt {}", attempt);
+                        return responseBody;
+                    } else {
+                        LOGGER.warn("Batch movie API returned empty response on attempt {}/{}", attempt, maxRetries);
+                    }
+                } else {
+                    LOGGER.warn("Batch movie API request failed with status: {} on attempt {}/{}, response: {}",
+                               response.statusCode(), attempt, maxRetries, response.body());
+                }
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    LOGGER.info("Retrying batch movie API after {}ms delay", delayMs);
+                    Thread.sleep(delayMs);
+                }
+
+            } catch (Exception e) {
+                lastException = e;
+                LOGGER.warn("Batch movie API failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    try {
+                        LOGGER.info("Retrying batch movie API after {}ms delay", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        LOGGER.warn("Batch movie API retry delay interrupted");
+                        break;
+                    }
+                }
             }
-            
-        } catch (Exception e) {
-            LOGGER.error("Batch ChatGPT API call failed: {}", e.getMessage());
         }
-        
+
+        // 所有重试都失败
+        LOGGER.error("Batch movie API failed after {} attempts", maxRetries, lastException);
         return null;
     }
     

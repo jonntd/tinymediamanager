@@ -31,43 +31,82 @@ public class ChatGPTEpisodeRecognitionService {
     private static final Pattern SEASON_EPISODE_PATTERN = Pattern.compile("(\\d{1,3})\\s+(\\d{1,4})");
     
     /**
-     * 使用AI识别剧集文件名，提取季数和集数
+     * 使用AI识别剧集文件名，提取季数和集数（带重试机制）
      *
      * @param episodeFilename 剧集文件名
      * @param tvShowTitle 电视剧标题（用于上下文）
      * @return EpisodeMatchingResult 包含识别结果
      */
     public static EpisodeMatchingResult recognizeEpisode(String episodeFilename, String tvShowTitle) {
-        LOGGER.info("=== Starting Episode AI Recognition ===");
-        LOGGER.info("Episode filename: {}", episodeFilename);
-        LOGGER.info("TV Show title: {}", tvShowTitle);
+        return recognizeEpisodeWithRetry(episodeFilename, tvShowTitle, 3);
+    }
 
-        // 处理路径，提取倒数三层目录信息（参考电影AI识别）
-        String pathContext = extractPathContext(episodeFilename);
-        LOGGER.info("=== Path Processing ===");
-        LOGGER.info("Full episode path: {}", episodeFilename);
-        LOGGER.info("Extracted directory context: {}", pathContext);
-        
-        try {
-            // 调用AI API识别剧集信息，使用路径上下文
-            String recognizedInfo = callChatGPTAPI(pathContext, tvShowTitle);
-            
-            if (recognizedInfo != null && !recognizedInfo.trim().isEmpty()) {
-                // 解析AI返回的季数和集数
-                EpisodeMatchingResult result = parseAIResponse(recognizedInfo);
-                
-                LOGGER.info("=== Episode AI Recognition Complete ===");
-                LOGGER.info("Raw AI response: '{}'", recognizedInfo);
-                LOGGER.info("Parsed result - Season: {}, Episodes: {}", result.season, result.episodes);
-                
-                return result;
+    /**
+     * 带重试机制的剧集识别
+     */
+    private static EpisodeMatchingResult recognizeEpisodeWithRetry(String episodeFilename, String tvShowTitle, int maxRetries) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                LOGGER.info("=== Starting Episode AI Recognition (Attempt {}/{}) ===", attempt, maxRetries);
+                LOGGER.info("Episode filename: {}", episodeFilename);
+                LOGGER.info("TV Show title: {}", tvShowTitle);
+
+                // 处理路径，提取倒数三层目录信息（参考电影AI识别）
+                String pathContext = extractPathContext(episodeFilename);
+                LOGGER.info("=== Path Processing ===");
+                LOGGER.info("Full episode path: {}", episodeFilename);
+                LOGGER.info("Extracted directory context: {}", pathContext);
+
+                // 调用AI API识别剧集信息，使用路径上下文
+                String recognizedInfo = callChatGPTAPI(pathContext, tvShowTitle);
+
+                if (recognizedInfo != null && !recognizedInfo.trim().isEmpty()) {
+                    // 解析AI返回的季数和集数
+                    EpisodeMatchingResult result = parseAIResponse(recognizedInfo);
+
+                    // 验证结果是否有效
+                    if (result != null && (result.season > 0 || !result.episodes.isEmpty())) {
+                        LOGGER.info("=== Episode AI Recognition Complete (Attempt {}) ===", attempt);
+                        LOGGER.info("Raw AI response: '{}'", recognizedInfo);
+                        LOGGER.info("Parsed result - Season: {}, Episodes: {}", result.season, result.episodes);
+                        return result;
+                    } else {
+                        LOGGER.warn("AI returned invalid result on attempt {}/{}", attempt, maxRetries);
+                    }
+                } else {
+                    LOGGER.warn("AI returned empty result on attempt {}/{}", attempt, maxRetries);
+                }
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    LOGGER.info("Retrying episode recognition after {}ms delay", delayMs);
+                    Thread.sleep(delayMs);
+                }
+
+            } catch (Exception e) {
+                lastException = e;
+                LOGGER.warn("Episode AI recognition failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    try {
+                        LOGGER.info("Retrying episode recognition after {}ms delay", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        LOGGER.warn("Episode recognition retry delay interrupted");
+                        break;
+                    }
+                }
             }
-            
-        } catch (Exception e) {
-            LOGGER.error("Episode AI recognition failed: {}", e.getMessage(), e);
         }
-        
-        // 返回空结果表示识别失败
+
+        // 所有重试都失败
+        LOGGER.error("Episode AI recognition failed after {} attempts", maxRetries, lastException);
         EpisodeMatchingResult emptyResult = new EpisodeMatchingResult();
         LOGGER.warn("Episode AI recognition failed, returning empty result");
         return emptyResult;

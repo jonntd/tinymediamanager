@@ -56,39 +56,97 @@ public class ChatGPTTvShowRecognitionService {
     }
     
     /**
-     * 识别电视剧标题
+     * 识别电视剧标题（带重试机制）
      * @param tvShow 待识别的电视剧
      * @return 识别出的标题，如果失败返回null
      */
     public String recognizeTvShowTitle(TvShow tvShow) {
-        LOGGER.info("=== Starting TV Show AI Recognition ===");
-        LOGGER.info("TV Show title: {}", tvShow.getTitle());
-        LOGGER.info("TV Show year: {}", tvShow.getYear());
-        LOGGER.info("TV Show DB ID: {}", tvShow.getDbId());
+        return recognizeTvShowTitleWithRetry(tvShow, 3);
+    }
+
+    /**
+     * 带重试机制的电视剧标题识别
+     * @param tvShow 待识别的电视剧
+     * @param maxRetries 最大重试次数
+     * @return 识别出的标题，如果失败返回null
+     */
+    private String recognizeTvShowTitleWithRetry(TvShow tvShow, int maxRetries) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                LOGGER.info("=== Starting TV Show AI Recognition (Attempt {}/{}) ===", attempt, maxRetries);
+                LOGGER.info("TV Show title: {}", tvShow.getTitle());
+                LOGGER.info("TV Show year: {}", tvShow.getYear());
+                LOGGER.info("TV Show DB ID: {}", tvShow.getDbId());
+
+                String result = performSingleRecognition(tvShow);
+
+                if (result != null && !result.trim().isEmpty()) {
+                    LOGGER.info("AI recognition successful on attempt {}", attempt);
+                    return result;
+                } else {
+                    LOGGER.warn("AI recognition returned empty result on attempt {}/{}", attempt, maxRetries);
+
+                    if (attempt < maxRetries) {
+                        // 指数退避重试
+                        long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                        LOGGER.info("Retrying after {}ms delay", delayMs);
+                        Thread.sleep(delayMs);
+                    }
+                }
+
+            } catch (Exception e) {
+                lastException = e;
+                LOGGER.warn("AI recognition failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+
+                if (attempt < maxRetries) {
+                    // 指数退避重试
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    try {
+                        LOGGER.info("Retrying after {}ms delay", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        LOGGER.warn("Retry delay interrupted");
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 所有重试都失败
+        LOGGER.error("AI recognition failed after {} attempts", maxRetries, lastException);
+        LOGGER.info("=== TV Show AI Recognition Failed ===");
+        return null;
+    }
+
+    /**
+     * 执行单次AI识别
+     */
+    private String performSingleRecognition(TvShow tvShow) {
 
         if (httpClient == null) {
             LOGGER.warn("HTTP client not initialized, cannot perform TV show recognition");
+            throw new RuntimeException("HTTP client not initialized");
+        }
+        // 获取电视剧的主要媒体文件路径
+        String tvShowPath = extractTvShowPath(tvShow);
+        if (tvShowPath == null || tvShowPath.trim().isEmpty()) {
+            LOGGER.warn("No valid path found for TV show: {}", tvShow.getTitle());
             return null;
         }
 
-        try {
-            // 获取电视剧的主要媒体文件路径
-            String tvShowPath = extractTvShowPath(tvShow);
-            if (tvShowPath == null || tvShowPath.trim().isEmpty()) {
-                LOGGER.warn("No valid path found for TV show: {}", tvShow.getTitle());
-                return null;
-            }
+        // 提取路径倒数三层目录名称（按主人要求）
+        String pathContext = extractLastThreeDirectoryNames(tvShowPath);
+        if (pathContext == null || pathContext.trim().isEmpty()) {
+            LOGGER.warn("Cannot extract directory names from path: {}", tvShowPath);
+            return null;
+        }
 
-            // 提取路径倒数三层目录名称（按主人要求）
-            String pathContext = extractLastThreeDirectoryNames(tvShowPath);
-            if (pathContext == null || pathContext.trim().isEmpty()) {
-                LOGGER.warn("Cannot extract directory names from path: {}", tvShowPath);
-                return null;
-            }
-
-            LOGGER.info("=== Path Processing ===");
-            LOGGER.info("Full TV show path: {}", tvShowPath);
-            LOGGER.info("Extracted directory context: {}", pathContext);
+        LOGGER.info("=== Path Processing ===");
+        LOGGER.info("Full TV show path: {}", tvShowPath);
+        LOGGER.info("Extracted directory context: {}", pathContext);
 
             // 检查缓存，避免重复识别
             String cacheKey = pathContext;
@@ -126,14 +184,8 @@ public class ChatGPTTvShowRecognitionService {
                 return cleanedTitle;
             } else {
                 LOGGER.warn("AI returned empty or null result");
+                return null;
             }
-
-        } catch (Exception e) {
-            LOGGER.error("Error during TV show recognition: {}", e.getMessage(), e);
-        }
-
-        LOGGER.info("=== TV Show AI Recognition Failed ===");
-        return null;
     }
     
     /**

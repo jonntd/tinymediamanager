@@ -1,7 +1,9 @@
 package org.tinymediamanager.core.tvshow.tasks;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
@@ -17,6 +19,9 @@ import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
@@ -72,14 +77,25 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
         int failureCount = 0;
         int skippedCount = 0;
         
+        // 使用真正的批量处理，而不是一条一条提交任务
+        LOGGER.info("Starting batch episode AI recognition for {} episodes", episodesToProcess.size());
+
+        // 分组处理，每批20个剧集
+        int batchSize = 20;
+        List<List<TvShowEpisode>> batches = new ArrayList<>();
+        for (int i = 0; i < episodesToProcess.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, episodesToProcess.size());
+            batches.add(episodesToProcess.subList(i, endIndex));
+        }
+
         initThreadPool(1, "episodeAI");
-        
-        for (TvShowEpisode episode : episodesToProcess) {
+
+        for (List<TvShowEpisode> batch : batches) {
             if (cancel) {
                 break;
             }
-            
-            submitTask(new EpisodeAiRecognitionTask(episode));
+
+            submitTask(new BatchEpisodeAiRecognitionTask(batch));
         }
         
         waitForCompletionOrCancel();
@@ -168,7 +184,111 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
     }
     
     /**
-     * 单个剧集AI识别任务
+     * 批量剧集AI识别任务（真正的批量处理）
+     */
+    private class BatchEpisodeAiRecognitionTask implements Runnable {
+        private final List<TvShowEpisode> episodes;
+
+        public BatchEpisodeAiRecognitionTask(List<TvShowEpisode> episodes) {
+            this.episodes = episodes;
+        }
+
+        @Override
+        public void run() {
+            LOGGER.info("Processing batch of {} episodes", episodes.size());
+
+            // 构建批量请求
+            Map<String, String> batchRequest = new HashMap<>();
+            Map<String, TvShowEpisode> episodeMap = new HashMap<>();
+
+            for (TvShowEpisode episode : episodes) {
+                String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+                String tvShowTitle = episode.getTvShow() != null ? episode.getTvShow().getTitle() : "";
+                String key = episode.getDbId().toString();
+
+                batchRequest.put(key, filename + "|" + tvShowTitle);
+                episodeMap.put(key, episode);
+            }
+
+            // 调用真正的批量AI识别服务
+            try {
+                LOGGER.info("Using true batch AI recognition for {} episodes", episodes.size());
+
+                BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
+                Map<String, EpisodeMatchingResult> batchResults = batchService.batchRecognizeEpisodes(episodes);
+
+                // 应用批量识别结果
+                for (TvShowEpisode episode : episodes) {
+                    if (cancel) {
+                        break;
+                    }
+
+                    String episodeId = episode.getDbId().toString();
+                    EpisodeMatchingResult result = batchResults.get(episodeId);
+
+                    if (result != null && !result.episodes.isEmpty()) {
+                        int season = result.season > 0 ? result.season : 1;
+                        int episodeNum = result.episodes.get(0);
+
+                        // 更新剧集信息
+                        MediaEpisodeNumber episodeNumber = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, season, episodeNum);
+                        episode.setEpisode(episodeNumber);
+                        episode.saveToDb();
+
+                        String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+                        LOGGER.info("Batch AI recognition result: S{}E{} for file: {}", season, episodeNum, filename);
+
+                        // 发送成功消息
+                        String successMsg = String.format("批量剧集AI识别: %s → S%02dE%02d", filename, season, episodeNum);
+                        MessageManager.getInstance().pushMessage(
+                            new Message(MessageLevel.INFO, "批量剧集AI识别", successMsg));
+                    } else {
+                        String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+                        LOGGER.warn("Batch AI recognition failed for episode: {}", filename);
+                    }
+                }
+
+            } catch (Exception e) {
+                LOGGER.error("Batch episode AI recognition failed: {}", e.getMessage());
+
+                // 批量失败时，不再回退到逐个处理，避免频繁API调用
+                LOGGER.warn("Batch processing failed, skipping individual fallback to prevent API spam");
+            }
+        }
+
+        private void processEpisodeIndividually(TvShowEpisode episode) {
+            // 原来的单个处理逻辑
+            String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+            String tvShowTitle = episode.getTvShow() != null ? episode.getTvShow().getTitle() : "";
+
+            LOGGER.info("Processing episode: {} from {}", filename, tvShowTitle);
+
+            // 执行AI识别
+            EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(filename, tvShowTitle);
+
+            if (result != null && !result.episodes.isEmpty()) {
+                int season = result.season > 0 ? result.season : 1;
+                int episodeNum = result.episodes.get(0);
+
+                LOGGER.info("AI recognition result: S{}E{} for file: {}", season, episodeNum, filename);
+
+                // 更新剧集信息
+                MediaEpisodeNumber episodeNumber = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, season, episodeNum);
+                episode.setEpisode(episodeNumber);
+                episode.saveToDb();
+
+                // 发送成功消息
+                String successMsg = String.format("剧集AI识别: %s → S%02dE%02d", filename, season, episodeNum);
+                MessageManager.getInstance().pushMessage(
+                    new Message(MessageLevel.INFO, "剧集AI识别", successMsg));
+            } else {
+                LOGGER.warn("AI recognition failed for episode: {}", filename);
+            }
+        }
+    }
+
+    /**
+     * 单个剧集AI识别任务（保留兼容性）
      */
     private class EpisodeAiRecognitionTask implements Callable<Object> {
         private final TvShowEpisode episode;

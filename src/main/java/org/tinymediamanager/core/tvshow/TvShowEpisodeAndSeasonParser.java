@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -52,6 +53,278 @@ public class TvShowEpisodeAndSeasonParser {
 
   private static final Logger  LOGGER              = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
 
+  // 解析结果缓存，避免重复解析同一文件
+  private static final ConcurrentHashMap<String, CachedEpisodeResult> PARSING_CACHE = new ConcurrentHashMap<>();
+  private static final int MAX_CACHE_SIZE = 10000; // 最大缓存条目数
+  private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24小时TTL
+
+  // 缓存统计 - 使用原子操作保证线程安全
+  private static final java.util.concurrent.atomic.AtomicLong cacheHits = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong cacheMisses = new java.util.concurrent.atomic.AtomicLong(0);
+
+  /**
+   * 带TTL的缓存条目
+   */
+  private static class CachedEpisodeResult {
+    final EpisodeMatchingResult result;
+    final long timestamp;
+
+    CachedEpisodeResult(EpisodeMatchingResult result) {
+      this.result = result;
+      this.timestamp = System.currentTimeMillis();
+    }
+
+    boolean isExpired() {
+      return System.currentTimeMillis() - timestamp > CACHE_TTL_MS;
+    }
+  }
+
+  /**
+   * 生成安全的缓存键，避免冲突
+   */
+  private static String generateCacheKey(String prefix, String filename, String showname) {
+    try {
+      // 标准化文件名，处理特殊字符和编码问题
+      String normalizedFilename = normalizeForCache(filename);
+      String normalizedShowname = showname != null ? normalizeForCache(showname) : "null";
+
+      // 使用SHA-256哈希生成固定长度的安全键
+      String combined = prefix + ":" + normalizedFilename + ":" + normalizedShowname;
+      java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(combined.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+      // 转换为十六进制字符串
+      StringBuilder hexString = new StringBuilder();
+      for (byte b : hash) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) {
+          hexString.append('0');
+        }
+        hexString.append(hex);
+      }
+
+      return prefix + "_" + hexString.toString();
+
+    } catch (Exception e) {
+      // 降级到简单的Base64编码
+      LOGGER.warn("Failed to generate SHA-256 cache key, falling back to Base64: {}", e.getMessage());
+      String safeFilename = java.util.Base64.getEncoder().encodeToString(filename.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      String safeShowname = showname != null ? java.util.Base64.getEncoder().encodeToString(showname.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : "null";
+      return prefix + ":" + safeFilename + ":" + safeShowname;
+    }
+  }
+
+  /**
+   * 标准化字符串用于缓存键生成
+   */
+  private static String normalizeForCache(String input) {
+    if (input == null || input.isEmpty()) {
+      return "";
+    }
+
+    // 移除控制字符和不可见字符
+    String normalized = input.replaceAll("[\\p{Cntrl}\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}]", "");
+
+    // 标准化Unicode字符（NFC标准化）
+    normalized = java.text.Normalizer.normalize(normalized, java.text.Normalizer.Form.NFC);
+
+    // 限制长度，避免过长的键
+    if (normalized.length() > 500) {
+      normalized = normalized.substring(0, 500);
+    }
+
+    return normalized;
+  }
+
+  /**
+   * 清理解析缓存，防止内存泄漏
+   */
+  public static void clearParsingCache() {
+    PARSING_CACHE.clear();
+    LOGGER.debug("Parsing cache cleared");
+  }
+
+  /**
+   * 获取缓存大小，用于监控
+   */
+  public static int getCacheSize() {
+    return PARSING_CACHE.size();
+  }
+
+  /**
+   * 获取缓存统计信息
+   */
+  public static String getCacheStatistics() {
+    long hits = cacheHits.get();
+    long misses = cacheMisses.get();
+    long total = hits + misses;
+    double hitRate = total > 0 ? (hits * 100.0 / total) : 0.0;
+    return String.format("Cache: %d entries, Hits: %d, Misses: %d, Hit rate: %.1f%%",
+                        PARSING_CACHE.size(), hits, misses, hitRate);
+  }
+
+  /**
+   * 重置缓存统计
+   */
+  public static void resetCacheStatistics() {
+    cacheHits.set(0);
+    cacheMisses.set(0);
+  }
+
+  /**
+   * 清理AI相关的缓存条目
+   */
+  public static void clearAICache() {
+    int removedCount = 0;
+    java.util.Iterator<java.util.Map.Entry<String, CachedEpisodeResult>> iterator = PARSING_CACHE.entrySet().iterator();
+
+    while (iterator.hasNext()) {
+      java.util.Map.Entry<String, CachedEpisodeResult> entry = iterator.next();
+      if (entry.getKey().startsWith("ai_") || entry.getKey().startsWith("hybrid_")) {
+        iterator.remove();
+        removedCount++;
+      }
+    }
+
+    LOGGER.info("Cleared {} AI-related cache entries", removedCount);
+  }
+
+  /**
+   * 智能AI调用决策器
+   */
+  private static class SmartAIDecisionMaker {
+    // 文件类型权重（基于历史成功率）
+    private static final java.util.Map<String, Double> FILE_TYPE_WEIGHTS = new java.util.HashMap<>();
+
+    static {
+      // 基于经验的文件类型AI成功率权重
+      FILE_TYPE_WEIGHTS.put("mkv", 0.9);   // 高成功率
+      FILE_TYPE_WEIGHTS.put("mp4", 0.85);
+      FILE_TYPE_WEIGHTS.put("avi", 0.8);
+      FILE_TYPE_WEIGHTS.put("wmv", 0.7);
+      FILE_TYPE_WEIGHTS.put("flv", 0.6);   // 低成功率
+    }
+
+    /**
+     * 基础AI资格检查
+     */
+    private static boolean isBasicAIEligible(String filename, String tvShowTitle) {
+      return TvShowEpisodeAndSeasonParser.shouldUseAI(filename, tvShowTitle);
+    }
+
+    /**
+     * 判断是否应该使用AI识别
+     */
+    static boolean shouldUseAI(String filename, String tvShowTitle, EpisodeMatchingResult traditionalResult) {
+      // 基础检查（调用原有的shouldUseAI方法）
+      if (!isBasicAIEligible(filename, tvShowTitle)) {
+        return false;
+      }
+
+      // 智能决策因子
+      double aiScore = calculateAIScore(filename, tvShowTitle, traditionalResult);
+
+      // 阈值：0.5以上才使用AI
+      boolean shouldUse = aiScore > 0.5;
+
+      LOGGER.debug("AI decision for {}: score={:.2f}, decision={}", filename, aiScore, shouldUse);
+      return shouldUse;
+    }
+
+    /**
+     * 计算AI调用评分
+     */
+    private static double calculateAIScore(String filename, String tvShowTitle, EpisodeMatchingResult traditionalResult) {
+      double score = 0.0;
+
+      // 因子1：文件类型权重 (30%)
+      String extension = getFileExtension(filename).toLowerCase();
+      double typeWeight = FILE_TYPE_WEIGHTS.getOrDefault(extension, 0.75); // 默认权重
+      score += typeWeight * 0.3;
+
+      // 因子2：传统解析失败程度 (40%)
+      double failureScore = calculateFailureScore(traditionalResult);
+      score += failureScore * 0.4;
+
+      // 因子3：文件名复杂度 (20%)
+      double complexityScore = calculateComplexityScore(filename);
+      score += complexityScore * 0.2;
+
+      // 因子4：剧集名称匹配度 (10%)
+      double titleMatchScore = calculateTitleMatchScore(filename, tvShowTitle);
+      score += titleMatchScore * 0.1;
+
+      return Math.min(1.0, Math.max(0.0, score)); // 限制在0-1范围
+    }
+
+    private static String getFileExtension(String filename) {
+      int lastDot = filename.lastIndexOf('.');
+      return lastDot > 0 ? filename.substring(lastDot + 1) : "";
+    }
+
+    private static double calculateFailureScore(EpisodeMatchingResult result) {
+      if (result.season > 0 && !result.episodes.isEmpty()) {
+        return 0.2; // 传统解析成功，AI价值较低
+      } else if (result.season > 0 || !result.episodes.isEmpty()) {
+        return 0.6; // 部分成功，AI可能有帮助
+      } else {
+        return 1.0; // 完全失败，AI价值最高
+      }
+    }
+
+    private static double calculateComplexityScore(String filename) {
+      // 文件名越复杂，AI识别价值越高
+      int specialChars = filename.replaceAll("[a-zA-Z0-9\\s]", "").length();
+      int totalLength = filename.length();
+
+      if (totalLength == 0) return 0.5;
+
+      double complexity = (double) specialChars / totalLength;
+      return Math.min(1.0, complexity * 2); // 特殊字符比例越高，复杂度越高
+    }
+
+    private static double calculateTitleMatchScore(String filename, String tvShowTitle) {
+      if (tvShowTitle == null || tvShowTitle.isEmpty()) {
+        return 0.5; // 无法判断，给中等分
+      }
+
+      String normalizedFilename = filename.toLowerCase();
+      String normalizedTitle = tvShowTitle.toLowerCase();
+
+      if (normalizedFilename.contains(normalizedTitle)) {
+        return 0.3; // 包含剧集名，传统解析可能足够
+      } else {
+        return 0.8; // 不包含剧集名，AI可能更有帮助
+      }
+    }
+  }
+
+  /**
+   * 检查并清理缓存，防止内存溢出
+   * 使用智能清理策略，只清理部分缓存而非全部
+   */
+  private static void checkAndCleanCache() {
+    if (PARSING_CACHE.size() > MAX_CACHE_SIZE) {
+      // 清理25%的缓存条目，而不是全部清空
+      int targetSize = (int) (MAX_CACHE_SIZE * 0.75);
+      int toRemove = PARSING_CACHE.size() - targetSize;
+
+      LOGGER.warn("Parsing cache size exceeded limit ({}), removing {} oldest entries",
+                  MAX_CACHE_SIZE, toRemove);
+
+      // 简单的清理策略：移除一些条目（在实际应用中可以实现LRU）
+      java.util.Iterator<String> iterator = PARSING_CACHE.keySet().iterator();
+      int removed = 0;
+      while (iterator.hasNext() && removed < toRemove) {
+        iterator.next();
+        iterator.remove();
+        removed++;
+      }
+
+      LOGGER.debug("Cache cleanup completed, current size: {}", PARSING_CACHE.size());
+    }
+  }
+
   // foo.yyyy.mm.dd.*
   private static final Pattern DATE_1              = Pattern.compile("([0-9]{4})[.-]([0-9]{2})[.-]([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
@@ -79,6 +352,20 @@ public class TvShowEpisodeAndSeasonParser {
   public static final Pattern  EPISODE_ONLY       = Pattern.compile("[\\s_.-]ep?[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
   private static final Pattern EPISODE_PATTERN    = Pattern.compile("[epx_-]+(\\d{1,4})", Pattern.CASE_INSENSITIVE);
   private static final Pattern EPISODE_PATTERN_2  = Pattern.compile("(?:episode|ep)[\\. _-]*(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+
+  // 中文剧集解析模式
+  private static final Pattern CHINESE_EPISODE_PATTERN = Pattern.compile("第(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_SEASON_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_SEASON_EPISODE_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季第(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
+
+  // 扩展的中文解析模式
+  private static final Pattern CHINESE_EPISODE_EXTENDED = Pattern.compile("(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_PART_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])部分?", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_CHAPTER_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])章", Pattern.CASE_INSENSITIVE);
+
+  // 特殊格式模式
+  private static final Pattern ROMAN_NUMERAL_PATTERN = Pattern.compile("([IVX]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern DOCUMENTARY_PATTERN = Pattern.compile("(\\d{1,2})(?:of|/)(\\d{1,2})", Pattern.CASE_INSENSITIVE);
   // (1/6) with normal or unicode slash!
   private static final Pattern EPISODE_PATTERN_NR = Pattern.compile("(\\d{1,2})[⧸/](\\d{1,2})", Pattern.CASE_INSENSITIVE);
   private static final Pattern ROMAN_PATTERN      = Pattern.compile("(part|pt)[\\._\\s]+([MDCLXVI]+)", Pattern.CASE_INSENSITIVE);
@@ -191,6 +478,231 @@ public class TvShowEpisodeAndSeasonParser {
   }
 
   /**
+   * 中文数字转阿拉伯数字
+   */
+  private static int chineseNumberToInt(String chineseNumber) {
+    if (chineseNumber.matches("\\d+")) {
+      return Integer.parseInt(chineseNumber);
+    }
+
+    switch (chineseNumber) {
+      case "一": return 1;
+      case "二": return 2;
+      case "三": return 3;
+      case "四": return 4;
+      case "五": return 5;
+      case "六": return 6;
+      case "七": return 7;
+      case "八": return 8;
+      case "九": return 9;
+      case "十": return 10;
+      default: return -1;
+    }
+  }
+
+  /**
+   * 罗马数字转阿拉伯数字
+   */
+  private static int romanToInt(String roman) {
+    if (roman == null || roman.isEmpty()) {
+      return -1;
+    }
+
+    roman = roman.toUpperCase();
+    switch (roman) {
+      case "I": return 1;
+      case "II": return 2;
+      case "III": return 3;
+      case "IV": return 4;
+      case "V": return 5;
+      case "VI": return 6;
+      case "VII": return 7;
+      case "VIII": return 8;
+      case "IX": return 9;
+      case "X": return 10;
+      case "XI": return 11;
+      case "XII": return 12;
+      case "XIII": return 13;
+      case "XIV": return 14;
+      case "XV": return 15;
+      case "XVI": return 16;
+      case "XVII": return 17;
+      case "XVIII": return 18;
+      case "XIX": return 19;
+      case "XX": return 20;
+      default: return -1;
+    }
+  }
+
+  /**
+   * 解析中文剧集格式（增强版）
+   */
+  private static EpisodeMatchingResult parseChineseEpisodeFormat(EpisodeMatchingResult result, String name) {
+    Matcher m;
+
+    // 先尝试完整的"第X季第Y集"格式
+    m = CHINESE_SEASON_EPISODE_PATTERN.matcher(name);
+    if (m.find()) {
+      try {
+        int season = chineseNumberToInt(m.group(1));
+        int episode = Integer.parseInt(m.group(2));
+        if (season > 0 && episode > 0) {
+          result.season = season;
+          result.episodes.add(episode);
+          LOGGER.debug("Parsed Chinese season-episode format: Season {}, Episode {}", season, episode);
+          return result;
+        }
+      } catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 尝试单独的"第X集"格式
+    m = CHINESE_EPISODE_PATTERN.matcher(name);
+    if (m.find()) {
+      try {
+        int episode = Integer.parseInt(m.group(1));
+        if (episode > 0) {
+          result.episodes.add(episode);
+          LOGGER.debug("Parsed Chinese episode format: Episode {}", episode);
+        }
+      } catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 尝试扩展的"X集"格式（没有"第"字）
+    if (result.episodes.isEmpty()) {
+      m = CHINESE_EPISODE_EXTENDED.matcher(name);
+      if (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          if (episode > 0 && episode <= 999) { // 合理范围内
+            result.episodes.add(episode);
+            LOGGER.debug("Parsed Chinese extended episode format: Episode {}", episode);
+          }
+        } catch (NumberFormatException e) {
+          // 忽略解析错误
+        }
+      }
+    }
+
+    // 尝试"第X部分"格式
+    if (result.episodes.isEmpty()) {
+      m = CHINESE_PART_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int part = chineseNumberToInt(m.group(1));
+          if (part > 0) {
+            result.episodes.add(part);
+            LOGGER.debug("Parsed Chinese part format: Part {}", part);
+          }
+        } catch (Exception e) {
+          // 忽略解析错误
+        }
+      }
+    }
+
+    // 尝试"第X章"格式
+    if (result.episodes.isEmpty()) {
+      m = CHINESE_CHAPTER_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int chapter = chineseNumberToInt(m.group(1));
+          if (chapter > 0) {
+            result.episodes.add(chapter);
+            LOGGER.debug("Parsed Chinese chapter format: Chapter {}", chapter);
+          }
+        } catch (Exception e) {
+          // 忽略解析错误
+        }
+      }
+    }
+
+    // 尝试罗马数字格式（如"大海战II"）
+    if (result.episodes.isEmpty()) {
+      m = ROMAN_NUMERAL_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int romanNum = romanToInt(m.group(1));
+          if (romanNum > 0) {
+            result.episodes.add(romanNum);
+            LOGGER.debug("Parsed Roman numeral format: Episode {}", romanNum);
+          }
+        } catch (Exception e) {
+          // 忽略解析错误
+        }
+      }
+    }
+
+    // 尝试单独的"第X季"格式
+    if (result.season == -1) {
+      m = CHINESE_SEASON_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int season = chineseNumberToInt(m.group(1));
+          if (season > 0) {
+            result.season = season;
+            LOGGER.debug("Parsed Chinese season format: Season {}", season);
+          }
+        } catch (Exception e) {
+          // 忽略解析错误
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 检查文件是否适合AI识别
+   */
+  private static boolean shouldUseAI(String filename, String tvShowTitle) {
+    // 如果文件名过长且包含大量描述性文字，可能不是标准剧集
+    if (filename.length() > 100) {
+      LOGGER.debug("Filename too long for AI recognition: {}", filename);
+      return false;
+    }
+
+    // 如果文件名包含明显的非剧集关键词，跳过AI
+    String lowerFilename = filename.toLowerCase();
+    String[] nonEpisodeKeywords = {
+      "trailer", "预告", "花絮", "幕后", "making", "behind",
+      "interview", "访谈", "documentary", "纪录片", "special", "特辑",
+      "opening", "ending", "op", "ed", "主题曲", "片头", "片尾"
+    };
+
+    for (String keyword : nonEpisodeKeywords) {
+      if (lowerFilename.contains(keyword)) {
+        LOGGER.debug("Filename contains non-episode keyword '{}', skipping AI: {}", keyword, filename);
+        return false;
+      }
+    }
+
+    // 如果电视剧标题和文件名完全不匹配，可能是错误分类
+    if (tvShowTitle != null && !tvShowTitle.isEmpty()) {
+      String cleanTitle = tvShowTitle.replaceAll("[^\\p{L}\\p{N}]", "").toLowerCase();
+      String cleanFilename = filename.replaceAll("[^\\p{L}\\p{N}]", "").toLowerCase();
+
+      // 检查是否有任何共同字符
+      boolean hasCommonChars = false;
+      for (char c : cleanTitle.toCharArray()) {
+        if (cleanFilename.indexOf(c) >= 0) {
+          hasCommonChars = true;
+          break;
+        }
+      }
+
+      if (!hasCommonChars && cleanTitle.length() > 2) {
+        LOGGER.debug("Filename has no common characters with TV show title, skipping AI: {} vs {}", filename, tvShowTitle);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * 使用AI辅助识别剧集文件名（当传统解析失败时的补充方案）
    *
    * @param filename 剧集文件名
@@ -198,29 +710,136 @@ public class TvShowEpisodeAndSeasonParser {
    * @return EpisodeMatchingResult AI识别结果
    */
   public static EpisodeMatchingResult detectEpisodeWithAI(String filename, String tvShowTitle) {
+    // 创建AI专用缓存键
+    String aiCacheKey = generateCacheKey("ai", filename, tvShowTitle);
+
+    // 检查AI缓存（带TTL验证）
+    CachedEpisodeResult cachedAiEntry = PARSING_CACHE.get(aiCacheKey);
+    if (cachedAiEntry != null) {
+      if (!cachedAiEntry.isExpired()) {
+        long hits = cacheHits.incrementAndGet();
+        LOGGER.debug("Using cached AI recognition result for: {} (Cache hits: {})", filename, hits);
+        return cachedAiEntry.result;
+      } else {
+        // 缓存已过期，移除
+        PARSING_CACHE.remove(aiCacheKey);
+        LOGGER.debug("AI cache entry expired for: {}", filename);
+      }
+    }
+    cacheMisses.incrementAndGet();
+
+    // 检查是否适合使用AI
+    if (!shouldUseAI(filename, tvShowTitle)) {
+      LOGGER.info("Skipping AI recognition for: {}", filename);
+      EpisodeMatchingResult emptyResult = new EpisodeMatchingResult();
+      // 缓存空结果，避免重复检查
+      checkAndCleanCache();
+      PARSING_CACHE.put(aiCacheKey, new CachedEpisodeResult(emptyResult));
+      return emptyResult;
+    }
+
     LOGGER.info("Attempting AI-assisted episode recognition for: {}", filename);
-    return ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
+    EpisodeMatchingResult aiResult = ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
+
+    // 缓存AI识别结果（无论成功还是失败）
+    checkAndCleanCache();
+    PARSING_CACHE.put(aiCacheKey, new CachedEpisodeResult(aiResult));
+
+    return aiResult;
   }
 
   /**
-   * 混合识别方法：先尝试传统解析，失败时使用AI辅助
+   * 混合识别方法：先尝试传统解析（包括中文），失败时使用AI辅助
    *
    * @param filename 剧集文件名
    * @param tvShowTitle 电视剧标题
    * @return EpisodeMatchingResult 识别结果
    */
   public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle) {
+    return detectEpisodeHybrid(filename, tvShowTitle, true);
+  }
+
+  /**
+   * 混合剧集解析方法（传统解析 + AI识别）
+   * @param filename 文件名
+   * @param tvShowTitle 电视剧标题
+   * @param enableAI 是否启用AI识别（false时只做传统解析）
+   * @return 解析结果
+   */
+  public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle, boolean enableAI) {
+    // 创建缓存键，包含文件名和剧集名
+    String cacheKey = generateCacheKey("hybrid", filename, tvShowTitle);
+
+    // 检查缓存（带TTL验证）
+    CachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
+    if (cachedEntry != null) {
+      if (!cachedEntry.isExpired()) {
+        long hits = cacheHits.incrementAndGet();
+        LOGGER.debug("Using cached hybrid parsing result for: {} (Cache hits: {})", filename, hits);
+        return cachedEntry.result;
+      } else {
+        // 缓存已过期，移除
+        PARSING_CACHE.remove(cacheKey);
+        LOGGER.debug("Hybrid cache entry expired for: {}", filename);
+      }
+    }
+    cacheMisses.incrementAndGet();
+
     // 首先尝试传统解析
     EpisodeMatchingResult traditionalResult = detectEpisodeFromFilename(filename, tvShowTitle);
 
     // 检查传统解析是否成功
     if (traditionalResult.season != -1 && !traditionalResult.episodes.isEmpty()) {
       LOGGER.debug("Traditional parsing successful for: {}", filename);
+      // 缓存成功的传统解析结果
+      checkAndCleanCache();
+      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(traditionalResult));
       return traditionalResult;
     }
 
-    // 传统解析失败，尝试AI识别
-    LOGGER.info("Traditional parsing failed, trying AI recognition for: {}", filename);
+    // 传统解析失败，尝试中文格式解析
+    LOGGER.debug("Traditional parsing failed, trying Chinese format parsing for: {}", filename);
+    EpisodeMatchingResult chineseResult = new EpisodeMatchingResult();
+    chineseResult = parseChineseEpisodeFormat(chineseResult, filename);
+
+    // 检查中文解析是否成功
+    if (!chineseResult.episodes.isEmpty()) {
+      LOGGER.info("Chinese format parsing successful for: {}", filename);
+
+      // 如果没有季数，默认为第1季
+      if (chineseResult.season == -1) {
+        chineseResult.season = 1;
+      }
+
+      // 发送中文解析成功消息
+      String successMsg = String.format("中文格式解析: %s → S%02dE%02d",
+          filename, chineseResult.season, chineseResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(
+          new Message(MessageLevel.INFO, "中文格式解析", successMsg));
+
+      return chineseResult;
+    }
+
+    // 如果禁用AI，直接返回中文解析结果
+    if (!enableAI) {
+      LOGGER.debug("AI recognition disabled, returning Chinese parsing result for: {}", filename);
+      // 缓存中文解析结果
+      checkAndCleanCache();
+      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(chineseResult));
+      return chineseResult;
+    }
+
+    // 智能AI调用决策
+    if (!SmartAIDecisionMaker.shouldUseAI(filename, tvShowTitle, chineseResult)) {
+      LOGGER.debug("Smart AI decision: skipping AI for {} (low value)", filename);
+      // 缓存中文解析结果
+      checkAndCleanCache();
+      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(chineseResult));
+      return chineseResult;
+    }
+
+    // 中文解析也失败，智能决策使用AI识别
+    LOGGER.info("Smart AI decision: using AI for {} (high value)", filename);
     EpisodeMatchingResult aiResult = detectEpisodeWithAI(filename, tvShowTitle);
 
     // 如果AI识别成功，使用AI结果
@@ -233,11 +852,17 @@ public class TvShowEpisodeAndSeasonParser {
       MessageManager.getInstance().pushMessage(
           new Message(MessageLevel.INFO, "自动AI识别", successMsg));
 
+      // 缓存成功的AI识别结果
+      checkAndCleanCache();
+      PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(aiResult));
       return aiResult;
     }
 
-    // 两种方法都失败，返回传统解析结果（可能包含部分信息）
-    LOGGER.warn("Both traditional and AI recognition failed for: {}", filename);
+    // 所有方法都失败，返回传统解析结果（可能包含部分信息）
+    LOGGER.warn("All parsing methods failed for: {}", filename);
+    // 缓存失败的解析结果，避免重复尝试
+    checkAndCleanCache();
+    PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(traditionalResult));
     return traditionalResult;
   }
 
@@ -251,6 +876,23 @@ public class TvShowEpisodeAndSeasonParser {
    * @return result the calculated result
    */
   public static EpisodeMatchingResult detectEpisodeFromFilename(String name, String showname) {
+    // 创建缓存键，包含文件名和剧集名
+    String cacheKey = generateCacheKey("filename", name, showname);
+
+    // 检查缓存（带TTL验证）
+    CachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
+    if (cachedEntry != null) {
+      if (!cachedEntry.isExpired()) {
+        long hits = cacheHits.incrementAndGet();
+        LOGGER.debug("Using cached parsing result for: {} (Cache hits: {})", name, hits);
+        return cachedEntry.result;
+      } else {
+        // 缓存已过期，移除
+        PARSING_CACHE.remove(cacheKey);
+        LOGGER.debug("Cache entry expired for: {}", name);
+      }
+    }
+    cacheMisses.incrementAndGet();
 
     // parse ANIME exclusively in front, unmodified
     EpisodeMatchingResult result = new EpisodeMatchingResult();
@@ -306,12 +948,16 @@ public class TvShowEpisodeAndSeasonParser {
       result.season = 1;
     }
 
+    // 检查缓存大小并缓存结果
+    checkAndCleanCache();
+    PARSING_CACHE.put(cacheKey, new CachedEpisodeResult(result));
+
     return result;
   }
 
   /**
    * Does all the season/episode detection
-   * 
+   *
    * @param name
    *          the RELATIVE filename (like /dir2/seas1/fname.ext) from the TvShowRoot
    * @param showname

@@ -166,6 +166,13 @@ public final class Settings extends AbstractSettings {
   private String                                           openAiExtractionPrompt       = "Extract the movie title from the provided file path context. Analyze the directory structure and file name to identify the actual movie title. Return only the clean movie title. If uncertain, make an educated guess based on common movie naming patterns. Prioritize the most specific directory name that resembles a movie title.";
   private String                                           openAiTestPath               = "/Users/jonntd/Movies/Test Movie/Test Movie.mkv";
 
+  // AI调用控制设置
+  private boolean                                          aiRateLimitEnabled           = true;
+  private int                                              aiMaxCallsPerMinute          = 50;
+  private int                                              aiMaxCallsPerHour            = 1000;
+  private int                                              aiMinIntervalSeconds         = 1;
+  private boolean                                          aiIndividualFallbackEnabled  = true;
+
   /**
    * Instantiates a new settings.
    */
@@ -1528,5 +1535,60 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.openAiTestPath;
     this.openAiTestPath = newValue;
     firePropertyChange("openAiTestPath", oldValue, newValue);
+  }
+
+  // AI Rate Limit Enabled
+  public boolean isAiRateLimitEnabled() {
+    return aiRateLimitEnabled;
+  }
+
+  public void setAiRateLimitEnabled(boolean newValue) {
+    boolean oldValue = this.aiRateLimitEnabled;
+    this.aiRateLimitEnabled = newValue;
+    firePropertyChange("aiRateLimitEnabled", oldValue, newValue);
+  }
+
+  // AI Max Calls Per Minute
+  public int getAiMaxCallsPerMinute() {
+    return aiMaxCallsPerMinute;
+  }
+
+  public void setAiMaxCallsPerMinute(int newValue) {
+    int oldValue = this.aiMaxCallsPerMinute;
+    this.aiMaxCallsPerMinute = newValue;
+    firePropertyChange("aiMaxCallsPerMinute", oldValue, newValue);
+  }
+
+  // AI Max Calls Per Hour
+  public int getAiMaxCallsPerHour() {
+    return aiMaxCallsPerHour;
+  }
+
+  public void setAiMaxCallsPerHour(int newValue) {
+    int oldValue = this.aiMaxCallsPerHour;
+    this.aiMaxCallsPerHour = newValue;
+    firePropertyChange("aiMaxCallsPerHour", oldValue, newValue);
+  }
+
+  // AI Min Interval Seconds
+  public int getAiMinIntervalSeconds() {
+    return aiMinIntervalSeconds;
+  }
+
+  public void setAiMinIntervalSeconds(int newValue) {
+    int oldValue = this.aiMinIntervalSeconds;
+    this.aiMinIntervalSeconds = newValue;
+    firePropertyChange("aiMinIntervalSeconds", oldValue, newValue);
+  }
+
+  // AI Individual Fallback Enabled
+  public boolean isAiIndividualFallbackEnabled() {
+    return aiIndividualFallbackEnabled;
+  }
+
+  public void setAiIndividualFallbackEnabled(boolean newValue) {
+    boolean oldValue = this.aiIndividualFallbackEnabled;
+    this.aiIndividualFallbackEnabled = newValue;
+    firePropertyChange("aiIndividualFallbackEnabled", oldValue, newValue);
   }
 }
