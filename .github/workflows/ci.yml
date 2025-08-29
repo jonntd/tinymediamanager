@@ -50,8 +50,7 @@ jobs:
     - name: Build and Package
       run: |
         echo "🔨 编译和打包..."
-        mvn clean compile --batch-mode -DskipTests=true -Ddependency.copy.skip=true
-        mvn package --batch-mode -DskipTests=true -Ddependency.copy.skip=true -DskipSign=true
+        mvn clean package --batch-mode -DskipTests=true -Ddependency.copy.skip=true -DskipSign=true -Dmaven.test.skip=true
 
     - name: Upload JAR artifacts
       uses: actions/upload-artifact@v4
