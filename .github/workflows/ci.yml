@@ -224,77 +224,77 @@ jobs:
         touch tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/.userdir
 
         # Create auto-fix script for users
-        cat > tinyMediaManager/Fix_macOS_Security.command << 'EOF'
-#!/bin/bash
-echo "🍎 tinyMediaManager macOS Security Fix"
-echo "======================================"
-echo ""
-echo "This script will remove the quarantine attribute from tinyMediaManager.app"
-echo "allowing it to run without security warnings."
-echo ""
-read -p "Press Enter to continue or Ctrl+C to cancel..."
-echo ""
-
-# Get the directory where this script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
-
-if [ -d "$APP_PATH" ]; then
-    echo "🔧 Removing quarantine attribute from tinyMediaManager.app..."
-    xattr -dr com.apple.quarantine "$APP_PATH"
-
-    if [ $? -eq 0 ]; then
-        echo "✅ Success! tinyMediaManager.app can now run normally."
+        cat > tinyMediaManager/Fix_macOS_Security.command << 'SCRIPT_EOF'
+        #!/bin/bash
+        echo "🍎 tinyMediaManager macOS Security Fix"
+        echo "======================================"
         echo ""
-        echo "You can now double-click tinyMediaManager.app to launch it."
+        echo "This script will remove the quarantine attribute from tinyMediaManager.app"
+        echo "allowing it to run without security warnings."
         echo ""
-        read -p "Press Enter to close this window..."
-    else
-        echo "❌ Failed to remove quarantine attribute."
-        echo "You may need to run this script with administrator privileges."
+        read -p "Press Enter to continue or Ctrl+C to cancel..."
         echo ""
-        read -p "Press Enter to close this window..."
-    fi
-else
-    echo "❌ tinyMediaManager.app not found in the same directory as this script."
-    echo "Please make sure this script is in the same folder as tinyMediaManager.app"
-    echo ""
-    read -p "Press Enter to close this window..."
-fi
-EOF
+
+        # Get the directory where this script is located
+        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+        APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
+
+        if [ -d "$APP_PATH" ]; then
+            echo "🔧 Removing quarantine attribute from tinyMediaManager.app..."
+            xattr -dr com.apple.quarantine "$APP_PATH"
+
+            if [ $? -eq 0 ]; then
+                echo "✅ Success! tinyMediaManager.app can now run normally."
+                echo ""
+                echo "You can now double-click tinyMediaManager.app to launch it."
+                echo ""
+                read -p "Press Enter to close this window..."
+            else
+                echo "❌ Failed to remove quarantine attribute."
+                echo "You may need to run this script with administrator privileges."
+                echo ""
+                read -p "Press Enter to close this window..."
+            fi
+        else
+            echo "❌ tinyMediaManager.app not found in the same directory as this script."
+            echo "Please make sure this script is in the same folder as tinyMediaManager.app"
+            echo ""
+            read -p "Press Enter to close this window..."
+        fi
+        SCRIPT_EOF
 
         # Make the script executable
         chmod +x tinyMediaManager/Fix_macOS_Security.command
 
         # Create a README for users
-        cat > tinyMediaManager/README_macOS.txt << 'EOF'
-🍎 tinyMediaManager for macOS (GitHub Build)
-==========================================
+        cat > tinyMediaManager/README_macOS.txt << 'README_EOF'
+        🍎 tinyMediaManager for macOS (GitHub Build)
+        ==========================================
 
-This is an unsigned build from GitHub Actions. macOS will show security warnings
-when you try to run tinyMediaManager.app for the first time.
+        This is an unsigned build from GitHub Actions. macOS will show security warnings
+        when you try to run tinyMediaManager.app for the first time.
 
-🚀 QUICK FIX (Choose one method):
+        🚀 QUICK FIX (Choose one method):
 
-Method 1: Double-click "Fix_macOS_Security.command"
-   - This script will automatically fix the security issue
-   - Just follow the prompts
+        Method 1: Double-click "Fix_macOS_Security.command"
+           - This script will automatically fix the security issue
+           - Just follow the prompts
 
-Method 2: Manual fix via Terminal
-   - Open Terminal
-   - Type: xattr -dr com.apple.quarantine
-   - Drag tinyMediaManager.app into Terminal
-   - Press Enter
+        Method 2: Manual fix via Terminal
+           - Open Terminal
+           - Type: xattr -dr com.apple.quarantine
+           - Drag tinyMediaManager.app into Terminal
+           - Press Enter
 
-Method 3: System Preferences
-   - Try to open tinyMediaManager.app (it will fail)
-   - Go to System Preferences > Security & Privacy > General
-   - Click "Open Anyway" next to the blocked app message
+        Method 3: System Preferences
+           - Try to open tinyMediaManager.app (it will fail)
+           - Go to System Preferences > Security & Privacy > General
+           - Click "Open Anyway" next to the blocked app message
 
-After using any method above, tinyMediaManager.app will run normally.
+        After using any method above, tinyMediaManager.app will run normally.
 
-For more information, visit: https://github.com/jonntd/tinymediamanager
-EOF
+        For more information, visit: https://github.com/jonntd/tinymediamanager
+        README_EOF
 
         echo "📦 Creating professional DMG with GitLab styling..."
 
