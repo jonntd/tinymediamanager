@@ -555,36 +555,36 @@ For more information, visit: https://github.com/jonntd/tinymediamanager
         TAG_NAME="${GITHUB_REF#refs/tags/}"
 
         # 生成发布说明
-        cat > release-notes.md << EOF
-        # tinyMediaManager ${TAG_NAME}
+        cat > release-notes.md <<EOF
+# tinyMediaManager ${TAG_NAME}
 
-        ## 🎉 新版本发布
+## 🎉 新版本发布
 
-        这是 tinyMediaManager 的 ${TAG_NAME} 版本，支持多个平台。
+这是 tinyMediaManager 的 ${TAG_NAME} 版本，支持多个平台。
 
-        ## 📦 下载
+## 📦 下载
 
-        ### Windows
-        - **Windows x64**: \`tinyMediaManager-${VERSION}-windows-amd64.zip\`
+### Windows
+- **Windows x64**: \`tinyMediaManager-${VERSION}-windows-amd64.zip\`
 
-        ### Linux
-        - **Linux x64**: \`tinyMediaManager-${VERSION}-linux-x64.tar.bz2\`
-        - **Linux ARM64**: \`tinyMediaManager-${VERSION}-linux-aarch64.tar.bz2\`
+### Linux
+- **Linux x64**: \`tinyMediaManager-${VERSION}-linux-x64.tar.bz2\`
+- **Linux ARM64**: \`tinyMediaManager-${VERSION}-linux-aarch64.tar.bz2\`
 
-        ### macOS
-        - **macOS Intel**: \`tinyMediaManager-${VERSION}-macos-x64.tar.bz2\`
-        - **macOS Apple Silicon**: \`tinyMediaManager-${VERSION}-macos-aarch64.tar.bz2\`
+### macOS
+- **macOS Intel**: \`tinyMediaManager-${VERSION}-macos-x64.tar.bz2\`
+- **macOS Apple Silicon**: \`tinyMediaManager-${VERSION}-macos-aarch64.tar.bz2\`
 
-        ## 🔐 校验和
-        每个下载包都提供了 SHA256 校验和文件，请在安装前验证文件完整性。
+## 🔐 校验和
+每个下载包都提供了 SHA256 校验和文件，请在安装前验证文件完整性。
 
-        ## 📋 系统要求
-        - Java 17 或更高版本
-        - 支持的操作系统：Windows 10+, macOS 10.14+, Linux (各主要发行版)
+## 📋 系统要求
+- Java 17 或更高版本
+- 支持的操作系统：Windows 10+, macOS 10.14+, Linux (各主要发行版)
 
-        ## 🐛 问题反馈
-        如果遇到问题，请在 [GitHub Issues](https://github.com/jonntd/tinymediamanager/issues) 中报告。
-        EOF
+## 🐛 问题反馈
+如果遇到问题，请在 [GitHub Issues](https://github.com/jonntd/tinymediamanager/issues) 中报告。
+EOF
 
         echo "release-notes<<EOF" >> $GITHUB_OUTPUT
         cat release-notes.md >> $GITHUB_OUTPUT
