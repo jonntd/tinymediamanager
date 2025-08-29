@@ -1096,7 +1096,7 @@
                                     <finalName>${project.artifactId}-${human.version}</finalName>
                                     <attach>false</attach>
                                     <descriptors>
-                                        <!-- Platform-specific descriptors will be added by profiles -->
+                                        <!-- Platform-specific descriptors will be overridden by profiles -->
                                     </descriptors>
                                     <tarLongFileMode>gnu</tarLongFileMode>
                                 </configuration>
@@ -1114,7 +1114,7 @@
                                     <finalName>${project.artifactId}-${human.version}</finalName>
                                     <attach>false</attach>
                                     <descriptors>
-                                        <!-- Platform-specific descriptors will be added by profiles -->
+                                        <!-- Platform-specific descriptors will be overridden by profiles -->
                                     </descriptors>
                                     <tarLongFileMode>gnu</tarLongFileMode>
                                 </configuration>
