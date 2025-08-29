@@ -284,19 +284,19 @@ jobs:
 
         # Create comprehensive auto-fix script for users
         cat > tinyMediaManager/Fix_macOS_Security.command << 'SCRIPT_EOF'
-#!/bin/bash
-set -e
+        #!/bin/bash
+        set -e
 
-echo "🍎 tinyMediaManager macOS Comprehensive Fix"
-echo "==========================================="
-echo ""
-echo "This script will fix common macOS issues with unsigned apps:"
-echo "- Remove quarantine attributes"
-echo "- Fix file permissions"
-echo "- Verify app bundle structure"
-echo ""
-read -p "Press Enter to continue or Ctrl+C to cancel..."
-echo ""
+        echo "🍎 tinyMediaManager macOS Comprehensive Fix"
+        echo "==========================================="
+        echo ""
+        echo "This script will fix common macOS issues with unsigned apps:"
+        echo "- Remove quarantine attributes"
+        echo "- Fix file permissions"
+        echo "- Verify app bundle structure"
+        echo ""
+        read -p "Press Enter to continue or Ctrl+C to cancel..."
+        echo ""
 
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
