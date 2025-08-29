@@ -311,6 +311,11 @@ jobs:
           echo "🎨 Creating professional DMG with background and layout..."
           chmod +x ../AppBundler/macos/bin/create-dmg
 
+          # Clean up any existing DMG and mounted volumes before creating
+          rm -f tinyMediaManager.dmg
+          hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
+          sleep 2
+
           # Build create-dmg arguments dynamically based on file existence
           DMG_ARGS=(
             --background ../AppBundler/macos/background.png
@@ -348,6 +353,10 @@ jobs:
             echo "✅ Professional DMG created successfully"
           else
             echo "❌ Professional DMG creation failed, falling back to standard DMG"
+            # Clean up any existing DMG and mounted volumes
+            rm -f tinyMediaManager.dmg
+            hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
+            sleep 2
             hdiutil create -volname "tinyMediaManager" \
               -srcfolder tinyMediaManager \
               -ov -format UDZO \
@@ -355,6 +364,10 @@ jobs:
           fi
         else
           echo "📦 Creating standard DMG (GitLab tools not found)..."
+          # Clean up any existing DMG and mounted volumes
+          rm -f tinyMediaManager.dmg
+          hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
+          sleep 2
           hdiutil create -volname "tinyMediaManager" \
             -srcfolder tinyMediaManager \
             -ov -format UDZO \
