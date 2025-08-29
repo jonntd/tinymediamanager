@@ -86,6 +86,8 @@
         <flatlaf.version>3.6.1</flatlaf.version>
         <jackson.version>2.15.2</jackson.version>
         <sonar.java.source>17</sonar.java.source>
+        <!-- Default assembly descriptor (will be overridden by platform profiles) -->
+        <assembly.descriptor>src/assembly/linux-amd64.xml</assembly.descriptor>
     </properties>
     <dependencies>
         <dependency>
@@ -1115,7 +1117,8 @@
                                     <finalName>${project.artifactId}-${human.version}</finalName>
                                     <attach>false</attach>
                                     <descriptors>
-                                        <!-- Platform-specific descriptors will be overridden by profiles -->
+                                        <!-- Will be set by platform-specific properties -->
+                                        <descriptor>${assembly.descriptor}</descriptor>
                                     </descriptors>
                                     <tarLongFileMode>gnu</tarLongFileMode>
                                 </configuration>
