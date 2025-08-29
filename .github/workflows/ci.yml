@@ -366,7 +366,7 @@ else
     read -p "Press Enter to close this window..."
     exit 1
 fi
-SCRIPT_EOF
+        SCRIPT_EOF
 
         # Make the script executable
         chmod +x tinyMediaManager/Fix_macOS_Security.command
@@ -399,7 +399,7 @@ Method 3: System Preferences
 After using any method above, tinyMediaManager.app will run normally.
 
 For more information, visit: https://github.com/jonntd/tinymediamanager
-README_EOF
+        README_EOF
 
         echo "📦 Creating professional DMG with GitLab styling..."
 
