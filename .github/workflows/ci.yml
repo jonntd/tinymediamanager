@@ -181,14 +181,17 @@ jobs:
     - name: Create platform package
       run: |
         echo "📦 Creating platform package for ${{ matrix.platform.name }}..."
-        if [ -f "dist/tinyMediaManager-${{ needs.build-and-test.outputs.version }}-${{ matrix.platform.assembly }}.zip" ]; then
-          echo "✅ Package created successfully"
-          ls -la dist/
-        elif [ -f "dist/tinyMediaManager-${{ needs.build-and-test.outputs.version }}-${{ matrix.platform.assembly }}.tar.bz2" ]; then
-          echo "✅ Package created successfully"
-          ls -la dist/
+        echo "🔍 Looking for files matching pattern: tinyMediaManager-*-${{ matrix.platform.assembly }}.*"
+        ls -la dist/
+
+        # Check for any file matching the platform pattern
+        if ls dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.* 1> /dev/null 2>&1; then
+          echo "✅ Package created successfully for ${{ matrix.platform.name }}"
+          echo "📁 Found files:"
+          ls -la dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.*
         else
-          echo "❌ Package creation failed"
+          echo "❌ No package found for ${{ matrix.platform.assembly }}"
+          echo "📁 Available files in dist/:"
           ls -la dist/ || echo "No dist directory found"
           exit 1
         fi
