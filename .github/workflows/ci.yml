@@ -163,7 +163,7 @@ jobs:
 
     - name: Build platform distribution
       run: |
-        echo "�️ Building distribution for ${{ matrix.platform.name }}..."
+        echo "🏗️ Building distribution for ${{ matrix.platform.name }}..."
         mvn clean package -Pdist --batch-mode -DskipTests=true -DskipSign=true
       shell: bash
 
