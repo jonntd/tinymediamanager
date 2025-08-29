@@ -34,7 +34,6 @@ pom.xml.*
 *.swp
 
 # macOS
-.DS_Store
 
 # KDE plasma
 .directory
@@ -73,3 +72,4 @@ launcher-extra.yml
 /src/test/resources/tmm_build_license
 /dependency-reduced-pom.xml
 /code-sign-cert.p12
+/test_dmg/
