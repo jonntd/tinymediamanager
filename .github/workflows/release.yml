@@ -1,0 +1,368 @@
+name: Release Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      pre_release:
+        description: 'Pre-release'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  MAVEN_OPTS: -Dmaven.repo.local=${{ github.workspace }}/.m2/repository
+
+jobs:
+  # 版本准备
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      next_version: ${{ steps.version.outputs.next_version }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.RELEASE_TOKEN }}
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions Release Bot"
+        git config --global user.email "release-bot@tinymediamanager.org"
+    
+    - name: Calculate version
+      id: version
+      run: |
+        CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
+        echo "Current version: $CURRENT_VERSION"
+        
+        # Calculate next version based on release type
+        IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
+        
+        case "${{ github.event.inputs.release_type }}" in
+          "major")
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          "minor")
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          "patch")
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        RELEASE_VERSION="$MAJOR.$MINOR.$PATCH"
+        NEXT_DEV_VERSION="$MAJOR.$MINOR.$((PATCH + 1))-SNAPSHOT"
+        
+        echo "Release version: $RELEASE_VERSION"
+        echo "Next dev version: $NEXT_DEV_VERSION"
+        
+        echo "version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+        echo "next_version=$NEXT_DEV_VERSION" >> $GITHUB_OUTPUT
+
+  # 测试阶段（可选）
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: ${{ !github.event.inputs.skip_tests }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    
+    - name: Run tests
+      run: |
+        mvn --batch-mode clean test -DskipTests=false -DskipITs=true
+
+  # 构建发布版本
+  build:
+    name: Build Release
+    runs-on: ${{ matrix.os }}
+    needs: [prepare, test]
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+        - os: ubuntu-latest
+          platform: linux
+          arch: amd64
+        - os: windows-latest
+          platform: windows
+          arch: amd64
+        - os: macos-latest
+          platform: macos
+          arch: amd64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.RELEASE_TOKEN }}
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    
+    - name: Import GPG key (Linux only)
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      run: |
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+        echo "use-agent" >> ~/.gnupg/gpg.conf
+        echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+        echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+        echo RELOADAGENT | gpg-connect-agent
+    
+    - name: Set release version
+      run: |
+        mvn --batch-mode versions:set -DnewVersion=${{ needs.prepare.outputs.version }}
+        mvn --batch-mode versions:commit
+    
+    - name: Build release artifacts
+      env:
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # Linux build with signing
+          mvn --batch-mode -P dist,sign-artifacts \
+            -DbuildNumber=${{ github.sha }} \
+            -Dgpg.passphrase="${GPG_PASSPHRASE}" \
+            -DskipTests=true \
+            clean package
+        else
+          # Windows/macOS build without signing
+          mvn --batch-mode -P dist \
+            -DbuildNumber=${{ github.sha }} \
+            -DskipSign=true \
+            -DskipTests=true \
+            clean package
+        fi
+    
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.platform }}-${{ matrix.arch }}
+        path: |
+          target/*.jar
+          target/*.jar.asc
+          dist/
+          target/tinyMediaManager-getdown/
+        retention-days: 30
+
+  # Docker发布
+  docker:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: release-linux-amd64
+        path: ./docker-artifacts
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: src/docker/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/tinymediamanager:${{ needs.prepare.outputs.version }}
+          ghcr.io/${{ github.repository_owner }}/tinymediamanager:latest
+        labels: |
+          org.opencontainers.image.title=tinyMediaManager
+          org.opencontainers.image.description=Media management tool
+          org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+          org.opencontainers.image.source=https://github.com/tinyMediaManager/tinyMediaManager
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+  # 创建GitHub Release
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare, build, docker]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.RELEASE_TOKEN }}
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./release-artifacts
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Generate changelog from git commits
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" $LAST_TAG..HEAD)
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" --max-count=20)
+        fi
+        
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Prepare release assets
+        mkdir -p release-assets
+        find release-artifacts -name "*.jar" -o -name "*.tar.xz" -o -name "*.zip" -o -name "*.dmg" -o -name "*.exe" | \
+          xargs -I {} cp {} release-assets/
+        
+        # Create release
+        gh release create "v${{ needs.prepare.outputs.version }}" \
+          --title "tinyMediaManager v${{ needs.prepare.outputs.version }}" \
+          --notes "## What's Changed
+        
+        ${{ steps.changelog.outputs.changelog }}
+        
+        ## Docker Images
+
+        - \`ghcr.io/${{ github.repository_owner }}/tinymediamanager:${{ needs.prepare.outputs.version }}\`
+        - \`ghcr.io/${{ github.repository_owner }}/tinymediamanager:latest\`
+        
+        ## Installation
+        
+        Download the appropriate package for your platform from the assets below.
+        
+        **Full Changelog**: https://github.com/tinyMediaManager/tinyMediaManager/compare/v${{ needs.prepare.outputs.version }}...HEAD" \
+          ${{ github.event.inputs.pre_release == 'true' && '--prerelease' || '' }} \
+          release-assets/*
+
+  # 更新开发版本
+  update-dev:
+    name: Update Development Version
+    runs-on: ubuntu-latest
+    needs: [prepare, release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.RELEASE_TOKEN }}
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions Release Bot"
+        git config --global user.email "release-bot@tinymediamanager.org"
+    
+    - name: Update to next development version
+      run: |
+        mvn --batch-mode versions:set -DnewVersion=${{ needs.prepare.outputs.next_version }}
+        mvn --batch-mode versions:commit
+        
+        git add pom.xml
+        git commit -m "Bump version to ${{ needs.prepare.outputs.next_version }}"
+        git push origin main
+
+  # 通知
+  notify:
+    name: Notify Release Status
+    runs-on: ubuntu-latest
+    needs: [prepare, test, build, docker, release, update-dev]
+    if: always()
+    
+    steps:
+    - name: Notify success
+      if: ${{ needs.release.result == 'success' }}
+      run: |
+        echo "🎉 Release v${{ needs.prepare.outputs.version }} created successfully!"
+        echo "📦 Docker images pushed to Docker Hub"
+        echo "🔄 Development version updated to ${{ needs.prepare.outputs.next_version }}"
+    
+    - name: Notify failure
+      if: ${{ needs.release.result == 'failure' }}
+      run: |
+        echo "❌ Release failed!"
+        echo "Please check the logs and try again."
+        exit 1
