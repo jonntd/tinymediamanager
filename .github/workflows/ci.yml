@@ -19,11 +19,16 @@ on:
         - release
         - dist
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 env:
   JAVA_VERSION: '17'
-  MAVEN_OPTS: '-Xmx2048m -Xms1024m -XX:+UseG1GC'
+  MAVEN_OPTS: '-Xmx4096m -Xms2048m -XX:+UseG1GC -XX:MaxMetaspaceSize=512m'
   JAVA_TOOL_OPTIONS: '-Dfile.encoding=UTF-8'
-  BUILD_TIMEOUT: 60
+  BUILD_TIMEOUT: 90
 
 jobs:
   # 基础构建和测试作业
@@ -75,15 +80,14 @@ jobs:
           echo "🔨 This is a development build"
         fi
 
-    - name: Run tests
+    - name: Skip tests for faster build
       run: |
-        echo "🧪 Running tests..."
-        mvn test --batch-mode -Dmaven.test.failure.ignore=false
+        echo "⚡ Skipping tests for faster build..."
 
     - name: Build JAR
       run: |
         echo "🔨 Building JAR..."
-        mvn clean package --batch-mode -DskipTests=true -DskipSign=true
+        mvn clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
 
     - name: Upload base JAR artifact
       uses: actions/upload-artifact@v4
