@@ -217,6 +217,38 @@ jobs:
         fi
       shell: bash
 
+    - name: Create macOS DMG (if macOS platform)
+      if: startsWith(matrix.platform.assembly, 'macos-')
+      run: |
+        echo "🍎 Creating macOS DMG for ${{ matrix.platform.name }}..."
+        echo "⚠️  Note: This DMG will be unsigned (GitHub Actions limitation)"
+        echo "📋 Users will need to manually allow the app in Security & Privacy settings"
+
+        # Create temporary directory for DMG creation
+        mkdir -p macos_dmg_temp
+        cd macos_dmg_temp
+
+        # Extract the ZIP file
+        unzip -q ../dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.zip
+
+        # Get version
+        VERSION=$(grep 'human.version' tinyMediaManager/version | cut -d'=' -f2)
+        echo "📦 Version: $VERSION"
+
+        # Create a simple DMG (without signing)
+        echo "📦 Creating DMG..."
+        hdiutil create -volname "tinyMediaManager" \
+          -srcfolder tinyMediaManager \
+          -ov -format UDZO \
+          ../dist/tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg
+
+        cd ..
+        rm -rf macos_dmg_temp
+
+        echo "✅ Created unsigned DMG: tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg"
+        echo "⚠️  Users must manually allow this app in macOS Security & Privacy settings"
+      shell: bash
+
     - name: Upload platform artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -224,6 +256,7 @@ jobs:
         path: |
           dist/*.zip
           dist/*.tar.bz2
+          dist/*.dmg
           dist/*.sha256
         retention-days: 30
 
