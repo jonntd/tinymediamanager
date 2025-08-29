@@ -1096,7 +1096,8 @@
                                     <finalName>${project.artifactId}-${human.version}</finalName>
                                     <attach>false</attach>
                                     <descriptors>
-                                        <!-- Platform-specific descriptors will be overridden by profiles -->
+                                        <!-- Will be set by platform-specific properties -->
+                                        <descriptor>${assembly.descriptor}</descriptor>
                                     </descriptors>
                                     <tarLongFileMode>gnu</tarLongFileMode>
                                 </configuration>
@@ -1183,115 +1184,40 @@
             </build>
         </profile>
 
-        <!-- Platform-specific build profiles -->
+        <!-- Platform-specific build profiles using properties -->
         <profile>
             <id>windows-amd64</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>assemble-dist</id>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/assembly/windows-amd64.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <assembly.descriptor>src/assembly/windows-amd64.xml</assembly.descriptor>
+            </properties>
         </profile>
 
         <profile>
             <id>linux-amd64</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>assemble-dist</id>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/assembly/linux-amd64.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <assembly.descriptor>src/assembly/linux-amd64.xml</assembly.descriptor>
+            </properties>
         </profile>
 
         <profile>
             <id>linux-arm64</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>assemble-dist</id>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/assembly/linux-arm64.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <assembly.descriptor>src/assembly/linux-arm64.xml</assembly.descriptor>
+            </properties>
         </profile>
 
         <profile>
             <id>macos-x86_64</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>assemble-mac</id>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/assembly/macos-x86_64.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <assembly.descriptor>src/assembly/macos-x86_64.xml</assembly.descriptor>
+            </properties>
         </profile>
 
         <profile>
             <id>macos-aarch64</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>assemble-mac</id>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/assembly/macos-aarch64.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <assembly.descriptor>src/assembly/macos-aarch64.xml</assembly.descriptor>
+            </properties>
         </profile>
     </profiles>
 </project>
