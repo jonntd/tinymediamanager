@@ -173,7 +173,8 @@ jobs:
     - name: Build platform distribution
       run: |
         echo "🏗️ Building distribution for ${{ matrix.platform.name }}..."
-        mvn clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
+        echo "📋 Using Maven profile: ${{ matrix.platform.assembly }}"
+        mvn clean package -Pdist,${{ matrix.platform.assembly }} --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
