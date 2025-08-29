@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ devel ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ devel ]
   workflow_dispatch:
@@ -10,9 +12,10 @@ on:
       build_type:
         description: 'Build type'
         required: true
-        default: 'release'
+        default: 'test'
         type: choice
         options:
+        - test
         - release
 
 env:
@@ -20,6 +23,52 @@ env:
   JAVA_VERSION: '17'
 
 jobs:
+  # 多JDK版本测试
+  test:
+    name: Test on JDK ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [17, 21]
+      fail-fast: false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    
+    - name: Run tests
+      run: |
+        mvn clean compile test-compile
+        mvn --batch-mode -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false surefire:test
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-jdk${{ matrix.java }}
+        path: |
+          target/surefire-reports/
+          target/site/jacoco/
+        retention-days: 7
+
+
+
   # 构建阶段
   build:
     name: Build on ${{ matrix.os }}
@@ -120,7 +169,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [test, build, docker]
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' && github.ref == 'refs/heads/devel'
+    if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release'))
     
     steps:
     - name: Checkout code
