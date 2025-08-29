@@ -1,11 +1,11 @@
 package org.tinymediamanager.core.tvshow.services;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.Ignore;
 import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatchingResult;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
 /**
  * 电视剧剧集AI识别服务测试
@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class ChatGPTEpisodeRecognitionServiceTest {
 
-    @BeforeEach
-    void setUp() {
+    @Before
+    public void setUp() {
         // 测试前的设置
     }
 
     @Test
-    @Disabled("需要配置OpenAI API才能运行")
-    void testRecognizeEpisode_StandardFormat() {
+    @Ignore("需要配置OpenAI API才能运行")
+    public void testRecognizeEpisode_StandardFormat() {
         // 测试标准格式的剧集文件名
         String filename = "[字幕组]怪奇物语.第一季.第01集.1080p.mkv";
         String tvShowTitle = "怪奇物语";
@@ -34,8 +34,8 @@ public class ChatGPTEpisodeRecognitionServiceTest {
     }
 
     @Test
-    @Disabled("需要配置OpenAI API才能运行")
-    void testRecognizeEpisode_ComplexFormat() {
+    @Ignore("需要配置OpenAI API才能运行")
+    public void testRecognizeEpisode_ComplexFormat() {
         // 测试复杂格式的剧集文件名
         String filename = "[复杂字幕组标记]电视剧名[特殊编码][多重标记]某集.mkv";
         String tvShowTitle = "电视剧名";
@@ -47,7 +47,7 @@ public class ChatGPTEpisodeRecognitionServiceTest {
     }
 
     @Test
-    void testParseAIResponse_ValidFormat() {
+    public void testParseAIResponse_ValidFormat() {
         // 测试AI响应解析功能（不需要API调用）
         // 这个测试可以正常运行，因为它只测试解析逻辑
         
@@ -59,7 +59,7 @@ public class ChatGPTEpisodeRecognitionServiceTest {
     }
 
     @Test
-    void testBasicFunctionality() {
+    public void testBasicFunctionality() {
         // 测试基本功能（不依赖API）
         String filename = "test.mkv";
         String tvShowTitle = "Test Show";
