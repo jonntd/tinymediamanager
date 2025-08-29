@@ -49,7 +49,7 @@ jobs:
         distribution: 'temurin'
         server-id: github-maven
         server-username: GITHUB_ACTOR
-        server-password: GHCR_PAT
+        server-password: ${{ secrets.GHCR_PAT }}
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -149,7 +149,7 @@ jobs:
         distribution: 'temurin'
         server-id: github-maven
         server-username: GITHUB_ACTOR
-        server-password: GHCR_PAT
+        server-password: ${{ secrets.GHCR_PAT }}
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
