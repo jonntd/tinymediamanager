@@ -283,7 +283,7 @@ jobs:
         echo "✅ Set correct permissions for entire app bundle"
 
         # Create comprehensive auto-fix script for users
-        cat > tinyMediaManager/Fix_macOS_Security.command <<-'SCRIPT_EOF'
+        cat > tinyMediaManager/Fix_macOS_Security.command << 'SCRIPT_EOF'
 #!/bin/bash
 set -e
 
