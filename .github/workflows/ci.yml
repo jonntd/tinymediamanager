@@ -122,8 +122,8 @@ jobs:
             native-path: native/linux
           - name: "Linux ARM64"
             os: ubuntu-latest
-            assembly: linux-aarch64
-            artifact-name: linux-aarch64
+            assembly: linux-arm64
+            artifact-name: linux-arm64
             native-path: native/arm
           - name: "macOS x64"
             os: macos-13
