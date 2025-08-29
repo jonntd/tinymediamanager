@@ -253,16 +253,47 @@ jobs:
         # Create .userdir file (same as GitLab method)
         touch tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/.userdir
 
-        # Create auto-fix script for users
+        # Fix critical macOS app permissions (GitLab does this automatically)
+        echo "🔧 Fixing macOS app permissions and structure..."
+
+        # Ensure the main executable has correct permissions
+        MAIN_EXECUTABLE="tinyMediaManager/tinyMediaManager.app/Contents/MacOS/tinyMediaManager"
+        if [[ -f "$MAIN_EXECUTABLE" ]]; then
+          chmod +x "$MAIN_EXECUTABLE"
+          echo "✅ Set executable permissions for main app"
+        else
+          echo "❌ Warning: Main executable not found at $MAIN_EXECUTABLE"
+          echo "📁 Available files in MacOS directory:"
+          ls -la "tinyMediaManager/tinyMediaManager.app/Contents/MacOS/" || echo "MacOS directory not found"
+        fi
+
+        # Ensure Info.plist exists and is readable
+        INFO_PLIST="tinyMediaManager/tinyMediaManager.app/Contents/Info.plist"
+        if [[ -f "$INFO_PLIST" ]]; then
+          chmod 644 "$INFO_PLIST"
+          echo "✅ Set correct permissions for Info.plist"
+          echo "📋 Info.plist CFBundleExecutable: $(plutil -extract CFBundleExecutable raw "$INFO_PLIST" 2>/dev/null || echo 'Not found')"
+        else
+          echo "❌ Warning: Info.plist not found at $INFO_PLIST"
+        fi
+
+        # Set correct permissions for the entire app bundle
+        chmod -R u+rw,go+r "tinyMediaManager/tinyMediaManager.app"
+        find "tinyMediaManager/tinyMediaManager.app" -type d -exec chmod 755 {} \;
+        echo "✅ Set correct permissions for entire app bundle"
+
+        # Create comprehensive auto-fix script for users
         cat > tinyMediaManager/Fix_macOS_Security.command <<-'SCRIPT_EOF'
 #!/bin/bash
 set -e
 
-echo "🍎 tinyMediaManager macOS Security Fix"
-echo "======================================"
+echo "🍎 tinyMediaManager macOS Comprehensive Fix"
+echo "==========================================="
 echo ""
-echo "This script will remove the quarantine attribute from tinyMediaManager.app"
-echo "allowing it to run without security warnings."
+echo "This script will fix common macOS issues with unsigned apps:"
+echo "- Remove quarantine attributes"
+echo "- Fix file permissions"
+echo "- Verify app bundle structure"
 echo ""
 read -p "Press Enter to continue or Ctrl+C to cancel..."
 echo ""
@@ -272,21 +303,62 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
 
 if [ -d "$APP_PATH" ]; then
-    echo "🔧 Removing quarantine attribute from tinyMediaManager.app..."
+    echo "🔧 Step 1: Removing quarantine attribute..."
     if xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then
-        echo "✅ Success! tinyMediaManager.app can now run normally."
+        echo "✅ Quarantine attribute removed successfully"
+    else
+        echo "⚠️  Quarantine attribute removal failed (may not be needed)"
+    fi
+
+    echo ""
+    echo "🔧 Step 2: Fixing file permissions..."
+
+    # Fix main executable permissions
+    MAIN_EXEC="$APP_PATH/Contents/MacOS/tinyMediaManager"
+    if [ -f "$MAIN_EXEC" ]; then
+        chmod +x "$MAIN_EXEC"
+        echo "✅ Fixed main executable permissions"
+    else
+        echo "❌ Main executable not found: $MAIN_EXEC"
+    fi
+
+    # Fix Info.plist permissions
+    INFO_PLIST="$APP_PATH/Contents/Info.plist"
+    if [ -f "$INFO_PLIST" ]; then
+        chmod 644 "$INFO_PLIST"
+        echo "✅ Fixed Info.plist permissions"
+    else
+        echo "❌ Info.plist not found: $INFO_PLIST"
+    fi
+
+    # Fix overall app bundle permissions
+    chmod -R u+rw,go+r "$APP_PATH"
+    find "$APP_PATH" -type d -exec chmod 755 {} \;
+    echo "✅ Fixed app bundle permissions"
+
+    echo ""
+    echo "🔧 Step 3: Verifying app structure..."
+
+    # Check critical files
+    if [ -f "$MAIN_EXEC" ] && [ -f "$INFO_PLIST" ]; then
+        echo "✅ App structure looks good"
+        echo ""
+        echo "🎉 All fixes applied successfully!"
         echo ""
         echo "You can now double-click tinyMediaManager.app to launch it."
         echo ""
-        read -p "Press Enter to close this window..."
+        echo "If you still get errors, try:"
+        echo "1. Right-click tinyMediaManager.app and select 'Open'"
+        echo "2. Go to System Preferences > Security & Privacy > General"
+        echo "3. Click 'Open Anyway' if prompted"
+        echo ""
     else
-        echo "❌ Failed to remove quarantine attribute."
-        echo "You may need to run this script with administrator privileges."
+        echo "❌ App structure appears to be damaged"
+        echo "Please re-download the application"
         echo ""
-        echo "Alternative: Try right-clicking tinyMediaManager.app and selecting 'Open'"
-        echo ""
-        read -p "Press Enter to close this window..."
     fi
+
+    read -p "Press Enter to close this window..."
 else
     echo "❌ tinyMediaManager.app not found in the same directory as this script."
     echo "Please make sure this script is in the same folder as tinyMediaManager.app"
