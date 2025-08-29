@@ -47,12 +47,9 @@ jobs:
       with:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
-
-    - name: Setup GitHub Maven authentication
-      run: |
-        echo "🔧 Setting up GitHub Maven authentication using .ci/settings.xml"
-        echo "GITHUB_REPO_USER=${{ github.actor }}" >> $GITHUB_ENV
-        echo "GITHUB_REPO_PASS=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+        server-id: github-maven
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -90,7 +87,9 @@ jobs:
     - name: Build JAR
       run: |
         echo "🔨 Building JAR..."
-        mvn -s .ci/settings.xml clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
+        mvn clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload base JAR artifact
       uses: actions/upload-artifact@v4
@@ -148,12 +147,9 @@ jobs:
       with:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
-
-    - name: Setup GitHub Maven authentication
-      run: |
-        echo "🔧 Setting up GitHub Maven authentication using .ci/settings.xml"
-        echo "GITHUB_REPO_USER=${{ github.actor }}" >> $GITHUB_ENV
-        echo "GITHUB_REPO_PASS=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+        server-id: github-maven
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -177,7 +173,9 @@ jobs:
     - name: Build platform distribution
       run: |
         echo "🏗️ Building distribution for ${{ matrix.platform.name }}..."
-        mvn -s .ci/settings.xml clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
+        mvn clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
 
     - name: Create platform package
