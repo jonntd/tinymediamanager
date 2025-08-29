@@ -48,23 +48,11 @@ jobs:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
 
-    - name: Create Maven settings
+    - name: Setup GitHub Maven authentication
       run: |
-        mkdir -p ~/.m2
-        cat > ~/.m2/settings.xml << 'EOF'
-        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-                                      http://maven.apache.org/xsd/settings-1.0.0.xsd">
-          <servers>
-            <server>
-              <id>github-maven</id>
-              <username>${{ github.actor }}</username>
-              <password>${{ secrets.GITHUB_TOKEN }}</password>
-            </server>
-          </servers>
-        </settings>
-        EOF
+        echo "🔧 Setting up GitHub Maven authentication using .ci/settings.xml"
+        echo "GITHUB_REPO_USER=${{ github.actor }}" >> $GITHUB_ENV
+        echo "GITHUB_REPO_PASS=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -102,9 +90,7 @@ jobs:
     - name: Build JAR
       run: |
         echo "🔨 Building JAR..."
-        mvn clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        mvn -s .ci/settings.xml clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
 
     - name: Upload base JAR artifact
       uses: actions/upload-artifact@v4
@@ -163,23 +149,11 @@ jobs:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
 
-    - name: Create Maven settings
+    - name: Setup GitHub Maven authentication
       run: |
-        mkdir -p ~/.m2
-        cat > ~/.m2/settings.xml << 'EOF'
-        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-                                      http://maven.apache.org/xsd/settings-1.0.0.xsd">
-          <servers>
-            <server>
-              <id>github-maven</id>
-              <username>${{ github.actor }}</username>
-              <password>${{ secrets.GITHUB_TOKEN }}</password>
-            </server>
-          </servers>
-        </settings>
-        EOF
+        echo "🔧 Setting up GitHub Maven authentication using .ci/settings.xml"
+        echo "GITHUB_REPO_USER=${{ github.actor }}" >> $GITHUB_ENV
+        echo "GITHUB_REPO_PASS=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -203,9 +177,7 @@ jobs:
     - name: Build platform distribution
       run: |
         echo "🏗️ Building distribution for ${{ matrix.platform.name }}..."
-        mvn clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        mvn -s .ci/settings.xml clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
       shell: bash
 
     - name: Create platform package
