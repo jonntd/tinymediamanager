@@ -60,7 +60,7 @@ jobs:
       id: build
       continue-on-error: true
       run: |
-        mvn clean package --batch-mode -P dist -DbuildNumber="${{ github.sha }}" -DskipSign=true -Dmaven.test.skip=true
+        mvn clean package --batch-mode -P dist -DbuildNumber="${{ github.sha }}" -DskipSign=true -Dmaven.test.skip=true -Ddependency.copy.skip=true
 
     - name: Auto-fix build errors
       if: steps.build.outcome == 'failure'

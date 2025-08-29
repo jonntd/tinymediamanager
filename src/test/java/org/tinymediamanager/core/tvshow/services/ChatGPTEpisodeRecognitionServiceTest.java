@@ -67,8 +67,8 @@ public class ChatGPTEpisodeRecognitionServiceTest {
         // 这个测试会因为没有配置API而返回空结果，但不会抛出异常
         EpisodeMatchingResult result = ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
         
-        assertNotNull(result, "应该返回一个非空的结果对象");
-        assertEquals(-1, result.season, "没有API配置时应该返回默认的season值");
-        assertTrue(result.episodes.isEmpty(), "没有API配置时应该返回空的episodes列表");
+        assertNotNull("应该返回一个非空的结果对象", result);
+        assertEquals("没有API配置时应该返回默认的season值", -1, result.season);
+        assertTrue("没有API配置时应该返回空的episodes列表", result.episodes.isEmpty());
     }
 }
