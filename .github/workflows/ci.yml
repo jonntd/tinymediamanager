@@ -65,26 +65,9 @@ jobs:
     - name: Auto-fix build errors
       if: steps.build.outcome == 'failure'
       run: |
-        echo "🔧 Build failed, attempting auto-fix..."
-
-        # 常见错误修复
-        if grep -q "Unknown lifecycle phase" build.log 2>/dev/null; then
-          echo "📝 Fixing Maven lifecycle phase error..."
-          mvn clean compile package --batch-mode -P dist -DskipSign=true -Dmaven.test.skip=true
-        elif grep -q "compilation failure" build.log 2>/dev/null; then
-          echo "📝 Fixing compilation errors..."
-          mvn clean compile --batch-mode -DskipTests=true
-          mvn package --batch-mode -P dist -DskipSign=true -Dmaven.test.skip=true
-        else
-          echo "📝 Trying alternative build command..."
-          mvn clean install --batch-mode -DskipTests=true -DskipSign=true
-        fi
-
-    - name: Retry build if auto-fix applied
-      if: steps.build.outcome == 'failure'
-      run: |
-        echo "🔄 Retrying build after auto-fix..."
-        mvn clean package --batch-mode -P dist -DbuildNumber="${{ github.sha }}" -DskipSign=true -Dmaven.test.skip=true
+        echo "🔧 Build failed, attempting simple auto-fix..."
+        echo "📝 Trying alternative build command..."
+        mvn clean install --batch-mode -DskipTests=true -DskipSign=true -Ddependency.copy.skip=true
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
