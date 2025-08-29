@@ -6,41 +6,48 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Simple Build Test
+  test:
+    name: Test on JDK ${{ matrix.java }}
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        java: [17, 21]
+      fail-fast: false
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up JDK 17
+    
+    - name: Set up JDK ${{ matrix.java }}
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: ${{ matrix.java }}
         distribution: 'temurin'
-
-    - name: Validate Maven project
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    
+    - name: Run tests (GitLab CI style)
       run: |
-        echo "🔍 检查 Maven 项目结构..."
-        ls -la
-        if [ -f "pom.xml" ]; then
-          echo "✅ 找到 pom.xml"
-          mvn --version
-          mvn help:effective-pom -q
-        else
-          echo "❌ 未找到 pom.xml"
-          exit 1
-        fi
-
-    - name: Basic compile test
+        echo "🧪 运行测试 (基于 GitLab CI 配置)..."
+        mvn -s .ci/settings.xml --batch-mode -U -DskipTests=false -DskipITs=true -Dmaven.test.failure.ignore=false clean test
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-jdk${{ matrix.java }}
+        path: |
+          target/surefire-reports/
+          target/site/jacoco/
+        retention-days: 7
+    
+    - name: Print success
       run: |
-        echo "🔨 尝试基本编译..."
-        mvn clean --batch-mode -q
-        mvn compile --batch-mode -DskipTests=true -Dmaven.test.skip=true -q
-
-    - name: Success
-      run: |
-        echo "🎉 基本编译成功!"
-        echo "� 编译输出:"
-        ls -la target/ || echo "无 target 目录"
+        echo "🎉 JDK ${{ matrix.java }} 测试成功!"
+        echo "📦 基于 GitLab CI 的成功配置"
