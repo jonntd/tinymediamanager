@@ -6,36 +6,83 @@ on:
       platforms:
         description: 'Target platforms'
         required: true
-        default: 'linux/amd64'
+        default: 'linux/amd64,linux/arm64'
         type: choice
         options:
         - linux/amd64
         - linux/arm64
         - linux/amd64,linux/arm64
-  push:
+  workflow_run:
+    workflows: ["Multi-Platform CI/CD Pipeline"]
+    types:
+      - completed
     branches: [ devel ]
-    paths:
-      - 'Dockerfile*'
-      - '.dockerignore'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  TMM_VERSION: "5.2.0"
 
 jobs:
-  docker-build:
-    name: Build Docker Image
+  # 检查是否有可用的构建产物
+  check-artifacts:
+    name: Check Build Artifacts
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    outputs:
+      has-linux-amd64: ${{ steps.check.outputs.has-linux-amd64 }}
+      has-linux-arm64: ${{ steps.check.outputs.has-linux-arm64 }}
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - name: Check available artifacts
+      id: check
+      run: |
+        echo "🔍 Checking available artifacts..."
+        ls -la
+
+        if ls *linux-amd64* 1> /dev/null 2>&1; then
+          echo "has-linux-amd64=true" >> $GITHUB_OUTPUT
+          echo "✅ Found Linux AMD64 artifact"
+        else
+          echo "has-linux-amd64=false" >> $GITHUB_OUTPUT
+          echo "❌ No Linux AMD64 artifact found"
+        fi
+
+        if ls *linux-arm64* 1> /dev/null 2>&1; then
+          echo "has-linux-arm64=true" >> $GITHUB_OUTPUT
+          echo "✅ Found Linux ARM64 artifact"
+        else
+          echo "has-linux-arm64=false" >> $GITHUB_OUTPUT
+          echo "❌ No Linux ARM64 artifact found"
+        fi
+
+  # 构建 AMD64 Docker 镜像
+  docker-build-amd64:
+    name: Build Docker Image (AMD64)
+    runs-on: ubuntu-latest
+    needs: check-artifacts
+    if: needs.check-artifacts.outputs.has-linux-amd64 == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Download Linux AMD64 artifact
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        run-id: ${{ github.event.workflow_run.id }}
+        pattern: "*linux-amd64*"
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -44,91 +91,183 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GHCR_PAT }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-
-    - name: Create Dockerfile
+    - name: Prepare Docker context
       run: |
-        cat > Dockerfile << 'EOF'
-        # tinyMediaManager Docker 构建
-        FROM eclipse-temurin:17-jdk-alpine AS builder
-        
-        # 安装构建依赖
-        RUN apk add --no-cache maven
-        
-        # 设置工作目录
-        WORKDIR /app
-        
-        # 复制源代码
-        COPY . .
-        
-        # 构建应用
-        RUN mvn clean package -DskipTests=true --batch-mode
-        
-        # 运行时镜像
+        echo "🏗️ Preparing Docker context for AMD64..."
+        mkdir -p target/docker
+
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          # 使用构建产物
+          echo "📦 Extracting build artifacts..."
+          tar xJf *linux-amd64*.tar.xz -C target/docker/ || echo "No tar.xz found, trying zip..."
+          unzip -q *linux-amd64*.zip -d target/docker/ || echo "No zip found"
+        fi
+
+        # 创建 Dockerfile.amd64
+        cat > target/docker/Dockerfile.amd64 << 'EOF'
         FROM eclipse-temurin:17-jre-alpine
-        
+
         # 安装运行时依赖
-        RUN apk add --no-cache fontconfig ttf-dejavu bash
-        
+        RUN apk add --no-cache fontconfig ttf-dejavu bash curl
+
         # 创建应用用户
         RUN addgroup -g 1000 tmm && adduser -D -u 1000 -G tmm tmm
-        
+
         # 设置工作目录
         WORKDIR /app
-        
+
         # 复制应用文件
-        COPY --from=builder /app/target/*.jar app.jar
-        COPY --from=builder /app/native/ native/
-        
+        COPY tinyMediaManager/ ./
+
         # 设置权限
-        RUN chown -R tmm:tmm /app
-        
+        RUN chown -R tmm:tmm /app && chmod +x tinyMediaManager
+
         # 切换到应用用户
         USER tmm
-        
+
+        # 暴露端口 (如果需要)
+        EXPOSE 8080
+
         # 启动命令
-        ENTRYPOINT ["java", "-jar", "app.jar"]
+        ENTRYPOINT ["./tinyMediaManager"]
         EOF
 
-    - name: Create .dockerignore
-      run: |
-        cat > .dockerignore << 'EOF'
-        .git
-        .gitignore
-        target/
-        dist/
-        *.log
-        .idea/
-        .vscode/
-        .DS_Store
-        README.md
-        docs/
-        EOF
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+    - name: Build with Kaniko
+      uses: int128/kaniko-action@v1
       with:
-        context: .
-        platforms: ${{ github.event.inputs.platforms || 'linux/amd64' }}
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64
+        file: target/docker/Dockerfile.amd64
+        context: target/docker
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
 
-    - name: Test Docker image
+  # 构建 ARM64 Docker 镜像
+  docker-build-arm64:
+    name: Build Docker Image (ARM64)
+    runs-on: ubuntu-latest
+    needs: check-artifacts
+    if: needs.check-artifacts.outputs.has-linux-arm64 == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download Linux ARM64 artifact
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        run-id: ${{ github.event.workflow_run.id }}
+        pattern: "*linux-arm64*"
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+    - name: Prepare Docker context
       run: |
-        echo "🧪 Testing Docker image..."
-        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-        echo "Testing image: $IMAGE_TAG"
-        
-        # 基础测试
-        docker run --rm "$IMAGE_TAG" --help || echo "Help command test completed"
+        echo "🏗️ Preparing Docker context for ARM64..."
+        mkdir -p target/docker
+
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          # 使用构建产物
+          echo "📦 Extracting build artifacts..."
+          tar xJf *linux-arm64*.tar.xz -C target/docker/ || echo "No tar.xz found, trying zip..."
+          unzip -q *linux-arm64*.zip -d target/docker/ || echo "No zip found"
+
+          # ARM64 特殊处理 (参考 deploy_release.yml)
+          if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
+            mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+          fi
+        fi
+
+        # 创建 Dockerfile.arm64
+        cat > target/docker/Dockerfile.arm64 << 'EOF'
+        FROM eclipse-temurin:17-jre-alpine
+
+        # 安装运行时依赖
+        RUN apk add --no-cache fontconfig ttf-dejavu bash curl
+
+        # 创建应用用户
+        RUN addgroup -g 1000 tmm && adduser -D -u 1000 -G tmm tmm
+
+        # 设置工作目录
+        WORKDIR /app
+
+        # 复制应用文件
+        COPY tinyMediaManager/ ./
+
+        # 设置权限
+        RUN chown -R tmm:tmm /app && chmod +x tinyMediaManager
+
+        # 切换到应用用户
+        USER tmm
+
+        # 暴露端口 (如果需要)
+        EXPOSE 8080
+
+        # 启动命令
+        ENTRYPOINT ["./tinyMediaManager"]
+        EOF
+
+    - name: Build with Kaniko
+      uses: int128/kaniko-action@v1
+      with:
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64
+        file: target/docker/Dockerfile.arm64
+        context: target/docker
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+  # 创建多架构 manifest
+  docker-manifest:
+    name: Create Multi-Arch Manifest
+    runs-on: ubuntu-latest
+    needs: [docker-build-amd64, docker-build-arm64]
+    if: always() && (needs.docker-build-amd64.result == 'success' || needs.docker-build-arm64.result == 'success')
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+    - name: Create and push manifest
+      run: |
+        echo "🏗️ Creating multi-arch manifest..."
+
+        # 准备镜像列表
+        IMAGES=""
+        if [ "${{ needs.docker-build-amd64.result }}" = "success" ]; then
+          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64"
+        fi
+        if [ "${{ needs.docker-build-arm64.result }}" = "success" ]; then
+          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64"
+        fi
+
+        echo "Images to include: $IMAGES"
+
+        # 创建并推送 manifest
+        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }} $IMAGES
+        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}
+
+        # 创建 latest 标签
+        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest $IMAGES
+        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        echo "✅ Multi-arch manifest created successfully!"
