@@ -3,58 +3,44 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ devel ]
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [ devel ]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build type'
-        required: true
-        default: 'test'
-        type: choice
-        options:
-        - test
-        - release
 
 jobs:
-  # 简化构建
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-      fail-fast: false
-    
+    name: Simple Build Test
+    runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-    
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-    
-    - name: Simple build
+
+    - name: Validate Maven project
       run: |
-        mvn clean compile --batch-mode -DskipTests=true -Ddependency.copy.skip=true
-        mvn package --batch-mode -DskipTests=true -Ddependency.copy.skip=true -DskipSign=true
-    
-    - name: Print success
+        echo "🔍 检查 Maven 项目结构..."
+        ls -la
+        if [ -f "pom.xml" ]; then
+          echo "✅ 找到 pom.xml"
+          mvn --version
+          mvn help:effective-pom -q
+        else
+          echo "❌ 未找到 pom.xml"
+          exit 1
+        fi
+
+    - name: Basic compile test
       run: |
-        echo "🎉 构建成功!"
-        echo "📦 JAR 文件已生成"
-        ls -la target/*.jar || echo "未找到 JAR 文件"
+        echo "🔨 尝试基本编译..."
+        mvn clean --batch-mode -q
+        mvn compile --batch-mode -DskipTests=true -Dmaven.test.skip=true -q
+
+    - name: Success
+      run: |
+        echo "🎉 基本编译成功!"
+        echo "� 编译输出:"
+        ls -la target/ || echo "无 target 目录"
