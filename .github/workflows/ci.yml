@@ -49,7 +49,7 @@ jobs:
         distribution: 'temurin'
         server-id: github-maven
         server-username: GITHUB_ACTOR
-        server-password: GITHUB_TOKEN
+        server-password: GHCR_PAT
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -89,7 +89,7 @@ jobs:
         echo "🔨 Building JAR..."
         mvn clean package --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GHCR_PAT }}
 
     - name: Upload base JAR artifact
       uses: actions/upload-artifact@v4
@@ -149,7 +149,7 @@ jobs:
         distribution: 'temurin'
         server-id: github-maven
         server-username: GITHUB_ACTOR
-        server-password: GITHUB_TOKEN
+        server-password: GHCR_PAT
 
     - name: Cache Maven dependencies
       uses: actions/cache@v4
@@ -175,7 +175,7 @@ jobs:
         echo "🏗️ Building distribution for ${{ matrix.platform.name }}..."
         mvn clean package -Pdist --batch-mode -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GHCR_PAT }}
       shell: bash
 
     - name: Create platform package
