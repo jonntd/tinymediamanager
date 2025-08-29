@@ -112,13 +112,13 @@ jobs:
         platform:
           - name: "Windows x64"
             os: windows-latest
-            assembly: windows-x64
-            artifact-name: windows-x64
+            assembly: windows-amd64
+            artifact-name: windows-amd64
             native-path: native/windows
           - name: "Linux x64"
             os: ubuntu-latest
-            assembly: linux-x64
-            artifact-name: linux-x64
+            assembly: linux-amd64
+            artifact-name: linux-amd64
             native-path: native/linux
           - name: "Linux ARM64"
             os: ubuntu-latest
@@ -127,8 +127,8 @@ jobs:
             native-path: native/arm
           - name: "macOS x64"
             os: macos-13
-            assembly: macos-x64
-            artifact-name: macos-x64
+            assembly: macos-x86_64
+            artifact-name: macos-x86_64
             native-path: native/mac
           - name: "macOS ARM64"
             os: macos-latest
