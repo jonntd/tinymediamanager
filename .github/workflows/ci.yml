@@ -204,6 +204,8 @@ jobs:
     - name: Create professional macOS DMG (GitLab-style, unsigned)
       if: startsWith(matrix.platform.assembly, 'macos-')
       run: |
+        set -e  # Exit on any error
+
         echo "🍎 Creating professional macOS DMG for ${{ matrix.platform.name }}..."
         echo "📋 Using GitLab's DMG creation method (without signing)"
         echo "⚠️  Note: This DMG will be unsigned (no Apple Developer account)"
@@ -213,88 +215,119 @@ jobs:
         mkdir -p macos_dmg_${{ matrix.platform.assembly }}
         cd macos_dmg_${{ matrix.platform.assembly }}
 
-        # Extract the ZIP file (same as GitLab method)
-        unzip -q -X ../dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.zip -d tinyMediaManager
+        # Extract the ZIP file (same as GitLab method) with error checking
+        ZIP_FILE="../dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.zip"
+        if ! ls $ZIP_FILE 1> /dev/null 2>&1; then
+          echo "❌ Error: No ZIP file found matching pattern: $ZIP_FILE"
+          exit 1
+        fi
 
-        # Get version (same as GitLab method)
-        VERSION=$(grep 'human.version' tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/version | cut -d'=' -f2)
+        echo "📦 Extracting ZIP file..."
+        if ! unzip -q -X $ZIP_FILE -d tinyMediaManager; then
+          echo "❌ Error: Failed to extract ZIP file"
+          exit 1
+        fi
+
+        # Verify app bundle exists
+        if [[ ! -d "tinyMediaManager/tinyMediaManager.app" ]]; then
+          echo "❌ Error: tinyMediaManager.app not found in extracted files"
+          echo "📁 Available files:"
+          ls -la tinyMediaManager/ || true
+          exit 1
+        fi
+
+        # Get version (same as GitLab method) with error checking
+        VERSION_FILE="tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/version"
+        if [[ ! -f "$VERSION_FILE" ]]; then
+          echo "❌ Error: Version file not found: $VERSION_FILE"
+          exit 1
+        fi
+
+        VERSION=$(grep 'human.version' "$VERSION_FILE" | cut -d'=' -f2)
+        if [[ -z "$VERSION" ]]; then
+          echo "❌ Error: Could not extract version from $VERSION_FILE"
+          exit 1
+        fi
         echo "📦 Version: $VERSION"
 
         # Create .userdir file (same as GitLab method)
         touch tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/.userdir
 
         # Create auto-fix script for users
-        cat > tinyMediaManager/Fix_macOS_Security.command << 'SCRIPT_EOF'
-        #!/bin/bash
-        echo "🍎 tinyMediaManager macOS Security Fix"
-        echo "======================================"
-        echo ""
-        echo "This script will remove the quarantine attribute from tinyMediaManager.app"
-        echo "allowing it to run without security warnings."
-        echo ""
-        read -p "Press Enter to continue or Ctrl+C to cancel..."
-        echo ""
+        cat > tinyMediaManager/Fix_macOS_Security.command <<-'SCRIPT_EOF'
+#!/bin/bash
+set -e
 
-        # Get the directory where this script is located
-        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-        APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
+echo "🍎 tinyMediaManager macOS Security Fix"
+echo "======================================"
+echo ""
+echo "This script will remove the quarantine attribute from tinyMediaManager.app"
+echo "allowing it to run without security warnings."
+echo ""
+read -p "Press Enter to continue or Ctrl+C to cancel..."
+echo ""
 
-        if [ -d "$APP_PATH" ]; then
-            echo "🔧 Removing quarantine attribute from tinyMediaManager.app..."
-            xattr -dr com.apple.quarantine "$APP_PATH"
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
 
-            if [ $? -eq 0 ]; then
-                echo "✅ Success! tinyMediaManager.app can now run normally."
-                echo ""
-                echo "You can now double-click tinyMediaManager.app to launch it."
-                echo ""
-                read -p "Press Enter to close this window..."
-            else
-                echo "❌ Failed to remove quarantine attribute."
-                echo "You may need to run this script with administrator privileges."
-                echo ""
-                read -p "Press Enter to close this window..."
-            fi
-        else
-            echo "❌ tinyMediaManager.app not found in the same directory as this script."
-            echo "Please make sure this script is in the same folder as tinyMediaManager.app"
-            echo ""
-            read -p "Press Enter to close this window..."
-        fi
-        SCRIPT_EOF
+if [ -d "$APP_PATH" ]; then
+    echo "🔧 Removing quarantine attribute from tinyMediaManager.app..."
+    if xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then
+        echo "✅ Success! tinyMediaManager.app can now run normally."
+        echo ""
+        echo "You can now double-click tinyMediaManager.app to launch it."
+        echo ""
+        read -p "Press Enter to close this window..."
+    else
+        echo "❌ Failed to remove quarantine attribute."
+        echo "You may need to run this script with administrator privileges."
+        echo ""
+        echo "Alternative: Try right-clicking tinyMediaManager.app and selecting 'Open'"
+        echo ""
+        read -p "Press Enter to close this window..."
+    fi
+else
+    echo "❌ tinyMediaManager.app not found in the same directory as this script."
+    echo "Please make sure this script is in the same folder as tinyMediaManager.app"
+    echo ""
+    read -p "Press Enter to close this window..."
+    exit 1
+fi
+SCRIPT_EOF
 
         # Make the script executable
         chmod +x tinyMediaManager/Fix_macOS_Security.command
 
         # Create a README for users
-        cat > tinyMediaManager/README_macOS.txt << 'README_EOF'
-        🍎 tinyMediaManager for macOS (GitHub Build)
-        ==========================================
+        cat > tinyMediaManager/README_macOS.txt <<-'README_EOF'
+🍎 tinyMediaManager for macOS (GitHub Build)
+==========================================
 
-        This is an unsigned build from GitHub Actions. macOS will show security warnings
-        when you try to run tinyMediaManager.app for the first time.
+This is an unsigned build from GitHub Actions. macOS will show security warnings
+when you try to run tinyMediaManager.app for the first time.
 
-        🚀 QUICK FIX (Choose one method):
+🚀 QUICK FIX (Choose one method):
 
-        Method 1: Double-click "Fix_macOS_Security.command"
-           - This script will automatically fix the security issue
-           - Just follow the prompts
+Method 1: Double-click "Fix_macOS_Security.command"
+   - This script will automatically fix the security issue
+   - Just follow the prompts
 
-        Method 2: Manual fix via Terminal
-           - Open Terminal
-           - Type: xattr -dr com.apple.quarantine
-           - Drag tinyMediaManager.app into Terminal
-           - Press Enter
+Method 2: Manual fix via Terminal
+   - Open Terminal
+   - Type: xattr -dr com.apple.quarantine
+   - Drag tinyMediaManager.app into Terminal
+   - Press Enter
 
-        Method 3: System Preferences
-           - Try to open tinyMediaManager.app (it will fail)
-           - Go to System Preferences > Security & Privacy > General
-           - Click "Open Anyway" next to the blocked app message
+Method 3: System Preferences
+   - Try to open tinyMediaManager.app (it will fail)
+   - Go to System Preferences > Security & Privacy > General
+   - Click "Open Anyway" next to the blocked app message
 
-        After using any method above, tinyMediaManager.app will run normally.
+After using any method above, tinyMediaManager.app will run normally.
 
-        For more information, visit: https://github.com/jonntd/tinymediamanager
-        README_EOF
+For more information, visit: https://github.com/jonntd/tinymediamanager
+README_EOF
 
         echo "📦 Creating professional DMG with GitLab styling..."
 
@@ -315,22 +348,49 @@ jobs:
         if [[ -f "../AppBundler/macos/bin/create-dmg" && -f "../AppBundler/macos/background.png" ]]; then
           echo "🎨 Creating professional DMG with background and layout..."
           chmod +x ../AppBundler/macos/bin/create-dmg
-          ../AppBundler/macos/bin/create-dmg \
-            --background ../AppBundler/macos/background.png \
-            --volname "tinyMediaManager" \
-            --window-pos 200 120 \
-            --window-size 660 400 \
-            --icon-size 100 \
-            --icon "tinyMediaManager.app" 160 180 \
-            --icon "Fix_macOS_Security.command" 320 180 \
-            --icon "README_macOS.txt" 480 180 \
-            --hide-extension "tinyMediaManager.app" \
-            --hide-extension "Fix_macOS_Security.command" \
-            --app-drop-link 500 300 \
-            --skip-jenkins \
-            --format UDBZ \
-            tinyMediaManager.dmg \
-            tinyMediaManager
+
+          # Build create-dmg arguments dynamically based on file existence
+          DMG_ARGS=(
+            --background ../AppBundler/macos/background.png
+            --volname "tinyMediaManager"
+            --window-pos 200 120
+            --window-size 660 400
+            --icon-size 100
+            --app-drop-link 500 300
+            --skip-jenkins
+            --format UDBZ
+          )
+
+          # Add icon positioning for files that exist
+          if [[ -d "tinyMediaManager/tinyMediaManager.app" ]]; then
+            DMG_ARGS+=(--icon "tinyMediaManager.app" 160 180)
+            DMG_ARGS+=(--hide-extension "tinyMediaManager.app")
+            echo "✅ Will position tinyMediaManager.app icon"
+          fi
+
+          if [[ -f "tinyMediaManager/Fix_macOS_Security.command" ]]; then
+            DMG_ARGS+=(--icon "Fix_macOS_Security.command" 320 180)
+            DMG_ARGS+=(--hide-extension "Fix_macOS_Security.command")
+            echo "✅ Will position Fix_macOS_Security.command icon"
+          fi
+
+          if [[ -f "tinyMediaManager/README_macOS.txt" ]]; then
+            DMG_ARGS+=(--icon "README_macOS.txt" 480 180)
+            echo "✅ Will position README_macOS.txt icon"
+          fi
+
+          # Create DMG with dynamic arguments
+          ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager
+
+          if [[ $? -eq 0 ]]; then
+            echo "✅ Professional DMG created successfully"
+          else
+            echo "❌ Professional DMG creation failed, falling back to standard DMG"
+            hdiutil create -volname "tinyMediaManager" \
+              -srcfolder tinyMediaManager \
+              -ov -format UDZO \
+              tinyMediaManager.dmg
+          fi
         else
           echo "📦 Creating standard DMG (GitLab tools not found)..."
           hdiutil create -volname "tinyMediaManager" \
@@ -339,17 +399,35 @@ jobs:
             tinyMediaManager.dmg
         fi
 
-        # Copy unsigned DMG to dist (with clear naming)
-        ditto tinyMediaManager.dmg ../dist/tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg
+        # Verify DMG was created successfully
+        if [[ ! -f "tinyMediaManager.dmg" ]]; then
+          echo "❌ Error: DMG file was not created"
+          exit 1
+        fi
 
-        echo "✅ Created professional unsigned DMG: tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg"
-        echo "🎨 DMG includes professional layout and background (if available)"
-        echo "⚠️  Users must manually allow this app in macOS Security & Privacy settings"
-        echo "💡 Quick fix: xattr -dr com.apple.quarantine tinyMediaManager.app"
+        # Copy unsigned DMG to dist (with clear naming) and verify
+        DMG_NAME="tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg"
+        if ! ditto tinyMediaManager.dmg "../dist/$DMG_NAME"; then
+          echo "❌ Error: Failed to copy DMG to dist directory"
+          exit 1
+        fi
+
+        # Verify final DMG exists and get size
+        if [[ -f "../dist/$DMG_NAME" ]]; then
+          DMG_SIZE=$(ls -lh "../dist/$DMG_NAME" | awk '{print $5}')
+          echo "✅ Created professional unsigned DMG: $DMG_NAME ($DMG_SIZE)"
+          echo "🎨 DMG includes professional layout and background (if available)"
+          echo "⚠️  Users must manually allow this app in macOS Security & Privacy settings"
+          echo "💡 Quick fix: xattr -dr com.apple.quarantine tinyMediaManager.app"
+        else
+          echo "❌ Error: Final DMG verification failed"
+          exit 1
+        fi
 
         # Cleanup
         cd ..
         rm -rf macos_dmg_${{ matrix.platform.assembly }}
+        echo "🧹 Cleanup completed"
       shell: bash
 
     - name: Upload platform artifacts
