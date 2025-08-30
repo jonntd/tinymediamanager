@@ -90,14 +90,12 @@
         <assembly.descriptor>src/assembly/linux-amd64.xml</assembly.descriptor>
     </properties>
     <dependencies>
-        <!-- 破解许可证依赖 - 自动检测模式 -->
+        <!-- 破解许可证依赖 - 使用Maven仓库 -->
         <dependency>
             <groupId>org.tinymediamanager</groupId>
             <artifactId>license</artifactId>
             <version>5.2.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/license.jar</systemPath>
-            <!-- 仅在文件存在时激活 -->
+            <!-- 从Maven本地仓库获取 -->
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -505,8 +503,6 @@
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>3.6.0</version>
                     <configuration>
-                        <!-- 包含system scope依赖 -->
-                        <includeSystemScope>true</includeSystemScope>
                         <artifactSet>
                             <includes>
                                 <include>org.tinymediamanager:yt</include>
@@ -1261,54 +1257,18 @@
             </properties>
         </profile>
 
-        <!-- 自动切换Profile系统 -->
+        <!-- 简化的Profile系统 - 现在license总是可用 -->
 
-        <!-- Profile 1: 有破解文件时使用 -->
+        <!-- 默认profile: 使用license进行完整构建 -->
         <profile>
             <id>with-license</id>
             <activation>
-                <file>
-                    <exists>lib/license.jar</exists>
-                </file>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <build.mode>cracked</build.mode>
+                <build.mode>with-license</build.mode>
             </properties>
-            <!-- 破解依赖已在主dependencies中定义 -->
-        </profile>
-
-        <!-- Profile 2: 无破解文件时使用（GitHub Actions） -->
-        <profile>
-            <id>without-license</id>
-            <activation>
-                <file>
-                    <missing>lib/license.jar</missing>
-                </file>
-            </activation>
-            <properties>
-                <build.mode>github</build.mode>
-            </properties>
-            <build>
-                <plugins>
-                    <!-- 跳过主要构建，只编译基础类 -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <configuration>
-                            <failOnError>false</failOnError>
-                            <excludes>
-                                <!-- 排除所有使用许可证的类 -->
-                                <exclude>**/TinyMediaManager.java</exclude>
-                                <exclude>**/scraper/**/*Provider.java</exclude>
-                                <exclude>**/tasks/**/*Task.java</exclude>
-                                <exclude>**/actions/**/*Action.java</exclude>
-                                <exclude>**/threading/TmmTask.java</exclude>
-                                <exclude>**/FeatureNotEnabledException.java</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
+            <!-- license依赖已在主dependencies中定义 -->
         </profile>
     </profiles>
 </project>

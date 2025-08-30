@@ -74,3 +74,4 @@ launcher-extra.yml
 /code-sign-cert.p12
 /test_dmg/
 lib/license-cracked.jar
+lib/license.jar

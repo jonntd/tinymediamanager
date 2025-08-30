@@ -228,17 +228,19 @@ public class ChatGPTMovieRecognitionService {
                               "- 查找官方来源：IMDb、豆瓣电影、The Movie Database (TMDb)等\n" +
                               "- 验证搜索结果的准确性和权威性\n\n" +
                               "### 3. 输出格式要求\n" +
-                              "**严格按照以下格式输出：**\n" +
+                              "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" +
                               "```\n标题 年份\n```\n" +
                               "- 标题使用官方中文名称（如果有），否则使用英文原名\n" +
                               "- 标题和年份之间用一个空格分隔\n" +
                               "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                               "- 如果文件名中没有年份，必须通过搜索找到正确的发行年份\n" +
                               "- 年份不能为空，不能省略，这是强制要求\n" +
-                              "- 不包含任何其他符号、括号或额外信息\n\n" +
+                              "- 不包含任何其他符号、括号或额外信息\n" +
+                              "- 如果搜索失败，输出：未知电影 1900\n" +
+                              "- 禁止返回'I am unable to'或任何错误说明\n\n" +
                               "### 4. 示例\n" +
                               "输入：`Inception.2010.1080p.BluRay.mkv` → 输出：`盗梦空间 2010`\n" +
-                              "输入：`Avatar.2009.4K.UHD.mkv` → 输出：`阿凡达 2009`";
+                              "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
             }
             
             LOGGER.info("=== Movie AI Recognition Debug ===");
@@ -394,16 +396,18 @@ public class ChatGPTMovieRecognitionService {
             String model = settings.getOpenAiModel();
 
             // 更强烈的年份要求提示词
-            String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，识别出正确的电影标题和发行年份。\n\n" +
+            String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，联网搜索并识别出正确的电影标题和发行年份。\n\n" +
                                  "**关键要求**：\n" +
                                  "1. 你的回答必须包含4位数字的年份\n" +
                                  "2. 格式：电影标题 年份（用空格分隔）\n" +
                                  "3. 年份范围：1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                                  "4. 如果不确定年份，请搜索确认\n" +
-                                 "5. 绝对不能省略年份\n\n" +
+                                 "5. 绝对不能省略年份\n" +
+                                 "6. 如果搜索失败，输出：未知电影 1900\n" +
+                                 "7. 禁止返回'I am unable to'或任何错误说明\n\n" +
                                  "示例：\n" +
                                  "输入：`Inception.2010.mkv` → 输出：`盗梦空间 2010`\n" +
-                                 "输入：`Avatar.mkv` → 输出：`阿凡达 2009`";
+                                 "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
 
             String requestBody = String.format(
                 "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.1}",

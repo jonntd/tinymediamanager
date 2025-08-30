@@ -163,7 +163,7 @@ public final class Settings extends AbstractSettings {
   private String                                           openAiApiKey                 = "";
   private String                                           openAiApiUrl                 = "https://api.openai.com/v1/chat/completions";
   private String                                           openAiModel                  = "gpt-3.5-turbo";
-  private String                                           openAiExtractionPrompt       = "Extract the movie title from the provided file path context. Analyze the directory structure and file name to identify the actual movie title. Return only the clean movie title. If uncertain, make an educated guess based on common movie naming patterns. Prioritize the most specific directory name that resembles a movie title.";
+  private String                                           openAiExtractionPrompt       = "你是专业的电影识别助手。根据文件路径联网搜索准确的电影信息。严格按照格式输出：标题 年份。标题用中文（如果有），年份必须4位数字。绝对不要返回解释或错误信息，只返回要求的格式。示例：卒仔抽车.mkv → 卒仔抽车 1980";
   private String                                           openAiTestPath               = "/Users/jonntd/Movies/Test Movie/Test Movie.mkv";
 
   // AI调用控制设置
