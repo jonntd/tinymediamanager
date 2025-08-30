@@ -18,6 +18,11 @@ on:
         - test
         - release
         - dist
+      create_release:
+        description: 'Create GitHub Release (仅当build_type为release时生效)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -258,7 +263,7 @@ jobs:
         set -e  # Exit on any error
 
         echo "🍎 Creating professional macOS DMG for ${{ matrix.platform.name }}..."
-        echo "📋 Using GitLab's DMG creation method (without signing)"
+        echo "📋 Using GitLab DMG creation method (without signing)"
         echo "⚠️  Note: This DMG will be unsigned (no Apple Developer account)"
         echo "📋 Users will need to manually allow the app: xattr -dr com.apple.quarantine tinyMediaManager.app"
 
@@ -520,7 +525,7 @@ jobs:
     - name: Upload platform artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: tinymediamanager-${{ matrix.platform.artifact-name }}-${{ needs.build-and-test.outputs.version }}
+        name: tinymediamanager-${{ matrix.platform.artifact-name }}-${{ github.sha }}
         path: |
           dist/*.zip
           dist/*.tar.bz2
@@ -528,18 +533,27 @@ jobs:
           dist/*.sha256
         retention-days: 30
 
-  # 创建 GitHub Release (暂时禁用)
+  # 创建 GitHub Release
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-and-test]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build-and-test, build-platforms]
+    if: |
+      always() && (
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' && github.event.inputs.create_release == 'true')
+      )
     permissions:
       contents: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Wait for platform builds
+      run: |
+        echo "⏳ 等待所有平台构建完成..."
+        sleep 30
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -548,31 +562,106 @@ jobs:
 
     - name: Prepare release assets
       run: |
-        echo "📦 Preparing release assets..."
+        echo "📦 准备发布资产..."
         mkdir -p release-assets
-
+        
+        # 显示所有下载的artifacts
+        echo "📁 发现的构建产物:"
+        find artifacts -type f -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.jar" -o -name "*.sha256" | head -20
+        
         # 复制所有构建产物到发布目录
-        find artifacts -name "*.zip" -exec cp {} release-assets/ \;
-        find artifacts -name "*.tar.bz2" -exec cp {} release-assets/ \;
-        find artifacts -name "*.sha256" -exec cp {} release-assets/ \;
-        find artifacts -name "*.jar" -exec cp {} release-assets/ \;
+        find artifacts -name "*.zip" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.bz2" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.dmg" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.sha256" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.jar" -exec cp {} release-assets/ \; 2>/dev/null || true
 
-        echo "✅ Release assets prepared:"
+        # 重命名文件以便更好识别
+        cd release-assets
+        for file in *; do
+          if [[ -f "$file" ]]; then
+            # 移除重复后缀并标准化命名
+            new_name=$(echo "$file" | sed 's/tinymediamanager-/tinyMediaManager-/g' | sed 's/--/-/g')
+            if [[ "$file" != "$new_name" ]]; then
+              mv "$file" "$new_name"
+            fi
+          fi
+        done
+        cd ..
+
+        echo "✅ 发布资产准备完成:"
         ls -la release-assets/
+        
+        # 计算总大小
+        TOTAL_SIZE=$(du -sh release-assets/ | cut -f1)
+        echo "📊 总发布大小: $TOTAL_SIZE"
 
-    - name: Generate release notes
+    - name: Extract version and tag info
+      id: release-info
+      run: |
+        # 提取版本信息
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+        else
+          # 从构建产物中获取版本信息
+          JAR_FILE=$(find artifacts -name "*.jar" | head -1)
+          if [[ -n "$JAR_FILE" ]]; then
+            VERSION=$(echo "$JAR_FILE" | sed 's/.*tinyMediaManager-\(.*\)\.jar/\1/')
+          else
+            VERSION="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+          fi
+          TAG_NAME="v${VERSION}"
+        fi
+        
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 发布版本: $VERSION"
+        echo "🏷️  Tag名称: $TAG_NAME"
+
+    - name: Generate enhanced release notes
       id: release-notes
       run: |
-        echo "📝 Generating release notes..."
-
-        # 提取版本号
-        VERSION="${{ needs.build-and-test.outputs.version }}"
-        TAG_NAME="${GITHUB_REF#refs/tags/}"
-
-        # 生成简单发布说明
-        echo "# tinyMediaManager ${TAG_NAME}" > release-notes.md
+        echo "📝 生成增强版发布说明..."
+        
+        TAG_NAME="${{ steps.release-info.outputs.tag }}"
+        VERSION="${{ steps.release-info.outputs.version }}"
+        
+        # 创建详细的发布说明
+        echo "# tinyMediaManager $VERSION" > release-notes.md
         echo "" >> release-notes.md
-        echo "New release of tinyMediaManager ${TAG_NAME}" >> release-notes.md
+        echo "🎉 我们很高兴发布 tinyMediaManager $VERSION！" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 📥 下载" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "### 平台版本" >> release-notes.md
+        echo "- **Windows x64**: tinyMediaManager-$VERSION-windows-amd64.zip" >> release-notes.md
+        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.bz2" >> release-notes.md
+        echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.bz2" >> release-notes.md
+        echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
+        echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "### 通用版本" >> release-notes.md
+        echo "- **JAR文件**: tinyMediaManager-$VERSION.jar (需要Java 17+)" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## ⚠️ macOS用户注意" >> release-notes.md
+        echo "macOS版本为未签名版本，首次运行时需要：" >> release-notes.md
+        echo "1. 双击随附的 \"Fix_macOS_Security.command\"" >> release-notes.md
+        echo "2. 或右键选择 \"打开\" 并确认安全警告" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🚀 快速开始" >> release-notes.md
+        echo "1. 下载对应平台的安装包" >> release-notes.md
+        echo "2. 解压/安装到您选择的目录" >> release-notes.md
+        echo "3. 运行 tinyMediaManager" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🔧 系统要求" >> release-notes.md
+        echo "- **Java**: 17或更高版本" >> release-notes.md
+        echo "- **内存**: 建议4GB以上" >> release-notes.md
+        echo "- **存储**: 根据媒体库大小预留空间" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "---" >> release-notes.md
+        echo "*发布于: $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> release-notes.md
+        echo "*GitHub Actions构建: #${{ github.run_number }}*" >> release-notes.md
 
         echo "release-notes<<EOF" >> $GITHUB_OUTPUT
         cat release-notes.md >> $GITHUB_OUTPUT
@@ -581,13 +670,14 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref_name }}
-        name: tinyMediaManager ${{ github.ref_name }}
+        tag_name: ${{ steps.release-info.outputs.tag }}
+        name: tinyMediaManager ${{ steps.release-info.outputs.version }}
         body: ${{ steps.release-notes.outputs.release-notes }}
         files: release-assets/*
         draft: false
-        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
-        generate_release_notes: true
+        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') }}
+        generate_release_notes: false
+        append_body: false
 
   # 构建状态通知
   notify-status:
@@ -620,5 +710,5 @@ jobs:
         echo "状态: ${{ steps.status.outputs.message }}"
         echo "基础构建: ${{ needs.build-and-test.result }}"
         echo "平台构建: ${{ needs.build-platforms.result }}"
-        echo "版本: ${{ needs.build-and-test.outputs.version }}"
-        echo "应该发布: ${{ needs.build-and-test.outputs.should-release }}"
+        echo "触发事件: ${{ github.event_name }}"
+        echo "分支/标签: ${{ github.ref }}"
