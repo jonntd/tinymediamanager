@@ -313,8 +313,19 @@ jobs:
 
           # Clean up any existing DMG and mounted volumes before creating
           rm -f tinyMediaManager.dmg
-          hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
-          sleep 2
+          # Force unmount any existing volumes with retry mechanism
+          for i in {1..5}; do
+            if hdiutil detach /Volumes/tinyMediaManager 2>/dev/null; then
+              echo "✅ Unmounted existing volume (attempt $i)"
+              break
+            fi
+            echo "⏳ Waiting for volume to unmount (attempt $i/5)..."
+            sleep 3
+          done
+
+          # Additional cleanup for GitHub Actions
+          sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+          sleep 5
 
           # Build create-dmg arguments dynamically based on file existence
           DMG_ARGS=(
@@ -353,32 +364,75 @@ jobs:
             echo "✅ Will position README_macOS.txt icon"
           fi
 
-          # Create DMG with dynamic arguments
-          ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager
+          # Create DMG with dynamic arguments and retry mechanism
+          DMG_SUCCESS=false
+          for attempt in {1..3}; do
+            echo "🔄 DMG creation attempt $attempt/3..."
 
-          if [[ $? -eq 0 ]]; then
-            echo "✅ Professional DMG created successfully"
-          else
-            echo "❌ Professional DMG creation failed, falling back to standard DMG"
-            # Clean up any existing DMG and mounted volumes
+            # Additional cleanup before each attempt
             rm -f tinyMediaManager.dmg
-            hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
+            sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
             sleep 2
-            hdiutil create -volname "tinyMediaManager" \
+
+            if timeout 300 ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager; then
+              echo "✅ Professional DMG created successfully on attempt $attempt"
+              DMG_SUCCESS=true
+              break
+            else
+              echo "⚠️ DMG creation attempt $attempt failed, cleaning up..."
+              rm -f tinyMediaManager.dmg
+              # Force cleanup any stuck processes
+              sudo pkill -f hdiutil 2>/dev/null || true
+              sleep 5
+            fi
+          done
+
+          if [[ "$DMG_SUCCESS" != "true" ]]; then
+            echo "❌ Professional DMG creation failed after 3 attempts, falling back to standard DMG"
+            # Final cleanup
+            rm -f tinyMediaManager.dmg
+            sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+            sudo pkill -f hdiutil 2>/dev/null || true
+            sleep 5
+
+            # Use simple hdiutil create with timeout
+            timeout 180 hdiutil create -volname "tinyMediaManager" \
               -srcfolder tinyMediaManager \
               -ov -format UDZO \
               tinyMediaManager.dmg
           fi
         else
           echo "📦 Creating standard DMG (GitLab tools not found)..."
-          # Clean up any existing DMG and mounted volumes
+          # Clean up any existing DMG and mounted volumes with retry
+          for i in {1..5}; do
+            if hdiutil detach /Volumes/tinyMediaManager 2>/dev/null; then
+              echo "✅ Unmounted existing volume (attempt $i)"
+              break
+            fi
+            echo "⏳ Waiting for volume to unmount (attempt $i/5)..."
+            sleep 3
+          done
+
           rm -f tinyMediaManager.dmg
-          hdiutil detach /Volumes/tinyMediaManager 2>/dev/null || true
-          sleep 2
-          hdiutil create -volname "tinyMediaManager" \
-            -srcfolder tinyMediaManager \
-            -ov -format UDZO \
-            tinyMediaManager.dmg
+          sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+          sleep 5
+
+          # Create standard DMG with timeout and retry
+          for attempt in {1..3}; do
+            echo "🔄 Standard DMG creation attempt $attempt/3..."
+            if timeout 180 hdiutil create -volname "tinyMediaManager" \
+              -srcfolder tinyMediaManager \
+              -ov -format UDZO \
+              tinyMediaManager.dmg; then
+              echo "✅ Standard DMG created successfully on attempt $attempt"
+              break
+            else
+              echo "⚠️ Standard DMG creation attempt $attempt failed"
+              rm -f tinyMediaManager.dmg
+              sudo pkill -f hdiutil 2>/dev/null || true
+              sleep 5
+            fi
+          done
         fi
 
         # Verify DMG was created successfully

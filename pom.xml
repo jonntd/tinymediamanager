@@ -90,11 +90,8 @@
         <assembly.descriptor>src/assembly/linux-amd64.xml</assembly.descriptor>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>org.tinymediamanager</groupId>
-            <artifactId>license</artifactId>
-            <version>5.2.1</version>
-        </dependency>
+        <!-- 破解许可证依赖 - 仅在本地构建时使用 -->
+        <!-- GitHub Actions 构建时会跳过此依赖 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -507,8 +504,40 @@
                                 <include>org.tinymediamanager:kodi-json-rpc</include>
                                 <include>org.tinymediamanager:libdvd</include>
                                 <include>org.tinymediamanager:libbluray</include>
+                                <!-- 破解许可证 - 仅在文件存在时包含 -->
+                                <include>org.tinymediamanager:license-cracked</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
+                                <include>ch.qos.logback:*</include>
+                                <include>org.slf4j:*</include>
+                                <include>org.codehaus.janino:*</include>
+                                <include>com.h2database:*</include>
+                                <include>org.apache.commons:*</include>
+                                <include>commons-codec:*</include>
+                                <include>commons-io:*</include>
+                                <include>com.fasterxml.jackson.core:*</include>
+                                <include>com.fasterxml.jackson.dataformat:*</include>
+                                <include>com.fasterxml.jackson.module:*</include>
+                                <include>org.yaml:*</include>
+                                <include>it.tidalwave.betterbeansbinding:*</include>
+                                <include>com.glazedlists:*</include>
+                                <include>org.jsoup:*</include>
+                                <include>com.formdev:*</include>
+                                <include>com.miglayout:*</include>
+                                <include>jakarta.xml.bind:*</include>
+                                <include>com.sun.xml.bind:*</include>
+                                <include>com.sun.activation:*</include>
+                                <include>com.squareup.okhttp3:*</include>
+                                <include>com.squareup.okio:*</include>
+                                <include>com.squareup.retrofit2:*</include>
+                                <include>com.google.code.gson:*</include>
+                                <include>org.jetbrains.kotlin:*</include>
+                                <include>org.jetbrains:*</include>
+                                <include>net.java.dev.jna:*</include>
+                                <include>org.imgscalr:*</include>
+                                <include>com.madgag:*</include>
+                                <include>com.twelvemonkeys.imageio:*</include>
+                                <include>com.twelvemonkeys.common:*</include>
                             </includes>
                         </artifactSet>
                         <extraJars>${maven.shade.extra}</extraJars>
@@ -1221,6 +1250,23 @@
             <properties>
                 <assembly.descriptor>src/assembly/macos-aarch64.xml</assembly.descriptor>
             </properties>
+        </profile>
+
+        <!-- 破解版本 Profile - 仅本地构建使用 -->
+        <profile>
+            <id>cracked</id>
+            <activation>
+                <file>
+                    <exists>lib/license-cracked.jar</exists>
+                </file>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.tinymediamanager</groupId>
+                    <artifactId>license-cracked</artifactId>
+                    <version>5.2.1</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>
