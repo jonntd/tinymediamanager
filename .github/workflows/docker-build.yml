@@ -99,20 +99,34 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
           # 使用构建产物
           echo "📦 Extracting build artifacts..."
-          # 查找并提取构建产物
-          BUILD_FILE=$(ls tinyMediaManager-*-linux-amd64.* 2>/dev/null | head -1)
-          if [ -n "$BUILD_FILE" ]; then
-            echo "Found build file: $BUILD_FILE"
-            if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
-              tar xjf "$BUILD_FILE" -C target/docker/
-            elif [[ "$BUILD_FILE" == *.zip ]]; then
-              unzip -q "$BUILD_FILE" -d target/docker/
+          
+          # GitHub Actions下载的artifact在子目录中
+          ARTIFACT_DIR="tinyMediaManager-linux-amd64"
+          if [ -d "$ARTIFACT_DIR" ]; then
+            echo "✅ Found artifact directory: $ARTIFACT_DIR"
+            
+            # 在artifact目录中查找构建产物
+            BUILD_FILE=$(find "$ARTIFACT_DIR" -name "tinyMediaManager-*-linux-amd64.*" -type f | head -1)
+            if [ -n "$BUILD_FILE" ]; then
+              echo "Found build file: $BUILD_FILE"
+              if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
+                tar xjf "$BUILD_FILE" -C target/docker/
+              elif [[ "$BUILD_FILE" == *.zip ]]; then
+                unzip -q "$BUILD_FILE" -d target/docker/
+              else
+                echo "❌ Unsupported file format: $BUILD_FILE"
+                exit 1
+              fi
             else
-              echo "❌ Unsupported file format: $BUILD_FILE"
+              echo "❌ No Linux AMD64 build artifact found in $ARTIFACT_DIR"
+              # 列出目录内容用于调试
+              ls -la "$ARTIFACT_DIR/"
               exit 1
             fi
           else
-            echo "❌ No Linux AMD64 build artifact found"
+            echo "❌ Artifact directory $ARTIFACT_DIR not found"
+            # 列出当前目录内容用于调试
+            ls -la
             exit 1
           fi
         fi
@@ -171,25 +185,39 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
           # 使用构建产物
           echo "📦 Extracting build artifacts..."
-          # 查找并提取构建产物
-          BUILD_FILE=$(ls tinyMediaManager-*-linux-arm64.* 2>/dev/null | head -1)
-          if [ -n "$BUILD_FILE" ]; then
-            echo "Found build file: $BUILD_FILE"
-            if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
-              tar xjf "$BUILD_FILE" -C target/docker/
-            elif [[ "$BUILD_FILE" == *.zip ]]; then
-              unzip -q "$BUILD_FILE" -d target/docker/
+          
+          # GitHub Actions下载的artifact在子目录中
+          ARTIFACT_DIR="tinyMediaManager-linux-arm64"
+          if [ -d "$ARTIFACT_DIR" ]; then
+            echo "✅ Found artifact directory: $ARTIFACT_DIR"
+            
+            # 在artifact目录中查找构建产物
+            BUILD_FILE=$(find "$ARTIFACT_DIR" -name "tinyMediaManager-*-linux-arm64.*" -type f | head -1)
+            if [ -n "$BUILD_FILE" ]; then
+              echo "Found build file: $BUILD_FILE"
+              if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
+                tar xjf "$BUILD_FILE" -C target/docker/
+              elif [[ "$BUILD_FILE" == *.zip ]]; then
+                unzip -q "$BUILD_FILE" -d target/docker/
+              else
+                echo "❌ Unsupported file format: $BUILD_FILE"
+                exit 1
+              fi
+
+              # ARM64 特殊处理 (参考 deploy_release.yml)
+              if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
+                mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+              fi
             else
-              echo "❌ Unsupported file format: $BUILD_FILE"
+              echo "❌ No Linux ARM64 build artifact found in $ARTIFACT_DIR"
+              # 列出目录内容用于调试
+              ls -la "$ARTIFACT_DIR/"
               exit 1
             fi
-
-            # ARM64 特殊处理 (参考 deploy_release.yml)
-            if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
-              mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
-            fi
           else
-            echo "❌ No Linux ARM64 build artifact found"
+            echo "❌ Artifact directory $ARTIFACT_DIR not found"
+            # 列出当前目录内容用于调试
+            ls -la
             exit 1
           fi
         fi
