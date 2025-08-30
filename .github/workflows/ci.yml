@@ -349,6 +349,8 @@ jobs:
           echo "🎨 Creating professional DMG with background and layout..."
           chmod +x ../AppBundler/macos/bin/create-dmg
 
+
+
           # Clean up any existing DMG and mounted volumes before creating
           rm -f tinyMediaManager.dmg
           # Force unmount any existing volumes with retry mechanism
@@ -384,17 +386,11 @@ jobs:
             echo "✅ Will position tinyMediaManager.app icon"
           fi
 
-          # Position Fix App like a UI button (prominent position)
-          if [[ -d "tinyMediaManager/Fix macOS Security.app" ]]; then
-            DMG_ARGS+=(--icon "Fix macOS Security.app" 450 300)
-            DMG_ARGS+=(--hide-extension "Fix macOS Security.app")
-            echo "✅ Will position Fix macOS Security.app as UI button (450, 300)"
-          fi
-
-          if [[ -f "tinyMediaManager/Fix_macOS_Security.command" ]]; then
-            DMG_ARGS+=(--icon "Fix_macOS_Security.command" 320 300)
-            DMG_ARGS+=(--hide-extension "Fix_macOS_Security.command")
-            echo "✅ Will position Fix_macOS_Security.command as backup option"
+          # 使用美观的Fix Security应用
+          if [[ -d "tinyMediaManager/🔧 Fix Security.app" ]]; then
+            DMG_ARGS+=(--icon "🔧 Fix Security.app" 450 300)
+            DMG_ARGS+=(--hide-extension "🔧 Fix Security.app")
+            echo "✅ Will position 🔧 Fix Security.app as UI button (450, 300)"
           fi
 
           if [[ -f "tinyMediaManager/README_macOS.txt" ]]; then
