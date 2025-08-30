@@ -335,14 +335,21 @@ jobs:
             echo "✅ Will position tinyMediaManager.app icon"
           fi
 
+          # Position Fix App like a UI button (prominent position)
+          if [[ -d "tinyMediaManager/Fix macOS Security.app" ]]; then
+            DMG_ARGS+=(--icon "Fix macOS Security.app" 450 300)
+            DMG_ARGS+=(--hide-extension "Fix macOS Security.app")
+            echo "✅ Will position Fix macOS Security.app as UI button (450, 300)"
+          fi
+
           if [[ -f "tinyMediaManager/Fix_macOS_Security.command" ]]; then
-            DMG_ARGS+=(--icon "Fix_macOS_Security.command" 300 180)
+            DMG_ARGS+=(--icon "Fix_macOS_Security.command" 320 300)
             DMG_ARGS+=(--hide-extension "Fix_macOS_Security.command")
-            echo "✅ Will position Fix_macOS_Security.command icon (prominent position)"
+            echo "✅ Will position Fix_macOS_Security.command as backup option"
           fi
 
           if [[ -f "tinyMediaManager/README_macOS.txt" ]]; then
-            DMG_ARGS+=(--icon "README_macOS.txt" 480 180)
+            DMG_ARGS+=(--icon "README_macOS.txt" 320 180)
             echo "✅ Will position README_macOS.txt icon"
           fi
 
