@@ -1,122 +1,136 @@
 #!/bin/bash
 set -e
 
-echo "🍎 tinyMediaManager macOS 权限修复工具"
-echo "========================================"
+echo "🍎 tinyMediaManager.app 正式版本安全修复工具"
+echo "=========================================="
 echo ""
-echo "此脚本将修复 macOS 对未签名应用的常见问题："
-echo "- 移除隔离属性 (quarantine)"
-echo "- 修复文件权限"
-echo "- 验证应用程序结构"
+echo "此脚本将修复 /Applications/tinyMediaManager.app 的macOS安全限制"
 echo ""
-read -p "按回车键继续，或按 Ctrl+C 取消..."
+echo "修复内容："
+echo "- 移除应用程序隔离属性"
+echo "- 修复.app包内所有可执行文件权限"
+echo "- 验证应用程序完整性"
+echo ""
+read -p "按回车键继续修复，或按 Ctrl+C 取消..."
+
 echo ""
 
-# 获取脚本所在目录
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-APP_PATH="$SCRIPT_DIR/tinyMediaManager.app"
+# 设置应用程序路径
+APP_PATH="/Applications/tinyMediaManager.app"
 
-# 如果在同一目录找不到，尝试常见位置
+echo "📍 目标应用: $APP_PATH"
+
+# 检查应用程序是否存在
 if [ ! -d "$APP_PATH" ]; then
-    echo "🔍 在当前目录未找到 tinyMediaManager.app，正在搜索..."
-
-    # 检查 DMG 挂载点 (最优先 - 用户通常在 DMG 中运行此脚本)
-    if [ -d "/Volumes/tinyMediaManager/tinyMediaManager.app" ]; then
-        APP_PATH="/Volumes/tinyMediaManager/tinyMediaManager.app"
-        echo "✅ 在 DMG 挂载点找到应用程序"
-    # 检查下载文件夹中的 DMG 内容
-    elif [ -d "$HOME/Downloads/tinyMediaManager.app" ]; then
-        APP_PATH="$HOME/Downloads/tinyMediaManager.app"
-        echo "✅ 在下载文件夹找到应用程序"
-    # 检查桌面
-    elif [ -d "$HOME/Desktop/tinyMediaManager.app" ]; then
-        APP_PATH="$HOME/Desktop/tinyMediaManager.app"
-        echo "✅ 在桌面找到应用程序"
-    # 检查应用程序文件夹 (已安装的情况)
-    elif [ -d "/Applications/tinyMediaManager.app" ]; then
-        APP_PATH="/Applications/tinyMediaManager.app"
-        echo "✅ 在应用程序文件夹找到应用程序"
-    else
-        echo "❌ 未找到 tinyMediaManager.app"
-        echo ""
-        echo "请确保 tinyMediaManager.app 位于以下位置之一："
-        echo "- 与此脚本相同的文件夹 (DMG 挂载状态)"
-        echo "- DMG 挂载点 (/Volumes/tinyMediaManager/)"
-        echo "- 下载文件夹 (~/Downloads/)"
-        echo "- 桌面 (~/Desktop/)"
-        echo "- 应用程序文件夹 (/Applications/)"
-        echo ""
-        read -p "按回车键关闭此窗口..."
-        exit 1
-    fi
-fi
-
-echo "📍 应用程序路径: $APP_PATH"
-echo ""
-
-if [ -d "$APP_PATH" ]; then
-    echo "🔧 步骤 1: 移除隔离属性..."
-    echo "⚠️  需要管理员权限来执行此操作"
-
-    if sudo xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then
-        echo "✅ 隔离属性移除成功"
-    else
-        echo "⚠️  隔离属性移除失败 (可能不需要或权限不足)"
-    fi
-
+    echo "❌ 未找到应用程序: $APP_PATH"
     echo ""
-    echo "🔧 步骤 2: 修复文件权限..."
-
-    # 修复主执行文件权限
-    MAIN_EXEC="$APP_PATH/Contents/MacOS/tinyMediaManager"
-    if [ -f "$MAIN_EXEC" ]; then
-        sudo chmod +x "$MAIN_EXEC"
-        echo "✅ 主执行文件权限已修复"
-    else
-        echo "❌ 未找到主执行文件: $MAIN_EXEC"
-    fi
-
-    # 修复 Info.plist 权限
-    INFO_PLIST="$APP_PATH/Contents/Info.plist"
-    if [ -f "$INFO_PLIST" ]; then
-        sudo chmod 644 "$INFO_PLIST"
-        echo "✅ Info.plist 权限已修复"
-    else
-        echo "❌ 未找到 Info.plist: $INFO_PLIST"
-    fi
-
-    # 修复整个应用包权限
-    sudo chmod -R u+rw,go+r "$APP_PATH"
-    sudo find "$APP_PATH" -type d -exec chmod 755 {} \;
-    echo "✅ 应用包权限已修复"
-    
+    echo "请确认："
+    echo "1. tinyMediaManager.app 是否已移动到应用程序文件夹？"
+    echo "2. 或者使用 Finder 找到应用程序的准确位置"
     echo ""
-    echo "🔧 步骤 3: 验证应用程序结构..."
-    
-    # 检查关键文件
-    if [ -f "$MAIN_EXEC" ] && [ -f "$INFO_PLIST" ]; then
-        echo "✅ 应用程序结构正常"
-        echo ""
-        echo "🎉 所有修复已成功完成！"
-        echo ""
-        echo "现在你可以双击 tinyMediaManager.app 来启动它。"
-        echo ""
-        echo "如果仍然遇到错误，请尝试："
-        echo "1. 右键点击 tinyMediaManager.app 并选择 '打开'"
-        echo "2. 前往 系统偏好设置 > 安全性与隐私 > 通用"
-        echo "3. 点击 '仍要打开' (如果出现提示)"
-        echo ""
-    else
-        echo "❌ 应用程序结构似乎已损坏"
-        echo "请重新下载应用程序"
-        echo ""
-    fi
-    
-    read -p "按回车键关闭此窗口..."
-else
-    echo "❌ 在指定路径未找到 tinyMediaManager.app"
-    echo "请确保此脚本与 tinyMediaManager.app 在同一文件夹中"
-    echo ""
-    read -p "按回车键关闭此窗口..."
+    read -p "按回车键退出..."
     exit 1
 fi
+
+echo "✅ 找到应用程序"
+echo ""
+
+# 步骤1: 移除隔离属性
+echo "🔧 步骤 1: 移除隔离属性..."
+if sudo xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then
+    echo "✅ 隔离属性移除成功"
+else
+    echo "⚠️  隔离属性移除失败 (可能不需要或权限不足)"
+fi
+
+# 步骤2: 修复.app包内所有可执行文件权限
+echo ""
+echo "🔧 步骤 2: 修复可执行文件权限..."
+
+# 修复主可执行文件
+MAIN_EXEC="$APP_PATH/Contents/MacOS/tinyMediaManager"
+if [ -f "$MAIN_EXEC" ]; then
+    sudo chmod +x "$MAIN_EXEC"
+    echo "✅ 主执行文件权限已修复"
+else
+    echo "❌ 未找到主执行文件: $MAIN_EXEC"
+fi
+
+# 修复Java可执行文件
+JAVA_EXEC="$APP_PATH/Contents/MacOS/jre/bin/java"
+if [ -f "$JAVA_EXEC" ]; then
+    sudo chmod +x "$JAVA_EXEC"
+    echo "✅ Java执行文件权限已修复"
+fi
+
+# 修复所有可执行脚本
+if [ -d "$APP_PATH/Contents/MacOS" ]; then
+    sudo find "$APP_PATH/Contents/MacOS" -type f -exec chmod +x {} \; 2>/dev/null
+    echo "✅ MacOS目录下所有文件权限已修复"
+fi
+
+# 修复整个.app包权限
+sudo chmod -R u+rw,go+r "$APP_PATH"
+sudo find "$APP_PATH" -type d -exec chmod 755 {} \;
+echo "✅ 应用程序包权限已统一修复"
+
+# 步骤3: 验证应用程序完整性
+echo ""
+echo "🔧 步骤 3: 验证应用程序结构..."
+
+REQUIRED_FILES=(
+    "$APP_PATH/Contents/Info.plist"
+    "$APP_PATH/Contents/MacOS/tinyMediaManager"
+    "$APP_PATH/Contents/MacOS"
+)
+
+ALL_GOOD=true
+for file in "${REQUIRED_FILES[@]}"; do
+    if [ ! -e "$file" ]; then
+        echo "❌ 缺少关键文件: $file"
+        ALL_GOOD=false
+    fi
+done
+
+if [ "$ALL_GOOD" = true ]; then
+    echo "✅ 应用程序结构完整"
+else
+    echo "⚠️  应用程序可能已损坏，建议重新下载"
+fi
+
+# 步骤4: 提供系统设置指导
+echo ""
+echo "🎯 步骤 4: 系统设置确认"
+echo ""
+echo "如果仍然无法打开，请按以下步骤操作："
+echo ""
+echo "方法1: 右键打开"
+echo "1. 在 Finder 中找到 /Applications/tinyMediaManager.app"
+echo "2. 右键点击应用程序图标"
+echo "3. 选择 '打开'"
+echo "4. 在弹出的对话框中点击 '打开'"
+echo ""
+echo "方法2: 系统偏好设置"
+echo "1. 打开 系统偏好设置 > 安全性与隐私"
+echo "2. 点击'通用'标签页"
+echo "3. 查看底部是否有 'tinyMediaManager.app 被阻止使用' 的提示"
+echo "4. 点击 '仍要打开'"
+echo ""
+echo "方法3: 终端命令 (终极方案)"
+echo "运行: sudo spctl --master-disable"
+echo "⚠️  此命令会降低系统安全性，仅建议临时使用"
+echo ""
+
+if [ "$ALL_GOOD" = true ]; then
+    echo "🎉 修复完成！"
+    echo ""
+    echo "现在可以尝试："
+    echo "1. 双击 /Applications/tinyMediaManager.app"
+    echo "2. 或使用方法1/2中的步骤"
+    echo ""
+else
+    echo "⚠️  应用程序可能已损坏"
+    echo "建议重新下载tinyMediaManager"
+fi
+
+read -p "按回车键关闭此窗口..."

@@ -94,11 +94,20 @@ start_with_jar() {
         exit 1
     fi
 
+    # 检查lib目录是否存在
+    if [ ! -d "$PROJECT_DIR/lib" ]; then
+        print_error "lib目录不存在: $PROJECT_DIR/lib"
+        exit 1
+    fi
+
+    # 构建类路径
+    CLASSPATH="$JAR_FILE:$PROJECT_DIR/lib/*"
+    
     if [ "$DEBUG_MODE" = "true" ]; then
         print_info "启用 DEBUG 模式..."
-        java -Dtmm.consoleloglevel=DEBUG -jar "$JAR_FILE"
+        java -Dtmm.consoleloglevel=DEBUG -cp "$CLASSPATH" org.tinymediamanager.TinyMediaManager
     else
-        java -jar "$JAR_FILE"
+        java -cp "$CLASSPATH" org.tinymediamanager.TinyMediaManager
     fi
 }
 
@@ -109,9 +118,9 @@ start_with_maven() {
 
     if [ "$DEBUG_MODE" = "true" ]; then
         print_info "启用 DEBUG 日志级别..."
-        mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager" -Dtmm.consoleloglevel=DEBUG
+        mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager" -Dexec.classpathScope=compile -Dtmm.consoleloglevel=DEBUG
     else
-        mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager"
+        mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager" -Dexec.classpathScope=compile
     fi
 }
 

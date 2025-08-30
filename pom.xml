@@ -95,7 +95,8 @@
             <groupId>org.tinymediamanager</groupId>
             <artifactId>license</artifactId>
             <version>5.2.1</version>
-            <!-- 从Maven本地仓库获取 -->
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/license.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
