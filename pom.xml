@@ -93,7 +93,7 @@
         <!-- 破解许可证依赖 - 自动检测模式 -->
         <dependency>
             <groupId>org.tinymediamanager</groupId>
-            <artifactId>license-cracked</artifactId>
+            <artifactId>license</artifactId>
             <version>5.2.1</version>
             <!-- 仅在文件存在时激活 -->
         </dependency>
@@ -510,7 +510,7 @@
                                 <include>org.tinymediamanager:libdvd</include>
                                 <include>org.tinymediamanager:libbluray</include>
                                 <!-- 破解许可证 - 仅在文件存在时包含 -->
-                                <include>org.tinymediamanager:license-cracked</include>
+                                <include>org.tinymediamanager:license</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>
                                 <include>ch.qos.logback:*</include>
@@ -1264,7 +1264,7 @@
             <id>with-license</id>
             <activation>
                 <file>
-                    <exists>lib/license-cracked.jar</exists>
+                    <exists>lib/license.jar</exists>
                 </file>
             </activation>
             <properties>
@@ -1278,7 +1278,7 @@
             <id>without-license</id>
             <activation>
                 <file>
-                    <missing>lib/license-cracked.jar</missing>
+                    <missing>lib/license.jar</missing>
                 </file>
             </activation>
             <properties>

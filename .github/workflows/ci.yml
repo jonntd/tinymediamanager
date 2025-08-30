@@ -84,6 +84,20 @@ jobs:
       run: |
         echo "⚡ Skipping tests for faster build..."
 
+    - name: Download license file
+      run: |
+        echo "📥 Downloading license.jar..."
+        mkdir -p lib/
+        curl -L -o lib/license.jar "${{ secrets.LICENSE_DOWNLOAD_URL }}"
+        if [ -f "lib/license.jar" ]; then
+          echo "✅ License file downloaded successfully"
+          ls -la lib/license.jar
+          echo "🔧 This will activate the 'with-license' Maven profile"
+        else
+          echo "❌ Failed to download license file"
+          exit 1
+        fi
+
     - name: Build JAR
       run: |
         echo "🔨 Building JAR with performance optimizations..."
@@ -168,6 +182,21 @@ jobs:
           ls -la ${{ matrix.platform.native-path }}/
         else
           echo "⚠️ No native libraries found for this platform"
+        fi
+      shell: bash
+
+    - name: Download license file
+      run: |
+        echo "📥 Downloading license.jar for ${{ matrix.platform.name }}..."
+        mkdir -p lib/
+        curl -L -o lib/license.jar "${{ secrets.LICENSE_DOWNLOAD_URL }}"
+        if [ -f "lib/license.jar" ]; then
+          echo "✅ License file downloaded successfully"
+          ls -la lib/license.jar
+          echo "🔧 This will activate the 'with-license' Maven profile"
+        else
+          echo "❌ Failed to download license file"
+          exit 1
         fi
       shell: bash
 
