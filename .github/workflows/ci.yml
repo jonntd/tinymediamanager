@@ -89,35 +89,26 @@ jobs:
       run: |
         echo "⚡ Skipping tests for faster build..."
 
-    - name: Download and install license file
+    - name: Download and install license file (可选)
       run: |
-        echo "📥 Downloading license.jar..."
-        mkdir -p lib/
-        curl -L -o lib/license.jar "${{ secrets.LICENSE_DOWNLOAD_URL }}"
-        if [ -f "lib/license.jar" ]; then
-          echo "✅ License file downloaded successfully"
-          ls -la lib/license.jar
-          echo "🔧 This will activate the 'with-license' Maven profile"
-
-          # 同时安装到Maven本地仓库作为备用
-          echo "📦 Installing license.jar to Maven local repository..."
-          mvn install:install-file \
-            -Dfile=lib/license.jar \
-            -DgroupId=org.tinymediamanager \
-            -DartifactId=license \
-            -Dversion=5.2.1 \
-            -Dpackaging=jar \
-            -q
-          echo "✅ License installed to Maven repository"
+        if [ -n "${{ secrets.LICENSE_DOWNLOAD_URL }}" ]; then
+          echo "📥 正在从自定义URL下载license.jar..."
+          mkdir -p lib/
+          if curl -L --fail "${{ secrets.LICENSE_DOWNLOAD_URL }}" -o lib/license.jar; then
+            echo "✅ 自定义license.jar下载成功"
+            mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+            echo "将使用本地license.jar进行构建"
+          else
+            echo "⚠️ 自定义license.jar下载失败，将使用tinyMediaManager官方版本"
+          fi
         else
-          echo "❌ Failed to download license file"
-          exit 1
+          echo "⚠️ LICENSE_DOWNLOAD_URL未配置，将使用tinyMediaManager官方版本"
         fi
 
     - name: Build JAR
       run: |
         echo "🔨 Building JAR with performance optimizations..."
-        mvn clean package --batch-mode -T 2 -DskipTests=true -Dmaven.test.skip=true -DskipSign=true
+        mvn clean package --batch-mode -T 2 -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Pgithub-ci
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         MAVEN_OPTS: "-Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication"
@@ -201,29 +192,20 @@ jobs:
         fi
       shell: bash
 
-    - name: Download and install license file
+    - name: Download and install license file (可选)
       run: |
-        echo "📥 Downloading license.jar for ${{ matrix.platform.name }}..."
-        mkdir -p lib/
-        curl -L -o lib/license.jar "${{ secrets.LICENSE_DOWNLOAD_URL }}"
-        if [ -f "lib/license.jar" ]; then
-          echo "✅ License file downloaded successfully"
-          ls -la lib/license.jar
-          echo "🔧 This will activate the 'with-license' Maven profile"
-
-          # 同时安装到Maven本地仓库作为备用
-          echo "📦 Installing license.jar to Maven local repository..."
-          mvn install:install-file \
-            -Dfile=lib/license.jar \
-            -DgroupId=org.tinymediamanager \
-            -DartifactId=license \
-            -Dversion=5.2.1 \
-            -Dpackaging=jar \
-            -q
-          echo "✅ License installed to Maven repository"
+        if [ -n "${{ secrets.LICENSE_DOWNLOAD_URL }}" ]; then
+          echo "📥 正在从自定义URL下载license.jar for ${{ matrix.platform.name }}..."
+          mkdir -p lib/
+          if curl -L --fail "${{ secrets.LICENSE_DOWNLOAD_URL }}" -o lib/license.jar; then
+            echo "✅ 自定义license.jar下载成功"
+            mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+            echo "将使用本地license.jar进行构建"
+          else
+            echo "⚠️ 自定义license.jar下载失败，将使用tinyMediaManager官方版本"
+          fi
         else
-          echo "❌ Failed to download license file"
-          exit 1
+          echo "⚠️ LICENSE_DOWNLOAD_URL未配置，将使用tinyMediaManager官方版本"
         fi
       shell: bash
 
