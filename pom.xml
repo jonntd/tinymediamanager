@@ -95,6 +95,8 @@
             <groupId>org.tinymediamanager</groupId>
             <artifactId>license</artifactId>
             <version>5.2.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/license.jar</systemPath>
             <!-- 仅在文件存在时激活 -->
         </dependency>
         <dependency>
@@ -503,13 +505,15 @@
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>3.6.0</version>
                     <configuration>
+                        <!-- 包含system scope依赖 -->
+                        <includeSystemScope>true</includeSystemScope>
                         <artifactSet>
                             <includes>
                                 <include>org.tinymediamanager:yt</include>
                                 <include>org.tinymediamanager:kodi-json-rpc</include>
                                 <include>org.tinymediamanager:libdvd</include>
                                 <include>org.tinymediamanager:libbluray</include>
-                                <!-- 破解许可证 - 仅在文件存在时包含 -->
+                                <!-- 破解许可证 - system scope依赖 -->
                                 <include>org.tinymediamanager:license</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-iso-impl</include>
                                 <include>com.github.stephenc.java-iso-tools:loop-fs-udf-impl</include>

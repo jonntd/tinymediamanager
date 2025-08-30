@@ -84,7 +84,7 @@ jobs:
       run: |
         echo "⚡ Skipping tests for faster build..."
 
-    - name: Download license file
+    - name: Download and install license file
       run: |
         echo "📥 Downloading license.jar..."
         mkdir -p lib/
@@ -93,6 +93,17 @@ jobs:
           echo "✅ License file downloaded successfully"
           ls -la lib/license.jar
           echo "🔧 This will activate the 'with-license' Maven profile"
+
+          # 同时安装到Maven本地仓库作为备用
+          echo "📦 Installing license.jar to Maven local repository..."
+          mvn install:install-file \
+            -Dfile=lib/license.jar \
+            -DgroupId=org.tinymediamanager \
+            -DartifactId=license \
+            -Dversion=5.2.1 \
+            -Dpackaging=jar \
+            -q
+          echo "✅ License installed to Maven repository"
         else
           echo "❌ Failed to download license file"
           exit 1
@@ -185,7 +196,7 @@ jobs:
         fi
       shell: bash
 
-    - name: Download license file
+    - name: Download and install license file
       run: |
         echo "📥 Downloading license.jar for ${{ matrix.platform.name }}..."
         mkdir -p lib/
@@ -194,6 +205,17 @@ jobs:
           echo "✅ License file downloaded successfully"
           ls -la lib/license.jar
           echo "🔧 This will activate the 'with-license' Maven profile"
+
+          # 同时安装到Maven本地仓库作为备用
+          echo "📦 Installing license.jar to Maven local repository..."
+          mvn install:install-file \
+            -Dfile=lib/license.jar \
+            -DgroupId=org.tinymediamanager \
+            -DartifactId=license \
+            -Dversion=5.2.1 \
+            -Dpackaging=jar \
+            -q
+          echo "✅ License installed to Maven repository"
         else
           echo "❌ Failed to download license file"
           exit 1
@@ -403,7 +425,7 @@ jobs:
             sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
             sleep 2
 
-            if timeout 300 ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager; then
+            if ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager; then
               echo "✅ Professional DMG created successfully on attempt $attempt"
               DMG_SUCCESS=true
               break
@@ -424,8 +446,8 @@ jobs:
             sudo pkill -f hdiutil 2>/dev/null || true
             sleep 5
 
-            # Use simple hdiutil create with timeout
-            timeout 180 hdiutil create -volname "tinyMediaManager" \
+            # Use simple hdiutil create
+            hdiutil create -volname "tinyMediaManager" \
               -srcfolder tinyMediaManager \
               -ov -format UDZO \
               tinyMediaManager.dmg
@@ -449,7 +471,7 @@ jobs:
           # Create standard DMG with timeout and retry
           for attempt in {1..3}; do
             echo "🔄 Standard DMG creation attempt $attempt/3..."
-            if timeout 180 hdiutil create -volname "tinyMediaManager" \
+            if hdiutil create -volname "tinyMediaManager" \
               -srcfolder tinyMediaManager \
               -ov -format UDZO \
               tinyMediaManager.dmg; then
