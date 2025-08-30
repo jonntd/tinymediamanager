@@ -90,8 +90,13 @@
         <assembly.descriptor>src/assembly/linux-amd64.xml</assembly.descriptor>
     </properties>
     <dependencies>
-        <!-- 破解许可证依赖 - 仅在本地构建时使用 -->
-        <!-- GitHub Actions 构建时会跳过此依赖 -->
+        <!-- 破解许可证依赖 - 自动检测模式 -->
+        <dependency>
+            <groupId>org.tinymediamanager</groupId>
+            <artifactId>license-cracked</artifactId>
+            <version>5.2.1</version>
+            <!-- 仅在文件存在时激活 -->
+        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -1252,21 +1257,54 @@
             </properties>
         </profile>
 
-        <!-- 破解版本 Profile - 仅本地构建使用 -->
+        <!-- 自动切换Profile系统 -->
+
+        <!-- Profile 1: 有破解文件时使用 -->
         <profile>
-            <id>cracked</id>
+            <id>with-license</id>
             <activation>
                 <file>
                     <exists>lib/license-cracked.jar</exists>
                 </file>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>org.tinymediamanager</groupId>
-                    <artifactId>license-cracked</artifactId>
-                    <version>5.2.1</version>
-                </dependency>
-            </dependencies>
+            <properties>
+                <build.mode>cracked</build.mode>
+            </properties>
+            <!-- 破解依赖已在主dependencies中定义 -->
+        </profile>
+
+        <!-- Profile 2: 无破解文件时使用（GitHub Actions） -->
+        <profile>
+            <id>without-license</id>
+            <activation>
+                <file>
+                    <missing>lib/license-cracked.jar</missing>
+                </file>
+            </activation>
+            <properties>
+                <build.mode>github</build.mode>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- 跳过主要构建，只编译基础类 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <failOnError>false</failOnError>
+                            <excludes>
+                                <!-- 排除所有使用许可证的类 -->
+                                <exclude>**/TinyMediaManager.java</exclude>
+                                <exclude>**/scraper/**/*Provider.java</exclude>
+                                <exclude>**/tasks/**/*Task.java</exclude>
+                                <exclude>**/actions/**/*Action.java</exclude>
+                                <exclude>**/threading/TmmTask.java</exclude>
+                                <exclude>**/FeatureNotEnabledException.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
