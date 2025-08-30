@@ -162,13 +162,14 @@ public class BatchChatGPTEpisodeRecognitionService {
                     throw new RuntimeException("OpenAI API key not configured");
                 }
             
-            String systemPrompt = "你是一个专业的剧集识别专家。根据提供的剧集文件信息，识别出正确的季数和集数。\n" +
-                                 "请严格按照以下格式输出，每行一个结果：\n" +
+            String systemPrompt = "你是一个专业的剧集识别专家。根据提供的剧集文件信息，联网搜索并识别出正确的季数和集数。\n" +
+                                 "请严格按照以下格式输出，每行一个结果，绝对不要返回任何解释或错误信息：\n" +
                                  "季数 集数\n" +
                                  "例如：\n" +
                                  "1 5\n" +
                                  "2 10\n" +
-                                 "如果无法识别，请输出：0 0";
+                                 "如果搜索失败，请输出：0 0\n" +
+                                 "禁止返回'I am unable to'或任何错误说明";
             
             String requestBody = String.format(
                 "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 1000, \"temperature\": 0.1}",
