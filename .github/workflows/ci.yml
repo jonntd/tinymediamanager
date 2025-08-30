@@ -511,6 +511,15 @@ jobs:
           dist/*.sha256
         retention-days: 30
 
+    - name: Upload Docker build artifacts
+      if: matrix.platform.assembly == 'linux-amd64' || matrix.platform.assembly == 'linux-arm64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinyMediaManager-${{ matrix.platform.artifact-name }}
+        path: |
+          dist/tinyMediaManager-*-${{ matrix.platform.artifact-name }}.*
+        retention-days: 30
+
   # 创建 GitHub Release
   create-release:
     name: Create GitHub Release

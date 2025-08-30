@@ -46,7 +46,7 @@ jobs:
         echo "🔍 Checking available artifacts..."
         ls -la
 
-        if ls *linux-amd64* 1> /dev/null 2>&1; then
+        if ls tinyMediaManager-*-linux-amd64.* 1> /dev/null 2>&1; then
           echo "has-linux-amd64=true" >> $GITHUB_OUTPUT
           echo "✅ Found Linux AMD64 artifact"
         else
@@ -54,7 +54,7 @@ jobs:
           echo "❌ No Linux AMD64 artifact found"
         fi
 
-        if ls *linux-arm64* 1> /dev/null 2>&1; then
+        if ls tinyMediaManager-*-linux-arm64.* 1> /dev/null 2>&1; then
           echo "has-linux-arm64=true" >> $GITHUB_OUTPUT
           echo "✅ Found Linux ARM64 artifact"
         else
@@ -82,7 +82,7 @@ jobs:
       with:
         github-token: ${{ secrets.GHCR_PAT }}
         run-id: ${{ github.event.workflow_run.id }}
-        pattern: "*linux-amd64*"
+        pattern: "tinyMediaManager-linux-amd64"
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -99,8 +99,22 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
           # 使用构建产物
           echo "📦 Extracting build artifacts..."
-          tar xJf *linux-amd64*.tar.xz -C target/docker/ || echo "No tar.xz found, trying zip..."
-          unzip -q *linux-amd64*.zip -d target/docker/ || echo "No zip found"
+          # 查找并提取构建产物
+          BUILD_FILE=$(ls tinyMediaManager-*-linux-amd64.* 2>/dev/null | head -1)
+          if [ -n "$BUILD_FILE" ]; then
+            echo "Found build file: $BUILD_FILE"
+            if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
+              tar xjf "$BUILD_FILE" -C target/docker/
+            elif [[ "$BUILD_FILE" == *.zip ]]; then
+              unzip -q "$BUILD_FILE" -d target/docker/
+            else
+              echo "❌ Unsupported file format: $BUILD_FILE"
+              exit 1
+            fi
+          else
+            echo "❌ No Linux AMD64 build artifact found"
+            exit 1
+          fi
         fi
 
         # 复制现有的 Dockerfile.amd64
@@ -140,7 +154,7 @@ jobs:
       with:
         github-token: ${{ secrets.GHCR_PAT }}
         run-id: ${{ github.event.workflow_run.id }}
-        pattern: "*linux-arm64*"
+        pattern: "tinyMediaManager-linux-arm64"
 
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -157,12 +171,26 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
           # 使用构建产物
           echo "📦 Extracting build artifacts..."
-          tar xJf *linux-arm64*.tar.xz -C target/docker/ || echo "No tar.xz found, trying zip..."
-          unzip -q *linux-arm64*.zip -d target/docker/ || echo "No zip found"
+          # 查找并提取构建产物
+          BUILD_FILE=$(ls tinyMediaManager-*-linux-arm64.* 2>/dev/null | head -1)
+          if [ -n "$BUILD_FILE" ]; then
+            echo "Found build file: $BUILD_FILE"
+            if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
+              tar xjf "$BUILD_FILE" -C target/docker/
+            elif [[ "$BUILD_FILE" == *.zip ]]; then
+              unzip -q "$BUILD_FILE" -d target/docker/
+            else
+              echo "❌ Unsupported file format: $BUILD_FILE"
+              exit 1
+            fi
 
-          # ARM64 特殊处理 (参考 deploy_release.yml)
-          if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
-            mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+            # ARM64 特殊处理 (参考 deploy_release.yml)
+            if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
+              mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+            fi
+          else
+            echo "❌ No Linux ARM64 build artifact found"
+            exit 1
           fi
         fi
 
