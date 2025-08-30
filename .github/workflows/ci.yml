@@ -567,14 +567,15 @@ jobs:
         
         # 显示所有下载的artifacts
         echo "📁 发现的构建产物:"
-        find artifacts -type f -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.jar" -o -name "*.sha256" | head -20
+        find artifacts -type f \( -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
         
-        # 复制所有构建产物到发布目录
+        # 复制平台构建产物到发布目录（排除原始JAR文件）
         find artifacts -name "*.zip" -exec cp {} release-assets/ \; 2>/dev/null || true
         find artifacts -name "*.tar.bz2" -exec cp {} release-assets/ \; 2>/dev/null || true
         find artifacts -name "*.dmg" -exec cp {} release-assets/ \; 2>/dev/null || true
         find artifacts -name "*.sha256" -exec cp {} release-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.jar" -exec cp {} release-assets/ \; 2>/dev/null || true
+        
+        # 排除原始JAR文件，只保留平台特定的构建产物
 
         # 重命名文件以便更好识别
         cd release-assets
@@ -641,8 +642,6 @@ jobs:
         echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
         echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
         echo "" >> release-notes.md
-        echo "### 通用版本" >> release-notes.md
-        echo "- **JAR文件**: tinyMediaManager-$VERSION.jar (需要Java 17+)" >> release-notes.md
         echo "" >> release-notes.md
         echo "## ⚠️ macOS用户注意" >> release-notes.md
         echo "macOS版本为未签名版本，首次运行时需要：" >> release-notes.md
