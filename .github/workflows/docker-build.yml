@@ -103,110 +103,22 @@ jobs:
           unzip -q *linux-amd64*.zip -d target/docker/ || echo "No zip found"
         fi
 
-        # 创建增强版 Dockerfile.amd64 (带 VNC 支持)
-        cat > target/docker/Dockerfile.amd64 << 'EOF'
-        # 使用 Ubuntu 作为基础镜像以支持更多功能
-        FROM ubuntu:22.04
-
-        # 设置环境变量
-        ENV APP=tinyMediaManager
-        ENV ALLOW_DIRECT_VNC=true
-        ENV LANG=en_US.UTF-8
-        ENV LC_ALL=en_US.UTF-8
-        ENV LC_TIME=C.UTF-8
-        ENV DEBIAN_FRONTEND=noninteractive
-        ENV DISPLAY=:1
-        ENV VNC_PORT=5901
-        ENV NO_VNC_PORT=6901
-
-        # 安装基础依赖和 VNC 组件
-        RUN apt-get update && apt-get install -y \
-            # Java 运行时
-            openjdk-17-jre-headless \
-            # 字体和本地化
-            fontconfig \
-            fonts-dejavu-core \
-            locales \
-            # VNC 和桌面环境
-            tigervnc-standalone-server \
-            tigervnc-common \
-            fluxbox \
-            # 网络和工具
-            curl \
-            wget \
-            # 媒体库支持
-            libmediainfo0v5 \
-            libzen0v5 \
-            # 清理
-            && apt-get clean \
-            && rm -rf /var/lib/apt/lists/* \
-            && locale-gen en_US.UTF-8
-
-        # 下载并安装 noVNC (基于 Web 的 VNC 客户端)
-        RUN mkdir -p /opt/novnc /opt/websockify \
-            && curl -s -L https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | tar xzf - -C /opt/novnc --strip-components=1 \
-            && curl -s -L https://github.com/novnc/websockify/archive/v0.11.0.tar.gz | tar xzf - -C /opt/websockify --strip-components=1 \
-            && ln -s /opt/novnc/vnc.html /opt/novnc/index.html
-
-        # 创建应用用户
-        RUN groupadd -g 1000 tmm \
-            && useradd -u 1000 -g tmm -m -s /bin/bash tmm \
-            && mkdir -p /home/tmm/.vnc /data \
-            && chown -R tmm:tmm /home/tmm /data
-
-        # 设置 VNC 密码和配置
-        USER tmm
-        RUN echo "tinymediamanager" | vncpasswd -f > /home/tmm/.vnc/passwd \
-            && chmod 600 /home/tmm/.vnc/passwd \
-            && echo "#!/bin/bash" > /home/tmm/.vnc/xstartup \
-            && echo "fluxbox &" >> /home/tmm/.vnc/xstartup \
-            && chmod +x /home/tmm/.vnc/xstartup
-
-        # 设置工作目录并复制应用文件
-        WORKDIR /app
-        COPY --chown=tmm:tmm tinyMediaManager/ ./
-        RUN chmod +x tinyMediaManager
-
-        # 创建启动脚本
-        USER root
-        RUN cat > /start-services.sh << 'SCRIPT'
-        #!/bin/bash
-        set -e
-
-        # 启动 VNC 服务器
-        su - tmm -c "vncserver :1 -geometry 1024x768 -depth 24"
-
-        # 启动 noVNC
-        /opt/websockify/run --web /opt/novnc --target-config /opt/novnc/vnc_tokens 6901 &
-
-        # 启动 tinyMediaManager
-        cd /app
-        su - tmm -c "DISPLAY=:1 /app/tinyMediaManager -Dtmm.contentfolder=/data"
-        SCRIPT
-        RUN chmod +x /start-services.sh
-
-        # 暴露端口
-        EXPOSE 5901 6901
-
-        # 添加标签
-        LABEL org.opencontainers.image.title="tinyMediaManager with VNC"
-        LABEL org.opencontainers.image.description="tinyMediaManager with VNC and web access support"
-        LABEL org.opencontainers.image.vendor="tinyMediaManager"
-
-        # 启动命令
-        CMD ["/start-services.sh"]
-        EOF
+        # 复制现有的 Dockerfile.amd64
+        cp src/docker/Dockerfile.amd64 target/docker/Dockerfile.amd64
 
     - name: Build with Kaniko
       uses: int128/kaniko-action@v1
       with:
         push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64-vnc
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64
         file: target/docker/Dockerfile.amd64
         context: target/docker
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GHCR_PAT }}
+        build-args: |
+          HUMAN_VERSION=${{ env.TMM_VERSION }}
+          BUILD_NUMBER=${{ github.sha }}
 
   # 构建 ARM64 Docker 镜像
   docker-build-arm64:
@@ -254,110 +166,22 @@ jobs:
           fi
         fi
 
-        # 创建增强版 Dockerfile.arm64 (带 VNC 支持)
-        cat > target/docker/Dockerfile.arm64 << 'EOF'
-        # 使用 Ubuntu 作为基础镜像以支持更多功能
-        FROM ubuntu:22.04
-
-        # 设置环境变量
-        ENV APP=tinyMediaManager
-        ENV ALLOW_DIRECT_VNC=true
-        ENV LANG=en_US.UTF-8
-        ENV LC_ALL=en_US.UTF-8
-        ENV LC_TIME=C.UTF-8
-        ENV DEBIAN_FRONTEND=noninteractive
-        ENV DISPLAY=:1
-        ENV VNC_PORT=5901
-        ENV NO_VNC_PORT=6901
-
-        # 安装基础依赖和 VNC 组件
-        RUN apt-get update && apt-get install -y \
-            # Java 运行时
-            openjdk-17-jre-headless \
-            # 字体和本地化
-            fontconfig \
-            fonts-dejavu-core \
-            locales \
-            # VNC 和桌面环境
-            tigervnc-standalone-server \
-            tigervnc-common \
-            fluxbox \
-            # 网络和工具
-            curl \
-            wget \
-            # 媒体库支持 (ARM64 版本)
-            libmediainfo0v5 \
-            libzen0v5 \
-            # 清理
-            && apt-get clean \
-            && rm -rf /var/lib/apt/lists/* \
-            && locale-gen en_US.UTF-8
-
-        # 下载并安装 noVNC (基于 Web 的 VNC 客户端)
-        RUN mkdir -p /opt/novnc /opt/websockify \
-            && curl -s -L https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | tar xzf - -C /opt/novnc --strip-components=1 \
-            && curl -s -L https://github.com/novnc/websockify/archive/v0.11.0.tar.gz | tar xzf - -C /opt/websockify --strip-components=1 \
-            && ln -s /opt/novnc/vnc.html /opt/novnc/index.html
-
-        # 创建应用用户
-        RUN groupadd -g 1000 tmm \
-            && useradd -u 1000 -g tmm -m -s /bin/bash tmm \
-            && mkdir -p /home/tmm/.vnc /data \
-            && chown -R tmm:tmm /home/tmm /data
-
-        # 设置 VNC 密码和配置
-        USER tmm
-        RUN echo "tinymediamanager" | vncpasswd -f > /home/tmm/.vnc/passwd \
-            && chmod 600 /home/tmm/.vnc/passwd \
-            && echo "#!/bin/bash" > /home/tmm/.vnc/xstartup \
-            && echo "fluxbox &" >> /home/tmm/.vnc/xstartup \
-            && chmod +x /home/tmm/.vnc/xstartup
-
-        # 设置工作目录并复制应用文件
-        WORKDIR /app
-        COPY --chown=tmm:tmm tinyMediaManager/ ./
-        RUN chmod +x tinyMediaManager
-
-        # 创建启动脚本
-        USER root
-        RUN cat > /start-services.sh << 'SCRIPT'
-        #!/bin/bash
-        set -e
-
-        # 启动 VNC 服务器
-        su - tmm -c "vncserver :1 -geometry 1024x768 -depth 24"
-
-        # 启动 noVNC
-        /opt/websockify/run --web /opt/novnc --target-config /opt/novnc/vnc_tokens 6901 &
-
-        # 启动 tinyMediaManager
-        cd /app
-        su - tmm -c "DISPLAY=:1 /app/tinyMediaManager -Dtmm.contentfolder=/data"
-        SCRIPT
-        RUN chmod +x /start-services.sh
-
-        # 暴露端口
-        EXPOSE 5901 6901
-
-        # 添加标签
-        LABEL org.opencontainers.image.title="tinyMediaManager with VNC (ARM64)"
-        LABEL org.opencontainers.image.description="tinyMediaManager with VNC and web access support for ARM64"
-        LABEL org.opencontainers.image.vendor="tinyMediaManager"
-
-        # 启动命令
-        CMD ["/start-services.sh"]
-        EOF
+        # 复制现有的 Dockerfile.arm64
+        cp src/docker/Dockerfile.arm64 target/docker/Dockerfile.arm64
 
     - name: Build with Kaniko
       uses: int128/kaniko-action@v1
       with:
         push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64-vnc
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64
         file: target/docker/Dockerfile.arm64
         context: target/docker
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GHCR_PAT }}
+        build-args: |
+          HUMAN_VERSION=${{ env.TMM_VERSION }}
+          BUILD_NUMBER=${{ github.sha }}
 
   # 创建多架构 manifest
   docker-manifest:
@@ -384,20 +208,20 @@ jobs:
         # 准备镜像列表
         IMAGES=""
         if [ "${{ needs.docker-build-amd64.result }}" = "success" ]; then
-          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64-vnc"
+          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-amd64"
         fi
         if [ "${{ needs.docker-build-arm64.result }}" = "success" ]; then
-          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64-vnc"
+          IMAGES="$IMAGES ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-arm64"
         fi
 
         echo "Images to include: $IMAGES"
 
-        # 创建并推送 VNC 版本的 manifest
-        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-vnc $IMAGES
-        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}-vnc
+        # 创建并推送 manifest
+        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }} $IMAGES
+        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TMM_VERSION }}
 
-        # 创建 latest-vnc 标签
-        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-vnc $IMAGES
-        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-vnc
+        # 创建 latest 标签
+        docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest $IMAGES
+        docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
         echo "✅ Multi-arch manifest created successfully!"
