@@ -533,6 +533,19 @@ jobs:
     permissions:
       contents: write
 
+  # 自动预发布（每次devel提交）
+  create-prerelease:
+    name: Create Auto Prerelease
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-platforms]
+    if: |
+      always() && 
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/devel' &&
+      needs.build-and-test.result == 'success'
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -547,28 +560,39 @@ jobs:
       with:
         path: artifacts
 
-    - name: Prepare release assets
+    - name: Generate prerelease version
+      id: prerelease-info
       run: |
-        echo "📦 准备发布资产..."
-        mkdir -p release-assets
+        # 生成基于commit的预发布版本号
+        COMMIT_SHA=${GITHUB_SHA:0:7}
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        VERSION="4.5-devel-${TIMESTAMP}-${COMMIT_SHA}"
+        TAG_NAME="v${VERSION}"
+        
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 预发布版本: $VERSION"
+        echo "🏷️  Tag名称: $TAG_NAME"
+
+    - name: Prepare prerelease assets
+      run: |
+        echo "📦 准备预发布资产..."
+        mkdir -p prerelease-assets
         
         # 显示所有下载的artifacts
         echo "📁 发现的构建产物:"
         find artifacts -type f \( -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
         
-        # 复制平台构建产物到发布目录（排除原始JAR文件）
-        find artifacts -name "*.zip" -exec cp {} release-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.tar.bz2" -exec cp {} release-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.dmg" -exec cp {} release-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.sha256" -exec cp {} release-assets/ \; 2>/dev/null || true
+        # 复制平台构建产物到预发布目录
+        find artifacts -name "*.zip" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.bz2" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.dmg" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.sha256" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
         
-        # 排除原始JAR文件，只保留平台特定的构建产物
-
-        # 重命名文件以便更好识别
-        cd release-assets
+        # 标准化文件名
+        cd prerelease-assets
         for file in *; do
           if [[ -f "$file" ]]; then
-            # 移除重复后缀并标准化命名
             new_name=$(echo "$file" | sed 's/tinymediamanager-/tinyMediaManager-/g' | sed 's/--/-/g')
             if [[ "$file" != "$new_name" ]]; then
               mv "$file" "$new_name"
@@ -577,12 +601,62 @@ jobs:
         done
         cd ..
 
-        echo "✅ 发布资产准备完成:"
-        ls -la release-assets/
+        echo "✅ 预发布资产准备完成:"
+        ls -la prerelease-assets/
         
-        # 计算总大小
-        TOTAL_SIZE=$(du -sh release-assets/ | cut -f1)
-        echo "📊 总发布大小: $TOTAL_SIZE"
+        TOTAL_SIZE=$(du -sh prerelease-assets/ | cut -f1)
+        echo "📊 总预发布大小: $TOTAL_SIZE"
+
+    - name: Generate prerelease notes
+      id: prerelease-notes
+      run: |
+        COMMIT_MSG=$(git log -1 --pretty=format:"%s" --abbrev-commit)
+        COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an")
+        COMMIT_DATE=$(git log -1 --pretty=format:"%cd" --date=format:"%Y-%m-%d %H:%M:%S")
+        
+        echo "# tinyMediaManager 预发布版本 ${{ steps.prerelease-info.outputs.version }}" > prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "🔄 **自动预发布构建** - 基于最新开发分支" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## 📋 构建信息" >> prerelease-notes.md
+        echo "- **版本**: ${{ steps.prerelease-info.outputs.version }}" >> prerelease-notes.md
+        echo "- **提交**: ${GITHUB_SHA:0:7}" >> prerelease-notes.md
+        echo "- **提交信息**: $COMMIT_MSG" >> prerelease-notes.md
+        echo "- **提交作者**: $COMMIT_AUTHOR" >> prerelease-notes.md
+        echo "- **构建时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## ⚠️ 重要说明" >> prerelease-notes.md
+        echo "- 这是**开发版本**，可能包含未测试的功能" >> prerelease-notes.md
+        echo "- 建议仅用于测试环境，不建议在生产环境使用" >> prerelease-notes.md
+        echo "- 如需稳定版本，请使用正式发布的版本" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## 📥 下载" >> prerelease-notes.md
+        echo "### 平台版本" >> prerelease-notes.md
+        echo "- **Windows x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-windows-amd64.zip" >> prerelease-notes.md
+        echo "- **Linux x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-amd64.tar.bz2" >> prerelease-notes.md
+        echo "- **Linux ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-arm64.tar.bz2" >> prerelease-notes.md
+        echo "- **macOS x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-x86_64.dmg" >> prerelease-notes.md
+        echo "- **macOS ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-aarch64.dmg" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "---" >> prerelease-notes.md
+        echo "*自动构建于: $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> prerelease-notes.md
+        echo "*GitHub Actions构建: #${{ github.run_number }}*" >> prerelease-notes.md
+
+        echo "prerelease-notes<<EOF" >> $GITHUB_OUTPUT
+        cat prerelease-notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Prerelease
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.prerelease-info.outputs.tag }}
+        name: tinyMediaManager 预发布 ${{ steps.prerelease-info.outputs.version }}
+        body: ${{ steps.prerelease-notes.outputs.prerelease-notes }}
+        files: prerelease-assets/*
+        draft: false
+        prerelease: true
+        generate_release_notes: false
+        append_body: false
 
     - name: Extract version and tag info
       id: release-info
