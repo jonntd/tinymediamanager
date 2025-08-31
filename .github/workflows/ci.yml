@@ -506,7 +506,7 @@ jobs:
         name: tinymediamanager-${{ matrix.platform.artifact-name }}-${{ github.sha }}
         path: |
           dist/*.zip
-          dist/*.tar.bz2
+          dist/*.tar.xz
           dist/*.dmg
           dist/*.sha256
         retention-days: 30
@@ -554,11 +554,11 @@ jobs:
         
         # 显示所有下载的artifacts
         echo "📁 发现的构建产物:"
-        find artifacts -type f \( -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
+        find artifacts -type f \( -name "*.zip" -o -name "*.tar.xz" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
         
         # 复制平台构建产物到发布目录
         find artifacts -name "*.zip" -exec cp {} release-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.tar.bz2" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.xz" -exec cp {} release-assets/ \; 2>/dev/null || true
         find artifacts -name "*.dmg" -exec cp {} release-assets/ \; 2>/dev/null || true
         find artifacts -name "*.sha256" -exec cp {} release-assets/ \; 2>/dev/null || true
         
@@ -620,8 +620,8 @@ jobs:
         echo "" >> release-notes.md
         echo "### 平台版本" >> release-notes.md
         echo "- **Windows x64**: tinyMediaManager-$VERSION-windows-amd64.zip" >> release-notes.md
-        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.bz2" >> release-notes.md
-        echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.bz2" >> release-notes.md
+        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.xz" >> release-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.xz" >> release-notes.md
         echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
         echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
         echo "" >> release-notes.md
@@ -709,11 +709,11 @@ jobs:
         
         # 显示所有下载的artifacts
         echo "📁 发现的构建产物:"
-        find artifacts -type f \( -name "*.zip" -o -name "*.tar.bz2" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
+        find artifacts -type f \( -name "*.zip" -o -name "*.tar.xz" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
         
         # 复制平台构建产物到预发布目录
         find artifacts -name "*.zip" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
-        find artifacts -name "*.tar.bz2" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.xz" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
         find artifacts -name "*.dmg" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
         find artifacts -name "*.sha256" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
         
@@ -761,8 +761,8 @@ jobs:
         echo "## 📥 下载" >> prerelease-notes.md
         echo "### 平台版本" >> prerelease-notes.md
         echo "- **Windows x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-windows-amd64.zip" >> prerelease-notes.md
-        echo "- **Linux x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-amd64.tar.bz2" >> prerelease-notes.md
-        echo "- **Linux ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-arm64.tar.bz2" >> prerelease-notes.md
+        echo "- **Linux x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-amd64.tar.xz" >> prerelease-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-arm64.tar.xz" >> prerelease-notes.md
         echo "- **macOS x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-x86_64.dmg" >> prerelease-notes.md
         echo "- **macOS ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-aarch64.dmg" >> prerelease-notes.md
         echo "" >> prerelease-notes.md
@@ -826,8 +826,8 @@ jobs:
         echo "" >> release-notes.md
         echo "### 平台版本" >> release-notes.md
         echo "- **Windows x64**: tinyMediaManager-$VERSION-windows-amd64.zip" >> release-notes.md
-        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.bz2" >> release-notes.md
-        echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.bz2" >> release-notes.md
+        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.xz" >> release-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.xz" >> release-notes.md
         echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
         echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
         echo "" >> release-notes.md
