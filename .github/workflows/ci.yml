@@ -657,7 +657,7 @@ jobs:
         body: ${{ steps.release-notes.outputs.release-notes }}
         files: release-assets/*
         draft: false
-        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') }}
+        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') || contains(steps.release-info.outputs.tag, 'SNAPSHOT') }}
         generate_release_notes: false
         append_body: false
 
@@ -863,7 +863,7 @@ jobs:
         body: ${{ steps.release-notes.outputs.release-notes }}
         files: release-assets/*
         draft: false
-        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') }}
+        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') || contains(steps.release-info.outputs.tag, 'SNAPSHOT') }}
         generate_release_notes: false
         append_body: false
 
