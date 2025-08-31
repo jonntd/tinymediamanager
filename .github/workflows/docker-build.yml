@@ -18,18 +18,6 @@ on:
       - completed
     branches: [ devel ]
     # 只在Multi-Platform CI/CD Pipeline成功完成时触发
-  # 手动触发 - 用于测试或紧急情况
-  workflow_dispatch:
-    inputs:
-      platforms:
-        description: 'Target platforms'
-        required: true
-        default: 'linux/amd64,linux/arm64'
-        type: choice
-        options:
-        - linux/amd64
-        - linux/arm64
-        - linux/amd64,linux/arm64
 
 env:
   REGISTRY: ghcr.io
