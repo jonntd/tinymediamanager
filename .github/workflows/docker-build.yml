@@ -110,69 +110,162 @@ jobs:
         echo "📁 当前目录所有文件:"
         find . -name "*Dockerfile*" -type f
 
+        # 显示下载的构建产物
+        echo "📁 下载的构建产物:"
+        ls -la . | grep -E "(tinyMediaManager|tinymediamanager)" || echo "未找到构建产物目录"
+
         # 检查是否有构建产物
         HAS_ARTIFACTS=false
-        if [ -d "artifacts" ]; then
-          echo "📦 处理上游构建产物..."
-          cd artifacts
-          
-          # 查找所有可能的构建产物
-          echo "🔍 查找AMD64构建产物..."
-          BUILD_FILES=$(find . -type f \( \
-            -name "*linux*amd64*" -o \
-            -name "*amd64*linux*" -o \
-            -name "*tinyMediaManager*amd64*" -o \
-            -name "*tinyMediaManager*linux*amd64*" \
+
+        # 首先检查是否有下载的构建产物目录（GitHub Actions download-artifact 会创建目录）
+        ARTIFACT_DIRS=$(find . -maxdepth 1 -type d -name "*linux*amd64*" -o -name "*tinyMediaManager*amd64*" | head -5)
+
+        if [ -n "$ARTIFACT_DIRS" ]; then
+          echo "📦 找到构建产物目录:"
+          echo "$ARTIFACT_DIRS"
+
+          # 处理第一个找到的目录
+          ARTIFACT_DIR=$(echo "$ARTIFACT_DIRS" | head -1)
+          echo "📂 处理目录: $ARTIFACT_DIR"
+
+          # 显示目录内容
+          echo "📁 目录内容:"
+          ls -la "$ARTIFACT_DIR"
+
+          # 查找目录中的构建产物文件
+          BUILD_FILES=$(find "$ARTIFACT_DIR" -type f \( \
+            -name "*.tar.xz" -o \
+            -name "*.tar.gz" -o \
+            -name "*.zip" -o \
+            -name "*tinyMediaManager*" \
           \) | head -10)
-          
+
           if [ -n "$BUILD_FILES" ]; then
-            echo "✅ 找到构建产物:"
+            echo "✅ 找到构建产物文件:"
             echo "$BUILD_FILES"
-            
+
             # 处理第一个找到的文件
             BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
             echo "📦 处理文件: $BUILD_FILE"
-            
+
             # 创建目标目录
-            mkdir -p ../target/docker/tinyMediaManager
-            
+            mkdir -p target/docker
+
             # 根据文件类型处理
             case "$BUILD_FILE" in
-              *.tar.*)
-                echo "📦 解压 tar 文件: $BUILD_FILE"
-                tar xf "$BUILD_FILE" -C ../target/docker/ || {
-                  echo "❌ tar 解压失败"
+              *.tar.xz)
+                echo "📦 解压 tar.xz 文件: $BUILD_FILE"
+                tar xJf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.xz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.tar.gz)
+                echo "📦 解压 tar.gz 文件: $BUILD_FILE"
+                tar xzf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.gz 解压失败"
                   exit 1
                 }
                 ;;
               *.zip)
                 echo "📦 解压 zip 文件: $BUILD_FILE"
-                unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                unzip -q "$BUILD_FILE" -d target/docker/ || {
                   echo "❌ zip 解压失败"
                   exit 1
                 }
                 ;;
               *)
                 echo "📋 直接复制文件: $BUILD_FILE"
-                cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                mkdir -p target/docker/tinyMediaManager
+                cp "$BUILD_FILE" target/docker/tinyMediaManager/
                 ;;
             esac
-            
-            cd ..
+
             HAS_ARTIFACTS=true
           else
-            echo "⚠️ 未找到上游构建产物，创建模拟构建"
-            cd ..
+            echo "⚠️ 目录中未找到可识别的构建产物文件"
+            echo "📁 尝试直接复制整个目录内容..."
+
+            # 如果没有找到特定文件，尝试复制整个目录
+            if [ -d "$ARTIFACT_DIR" ]; then
+              mkdir -p target/docker
+              cp -r "$ARTIFACT_DIR"/* target/docker/ 2>/dev/null || {
+                echo "⚠️ 直接复制失败，创建模拟构建"
+              }
+
+              # 检查是否成功复制了 tinyMediaManager 目录
+              if [ -d "target/docker/tinyMediaManager" ]; then
+                echo "✅ 成功复制构建产物目录"
+                HAS_ARTIFACTS=true
+              fi
+            fi
           fi
         else
-          echo "⚠️ 无上游构建产物，使用本地构建"
+          echo "⚠️ 未找到构建产物目录，检查 artifacts 目录..."
+
+          # 检查传统的 artifacts 目录
+          if [ -d "artifacts" ]; then
+            echo "📦 处理 artifacts 目录..."
+            cd artifacts
+
+            # 查找所有可能的构建产物
+            echo "🔍 查找AMD64构建产物..."
+            BUILD_FILES=$(find . -type f \( \
+              -name "*linux*amd64*" -o \
+              -name "*amd64*linux*" -o \
+              -name "*tinyMediaManager*amd64*" -o \
+              -name "*tinyMediaManager*linux*amd64*" \
+            \) | head -10)
+
+            if [ -n "$BUILD_FILES" ]; then
+              echo "✅ 找到构建产物:"
+              echo "$BUILD_FILES"
+
+              # 处理第一个找到的文件
+              BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+              echo "📦 处理文件: $BUILD_FILE"
+
+              # 创建目标目录
+              mkdir -p ../target/docker/tinyMediaManager
+
+              # 根据文件类型处理
+              case "$BUILD_FILE" in
+                *.tar.*)
+                  echo "📦 解压 tar 文件: $BUILD_FILE"
+                  tar xf "$BUILD_FILE" -C ../target/docker/ || {
+                    echo "❌ tar 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *.zip)
+                  echo "📦 解压 zip 文件: $BUILD_FILE"
+                  unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                    echo "❌ zip 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *)
+                  echo "📋 直接复制文件: $BUILD_FILE"
+                  cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                  ;;
+              esac
+
+              cd ..
+              HAS_ARTIFACTS=true
+            else
+              echo "⚠️ artifacts 目录中未找到上游构建产物"
+              cd ..
+            fi
+          else
+            echo "⚠️ 无上游构建产物，使用本地构建"
+          fi
         fi
 
         # 如果没有构建产物，则创建模拟构建
         if [ "$HAS_ARTIFACTS" = "false" ]; then
           echo "⚠️ 创建模拟构建环境"
           mkdir -p target/docker/tinyMediaManager
-          
+
           # 创建模拟tinyMediaManager二进制文件
           echo '#!/bin/bash' > target/docker/tinyMediaManager/tinyMediaManager
           echo 'echo "tinyMediaManager v5.2.0 - Docker Build"' >> target/docker/tinyMediaManager/tinyMediaManager
@@ -252,69 +345,162 @@ jobs:
         echo "📁 当前目录所有文件:"
         find . -name "*Dockerfile*" -type f
 
+        # 显示下载的构建产物
+        echo "📁 下载的构建产物:"
+        ls -la . | grep -E "(tinyMediaManager|tinymediamanager)" || echo "未找到构建产物目录"
+
         # 检查是否有构建产物
         HAS_ARTIFACTS=false
-        if [ -d "artifacts" ]; then
-          echo "📦 处理上游构建产物..."
-          cd artifacts
-          
-          # 查找所有可能的构建产物
-          echo "🔍 查找ARM64构建产物..."
-          BUILD_FILES=$(find . -type f \( \
-            -name "*linux*arm64*" -o \
-            -name "*arm64*linux*" -o \
-            -name "*tinyMediaManager*arm64*" -o \
-            -name "*tinyMediaManager*linux*arm64*" \
+
+        # 首先检查是否有下载的构建产物目录（GitHub Actions download-artifact 会创建目录）
+        ARTIFACT_DIRS=$(find . -maxdepth 1 -type d -name "*linux*arm64*" -o -name "*tinyMediaManager*arm64*" | head -5)
+
+        if [ -n "$ARTIFACT_DIRS" ]; then
+          echo "📦 找到构建产物目录:"
+          echo "$ARTIFACT_DIRS"
+
+          # 处理第一个找到的目录
+          ARTIFACT_DIR=$(echo "$ARTIFACT_DIRS" | head -1)
+          echo "📂 处理目录: $ARTIFACT_DIR"
+
+          # 显示目录内容
+          echo "📁 目录内容:"
+          ls -la "$ARTIFACT_DIR"
+
+          # 查找目录中的构建产物文件
+          BUILD_FILES=$(find "$ARTIFACT_DIR" -type f \( \
+            -name "*.tar.xz" -o \
+            -name "*.tar.gz" -o \
+            -name "*.zip" -o \
+            -name "*tinyMediaManager*" \
           \) | head -10)
-          
+
           if [ -n "$BUILD_FILES" ]; then
-            echo "✅ 找到构建产物:"
+            echo "✅ 找到构建产物文件:"
             echo "$BUILD_FILES"
-            
+
             # 处理第一个找到的文件
             BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
             echo "📦 处理文件: $BUILD_FILE"
-            
+
             # 创建目标目录
-            mkdir -p ../target/docker/tinyMediaManager
-            
+            mkdir -p target/docker
+
             # 根据文件类型处理
             case "$BUILD_FILE" in
-              *.tar.*)
-                echo "📦 解压 tar 文件: $BUILD_FILE"
-                tar xf "$BUILD_FILE" -C ../target/docker/ || {
-                  echo "❌ tar 解压失败"
+              *.tar.xz)
+                echo "📦 解压 tar.xz 文件: $BUILD_FILE"
+                tar xJf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.xz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.tar.gz)
+                echo "📦 解压 tar.gz 文件: $BUILD_FILE"
+                tar xzf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.gz 解压失败"
                   exit 1
                 }
                 ;;
               *.zip)
                 echo "📦 解压 zip 文件: $BUILD_FILE"
-                unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                unzip -q "$BUILD_FILE" -d target/docker/ || {
                   echo "❌ zip 解压失败"
                   exit 1
                 }
                 ;;
               *)
                 echo "📋 直接复制文件: $BUILD_FILE"
-                cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                mkdir -p target/docker/tinyMediaManager
+                cp "$BUILD_FILE" target/docker/tinyMediaManager/
                 ;;
             esac
-            
-            cd ..
+
             HAS_ARTIFACTS=true
           else
-            echo "⚠️ 未找到上游构建产物，创建模拟构建"
-            cd ..
+            echo "⚠️ 目录中未找到可识别的构建产物文件"
+            echo "📁 尝试直接复制整个目录内容..."
+
+            # 如果没有找到特定文件，尝试复制整个目录
+            if [ -d "$ARTIFACT_DIR" ]; then
+              mkdir -p target/docker
+              cp -r "$ARTIFACT_DIR"/* target/docker/ 2>/dev/null || {
+                echo "⚠️ 直接复制失败，创建模拟构建"
+              }
+
+              # 检查是否成功复制了 tinyMediaManager 目录
+              if [ -d "target/docker/tinyMediaManager" ]; then
+                echo "✅ 成功复制构建产物目录"
+                HAS_ARTIFACTS=true
+              fi
+            fi
           fi
         else
-          echo "⚠️ 无上游构建产物，使用本地构建"
+          echo "⚠️ 未找到构建产物目录，检查 artifacts 目录..."
+
+          # 检查传统的 artifacts 目录
+          if [ -d "artifacts" ]; then
+            echo "📦 处理 artifacts 目录..."
+            cd artifacts
+
+            # 查找所有可能的构建产物
+            echo "🔍 查找ARM64构建产物..."
+            BUILD_FILES=$(find . -type f \( \
+              -name "*linux*arm64*" -o \
+              -name "*arm64*linux*" -o \
+              -name "*tinyMediaManager*arm64*" -o \
+              -name "*tinyMediaManager*linux*arm64*" \
+            \) | head -10)
+
+            if [ -n "$BUILD_FILES" ]; then
+              echo "✅ 找到构建产物:"
+              echo "$BUILD_FILES"
+
+              # 处理第一个找到的文件
+              BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+              echo "📦 处理文件: $BUILD_FILE"
+
+              # 创建目标目录
+              mkdir -p ../target/docker/tinyMediaManager
+
+              # 根据文件类型处理
+              case "$BUILD_FILE" in
+                *.tar.*)
+                  echo "📦 解压 tar 文件: $BUILD_FILE"
+                  tar xf "$BUILD_FILE" -C ../target/docker/ || {
+                    echo "❌ tar 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *.zip)
+                  echo "📦 解压 zip 文件: $BUILD_FILE"
+                  unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                    echo "❌ zip 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *)
+                  echo "📋 直接复制文件: $BUILD_FILE"
+                  cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                  ;;
+              esac
+
+              cd ..
+              HAS_ARTIFACTS=true
+            else
+              echo "⚠️ artifacts 目录中未找到上游构建产物"
+              cd ..
+            fi
+          else
+            echo "⚠️ 无上游构建产物，使用本地构建"
+          fi
         fi
 
         # 如果没有构建产物，则创建模拟构建
         if [ "$HAS_ARTIFACTS" = "false" ]; then
           echo "⚠️ 创建模拟构建环境"
           mkdir -p target/docker/tinyMediaManager
-          
+
           # 创建模拟tinyMediaManager二进制文件
           echo '#!/bin/bash' > target/docker/tinyMediaManager/tinyMediaManager
           echo 'echo "tinyMediaManager v5.2.0 - Docker Build"' >> target/docker/tinyMediaManager/tinyMediaManager
