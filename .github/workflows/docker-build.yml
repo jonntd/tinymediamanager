@@ -81,6 +81,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: devel
 
     - name: Download Linux AMD64 artifact (if available)
       if: needs.check-environment.outputs.has-upstream-artifacts == 'true' && github.event.workflow_run.conclusion == 'success'
@@ -316,6 +318,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: devel
 
     - name: Download Linux ARM64 artifact (if available)
       if: needs.check-environment.outputs.has-upstream-artifacts == 'true' && github.event.workflow_run.conclusion == 'success'
