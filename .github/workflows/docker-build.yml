@@ -90,7 +90,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
-        pattern: "tinymediamanager-linux-amd64*"
+        pattern: "tinyMediaManager-linux-amd64*"
         path: artifacts
 
     - name: Log in to Container Registry
@@ -327,7 +327,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
-        pattern: "tinymediamanager-linux-arm64*"
+        pattern: "tinyMediaManager-linux-arm64*"
         path: artifacts
 
     - name: Log in to Container Registry
