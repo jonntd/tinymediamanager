@@ -109,30 +109,83 @@ jobs:
             BUILD_FILE=$(find "$ARTIFACT_DIR" -name "tinyMediaManager-*-linux-amd64.*" -type f | head -1)
             if [ -n "$BUILD_FILE" ]; then
               echo "Found build file: $BUILD_FILE"
-              if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
-                tar xjf "$BUILD_FILE" -C target/docker/
-              elif [[ "$BUILD_FILE" == *.zip ]]; then
-                unzip -q "$BUILD_FILE" -d target/docker/
+              
+              # 支持更多压缩格式
+              case "$BUILD_FILE" in
+                *.tar.bz2)
+                  tar xjf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.tar.gz)
+                  tar xzf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.tar.xz)
+                  tar xJf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.zip)
+                  unzip -q "$BUILD_FILE" -d target/docker/
+                  ;;
+                *)
+                  echo "❌ Unsupported file format: $BUILD_FILE"
+                  exit 1
+                  ;;
+              esac
+
+              # 验证可执行文件
+              if [ -f target/docker/tinyMediaManager/tinyMediaManager ]; then
+                echo "✅ tinyMediaManager binary found"
+                chmod +x target/docker/tinyMediaManager/tinyMediaManager
               else
-                echo "❌ Unsupported file format: $BUILD_FILE"
+                echo "❌ tinyMediaManager binary not found"
+                echo "📁 Available files in tinyMediaManager/:"
+                ls -la target/docker/tinyMediaManager/ || echo "tinyMediaManager directory not found"
                 exit 1
               fi
             else
               echo "❌ No Linux AMD64 build artifact found in $ARTIFACT_DIR"
               # 列出目录内容用于调试
+              echo "📁 Contents of $ARTIFACT_DIR/:"
               ls -la "$ARTIFACT_DIR/"
+              echo "📁 Available files:"
+              find "$ARTIFACT_DIR" -type f -name "*" | head -20
               exit 1
             fi
           else
             echo "❌ Artifact directory $ARTIFACT_DIR not found"
             # 列出当前目录内容用于调试
+            echo "📁 Current directory contents:"
             ls -la
+            echo "📁 Looking for any artifacts..."
+            find . -name "*linux-amd64*" -type f | head -10
             exit 1
           fi
+        else
+          echo "📝 Manual build mode - creating minimal structure for testing..."
+          mkdir -p target/docker/tinyMediaManager
+          cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
+          #!/bin/bash
+          echo 'tinyMediaManager test binary for AMD64'
+          EOF
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+        fi
+
+        # 验证构建上下文
+        echo "🔍 Validating Docker build context..."
+        if [ -d "target/docker/tinyMediaManager" ]; then
+          echo "✅ tinyMediaManager directory exists"
+          ls -la target/docker/tinyMediaManager/
+        else
+          echo "❌ tinyMediaManager directory not found"
+          exit 1
         fi
 
         # 复制现有的 Dockerfile.amd64
-        cp src/docker/Dockerfile.amd64 target/docker/Dockerfile.amd64
+        if [ -f "src/docker/Dockerfile.amd64" ]; then
+          cp src/docker/Dockerfile.amd64 target/docker/Dockerfile.amd64
+          echo "✅ Dockerfile.amd64 copied successfully"
+        else
+          echo "❌ Dockerfile.amd64 not found at src/docker/Dockerfile.amd64"
+          exit 1
+        fi
 
     - name: Build with Kaniko
       uses: int128/kaniko-action@v1
@@ -195,35 +248,87 @@ jobs:
             BUILD_FILE=$(find "$ARTIFACT_DIR" -name "tinyMediaManager-*-linux-arm64.*" -type f | head -1)
             if [ -n "$BUILD_FILE" ]; then
               echo "Found build file: $BUILD_FILE"
-              if [[ "$BUILD_FILE" == *.tar.bz2 ]]; then
-                tar xjf "$BUILD_FILE" -C target/docker/
-              elif [[ "$BUILD_FILE" == *.zip ]]; then
-                unzip -q "$BUILD_FILE" -d target/docker/
-              else
-                echo "❌ Unsupported file format: $BUILD_FILE"
-                exit 1
-              fi
+              
+              # 支持更多压缩格式
+              case "$BUILD_FILE" in
+                *.tar.bz2)
+                  tar xjf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.tar.gz)
+                  tar xzf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.tar.xz)
+                  tar xJf "$BUILD_FILE" -C target/docker/
+                  ;;
+                *.zip)
+                  unzip -q "$BUILD_FILE" -d target/docker/
+                  ;;
+                *)
+                  echo "❌ Unsupported file format: $BUILD_FILE"
+                  exit 1
+                  ;;
+              esac
 
               # ARM64 特殊处理 (参考 deploy_release.yml)
               if [ -f target/docker/tinyMediaManager/tinyMediaManager-arm ]; then
+                echo "🔧 Renaming tinyMediaManager-arm to tinyMediaManager..."
                 mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+                chmod +x target/docker/tinyMediaManager/tinyMediaManager
+              elif [ -f target/docker/tinyMediaManager/tinyMediaManager ]; then
+                echo "✅ tinyMediaManager binary already exists"
+                chmod +x target/docker/tinyMediaManager/tinyMediaManager
+              else
+                echo "❌ tinyMediaManager binary not found"
+                echo "📁 Available files in tinyMediaManager/:"
+                ls -la target/docker/tinyMediaManager/ || echo "tinyMediaManager directory not found"
+                exit 1
               fi
             else
               echo "❌ No Linux ARM64 build artifact found in $ARTIFACT_DIR"
               # 列出目录内容用于调试
+              echo "📁 Contents of $ARTIFACT_DIR/:"
               ls -la "$ARTIFACT_DIR/"
+              echo "📁 Available files:"
+              find "$ARTIFACT_DIR" -type f -name "*" | head -20
               exit 1
             fi
           else
             echo "❌ Artifact directory $ARTIFACT_DIR not found"
             # 列出当前目录内容用于调试
+            echo "📁 Current directory contents:"
             ls -la
+            echo "📁 Looking for any artifacts..."
+            find . -name "*linux-arm64*" -type f | head -10
             exit 1
           fi
+        else
+          echo "📝 Manual build mode - creating minimal structure for testing..."
+          mkdir -p target/docker/tinyMediaManager
+          cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
+          #!/bin/bash
+          echo 'tinyMediaManager test binary for ARM64'
+          EOF
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+        fi
+
+        # 验证构建上下文
+        echo "🔍 Validating Docker build context..."
+        if [ -d "target/docker/tinyMediaManager" ]; then
+          echo "✅ tinyMediaManager directory exists"
+          ls -la target/docker/tinyMediaManager/
+        else
+          echo "❌ tinyMediaManager directory not found"
+          exit 1
         fi
 
         # 复制现有的 Dockerfile.arm64
-        cp src/docker/Dockerfile.arm64 target/docker/Dockerfile.arm64
+        if [ -f "src/docker/Dockerfile.arm64" ]; then
+          cp src/docker/Dockerfile.arm64 target/docker/Dockerfile.arm64
+          echo "✅ Dockerfile.arm64 copied successfully"
+        else
+          echo "❌ Dockerfile.arm64 not found at src/docker/Dockerfile.arm64"
+          exit 1
+        fi
 
     - name: Build with Kaniko
       uses: int128/kaniko-action@v1
