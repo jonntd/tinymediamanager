@@ -2,7 +2,7 @@
           xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
     <id>linux-amd64</id>
     <formats>
-        <format>tar.xz</format>
+        <format>tar.bz2</format>
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
