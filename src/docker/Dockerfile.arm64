@@ -37,5 +37,9 @@ LABEL "org.opencontainers.image.source"="https://github.com/tinyMediaManager/tin
 # Install tmm & requirements
 ADD tinyMediaManager /app
 
+# 确保ARM64二进制文件有执行权限并重命名为标准名称
+RUN mv /app/tinyMediaManager-arm64 /app/tinyMediaManager && \
+    chmod +x /app/tinyMediaManager
+
 WORKDIR /app
 CMD ["/app/tinyMediaManager", "-Dtmm.contentfolder=/data"]

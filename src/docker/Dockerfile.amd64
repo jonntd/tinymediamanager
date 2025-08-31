@@ -37,5 +37,8 @@ LABEL "org.opencontainers.image.source"="https://github.com/tinyMediaManager/tin
 # Install tmm & requirements
 ADD tinyMediaManager /app
 
+# 确保二进制文件有执行权限
+RUN chmod +x /app/tinyMediaManager
+
 WORKDIR /app
 CMD ["/app/tinyMediaManager", "-Dtmm.contentfolder=/data"]
