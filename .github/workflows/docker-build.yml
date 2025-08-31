@@ -32,6 +32,7 @@ jobs:
     outputs:
       has-upstream-artifacts: ${{ steps.check.outputs.has-upstream }}
       build-type: ${{ steps.check.outputs.build-type }}
+      should-build: ${{ steps.check.outputs.should-build }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -41,15 +42,29 @@ jobs:
       run: |
         echo "🔍 检查构建环境..."
         
-        # 检查是否有上游构建产物
+        # 检查是否应该构建（防止重复触发）
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
-          echo "has-upstream=true" >> $GITHUB_OUTPUT
-          echo "build-type=upstream" >> $GITHUB_OUTPUT
-          echo "✅ 使用上游构建产物"
-        else
+          if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+            echo "should-build=true" >> $GITHUB_OUTPUT
+            echo "has-upstream=true" >> $GITHUB_OUTPUT
+            echo "build-type=upstream" >> $GITHUB_OUTPUT
+            echo "✅ 使用上游构建产物"
+          else
+            echo "should-build=false" >> $GITHUB_OUTPUT
+            echo "has-upstream=false" >> $GITHUB_OUTPUT
+            echo "build-type=none" >> $GITHUB_OUTPUT
+            echo "❌ 上游工作流未完成，跳过构建"
+          fi
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "should-build=true" >> $GITHUB_OUTPUT
           echo "has-upstream=false" >> $GITHUB_OUTPUT
           echo "build-type=local" >> $GITHUB_OUTPUT
-          echo "⚠️ 使用本地构建"
+          echo "✅ 手动触发构建"
+        else
+          echo "should-build=false" >> $GITHUB_OUTPUT
+          echo "has-upstream=false" >> $GITHUB_OUTPUT
+          echo "build-type=none" >> $GITHUB_OUTPUT
+          echo "⚠️ 未知触发源，跳过构建"
         fi
 
   # 构建 AMD64 Docker 镜像
@@ -57,11 +72,8 @@ jobs:
     name: Build Docker Image (AMD64)
     runs-on: ubuntu-latest
     needs: check-environment
-    # 只在Multi-Platform CI/CD Pipeline成功完成时执行
-    if: |
-      github.event_name == 'workflow_run' && 
-      github.event.workflow_run.conclusion == 'success' ||
-      github.event_name == 'workflow_dispatch'
+    # 只在明确需要构建时执行（防止重复触发）
+    if: needs.check-environment.outputs.should-build == 'true'
     permissions:
       contents: read
       packages: write
@@ -202,11 +214,8 @@ jobs:
     name: Build Docker Image (ARM64)
     runs-on: ubuntu-latest
     needs: check-environment
-    # 只在Multi-Platform CI/CD Pipeline成功完成时执行
-    if: |
-      github.event_name == 'workflow_run' && 
-      github.event.workflow_run.conclusion == 'success' ||
-      github.event_name == 'workflow_dispatch'
+    # 只在明确需要构建时执行（防止重复触发）
+    if: needs.check-environment.outputs.should-build == 'true'
     permissions:
       contents: read
       packages: write
