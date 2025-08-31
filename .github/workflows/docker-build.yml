@@ -17,11 +17,19 @@ on:
     types:
       - completed
     branches: [ devel ]
-    # 只在工作流成功完成时触发
-  # push 触发器 - 只在手动触发模式下使用
-  push:
-    branches: [ devel, main ]
-    paths: [ 'src/docker/**', '.github/workflows/docker-build.yml' ]
+    # 只在Multi-Platform CI/CD Pipeline成功完成时触发
+  # 手动触发 - 用于测试或紧急情况
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Target platforms'
+        required: true
+        default: 'linux/amd64,linux/arm64'
+        type: choice
+        options:
+        - linux/amd64
+        - linux/arm64
+        - linux/amd64,linux/arm64
 
 env:
   REGISTRY: ghcr.io
@@ -61,13 +69,11 @@ jobs:
     name: Build Docker Image (AMD64)
     runs-on: ubuntu-latest
     needs: check-environment
-    # 只在检查通过且有上游构建或手动触发时执行
+    # 只在Multi-Platform CI/CD Pipeline成功完成时执行
     if: |
-      always() && 
-      (needs.check-environment.outputs.has-upstream-artifacts == 'true' && 
-       github.event.workflow_run.conclusion == 'success' || 
-       github.event_name == 'workflow_dispatch' || 
-       github.event_name == 'push')
+      github.event_name == 'workflow_run' && 
+      github.event.workflow_run.conclusion == 'success' ||
+      github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -208,13 +214,11 @@ jobs:
     name: Build Docker Image (ARM64)
     runs-on: ubuntu-latest
     needs: check-environment
-    # 只在检查通过且有上游构建或手动触发时执行
+    # 只在Multi-Platform CI/CD Pipeline成功完成时执行
     if: |
-      always() && 
-      (needs.check-environment.outputs.has-upstream-artifacts == 'true' && 
-       github.event.workflow_run.conclusion == 'success' || 
-       github.event_name == 'workflow_dispatch' || 
-       github.event_name == 'push')
+      github.event_name == 'workflow_run' && 
+      github.event.workflow_run.conclusion == 'success' ||
+      github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
