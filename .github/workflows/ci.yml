@@ -871,24 +871,34 @@ jobs:
   notify-status:
     name: Notify Build Status
     runs-on: ubuntu-latest
-    needs: [build-and-test]
+    needs: [build-and-test, build-platforms]
     if: always()
 
     steps:
     - name: Determine overall status
       id: status
       run: |
-        if [[ "${{ needs.build-and-test.result }}" == "success" ]]; then
-          if [[ "${{ needs.build-platforms.result }}" == "success" || "${{ needs.build-platforms.result }}" == "skipped" ]]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "message=✅ 构建成功完成" >> $GITHUB_OUTPUT
-          else
-            echo "status=partial" >> $GITHUB_OUTPUT
-            echo "message=⚠️ 基础构建成功，但平台构建失败" >> $GITHUB_OUTPUT
-          fi
-        else
+        # 收集所有依赖作业的状态
+        TEST_RESULT="${{ needs.build-and-test.result }}"
+        PLATFORMS_RESULT="${{ needs.build-platforms.result }}"
+        
+        echo "构建状态汇总:"
+        echo "- 基础测试: $TEST_RESULT"
+        echo "- 平台构建: $PLATFORMS_RESULT"
+        
+        # 判断整体状态
+        if [[ "$TEST_RESULT" == "success" && "$PLATFORMS_RESULT" == "success" ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "message=✅ 所有构建成功完成" >> $GITHUB_OUTPUT
+        elif [[ "$TEST_RESULT" == "failure" || "$PLATFORMS_RESULT" == "failure" ]]; then
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "message=❌ 构建失败" >> $GITHUB_OUTPUT
+        elif [[ "$TEST_RESULT" == "cancelled" || "$PLATFORMS_RESULT" == "cancelled" ]]; then
+          echo "status=cancelled" >> $GITHUB_OUTPUT
+          echo "message=⏹️ 构建被取消" >> $GITHUB_OUTPUT
+        else
+          echo "status=unknown" >> $GITHUB_OUTPUT
+          echo "message=❓ 构建状态未知" >> $GITHUB_OUTPUT
         fi
 
     - name: Print build summary
@@ -896,7 +906,9 @@ jobs:
         echo "🏗️ 构建摘要"
         echo "=============="
         echo "状态: ${{ steps.status.outputs.message }}"
-        echo "基础构建: ${{ needs.build-and-test.result }}"
+        echo "基础测试: ${{ needs.build-and-test.result }}"
         echo "平台构建: ${{ needs.build-platforms.result }}"
         echo "触发事件: ${{ github.event_name }}"
         echo "分支/标签: ${{ github.ref }}"
+        echo "提交 SHA: ${{ github.sha }}"
+        echo "运行编号: #${{ github.run_number }}"
