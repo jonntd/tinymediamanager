@@ -51,6 +51,8 @@ class MiscSettingsPanel extends JPanel {
   private JCheckBox      chckbxMediaInfoXml;
   private JComboBox      cbImageCacheSize;
   private JCheckBox      chckbxEnableTrash;
+  private JCheckBox      chckbxEnableMediaInfo;
+  private JCheckBox      chckbxFetchVideoInfoOnUpdate;
 
   /**
    * Instantiates a new general settings panel.
@@ -138,6 +140,14 @@ class MiscSettingsPanel extends JPanel {
 
         chckbxMediaInfoXml = new JCheckBox(TmmResourceBundle.getString("Settings.writemediainfoxml"));
         Misc.add(chckbxMediaInfoXml, "cell 1 2 2 1");
+
+        chckbxEnableMediaInfo = new JCheckBox(TmmResourceBundle.getString("Settings.mediainfo.enable"));
+        chckbxEnableMediaInfo.setToolTipText(TmmResourceBundle.getString("Settings.mediainfo.enable.desc"));
+        Misc.add(chckbxEnableMediaInfo, "cell 1 3 2 1");
+
+        chckbxFetchVideoInfoOnUpdate = new JCheckBox(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate"));
+        chckbxFetchVideoInfoOnUpdate.setToolTipText(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate.desc"));
+        Misc.add(chckbxFetchVideoInfoOnUpdate, "cell 1 4 2 1");
       }
     }
   }
@@ -174,5 +184,15 @@ class MiscSettingsPanel extends JPanel {
     AutoBinding autoBinding_2 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_2, chckbxEnableTrash,
         jCheckBoxBeanProperty);
     autoBinding_2.bind();
+    //
+    Property settingsBeanProperty_3 = BeanProperty.create("enableMediaInfo");
+    AutoBinding autoBinding_3 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_3, chckbxEnableMediaInfo,
+        jCheckBoxBeanProperty);
+    autoBinding_3.bind();
+    //
+    Property settingsBeanProperty_4 = BeanProperty.create("fetchVideoInfoOnUpdate");
+    AutoBinding autoBinding_4 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4, chckbxFetchVideoInfoOnUpdate,
+        jCheckBoxBeanProperty);
+    autoBinding_4.bind();
   }
 }

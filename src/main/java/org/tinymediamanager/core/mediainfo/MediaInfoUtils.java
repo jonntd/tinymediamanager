@@ -16,9 +16,11 @@
 
 package org.tinymediamanager.core.mediainfo;
 
+import org.tinymediamanager.core.Settings;
+
 /**
  * common helpers for Mediainfo
- * 
+ *
  * @author Manuel Laggner
  */
 public class MediaInfoUtils {
@@ -34,6 +36,21 @@ public class MediaInfoUtils {
    * @return true/false
    */
   public static boolean useMediaInfo() {
-    return USE_LIBMEDIAINFO;
+    // 首先检查系统属性设置（命令行参数优先级最高）
+    if (!USE_LIBMEDIAINFO) {
+      return false;
+    }
+
+    // 然后检查 GUI 设置
+    try {
+      if (!Settings.getInstance().isEnableMediaInfo()) {
+        return false;
+      }
+    }
+    catch (Exception e) {
+      // 如果设置加载失败，使用默认值 true
+    }
+
+    return true;
   }
 }

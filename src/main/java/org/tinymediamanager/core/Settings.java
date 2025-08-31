@@ -159,6 +159,9 @@ public final class Settings extends AbstractSettings {
   private int                                              automaticUpdateInterval      = 1;
   private String                                           mdbListApiKey                = "";
 
+  // MediaInfo 设置
+  private boolean                                          enableMediaInfo              = true;
+
   // OpenAI API settings
   private String                                           openAiApiKey                 = "";
   private String                                           openAiApiUrl                 = "https://api.openai.com/v1/chat/completions";
@@ -1481,6 +1484,16 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.mdbListApiKey;
     this.mdbListApiKey = mdbListApiKey;
     firePropertyChange("mdbListApiKey", oldValue, mdbListApiKey);
+  }
+
+  public boolean isEnableMediaInfo() {
+    return enableMediaInfo;
+  }
+
+  public void setEnableMediaInfo(boolean newValue) {
+    boolean oldValue = this.enableMediaInfo;
+    this.enableMediaInfo = newValue;
+    firePropertyChange("enableMediaInfo", oldValue, newValue);
   }
 
   // OpenAI API Key
