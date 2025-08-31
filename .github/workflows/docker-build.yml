@@ -17,7 +17,8 @@ on:
     types:
       - completed
     branches: [ devel ]
-  # 允许手动触发，不依赖上游构建
+    # 只在工作流成功完成时触发
+  # push 触发器 - 只在手动触发模式下使用
   push:
     branches: [ devel, main ]
     paths: [ 'src/docker/**', '.github/workflows/docker-build.yml' ]
@@ -60,7 +61,13 @@ jobs:
     name: Build Docker Image (AMD64)
     runs-on: ubuntu-latest
     needs: check-environment
-    if: always()
+    # 只在检查通过且有上游构建或手动触发时执行
+    if: |
+      always() && 
+      (needs.check-environment.outputs.has-upstream-artifacts == 'true' && 
+       github.event.workflow_run.conclusion == 'success' || 
+       github.event_name == 'workflow_dispatch' || 
+       github.event_name == 'push')
     permissions:
       contents: read
       packages: write
@@ -161,11 +168,9 @@ jobs:
           mkdir -p target/docker/tinyMediaManager
           
           # 创建模拟tinyMediaManager二进制文件
-          cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
-          #!/bin/bash
-          echo "tinyMediaManager v5.2.0 - Docker Build"
-          echo "This is a placeholder binary for testing"
-          EOF
+          echo '#!/bin/bash' > target/docker/tinyMediaManager/tinyMediaManager
+          echo 'echo "tinyMediaManager v5.2.0 - Docker Build"' >> target/docker/tinyMediaManager/tinyMediaManager
+          echo 'echo "This is a placeholder binary for testing"' >> target/docker/tinyMediaManager/tinyMediaManager
           chmod +x target/docker/tinyMediaManager/tinyMediaManager
         fi
 
@@ -203,7 +208,13 @@ jobs:
     name: Build Docker Image (ARM64)
     runs-on: ubuntu-latest
     needs: check-environment
-    if: always()
+    # 只在检查通过且有上游构建或手动触发时执行
+    if: |
+      always() && 
+      (needs.check-environment.outputs.has-upstream-artifacts == 'true' && 
+       github.event.workflow_run.conclusion == 'success' || 
+       github.event_name == 'workflow_dispatch' || 
+       github.event_name == 'push')
     permissions:
       contents: read
       packages: write
@@ -304,11 +315,9 @@ jobs:
           mkdir -p target/docker/tinyMediaManager
           
           # 创建模拟tinyMediaManager二进制文件
-          cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
-          #!/bin/bash
-          echo "tinyMediaManager v5.2.0 - Docker Build"
-          echo "This is a placeholder binary for testing"
-          EOF
+          echo '#!/bin/bash' > target/docker/tinyMediaManager/tinyMediaManager
+          echo 'echo "tinyMediaManager v5.2.0 - Docker Build"' >> target/docker/tinyMediaManager/tinyMediaManager
+          echo 'echo "This is a placeholder binary for testing"' >> target/docker/tinyMediaManager/tinyMediaManager
           chmod +x target/docker/tinyMediaManager/tinyMediaManager
         fi
 
