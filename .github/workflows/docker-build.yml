@@ -92,8 +92,10 @@ jobs:
 
         # 调试信息
         echo "📁 当前工作目录: $(pwd)"
-        echo "📁 目录内容:"
-        ls -la
+        echo "📁 src/docker目录内容:"
+        ls -la src/docker/
+        echo "📁 当前目录所有文件:"
+        find . -name "*Dockerfile*" -type f
 
         # 检查是否有构建产物
         HAS_ARTIFACTS=false
@@ -168,7 +170,15 @@ EOF
         fi
 
         # 复制Dockerfile
-        cp src/docker/Dockerfile.amd64 target/docker/Dockerfile
+        if [ -f "src/docker/Dockerfile.amd64" ]; then
+          cp src/docker/Dockerfile.amd64 target/docker/Dockerfile
+          echo "✅ 成功复制Dockerfile.amd64"
+        else
+          echo "❌ 无法找到src/docker/Dockerfile.amd64"
+          echo "📁 src/docker目录内容:"
+          ls -la src/docker/
+          exit 1
+        fi
 
         echo "✅ Docker上下文准备完成"
         echo "📁 最终目录结构:"
@@ -225,8 +235,10 @@ EOF
 
         # 调试信息
         echo "📁 当前工作目录: $(pwd)"
-        echo "📁 目录内容:"
-        ls -la
+        echo "📁 src/docker目录内容:"
+        ls -la src/docker/
+        echo "📁 当前目录所有文件:"
+        find . -name "*Dockerfile*" -type f
 
         # 检查是否有构建产物
         HAS_ARTIFACTS=false
@@ -301,7 +313,15 @@ EOF
         fi
 
         # 复制Dockerfile
-        cp src/docker/Dockerfile.arm64 target/docker/Dockerfile
+        if [ -f "src/docker/Dockerfile.arm64" ]; then
+          cp src/docker/Dockerfile.arm64 target/docker/Dockerfile
+          echo "✅ 成功复制Dockerfile.arm64"
+        else
+          echo "❌ 无法找到src/docker/Dockerfile.arm64"
+          echo "📁 src/docker目录内容:"
+          ls -la src/docker/
+          exit 1
+        fi
 
         echo "✅ Docker上下文准备完成"
         echo "📁 最终目录结构:"
