@@ -162,10 +162,10 @@ jobs:
           
           # 创建模拟tinyMediaManager二进制文件
           cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
-#!/bin/bash
-echo "tinyMediaManager v5.2.0 - Docker Build"
-echo "This is a placeholder binary for testing"
-EOF
+          #!/bin/bash
+          echo "tinyMediaManager v5.2.0 - Docker Build"
+          echo "This is a placeholder binary for testing"
+          EOF
           chmod +x target/docker/tinyMediaManager/tinyMediaManager
         fi
 
@@ -305,10 +305,10 @@ EOF
           
           # 创建模拟tinyMediaManager二进制文件
           cat > target/docker/tinyMediaManager/tinyMediaManager << 'EOF'
-#!/bin/bash
-echo "tinyMediaManager v5.2.0 - Docker Build"
-echo "This is a placeholder binary for testing"
-EOF
+          #!/bin/bash
+          echo "tinyMediaManager v5.2.0 - Docker Build"
+          echo "This is a placeholder binary for testing"
+          EOF
           chmod +x target/docker/tinyMediaManager/tinyMediaManager
         fi
 
