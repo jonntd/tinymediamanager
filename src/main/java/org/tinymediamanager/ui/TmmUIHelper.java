@@ -654,6 +654,11 @@ public class TmmUIHelper {
    * @return true/false
    */
   public static boolean shouldCheckForUpdate() {
+    // 强制禁用自动更新检查
+    return false;
+
+    // 原始逻辑已被禁用
+    /*
     if (ReleaseInfo.isNightly()) {
       return true;
     }
@@ -675,6 +680,7 @@ public class TmmUIHelper {
       LOGGER.debug("Could not check the update interval - '{}'", e.getMessage());
       return true;
     }
+    */
   }
 
   public static void checkForUpdate(int delayInSeconds) {

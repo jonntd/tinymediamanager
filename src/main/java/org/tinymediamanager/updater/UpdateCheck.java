@@ -52,6 +52,12 @@ public class UpdateCheck {
 
   public boolean isUpdateAvailable() {
     TmmProperties.getInstance().putProperty("lastUpdateCheck", Long.toString(new Date().getTime()));
+
+    // 强制禁用更新检查
+    return false;
+
+    // 原始逻辑已被禁用
+    /*
     if (ReleaseInfo.isGitBuild()) {
       return false;
     }
@@ -183,6 +189,7 @@ public class UpdateCheck {
       }
     }
     return false;
+    */
   }
 
   public static List<String> parseUpdateUrls() {

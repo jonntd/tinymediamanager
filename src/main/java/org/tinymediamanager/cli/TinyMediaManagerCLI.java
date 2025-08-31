@@ -112,6 +112,9 @@ public class TinyMediaManagerCLI implements Runnable {
   @Override
   public void run() {
     if (update) {
+      LOGGER.info("Update check has been disabled in this build");
+      // 强制禁用更新功能
+      /*
       LOGGER.info("Checking for new updates...");
 
       if (new UpdateCheck().isUpdateAvailable()) {
@@ -124,6 +127,7 @@ public class TinyMediaManagerCLI implements Runnable {
           LOGGER.info("Update downloaded successful - restart to apply");
         }
       }
+      */
     }
 
     if (startApi) {
