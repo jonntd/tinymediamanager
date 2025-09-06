@@ -29,7 +29,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -53,6 +52,7 @@ import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 
 import com.uwetrottmann.trakt5.TraktV2;
+import com.uwetrottmann.trakt5.entities.AccessToken;
 import com.uwetrottmann.trakt5.entities.BaseEpisode;
 import com.uwetrottmann.trakt5.entities.BaseSeason;
 import com.uwetrottmann.trakt5.entities.BaseShow;
@@ -68,6 +68,7 @@ import com.uwetrottmann.trakt5.entities.SyncResponse;
 import com.uwetrottmann.trakt5.entities.SyncSeason;
 import com.uwetrottmann.trakt5.entities.SyncShow;
 import com.uwetrottmann.trakt5.entities.TraktError;
+import com.uwetrottmann.trakt5.entities.TraktOAuthError;
 import com.uwetrottmann.trakt5.enums.Extended;
 import com.uwetrottmann.trakt5.enums.Rating;
 import com.uwetrottmann.trakt5.enums.RatingsFilter;
@@ -92,8 +93,28 @@ class TraktTvTvShow {
   private <T> T executeCall(Call<T> call) throws IOException {
     Response<T> response = call.execute();
     if (!response.isSuccessful() && response.code() == 401) {
-      api.refreshAccessToken(Objects.requireNonNull(api.refreshToken()));
-      response = call.clone().execute(); // retry
+
+      Response<AccessToken> refresh = api.refreshToken(Settings.getInstance().getTraktRefreshToken())
+          .refreshAccessToken(Settings.getInstance().getTraktRefreshToken());
+      if (refresh.isSuccessful() && refresh.body() != null) {
+        if (StringUtils.isNoneBlank(refresh.body().access_token, refresh.body().refresh_token)) {
+          Settings.getInstance().setTraktAccessToken(refresh.body().access_token);
+          Settings.getInstance().setTraktRefreshToken(refresh.body().refresh_token);
+          api.accessToken(Settings.getInstance().getTraktAccessToken());
+        }
+        response = call.clone().execute(); // retry
+      }
+      else {
+        // error logging for refresh action
+        String message = "Refreshing token failed: " + refresh.code() + " " + refresh.message();
+        TraktOAuthError error = api.checkForTraktOAuthError(refresh);
+        if (error != null && error.error_description != null) {
+          message += " message: " + error.error_description;
+        }
+        MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "trakt.sync", message, null));
+        throw new HttpException(refresh.code(), message);
+      }
+
     }
     if (!response.isSuccessful()) {
       String message = "Request failed: " + response.code() + " " + response.message();

@@ -1,3 +1,18 @@
+Version 5.2.1
+=======================
++ [Trailer] added a new option to set custom download parameters for yt-dlp
++ [Subtitles] added new columns to display hearing impaired and machine translated subtitles in the subtitle chooser #3036
+---
+x [Scraper] fixed parsing single search results in "Fernsehserien.de" scraper #3043
+x [Scraper] fixed englishTitle in TVDB, overwriting locale one #3037
+x [UI] fixed loading of episode actor images #3027
+x [UI] prompt to overwrite existing actor images when downloading new ones #3034
+x [UI] fixed some resizing issues in the wizard
+x [Trailer] fixed downloading trailers with yt-dlp #3045 #3046
+x [Jellyfin] add trickplay folder to be detected as "extras"
+x [MediaInfo] TMM starts now again when having NO mediainfo installed
+
+
 Version 5.2.0
 =======================
 + [Performance] completely reworked internal eventing
@@ -29,8 +44,9 @@ x [TV shows] fixed a problem when exchanging the video file of a TV show episode
 x [TV shows] added enhanced quick filter, same as for movies #3001
 x [Renamer] fixed using ${originalFilename} in the renamer filename pattern #2966
 x [Scraper] do not overwrite existing fields with empty values #2947
-x [IMDB] also scrape actor attributes #3007
-x [IMDB] fix generating actor profile url #3005
+x [IMDb] also scrape actor attributes #3007
+x [IMDb] fixed generating actor profile url #3005
+x [IMDb] fixed fetching of taglines
 x [UI] some UI fixes
 x [UI] increased quality level of the scaling algorithm for better image quality
 x [UI] re-layout all visible dialogs when changing the font size #2970
@@ -42,7 +58,11 @@ x [MediaInfo] corrected the format detection for some cropped 540p resolutions
 x [MediaInfo] fixed parsing of .ISO files #2998
 x [Trailer] activated yt-dlp as a default trailer downloader
 x [HTTP] adhere globally to 429 retry headers, not per scraper
-X [UPNP] fixed a problem with UPNP connections
+x [UPNP] fixed a problem with UPNP connections
+x [KODI] improve error handling for the RPC methods, to better matching between #3030
+x [KODI] able to process multi-episode files #3033
+x [Trakt.tv] better error handling / visualization.
 x [Library] upgraded Java to 21.0.8
 x [Library] upgraded to the latest version of H2 MVStore
 x [Library] upgraded libmediainfo to 25.07
+x [CLI] fix CLI output, add missing version param, improve performance

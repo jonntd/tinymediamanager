@@ -150,6 +150,7 @@ public class IconManager {
   public static final ImageIcon              TABLE_ALERT                  = createSVGIcon("icn_alert_active.svg", Color.RED);
 
   // font awesome icons normal
+  public static final ImageIcon              AI                           = createSVGIcon("microchip-ai.svg");
   public static final ImageIcon              CANCEL                       = createSVGIcon("circle-xmark.svg");
   public static final ImageIcon              CARET_UP                     = createSVGIcon("chevron-up.svg");
   public static final ImageIcon              CARET_DOWN                   = createSVGIcon("chevron-down.svg");
@@ -157,6 +158,7 @@ public class IconManager {
   public static final ImageIcon              COLLAPSED                    = createSVGIcon("square-chevron-down.svg");
   public static final ImageIcon              CONFIGURE                    = createSVGIcon("wrench.svg");
   public static final ImageIcon              DATE_PICKER                  = createSVGIcon("calendar-lines.svg");
+  public static final ImageIcon              DEAF                         = createSVGIcon("ear-deaf.svg");
   public static final ImageIcon              DELETE_GRAY                  = createSVGIcon("trash-alt.svg");
   public static final ImageIcon              ERROR                        = createSVGIcon("circle-xmark.svg", RED);
   public static final ImageIcon              EXPANDED                     = createSVGIcon("square-chevron-right.svg");

@@ -814,6 +814,7 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
     addUserNote(episode, parser);
     addEpisodeGroups(episode, parser);
     addEnglishTitle(episode, parser);
+    addCRC32(episode, parser);
   }
 
   /**
@@ -884,6 +885,18 @@ public abstract class TvShowEpisodeGenericXmlConnector implements ITvShowEpisode
       englishTitle.setTextContent(episode.getEnglishTitle());
       root.appendChild(englishTitle);
     }
+  }
+
+  /**
+   * add the <crc32 >xxx</crc32 >
+   */
+  protected void addCRC32(TvShowEpisode episode, TvShowEpisodeNfoParser.Episode parser) {
+    if (episode.getMainFile() == null || StringUtils.isBlank(episode.getMainFile().getCRC32())) {
+      return;
+    }
+    Element crc = document.createElement("crc32");
+    crc.setTextContent(episode.getMainFile().getCRC32());
+    root.appendChild(crc);
   }
 
   /**

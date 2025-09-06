@@ -90,7 +90,6 @@ import org.tinymediamanager.scraper.imdb.entities.ImdbReleaseDate;
 import org.tinymediamanager.scraper.imdb.entities.ImdbSearchResult;
 import org.tinymediamanager.scraper.imdb.entities.ImdbSectionItem;
 import org.tinymediamanager.scraper.imdb.entities.ImdbShowEpisodes;
-import org.tinymediamanager.scraper.imdb.entities.ImdbTextType;
 import org.tinymediamanager.scraper.imdb.entities.ImdbTitleKeyword;
 import org.tinymediamanager.scraper.imdb.entities.ImdbTitleType;
 import org.tinymediamanager.scraper.imdb.entities.ImdbVideo;
@@ -1129,6 +1128,7 @@ public abstract class ImdbParser {
           md.setOriginalTitle(md.getTitle());
         }
         md.setEnglishTitle(JsonUtils.at(node, "/props/pageProps/mainColumnData/akas/edges/0/node/text").asText());
+        md.setTagline(JsonUtils.at(node, "/props/pageProps/mainColumnData/taglines/edges/0/node/text").asText());
         md.setYear(JsonUtils.at(node, "/props/pageProps/mainColumnData/releaseYear/year").asInt(0));
 
         JsonNode plotNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/plot/plotText");
@@ -1213,11 +1213,6 @@ public abstract class ImdbParser {
         JsonNode keywordsNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/storylineKeywords/edges");
         for (ImdbKeyword kw : JsonUtils.parseList(mapper, keywordsNode, ImdbKeyword.class)) {
           md.addTag(kw.node.text);
-        }
-
-        JsonNode taglineNode = JsonUtils.at(node, "/props/pageProps/mainColumnData/taglines/edges");
-        for (ImdbTextType tag : JsonUtils.parseList(mapper, taglineNode, ImdbTextType.class)) {
-          md.setTagline(tag.text); // FIXME: we only have one
         }
 
         JsonNode certsEdge = JsonUtils.at(node, "/props/pageProps/mainColumnData/certificates/edges");

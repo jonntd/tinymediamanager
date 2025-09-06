@@ -18,7 +18,6 @@ package org.tinymediamanager.ui.actions;
 import java.awt.event.ActionEvent;
 
 import org.tinymediamanager.core.TmmResourceBundle;
-import org.tinymediamanager.ui.MainWindow;
 
 /**
  * The {@link CloseTmmAction} is used to offer a dedicated close button
@@ -33,6 +32,6 @@ public class CloseTmmAction extends TmmAction {
 
   @Override
   protected void processAction(ActionEvent e) {
-    MainWindow.getInstance().closeTmm();
+    System.exit(0);
   }
 }

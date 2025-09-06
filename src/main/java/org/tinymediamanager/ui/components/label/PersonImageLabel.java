@@ -94,7 +94,7 @@ public class PersonImageLabel extends ImageLabel {
         Path file = null;
 
         // we prefer reading it from the cache
-        if (preferCache) {
+        if (Settings.getInstance().isImageCache()) {
           file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename));
         }
 
@@ -103,13 +103,7 @@ public class PersonImageLabel extends ImageLabel {
           file = Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename);
         }
 
-        // not available in the path and not preferred from the cache..
-        // well just try to read it from the cache
-        if (!Files.exists(file) && !preferCache) {
-          file = ImageCache.getCachedFile(Paths.get(mediaEntity.getPath(), Person.ACTOR_DIR, actorImageFilename));
-        }
-
-        if (file != null && Files.exists(file)) {
+        if (Files.exists(file)) {
           imagePath = file;
           return null;
         }

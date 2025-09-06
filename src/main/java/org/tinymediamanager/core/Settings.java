@@ -108,6 +108,7 @@ public final class Settings extends AbstractSettings {
   private Integer                                          ffmpegPercentage             = 50;
   private boolean                                          useInternalYtDlp             = true;
   private String                                           externalYtDlpPath            = "";
+  private String                                           ytDlpParams                  = "";
 
   private String                                           theme                        = "Light";
   private int                                              fontSize                     = 12;
@@ -1009,6 +1010,16 @@ public final class Settings extends AbstractSettings {
     String oldValue = this.externalYtDlpPath;
     this.externalYtDlpPath = newValue;
     firePropertyChange("externalYtDlpPath", oldValue, newValue);
+  }
+
+  public String getYtDlpParams() {
+    return ytDlpParams;
+  }
+
+  public void setYtDlpParams(String newValue) {
+    String oldValue = this.ytDlpParams;
+    this.ytDlpParams = newValue;
+    firePropertyChange("ytDlpParams", oldValue, newValue);
   }
 
   public String getMediaPlayer() {

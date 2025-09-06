@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,12 +197,23 @@ public abstract class YtDownloadTask extends TmmTask {
         Files.createDirectory(tempDir);
       }
       long timestamp = System.currentTimeMillis();
-      Path tempFile = tempDir.resolve("yt-dlp." + timestamp + ".mp4");
-      YtDlp.downloadTrailer(mediaTrailer.getUrl(), height, tempFile);
+      String tempFilename = "yt-dlp." + timestamp;
 
-      Path trailerFilename = Paths.get(trailerBasename + ".mp4");
+      YtDlp.downloadTrailer(mediaTrailer.getUrl(), height, tempDir.resolve(tempFilename));
+
+      List<Path> tempFiles = Utils.listFiles(tempDir);
+      Path tempFile = null;
+      for (Path file : tempFiles) {
+        if (file.getFileName().toString().startsWith(tempFilename)) {
+          tempFile = file;
+          break;
+        }
+      }
+
       // add new trailer
       if (Files.exists(tempFile)) {
+        Path trailerFilename = Paths.get(trailerBasename + "." + FilenameUtils.getExtension(tempFile.getFileName().toString()));
+
         // delete same named trailer
         if (Files.exists(trailerFilename)) {
           Utils.deleteFileSafely(trailerFilename);
@@ -219,9 +231,13 @@ public abstract class YtDownloadTask extends TmmTask {
         mediaEntity.addToMediaFiles(mf); // add file, but maybe with other MI values
         mediaEntity.saveToDb();
       }
+      else {
+        LOGGER.warn("Could not find downloaded trailer file '{}'", tempFile);
+      }
     }
     catch (Exception e) {
       LOGGER.error("Could not download trailer using yt-dlp - '{}'", e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message("yt-dlp: " + mediaEntity.getTitle() + " - " + mediaTrailer.getName(), e.getMessage()));
     }
   }
 

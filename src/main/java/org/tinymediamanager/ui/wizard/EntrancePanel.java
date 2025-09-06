@@ -52,10 +52,10 @@ class EntrancePanel extends JPanel {
     String greetingText = Jsoup.parse(TmmResourceBundle.getString("wizard.greeting.header")).text();
     final JTextPane tpGreetingHeader = new ReadOnlyTextPane(greetingText);
     TmmFontHelper.changeFont(tpGreetingHeader, TmmFontHelper.H2);
-    add(tpGreetingHeader, "cell 0 2 5 1,alignx center");
+    add(tpGreetingHeader, "cell 0 2 5 1,alignx center, wmin 0");
 
     JTextPane tpGreetingText = new ReadOnlyTextPane(TmmResourceBundle.getString("wizard.greeting.text"));
-    add(tpGreetingText, "cell 3 4,grow");
+    add(tpGreetingText, "cell 3 4,grow, wmin 0");
 
     JButton btnImportData = new JButton(TmmResourceBundle.getString("wizard.import"));
     add(btnImportData, "cell 3 6,alignx center,aligny center");

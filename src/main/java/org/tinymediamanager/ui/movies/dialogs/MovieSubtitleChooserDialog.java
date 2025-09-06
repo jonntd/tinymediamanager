@@ -207,7 +207,6 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
       panelContent.add(scrollPaneSubs, "cell 0 5 5 1,grow");
 
       tableSubs = new TmmTable(new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(subtitleEventList), new SubtitleTableFormat()));
-      tableSubs.setDefaultRenderer(ImageIcon.class, new Renderer());
       tableSubs.configureScrollPane(scrollPaneSubs);
     }
     {
@@ -334,6 +333,8 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
       Collections.sort(searchResults);
       Collections.reverse(searchResults);
 
+      tableSubs.adjustColumnPreferredWidths(5);
+
       return null;
     }
 
@@ -377,6 +378,25 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
        * download
        */
       Column col = new Column("", "icon", model -> IconManager.DOWNLOAD, ImageIcon.class);
+      col.setCellRenderer(new Renderer());
+      addColumn(col);
+
+      /*
+       * hearing impaired
+       */
+      col = new Column("", "hearingImpaired", model -> model.isHearingImpaired() ? IconManager.TABLE_OK : null, ImageIcon.class);
+      col.setHeaderIcon(IconManager.DEAF);
+      col.setColumnResizeable(false);
+      col.setHeaderTooltip(TmmResourceBundle.getString("metatag.hearingimpaired"));
+      addColumn(col);
+
+      /*
+       * machine translated
+       */
+      col = new Column("", "machineTranslated", model -> model.isMachineTranslated() ? IconManager.TABLE_OK : null, ImageIcon.class);
+      col.setHeaderIcon(IconManager.AI);
+      col.setColumnResizeable(false);
+      col.setHeaderTooltip(TmmResourceBundle.getString("metatag.machinetranslated"));
       addColumn(col);
 
       /*
@@ -384,6 +404,7 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
        */
       col = new Column(TmmResourceBundle.getString("metatag.title"), "title", MovieSubtitleChooserModel::getName, String.class);
       col.setCellTooltip(MovieSubtitleChooserModel::getName);
+      col.setColumnResizeable(true);
       addColumn(col);
 
       /*
@@ -391,6 +412,7 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
        */
       col = new Column(TmmResourceBundle.getString("metatag.releasename"), "releasename", MovieSubtitleChooserModel::getReleaseName, String.class);
       col.setCellTooltip(MovieSubtitleChooserModel::getReleaseName);
+      col.setColumnResizeable(true);
       addColumn(col);
     }
   }
@@ -459,7 +481,7 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
     public void mouseEntered(MouseEvent e) {
       JTable table = (JTable) e.getSource();
       int col = table.columnAtPoint(new Point(e.getX(), e.getY()));
-      if (col == 0 || col == 1) {
+      if (col == 0) {
         table.setCursor(new Cursor(Cursor.HAND_CURSOR));
       }
     }
@@ -468,7 +490,7 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
     public void mouseExited(MouseEvent e) {
       JTable table = (JTable) e.getSource();
       int col = table.columnAtPoint(new Point(e.getX(), e.getY()));
-      if (col != 0 && col != 1) {
+      if (col != 0) {
         table.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
       }
     }
@@ -477,10 +499,10 @@ public class MovieSubtitleChooserDialog extends TmmDialog {
     public void mouseMoved(MouseEvent e) {
       JTable table = (JTable) e.getSource();
       int col = table.columnAtPoint(new Point(e.getX(), e.getY()));
-      if (col != 0 && col != 1 && table.getCursor().getType() == Cursor.HAND_CURSOR) {
+      if (col != 0 && table.getCursor().getType() == Cursor.HAND_CURSOR) {
         table.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
       }
-      if ((col == 0 || col == 1) && table.getCursor().getType() == Cursor.DEFAULT_CURSOR) {
+      if (col == 0 && table.getCursor().getType() == Cursor.DEFAULT_CURSOR) {
         table.setCursor(new Cursor(Cursor.HAND_CURSOR));
       }
     }

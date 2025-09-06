@@ -58,6 +58,20 @@ public class TvShowSubtitleChooserModel extends AbstractModelObject {
     return name;
   }
 
+  public boolean isHearingImpaired() {
+    if (result == null) {
+      return false;
+    }
+    return result.isHearingImpaired();
+  }
+
+  public boolean isMachineTranslated() {
+    if (result == null) {
+      return false;
+    }
+    return result.isMachineTranslated() || result.isAiTranslated();
+  }
+
   public String getReleaseName() {
     return releaseName;
   }

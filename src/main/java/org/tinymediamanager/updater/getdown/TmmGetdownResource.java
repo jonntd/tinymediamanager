@@ -95,7 +95,7 @@ public class TmmGetdownResource extends Resource {
     // first create a .md5 file since we delete the archive afterwards
     String newFileName = _localNew.getName() + ".sha256";
     MessageDigest digest = Digest.getMessageDigest(Digest.VERSION);
-    Utils.writeStringToFile(_localNew.toPath().resolve(newFileName), computeDigest(Digest.VERSION, _localNew, digest, null));
+    Utils.writeStringToFile(_localNew.toPath().resolveSibling(newFileName), computeDigest(Digest.VERSION, _localNew, digest, null));
 
     if (_isZip) {
       try (ZipFile jar = new ZipFile(_localNew)) {

@@ -70,8 +70,10 @@ public class TvShowKodiRefreshNfoAction extends TmmAction {
             List<UUID> processed = new ArrayList<UUID>(selectedObjects.getEpisodesRecursive().size());
 
             // update show + all EPs
+            boolean remap = false;
             for (TvShow tvShow : selectedObjects.getTvShows()) {
               kodiRPC.refreshFromNfo(tvShow);
+              remap = true;
               processed.addAll(tvShow.getEpisodes().stream().map(ep -> ep.getDbId()).collect(Collectors.toList()));
               publishState(++i);
               if (cancel) {
@@ -91,10 +93,10 @@ public class TvShowKodiRefreshNfoAction extends TmmAction {
               }
             }
 
-            // if we have updated at least one movie, we need to re-match the movies
-            if (progressDone > 0) {
+            // if we have updated at least one show (but not episode), we need to re-match the shows
+            if (remap) {
               try {
-                // need some time to propagate the new movieId
+                // need some time to propagate the new showId
                 Thread.sleep(1000);
               }
               catch (InterruptedException e) {

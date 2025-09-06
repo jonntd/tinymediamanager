@@ -47,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.imgscalr.Scalr;
 import org.tinymediamanager.core.ImageCache;
 import org.tinymediamanager.core.ImageUtils;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.http.InMemoryCachedUrl;
 import org.tinymediamanager.scraper.http.Url;
@@ -720,7 +721,7 @@ public class ImageLabel extends JComponent {
     protected Void doInBackground() {
       try {
         // if we want to use the cache, fetch this url via the image cache
-        if (preferCache) {
+        if (preferCache && Settings.getInstance().isImageCache()) {
           Path cachedFile = ImageCache.getCachedFile(imageUrl);
 
           if (cachedFile != null && Files.exists(cachedFile)) {
@@ -794,21 +795,22 @@ public class ImageLabel extends JComponent {
     @Override
     protected Void doInBackground() {
       Path file = null;
+      Path pathToImage = Paths.get(imagePath);
 
       // we prefer reading it from the cache
-      if (preferCache) {
-        file = ImageCache.getCachedFile(Paths.get(imagePath));
+      if (preferCache && Settings.getInstance().isImageCache()) {
+        file = ImageCache.getCachedFile(pathToImage);
       }
 
       // not in the cache - read it from the path
       if (file == null) {
-        file = Paths.get(imagePath);
+        file = pathToImage;
       }
 
-      // not available in the path and not preferred from the cache..
+      // not available in the path and not preferred from the cache...
       // well just try to read it from the cache
-      if ((!Files.exists(file)) && !preferCache) {
-        file = ImageCache.getCachedFile(Paths.get(imagePath));
+      if ((!Files.exists(file)) && Settings.getInstance().isImageCache()) {
+        file = ImageCache.getCachedFile(pathToImage);
       }
 
       if (file != null && Files.exists(file)) {

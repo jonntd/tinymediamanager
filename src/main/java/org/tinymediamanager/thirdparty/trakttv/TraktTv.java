@@ -46,6 +46,7 @@ import com.uwetrottmann.trakt5.entities.SyncResponse;
 import com.uwetrottmann.trakt5.entities.SyncStats;
 import com.uwetrottmann.trakt5.entities.TraktError;
 import com.uwetrottmann.trakt5.entities.TraktList;
+import com.uwetrottmann.trakt5.entities.TraktOAuthError;
 import com.uwetrottmann.trakt5.entities.UserSlug;
 import com.uwetrottmann.trakt5.enums.Audio;
 import com.uwetrottmann.trakt5.enums.AudioChannels;
@@ -155,7 +156,13 @@ public class TraktTv implements TmmFeature {
       }
     }
     else {
-      throw new IOException("could not get trakt.tv refresh token (HTTP " + response.code() + " - " + response.message() + ")");
+      // error logging for refresh action
+      String message = "Refreshing token failed: " + response.code() + " " + response.message();
+      TraktOAuthError error = api.checkForTraktOAuthError(response);
+      if (error != null && error.error_description != null) {
+        message += " message: " + error.error_description;
+      }
+      throw new HttpException(response.code(), message);
     }
   }
 

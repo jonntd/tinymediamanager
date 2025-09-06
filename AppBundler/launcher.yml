@@ -6,6 +6,7 @@ classpath:
   - /addons/*
   - CONTENT_DIR/addons/*
 jvmOpts:
+  - '-add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED'
   - '-Xms64m'
   - '-Xmx512m'
   - '-Xss512k'
@@ -16,7 +17,7 @@ jvmOpts:
   - '-Dfile.encoding=UTF-8'
   - '-Dsun.jnu.encoding=UTF-8'
   - '-Djna.nosys=true'
-  - '-Dtmm.consoleloglevel=NONE'
+  - '-Dtmm.consoleloglevel=DEBUG'
   - '[macos] -Dapple.awt.graphics.UseQuartz=true'
   - '[macos] -Xdock:name=tinyMediaManager'
   - '[macos] -Dapple.awt.application.name=tinyMediaManager'

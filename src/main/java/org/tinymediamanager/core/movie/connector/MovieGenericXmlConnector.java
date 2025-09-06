@@ -942,6 +942,7 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     addOriginalFilename();
     addUserNote();
     addEnglishTitle();
+    addCRC32();
   }
 
   /**
@@ -960,6 +961,18 @@ public abstract class MovieGenericXmlConnector implements IMovieConnector {
     Element englishTitle = document.createElement("english_title");
     englishTitle.setTextContent(movie.getEnglishTitle());
     root.appendChild(englishTitle);
+  }
+
+  /**
+   * add the <crc32 >xxx</crc32 >
+   */
+  protected void addCRC32() {
+    if (movie.getMainFile() == null || StringUtils.isBlank(movie.getMainFile().getCRC32())) {
+      return;
+    }
+    Element crc = document.createElement("crc32");
+    crc.setTextContent(movie.getMainFile().getCRC32());
+    root.appendChild(crc);
   }
 
   /**

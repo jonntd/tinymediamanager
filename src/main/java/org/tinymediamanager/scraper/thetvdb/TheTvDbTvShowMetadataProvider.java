@@ -1124,7 +1124,7 @@ public class TheTvDbTvShowMetadataProvider extends TheTvDbMetadataProvider
                       toInject.originalName = translation.name;
                     }
                     if (StringUtils.isNotBlank(translation.name)) {
-                      toInject.name = translation.name;
+                      toInject.englishName = translation.name;
                     }
                     break;
                   }

@@ -164,11 +164,11 @@ class MovieScraperPanel extends JPanel {
     TmmFontHelper.changeFont(lblMovieScraper, 1.3333, Font.BOLD);
     JPanel panelMovieScrapers = new JPanel();
 
-    add(panelMovieScrapers, "cell 0 1,grow");
+    add(panelMovieScrapers, "cell 0 1,grow, wmin 0");
     panelMovieScrapers.setLayout(new MigLayout("", "[][][600lp,grow]", "[150lp:200lp,grow][][][][][20lp][][]"));
 
     JScrollPane scrollPaneScraper = new JScrollPane();
-    panelMovieScrapers.add(scrollPaneScraper, "cell 0 0 2 1,grow");
+    panelMovieScrapers.add(scrollPaneScraper, "cell 0 0 2 1,grow, wmin 0");
 
     tableScraper = new TmmTable() {
       @Override
@@ -195,11 +195,11 @@ class MovieScraperPanel extends JPanel {
       tpScraperDescription = new JTextPane();
       tpScraperDescription.setOpaque(false);
       tpScraperDescription.setEditorKit(new HTMLEditorKit());
-      panelScraperDetails.add(tpScraperDescription, "cell 0 0,growx,aligny top");
+      panelScraperDetails.add(tpScraperDescription, "cell 0 0,growx,wmin 0, aligny top");
 
       panelScraperOptions = new JPanel();
       panelScraperOptions.setLayout(new FlowLayout(FlowLayout.LEFT));
-      panelScraperDetails.add(panelScraperOptions, "cell 0 1,growx,aligny top");
+      panelScraperDetails.add(panelScraperOptions, "cell 0 1,growx, wmin 0, aligny top");
     }
 
     JLabel lblScraperLanguage = new JLabel(TmmResourceBundle.getString("Settings.preferredLanguage"));

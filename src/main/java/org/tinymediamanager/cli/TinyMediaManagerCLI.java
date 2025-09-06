@@ -29,6 +29,7 @@ import org.tinymediamanager.updater.UpdateCheck;
 import org.tinymediamanager.updater.UpdaterTask;
 
 import picocli.CommandLine;
+import picocli.CommandLine.ParseResult;
 
 // @formatter:off
 @CommandLine.Command(
@@ -40,6 +41,7 @@ import picocli.CommandLine;
         optionListHeading = "%n",
         commandListHeading = "%nCommands:%n",
         footerHeading = "%nExamples:%n",
+        versionProvider = CmdVersion.class,
         footer = {
                 "  tinyMediaManager movie -u -n -r      to find/scrape and rename new movies",
                 "  tinyMediaManager movie -t -s         to download missing trailer/subtitles",
@@ -73,8 +75,10 @@ public class TinyMediaManagerCLI implements Runnable {
 
   public static boolean checkArgs(String... args) {
     CommandLine cmd = new CommandLine(TinyMediaManagerCLI.class);
+
+    ParseResult parsed = null;
     try {
-      cmd.parseArgs(args);
+      parsed = cmd.parseArgs(args);
     }
     catch (CommandLine.ParameterException e) {
       try {
@@ -87,10 +91,28 @@ public class TinyMediaManagerCLI implements Runnable {
       }
     }
 
-    String fullCommand = String.join(" ", args);
-    if (fullCommand.contains("-h")) {
-      cmd.execute(args);
+    if (parsed.isVersionHelpRequested()) {
+      cmd.printVersionHelp(System.out);
       return false;
+    }
+    if (parsed.hasSubcommand()) {
+      ParseResult sub = parsed.subcommand();
+      if (sub.isVersionHelpRequested()) {
+        cmd.printVersionHelp(System.out);
+        return false;
+      }
+    }
+
+    if (parsed.isUsageHelpRequested()) {
+      CommandLine.printHelpIfRequested(parsed);
+      return false;
+    }
+    if (parsed.hasSubcommand()) {
+      ParseResult sub = parsed.subcommand();
+      if (sub.isUsageHelpRequested()) {
+        CommandLine.printHelpIfRequested(parsed);
+        return false;
+      }
     }
 
     return true;

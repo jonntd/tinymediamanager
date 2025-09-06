@@ -16,6 +16,7 @@
 package org.tinymediamanager.ui.tvshows.dialogs;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Point;
@@ -36,8 +37,10 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.table.DefaultTableCellRenderer;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -348,6 +351,8 @@ public class TvShowSubtitleChooserDialog extends TmmDialog {
       Collections.sort(searchResults);
       Collections.reverse(searchResults);
 
+      tableSubs.adjustColumnPreferredWidths(5);
+
       return null;
     }
 
@@ -384,20 +389,56 @@ public class TvShowSubtitleChooserDialog extends TmmDialog {
        * download icon
        */
       Column col = new Column("", "icon", model -> IconManager.DOWNLOAD, ImageIcon.class);
+      col.setCellRenderer(new Renderer());
+      addColumn(col);
+
+      /*
+       * hearing impaired
+       */
+      col = new Column("", "hearingImpaired", model -> model.isHearingImpaired() ? IconManager.TABLE_OK : null, ImageIcon.class);
+      col.setHeaderIcon(IconManager.DEAF);
       col.setColumnResizeable(false);
+      col.setHeaderTooltip(TmmResourceBundle.getString("metatag.hearingimpaired"));
+      addColumn(col);
+
+      /*
+       * machine translated
+       */
+      col = new Column("", "machineTranslated", model -> model.isMachineTranslated() ? IconManager.TABLE_OK : null, ImageIcon.class);
+      col.setHeaderIcon(IconManager.AI);
+      col.setColumnResizeable(false);
+      col.setHeaderTooltip(TmmResourceBundle.getString("metatag.machinetranslated"));
       addColumn(col);
 
       /*
        * title
        */
       col = new Column(TmmResourceBundle.getString("metatag.title"), "title", TvShowSubtitleChooserModel::getName, String.class);
+      col.setColumnResizeable(true);
       addColumn(col);
 
       /*
        * release name
        */
       col = new Column(TmmResourceBundle.getString("metatag.releasename"), "releasename", TvShowSubtitleChooserModel::getReleaseName, String.class);
+      col.setColumnResizeable(true);
       addColumn(col);
+    }
+  }
+
+  private static class Renderer extends DefaultTableCellRenderer {
+    private final JLabel downloadLabel;
+
+    Renderer() {
+      downloadLabel = new JLabel(TmmResourceBundle.getString("Button.download"), IconManager.DOWNLOAD, SwingConstants.CENTER);
+    }
+
+    @Override
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+      if (value == IconManager.DOWNLOAD) {
+        return downloadLabel;
+      }
+      return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
     }
   }
 

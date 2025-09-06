@@ -76,10 +76,10 @@ class TvShowSourcePanel extends JPanel {
     panelTvShowDataSources.setLayout(new MigLayout("", "[grow][]", "[][grow]"));
 
     JTextArea tpDatasourceHint = new ReadOnlyTextArea(TmmResourceBundle.getString("wizard.datasource.hint"));
-    panelTvShowDataSources.add(tpDatasourceHint, "cell 0 0 2 1,growx");
+    panelTvShowDataSources.add(tpDatasourceHint, "cell 0 0 2 1,growx, wmin 0");
 
     JScrollPane scrollPaneDataSources = new JScrollPane();
-    panelTvShowDataSources.add(scrollPaneDataSources, "cell 0 1,grow");
+    panelTvShowDataSources.add(scrollPaneDataSources, "cell 0 1,grow, wmin 0");
 
     listDataSources = new JList<>();
     scrollPaneDataSources.setViewportView(listDataSources);

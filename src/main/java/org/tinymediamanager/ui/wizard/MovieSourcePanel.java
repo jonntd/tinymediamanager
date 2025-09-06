@@ -73,15 +73,15 @@ class MovieSourcePanel extends JPanel {
     }
     JPanel panelMovieDataSources = new JPanel();
 
-    add(panelMovieDataSources, "cell 0 1,grow");
+    add(panelMovieDataSources, "cell 0 1,grow, wmin 0");
     panelMovieDataSources.setLayout(new MigLayout("", "[grow][]", "[][200lp,grow]"));
     {
       JTextArea tpDatasourceHint = new ReadOnlyTextArea(TmmResourceBundle.getString("wizard.datasource.hint"));
-      panelMovieDataSources.add(tpDatasourceHint, "cell 0 0 2 1,grow");
+      panelMovieDataSources.add(tpDatasourceHint, "cell 0 0 2 1, grow, wmin 0");
     }
     {
       JScrollPane scrollPaneDataSources = new JScrollPane();
-      panelMovieDataSources.add(scrollPaneDataSources, "cell 0 1,grow");
+      panelMovieDataSources.add(scrollPaneDataSources, "cell 0 1,grow, wmin 0");
 
       listDataSources = new JList<>();
       scrollPaneDataSources.setViewportView(listDataSources);

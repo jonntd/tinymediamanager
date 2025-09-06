@@ -95,7 +95,7 @@ public class MediaFileHelper {
   // lower case
   public static final List<String> EXTRA_FOLDERS      = List.of("extra", "extras", "behind the scenes", "behindthescenes", "deleted scenes",
       "deletedscenes", "deleted", "featurette", "featurettes", "interview", "interviews", "scene", "scenes", "short", "shorts", "other", "others",
-      "bloopers");
+      "bloopers", "trickplay");
   // for structure detection
   public static final List<String> BLURAY_FOLDERS     = List.of("BDMV", "PLAYLIST", "CLIPINF", "STREAM");
 
@@ -1276,7 +1276,7 @@ public class MediaFileHelper {
             long fileSize = entry.getSize();
 
             // Preparing to fill MediaInfo with a buffer
-            fileMI.Open_Buffer_Init(fileSize, 0);
+            fileMI.openBufferInit(fileSize, 0);
 
             long pos = 0L;
             // The parsing loop
@@ -1290,23 +1290,23 @@ public class MediaFileHelper {
                 pos += fromBufferSize; // add bytes read to file position
 
                 // Sending the buffer to MediaInfo
-                int result = fileMI.Open_Buffer_Continue(fromBuffer, fromBufferSize);
+                int result = fileMI.openBufferContinue(fromBuffer, fromBufferSize);
                 if ((result & 8) == 8) { // Status.Finalized
                   break;
                 }
 
                 // Testing if MediaInfo request to go elsewhere
-                if (fileMI.Open_Buffer_Continue_GoTo_Get() != -1) {
-                  pos = fileMI.Open_Buffer_Continue_GoTo_Get();
+                if (fileMI.openBufferContinueGoToGet() != -1) {
+                  pos = fileMI.openBufferContinueGoToGet();
                   LOGGER.trace("ISO: Seek to {}", pos);
-                  fileMI.Open_Buffer_Init(fileSize, pos); // Informing MediaInfo we have seek
+                  fileMI.openBufferInit(fileSize, pos); // Informing MediaInfo we have seek
                 }
               }
             } while (fromBufferSize > 0);
 
             // Finalizing
             LOGGER.trace("ISO: finalize entry");
-            fileMI.Open_Buffer_Finalize(); // This is the end of the stream, MediaInfo must finish some work
+            fileMI.openBufferFinalize(); // This is the end of the stream, MediaInfo must finish some work
 
             mif.setSnapshot(fileMI.snapshot());
             miFiles.add(mif);
@@ -1377,7 +1377,7 @@ public class MediaFileHelper {
           long fileSize = entry.getSize();
 
           // Preparing to fill MediaInfo with a buffer
-          fileMI.Open_Buffer_Init(fileSize, 0);
+          fileMI.openBufferInit(fileSize, 0);
 
           long pos = 0L;
           // The parsing loop
@@ -1391,23 +1391,23 @@ public class MediaFileHelper {
               pos += fromBufferSize; // add bytes read to file position
 
               // Sending the buffer to MediaInfo
-              int result = fileMI.Open_Buffer_Continue(fromBuffer, fromBufferSize);
+              int result = fileMI.openBufferContinue(fromBuffer, fromBufferSize);
               if ((result & 8) == 8) { // Status.Finalized
                 break;
               }
 
               // Testing if MediaInfo request to go elsewhere
-              if (fileMI.Open_Buffer_Continue_GoTo_Get() != -1) {
-                pos = fileMI.Open_Buffer_Continue_GoTo_Get();
+              if (fileMI.openBufferContinueGoToGet() != -1) {
+                pos = fileMI.openBufferContinueGoToGet();
                 LOGGER.trace("ISO: Seek to {}", pos);
-                fileMI.Open_Buffer_Init(fileSize, pos); // Informing MediaInfo we have seek
+                fileMI.openBufferInit(fileSize, pos); // Informing MediaInfo we have seek
               }
             }
           } while (fromBufferSize > 0);
 
           // Finalizing
           LOGGER.trace("ISO: finalize entry");
-          fileMI.Open_Buffer_Finalize(); // This is the end of the stream, MediaInfo must finish some work
+          fileMI.openBufferFinalize(); // This is the end of the stream, MediaInfo must finish some work
 
           mif.setSnapshot(fileMI.snapshot());
           miFiles.add(mif);

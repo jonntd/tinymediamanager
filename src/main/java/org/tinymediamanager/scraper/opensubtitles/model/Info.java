@@ -60,20 +60,25 @@ public class Info {
   }
 
   public static class MovieInfo {
-    public final String id;
-    public final String movieHash;
-    public final double score;
+    public final String  id;
+    public final String  movieHash;
+    public final double  score;
 
-    public final String movieKind;
-    public final String movieTitle;
-    public final String movieReleaseName;
-    public final String subFormat;
-    public final String subDownloadLink;
-    public final int    subSumCD;
-    public final Float  subRating;
-    public final String zipDownloadLink;
-    public final String season;
-    public final String episode;
+    public final String  movieKind;
+    public final String  movieTitle;
+    public final String  movieReleaseName;
+    public final String  subFormat;
+    public final String  subDownloadLink;
+    public final int     subSumCD;
+    public final Float   subRating;
+    public final String  subLanguageID;
+    public final String  subLanguageISO639;
+    public final String  subLanguageName;
+    public final boolean subHearingImpaired;
+    public final boolean subAutoTranslation;
+    public final String  zipDownloadLink;
+    public final String  season;
+    public final String  episode;
 
     @SuppressWarnings("unchecked")
     public MovieInfo(Object data) throws Exception {
@@ -85,8 +90,13 @@ public class Info {
       movieTitle = (String) values.get("MovieName");
       movieReleaseName = (String) values.get("MovieReleaseName");
       subFormat = (String) values.get("SubFormat");
+      subLanguageID = (String) values.get("SubLanguageID");
+      subLanguageISO639 = (String) values.get("ISO639");
+      subLanguageName = (String) values.get("LanguageName");
       subDownloadLink = (String) values.get("SubDownloadLink");
       subSumCD = Integer.parseInt((String) values.get("SubSumCD"));
+      subHearingImpaired = ((String) values.get("SubHearingImpaired")).equals("1");
+      subAutoTranslation = ((String) values.get("SubAutoTranslation")).equals("1");
       subRating = Float.parseFloat((String) values.get("SubRating"));
       zipDownloadLink = (String) values.get("ZipDownloadLink");
       season = (String) values.get("SeriesSeason");

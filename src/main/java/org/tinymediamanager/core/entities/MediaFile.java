@@ -19,7 +19,6 @@ import static org.tinymediamanager.core.Constants.SUBTITLES;
 import static org.tinymediamanager.core.MediaFileHelper.BINARY_FILETYPES;
 import static org.tinymediamanager.core.MediaFileHelper.getFirstEntryViaScanner;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -209,27 +208,6 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     }
     else {
       this.type = type;
-    }
-
-    // Always get file size during construction (regardless of fetchVideoInfoOnUpdate setting)
-    try {
-      if (Files.exists(f)) {
-        if (Files.isDirectory(f)) {
-          // For directories (disc structures), calculate total size of disc files
-          this.filesize = Utils.getDirectorySizeOfDiscFiles(f);
-          LOGGER.trace("MediaFile constructor (directory): {} - total disc size: {} bytes", filename, filesize);
-        } else {
-          // For regular files, get file size directly
-          this.filesize = Files.size(f);
-          LOGGER.trace("MediaFile constructor (file): {} - size: {} bytes", filename, filesize);
-        }
-        this.filedate = Files.getLastModifiedTime(f).toMillis();
-      } else {
-        LOGGER.debug("MediaFile constructor: File does not exist: {}", f);
-      }
-    }
-    catch (IOException e) {
-      LOGGER.debug("MediaFile constructor: Could not get file size for '{}': {}", f, e.getMessage());
     }
 
     // check if that file is an ISO file

@@ -83,11 +83,13 @@ public class TvShowScrapeEpisodesAction extends TmmAction {
       QueueTask queueTask = new QueueTask(TmmResourceBundle.getString("tvshow.scraping"));
       queueTask.addTask(new TvShowEpisodeScrapeTask(entry.getValue(), options, episodeScraperMetadataConfig, overwrite));
 
-      TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));
-      task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-      task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
-      task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
-      queueTask.addTask(task);
+      if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
+        TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(Collections.singletonList(entry.getKey()));
+        task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+        task.setSyncWatched(TvShowModuleManager.getInstance().getSettings().getSyncTraktWatched());
+        task.setSyncRating(TvShowModuleManager.getInstance().getSettings().getSyncTraktRating());
+        queueTask.addTask(task);
+      }
 
       TmmTaskManager.getInstance().addUnnamedTask(queueTask);
     }

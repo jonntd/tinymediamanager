@@ -30,15 +30,19 @@ import org.tinymediamanager.scraper.util.StrgUtils;
  */
 public class SubtitleSearchResult implements Comparable<SubtitleSearchResult> {
   private String                                    providerId;
-  private String                                    id          = "";
-  private String                                    title       = "";
-  private String                                    releaseName = "";
-  private int                                       stackCount  = 0;
-  private float                                     score       = 0f;
-  private float                                     rating      = 0f;
+  private String                                    id                = "";
+  private String                                    title             = "";
+  private String                                    releaseName       = "";
+  private int                                       stackCount        = 0;
+  private float                                     score             = 0f;
+  private float                                     rating            = 0f;
+  private String                                    language          = "";
+  private boolean                                   hearingImpaired   = false;
+  private boolean                                   aiTranslated      = false;
+  private boolean                                   machineTranslated = false;
 
-  private String                                    url         = null;
-  private ThrowingSupplier<String, ScrapeException> urlSupplier = null;
+  private String                                    url               = null;
+  private ThrowingSupplier<String, ScrapeException> urlSupplier       = null;
 
   public SubtitleSearchResult(String providerId) {
     this.providerId = providerId;
@@ -221,6 +225,38 @@ public class SubtitleSearchResult implements Comparable<SubtitleSearchResult> {
    */
   public void setStackCount(int stackCount) {
     this.stackCount = stackCount;
+  }
+
+  public String getLanguage() {
+    return language;
+  }
+
+  public void setLanguage(String language) {
+    this.language = language;
+  }
+
+  public boolean isHearingImpaired() {
+    return hearingImpaired;
+  }
+
+  public void setHearingImpaired(boolean hearingImpaired) {
+    this.hearingImpaired = hearingImpaired;
+  }
+
+  public boolean isAiTranslated() {
+    return aiTranslated;
+  }
+
+  public void setAiTranslated(boolean aiTranslated) {
+    this.aiTranslated = aiTranslated;
+  }
+
+  public boolean isMachineTranslated() {
+    return machineTranslated;
+  }
+
+  public void setMachineTranslated(boolean machineTranslated) {
+    this.machineTranslated = machineTranslated;
   }
 
   @Override

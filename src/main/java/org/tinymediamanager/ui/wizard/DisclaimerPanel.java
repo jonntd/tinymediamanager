@@ -59,7 +59,7 @@ class DisclaimerPanel extends JPanel {
     {
       JScrollPane scrollPane = new NoBorderScrollPane();
       scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-      add(scrollPane, "cell 0 1,grow");
+      add(scrollPane, "cell 0 1,grow, wmin 0");
 
       JTextArea taDisclaimer = new ReadOnlyTextArea(TmmResourceBundle.getString("wizard.disclaimer.long"));
       scrollPane.setViewportView(taDisclaimer);

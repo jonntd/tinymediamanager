@@ -33,7 +33,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.logging.LogManager;
 
@@ -348,47 +350,57 @@ public final class TinyMediaManager {
     }
   }
 
-  private void printLogHeader() {
-    LOGGER.info("=======================================================");
-    LOGGER.info("=== tinyMediaManager (c) 2012 - 2025 Manuel Laggner ===");
-    LOGGER.info("=======================================================");
-    LOGGER.info("tmm.version      : {}", ReleaseInfo.getRealVersion());
+  public static String[] generateLogHeader() {
+    List<String> lines = new ArrayList<>();
+    lines.add("=======================================================");
+    lines.add("=== tinyMediaManager (c) 2012 - 2025 Manuel Laggner ===");
+    lines.add("=======================================================");
+    lines.add("tmm.version      : " + ReleaseInfo.getRealVersion());
     if (!ReleaseInfo.isGitBuild()) {
-      LOGGER.info("tmm.build        : {}", ReleaseInfo.getRealBuildDate());
+      lines.add("tmm.build        : " + ReleaseInfo.getRealBuildDate());
     }
     if (Globals.isDocker()) {
-      LOGGER.info("tmm.docker       : true");
+      lines.add("tmm.docker       : true");
     }
-    LOGGER.info("os.name          : {}", System.getProperty("os.name"));
-    LOGGER.info("os.version       : {}", System.getProperty("os.version"));
-    LOGGER.info("os.arch          : {}", System.getProperty("os.arch"));
-    LOGGER.info("java.version     : {}", System.getProperty("java.version"));
-    LOGGER.info("java.maxMem      : {} MiB", Runtime.getRuntime().maxMemory() / 1024 / 1024);
+    lines.add("tmm.home         : " + Path.of("").toAbsolutePath().toString());
+    lines.add("tmm.datafolder   : " + Globals.DATA_FOLDER);
+    lines.add("tmm.cachefolder  : " + Globals.CACHE_FOLDER);
+    lines.add("tmm.backupfolder : " + Globals.BACKUP_FOLDER);
+    lines.add("tmm.logfolder    : " + Globals.LOG_FOLDER);
+    lines.add("os.name          : " + System.getProperty("os.name"));
+    lines.add("os.version       : " + System.getProperty("os.version"));
+    lines.add("os.arch          : " + System.getProperty("os.arch"));
+    lines.add("java.version     : " + System.getProperty("java.version"));
+    lines.add("java.maxMem      : " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MiB");
 
     if (Globals.isRunningJavaWebStart()) {
-      LOGGER.info("java.webstart    : true");
+      lines.add("java.webstart    : true");
     }
     if (Globals.isRunningWebSwing()) {
-      LOGGER.info("java.webswing    : true");
+      lines.add("java.webswing    : true");
     }
 
     // START character encoding debug
     byte[] bArray = { 'w' };
-    LOGGER.info("current encoding : {} | {} | {}", System.getProperty("file.encoding"),
-        new InputStreamReader(new ByteArrayInputStream(bArray)).getEncoding(), Charset.defaultCharset());
+    lines.add("current encoding : " + System.getProperty("file.encoding") + " | "
+        + new InputStreamReader(new ByteArrayInputStream(bArray)).getEncoding() + " | " + Charset.defaultCharset());
 
     // start & JVM params
     RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-    LOGGER.info("JVM parameters   : {}", String.join(" ", runtimeMXBean.getInputArguments()));
+    lines.add("JVM parameters   : " + String.join(" ", runtimeMXBean.getInputArguments()));
 
     // set GUI default language
-    LOGGER.info("System language  : {}_{}", System.getProperty("user.language"), System.getProperty("user.country"));
-    LOGGER.info("GUI language     : {}", Locale.getDefault().toLanguageTag());
-    LOGGER.info("tmm.datafolder   : {} ", Globals.DATA_FOLDER);
-    LOGGER.info("tmm.cachefolder  : {} ", Globals.CACHE_FOLDER);
-    LOGGER.info("tmm.backupfolder : {} ", Globals.BACKUP_FOLDER);
-    LOGGER.info("tmm.logfolder    : {} ", Globals.LOG_FOLDER);
-    LOGGER.info("=====================================================");
+    lines.add("System language  : " + System.getProperty("user.language") + "_" + System.getProperty("user.country"));
+    lines.add("GUI language     : " + Locale.getDefault().toLanguageTag());
+    lines.add("=====================================================");
+
+    return lines.toArray(String[]::new);
+  }
+
+  private void printLogHeader() {
+    for (String line : generateLogHeader()) {
+      LOGGER.info(line);
+    }
     LOGGER.info("starting tinyMediaManager");
   }
 

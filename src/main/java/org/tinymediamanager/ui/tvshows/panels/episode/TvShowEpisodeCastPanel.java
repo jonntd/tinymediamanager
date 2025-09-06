@@ -111,7 +111,7 @@ public class TvShowEpisodeCastPanel extends JPanel {
         int selectedRow = tableActor.convertRowIndexToModel(tableActor.getSelectedRow());
         if (selectedRow >= 0 && selectedRow < actorEventList.size()) {
           Person actor = actorEventList.get(selectedRow);
-          lblActorThumb.setPerson(selectionModel.getSelectedTvShowEpisode(), actor);
+          lblActorThumb.setPerson(selectionModel.getSelectedTvShowEpisode().getTvShow(), actor); // needs to use the TV show here
         }
         else {
           lblActorThumb.clearImage();
@@ -125,7 +125,7 @@ public class TvShowEpisodeCastPanel extends JPanel {
         int selectedRow = tableCrew.convertRowIndexToModel(tableCrew.getSelectedRow());
         if (selectedRow >= 0 && selectedRow < crewEventList.size()) {
           Person crewMember = crewEventList.get(selectedRow);
-          lblCrewThumb.setPerson(selectionModel.getSelectedTvShowEpisode(), crewMember);
+          lblCrewThumb.setPerson(selectionModel.getSelectedTvShowEpisode().getTvShow(), crewMember); // needs to use the TV show here
         }
         else {
           lblCrewThumb.clearImage();

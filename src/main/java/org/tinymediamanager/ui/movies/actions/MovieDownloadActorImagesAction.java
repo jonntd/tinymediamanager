@@ -55,8 +55,17 @@ public class MovieDownloadActorImagesAction extends TmmAction {
       return;
     }
 
+    boolean overwriteActorImages = false;
+
+    Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
+    int answer = JOptionPane.showOptionDialog(MainWindow.getFrame(), TmmResourceBundle.getString("movie.downloadactorimages.overwrite"),
+        TmmResourceBundle.getString("movie.downloadactorimages"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+    if (answer == JOptionPane.YES_OPTION) {
+      overwriteActorImages = true;
+    }
+
     for (Movie movie : selectedMovies) {
-      movie.writeActorImages(true);
+      movie.writeActorImages(overwriteActorImages);
     }
   }
 }

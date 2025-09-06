@@ -326,7 +326,9 @@ abstract class OpenSubtitlesSubtitleProvider implements IMediaProvider {
     result.setRating(movieInfo.subRating);
     result.setStackCount(movieInfo.subSumCD);
     result.setScore((float) movieInfo.score);
-
+    result.setLanguage(movieInfo.subLanguageName);
+    result.setMachineTranslated(movieInfo.subAutoTranslation);
+    result.setHearingImpaired(movieInfo.subHearingImpaired);
     return result;
   }
 

@@ -162,11 +162,11 @@ class UiSettingsPanelLite extends JPanel {
     {
       JLabel lblUiSettings = new JLabel(TmmResourceBundle.getString("wizard.ui"));
       TmmFontHelper.changeFont(lblUiSettings, 1.3333, Font.BOLD);
-      add(lblUiSettings, "cell 0 0 3 1,growx");
+      add(lblUiSettings, "cell 0 0 3 1,growx, wmin 0");
     }
 
     JTextArea taSettingsHint = new ReadOnlyTextArea(TmmResourceBundle.getString("wizard.ui.hint"));
-    add(taSettingsHint, "cell 1 1 2 1,growx");
+    add(taSettingsHint, "cell 1 1 2 1,growx, wmin 0");
 
     JLabel lblLanguageT = new JLabel(TmmResourceBundle.getString("Settings.language"));
     add(lblLanguageT, "flowx,cell 1 3 2 1");
@@ -184,7 +184,7 @@ class UiSettingsPanelLite extends JPanel {
     catch (Exception e) {
       LOGGER.debug("could not load image: {}", e.getMessage());
     }
-    add(lblLight, "cell 1 6, grow");
+    add(lblLight, "cell 1 6");
 
     lblDark = new ImageLabel(false);
     try (InputStream is = UiSettingsPanelLite.class.getResourceAsStream("dark.png")) {
@@ -193,7 +193,7 @@ class UiSettingsPanelLite extends JPanel {
     catch (Exception e) {
       LOGGER.debug("could not load image: {}", e.getMessage());
     }
-    add(lblDark, "cell 2 6, grow");
+    add(lblDark, "cell 2 6");
 
     ButtonGroup buttonGroup = new ButtonGroup();
 
@@ -219,7 +219,7 @@ class UiSettingsPanelLite extends JPanel {
     add(cbFontSize, "cell 1 10");
 
     JTextArea taFontHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.fonts.hint"));
-    add(taFontHint, "cell 1 11 2 1,grow");
+    add(taFontHint, "cell 1 11 2 1,grow, wmin 0");
 
     {
       lblUpdate = new JLabel(TmmResourceBundle.getString("Settings.update"));

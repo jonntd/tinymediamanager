@@ -23,7 +23,6 @@ import java.nio.file.Path;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -47,6 +46,7 @@ import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
 import org.tinymediamanager.ui.components.textfield.ReadOnlyTextArea;
+import org.tinymediamanager.ui.components.textfield.TmmRoundTextArea;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -73,7 +73,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
   private JRadioButton      rdbtnYtDlpExternal;
   private JTextField        tfYtDlpPath;
   private JButton           btnSearchYtDlpBinary;
-  private JCheckBox         chkbxYtCookies;
+  private JTextArea         taYtDlpParams;
 
   ExternalToolsSettingsPanel() {
     initComponents();
@@ -179,7 +179,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
     }
     {
       JPanel panelYtDlp = new JPanel();
-      panelYtDlp.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][400lp,grow][]", "[][][][]15lp![][]"));
+      panelYtDlp.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][400lp,grow][]", "[][][][]15lp![][][]15lp![][]"));
       JLabel lblYtDlpT = new TmmLabel("yt-dlp", H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelYtDlp, lblYtDlpT, true);
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/settings#yt-dlp"));
@@ -206,8 +206,23 @@ public class ExternalToolsSettingsPanel extends JPanel {
         panelYtDlp.add(tpYtDlpLocation, "cell 2 3,growx, wmin 0");
         TmmFontHelper.changeFont(tpYtDlpLocation, L2);
 
+        JLabel lblYtDlpParams = new JLabel(TmmResourceBundle.getString("Settings.ytdlp.params"));
+        panelYtDlp.add(lblYtDlpParams, "cell 1 4 2 1");
+
+        taYtDlpParams = new TmmRoundTextArea();
+        panelYtDlp.add(taYtDlpParams, "cell 1 4 2 1,growx, wmin 0");
+
+        JTextArea taYtDlpParamHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.ytdlp.params.hint"));
+        panelYtDlp.add(taYtDlpParamHint, "cell 1 5 2 1, growx, wmin 0");
+        TmmFontHelper.changeFont(taYtDlpParamHint, L2);
+
+        JTextArea taYtDlpDefaultParams = new ReadOnlyTextArea(
+            "-f \"bv*+ba/best\" -S res: 1080 --merge-output-format mkv --concurrent-fragments 4 --abort-on-unavailable-fragment --fragment-retries 99");
+        panelYtDlp.add(taYtDlpDefaultParams, "cell 1 6 2 1, growx, wmin 0");
+        TmmFontHelper.changeFont(taYtDlpDefaultParams, L2);
+
         JTextArea taYtCookieHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.ytdlp.cookies.hint"));
-        panelYtDlp.add(taYtCookieHint, "cell 2 4, growx, wmin 0");
+        panelYtDlp.add(taYtCookieHint, "cell 1 7 2 1, growx, wmin 0");
 
         JButton btnOpenFaq = new JButton("yt-dlp FAQ");
         btnOpenFaq.addActionListener(e -> {
@@ -220,7 +235,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
                 .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", e1.getLocalizedMessage() }));
           }
         });
-        panelYtDlp.add(btnOpenFaq, "cell 2 5");
+        panelYtDlp.add(btnOpenFaq, "cell 1 8 2 1");
       }
     }
   }
@@ -256,5 +271,11 @@ public class ExternalToolsSettingsPanel extends JPanel {
     AutoBinding autoBinding_12 = Bindings.createAutoBinding(AutoBinding.UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_12,
         rdbtnYtDlpInternal, jCheckBoxBeanProperty_1);
     autoBinding_12.bind();
+    //
+    Property settingsBeanProperty_13 = BeanProperty.create("ytDlpParams");
+    Property jTextFieldBeanProperty_6 = BeanProperty.create("text");
+    AutoBinding autoBinding_13 = Bindings.createAutoBinding(AutoBinding.UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_13, taYtDlpParams,
+        jTextFieldBeanProperty_6);
+    autoBinding_13.bind();
   }
 }

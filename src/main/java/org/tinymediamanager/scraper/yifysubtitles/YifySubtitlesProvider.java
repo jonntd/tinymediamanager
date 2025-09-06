@@ -162,7 +162,13 @@ public class YifySubtitlesProvider implements IMovieSubtitleProvider {
             }
 
             case "uploader-cell":
+              break;
+
             case "other-cell": {
+              Element hi = td.getElementsByClass("hi-subtitle").first();
+              if (hi != null) {
+                sr.setHearingImpaired(true);
+              }
               break;
             }
 
@@ -170,8 +176,11 @@ public class YifySubtitlesProvider implements IMovieSubtitleProvider {
               // if it has an A tag, it is our main
               Element a = td.getElementsByTag("a").first();
               if (a != null) {
-                String downloadUrl = a.attr("href").replace("/subtitles/", getApiKey() + "/subtitle/") + ".zip";
-
+                String downloadUrl = a.attr("href").replace("/subtitles/", getApiKey() + "subtitle/") + ".zip";
+                // sometimes they are not listed as HI on the site, but the url clearly says so
+                if (a.text().matches(".*[\\[\\(_.-][sS][dD][hH].*")) {
+                  sr.setHearingImpaired(true);
+                }
                 sr.setUrl(() -> downloadUrl);
                 sr.setReleaseName(a.ownText().split(" ", 2)[0]); // multiple releases possible
               }

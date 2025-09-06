@@ -22,10 +22,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SearchResultAttributes {
   @JsonProperty("subtitle_id")
-  public String             subtitleId        = "";
+  public String             subtitleId = "";
 
   @JsonProperty("language")
-  public String             language          = "";
+  public String             language   = "";
 
   @JsonProperty("download_count")
   public int                downloadCount;
@@ -61,16 +61,16 @@ public class SearchResultAttributes {
   public boolean            aiTranslated;
 
   @JsonProperty("machine_translated")
-  public String             machineTranslated = "";
+  public boolean            machineTranslated;
 
   @JsonProperty("upload_date")
-  public String             uploadDate        = "";
+  public String             uploadDate = "";
 
   @JsonProperty("release")
-  public String             release           = "";
+  public String             release    = "";
 
   @JsonProperty("comments")
-  public String             comments          = "";
+  public String             comments   = "";
 
   @JsonProperty("legacy_subtitle_id")
   public int                legacySubtitleId;
@@ -79,8 +79,8 @@ public class SearchResultAttributes {
   public FeatureDetails     featureDetails;
 
   @JsonProperty("url")
-  public String             url               = "";
+  public String             url        = "";
 
   @JsonProperty("files")
-  public List<SubtitleFile> files             = new ArrayList<>();
+  public List<SubtitleFile> files      = new ArrayList<>();
 }

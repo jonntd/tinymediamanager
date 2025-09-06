@@ -275,6 +275,10 @@ abstract class OpenSubtitlesComSubtitleProvider implements IMediaProvider {
 
     SubtitleSearchResult subtitleSearchResult = new SubtitleSearchResult(providerInfo.getId());
     subtitleSearchResult.setId(result.id);
+    subtitleSearchResult.setLanguage(result.attributes.language);
+    subtitleSearchResult.setHearingImpaired(result.attributes.hearingImpaired);
+    subtitleSearchResult.setAiTranslated(result.attributes.aiTranslated);
+    subtitleSearchResult.setMachineTranslated(result.attributes.machineTranslated);
 
     if (result.attributes.featureDetails != null) {
       subtitleSearchResult.setTitle(result.attributes.featureDetails.title);

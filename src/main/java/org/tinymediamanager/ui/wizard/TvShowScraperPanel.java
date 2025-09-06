@@ -142,11 +142,11 @@ class TvShowScraperPanel extends JPanel {
     add(lblTvShowScraper, "cell 0 0");
     JPanel panelTvShowScrapers = new JPanel();
 
-    add(panelTvShowScrapers, "cell 0 1,grow");
+    add(panelTvShowScrapers, "cell 0 1,grow, wmin 0");
     panelTvShowScrapers.setLayout(new MigLayout("", "[][][500lp,grow]", "[150lp:300lp][][]"));
 
     JScrollPane scrollPaneScraper = new JScrollPane();
-    panelTvShowScrapers.add(scrollPaneScraper, "cell 0 0 2 1,grow");
+    panelTvShowScrapers.add(scrollPaneScraper, "cell 0 0 2 1,grow, wmin 0");
 
     tableScraper = new TmmTable() {
       @Override
@@ -163,7 +163,7 @@ class TvShowScraperPanel extends JPanel {
 
     {
       JScrollPane scrollPaneScraperDetails = new NoBorderScrollPane();
-      panelTvShowScrapers.add(scrollPaneScraperDetails, "cell 2 0 1 2,grow");
+      panelTvShowScrapers.add(scrollPaneScraperDetails, "cell 2 0 1 2,grow, wmin 0");
       scrollPaneScraperDetails.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
       JPanel panelScraperDetails = new ScrollablePanel();
@@ -173,11 +173,11 @@ class TvShowScraperPanel extends JPanel {
       tpScraperDescription = new JTextPane();
       tpScraperDescription.setOpaque(false);
       tpScraperDescription.setEditorKit(new HTMLEditorKit());
-      panelScraperDetails.add(tpScraperDescription, "cell 0 0,growx,aligny top");
+      panelScraperDetails.add(tpScraperDescription, "cell 0 0,growx, wmin 0, aligny top");
 
       panelScraperOptions = new JPanel();
       panelScraperOptions.setLayout(new FlowLayout(FlowLayout.LEFT));
-      panelScraperDetails.add(panelScraperOptions, "cell 0 1,growx,aligny top");
+      panelScraperDetails.add(panelScraperOptions, "cell 0 1,growx, wmin 0, aligny top");
     }
 
     JLabel lblScraperLanguage = new JLabel(TmmResourceBundle.getString("Settings.preferredLanguage"));

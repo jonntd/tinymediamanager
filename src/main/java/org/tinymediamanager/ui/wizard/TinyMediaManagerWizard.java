@@ -95,7 +95,7 @@ public class TinyMediaManagerWizard extends TmmDialog {
 
       panelContent = new JPanel();
       panelContent.setLayout(new CardLayout());
-      panelSizing.add(panelContent, "cell 0 0,grow");
+      panelSizing.add(panelContent, "cell 0 0,grow, wmin 0");
     }
     {
       actBack = new BackAction();

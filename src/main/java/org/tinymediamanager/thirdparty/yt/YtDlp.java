@@ -116,27 +116,38 @@ public class YtDlp {
       cmdList.add(cookieFile.toAbsolutePath().toString());
     }
 
-    cmdList.add("-f");
-    cmdList.add("bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b");
-
-    if (height > 0) {
-      cmdList.add("-S");
-      cmdList.add("res:" + height);
+    if (StringUtils.isNotBlank(Settings.getInstance().getYtDlpParams())) {
+      cmdList.add(Settings.getInstance().getYtDlpParams());
     }
+    else {
+      // ATTENTION: when changing the default parameters here, please also change them in ExternalToolsSettingsPanel!
+      cmdList.add("-f");
+      cmdList.add("bv*+ba/best");
 
-    cmdList.add("--concurrent-fragments");
-    cmdList.add("4");
-    cmdList.add("--abort-on-unavailable-fragment");
-    cmdList.add("--fragment-retries");
-    cmdList.add("99");
+      if (height > 0) {
+        cmdList.add("-S");
+        cmdList.add("res:" + height);
+      }
+
+      cmdList.add("--merge-output-format");
+      cmdList.add("mkv");
+
+      cmdList.add("--concurrent-fragments");
+      cmdList.add("4");
+      cmdList.add("--abort-on-unavailable-fragment");
+      cmdList.add("--fragment-retries");
+      cmdList.add("99");
+    }
 
     if (Settings.getInstance().isIgnoreSSLProblems()) {
       cmdList.add("--no-check-certificates");
     }
 
     cmdList.add(url);
+    cmdList.add("-P");
+    cmdList.add(trailerFile.getParent().toAbsolutePath().toString());
     cmdList.add("-o");
-    cmdList.add(trailerFile.toAbsolutePath().toString());
+    cmdList.add(trailerFile.getFileName().toString() + ".%(ext)s");
 
     return cmdList;
   }
@@ -171,8 +182,8 @@ public class YtDlp {
       int processValue = process.waitFor();
       String response = outputStream.toString(StandardCharsets.UTF_8);
       if (processValue != 0) {
-        LOGGER.warn("Error calling yt-dlp - '{}'", response);
-        throw new IOException("error running yt-dlp - code '" + processValue + "' / '" + response + "'");
+        LOGGER.debug("Error calling yt-dlp - '{}' / '{}'", processValue, response);
+        throw new IOException(response);
       }
       return response;
     }

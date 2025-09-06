@@ -20,12 +20,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.actions.TmmAction;
 import org.tinymediamanager.ui.tvshows.TvShowSelectionModel;
 import org.tinymediamanager.ui.tvshows.TvShowUIModule;
@@ -57,12 +59,21 @@ public class TvShowDownloadActorImagesAction extends TmmAction {
       return;
     }
 
+    boolean overwriteActorImages = false;
+
+    Object[] options = { TmmResourceBundle.getString("Button.yes"), TmmResourceBundle.getString("Button.no") };
+    int answer = JOptionPane.showOptionDialog(MainWindow.getFrame(), TmmResourceBundle.getString("tvshow.downloadactorimages.overwrite"),
+        TmmResourceBundle.getString("tvshow.downloadactorimages"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, null);
+    if (answer == JOptionPane.YES_OPTION) {
+      overwriteActorImages = true;
+    }
+
     for (TvShow tvShow : selectedObjects.getTvShows()) {
-      tvShow.writeActorImages(true);
+      tvShow.writeActorImages(overwriteActorImages);
     }
 
     for (TvShowEpisode episode : selectedObjects.getEpisodesRecursive()) {
-      episode.writeActorImages(true);
+      episode.writeActorImages(overwriteActorImages);
     }
   }
 }
