@@ -18,17 +18,27 @@ RUN \
     # Remove some unneeded stuff.
     rm *.deb
 
-LABEL "org.opencontainers.image.version"="${human.version}"
-LABEL "org.opencontainers.image.title"="${project.artifactId}"
-LABEL "org.opencontainers.image.description"="${project.description}"
-LABEL "org.opencontainers.image.url"="${project.url}"
+# Build arguments for labels
+ARG HUMAN_VERSION=5.2.0
+ARG PROJECT_ARTIFACT_ID=tinyMediaManager
+ARG PROJECT_DESCRIPTION="A media management tool for movies and TV shows"
+ARG PROJECT_URL=https://www.tinymediamanager.org
+ARG BUILD_NUMBER=local
+
+LABEL "org.opencontainers.image.version"="${HUMAN_VERSION}"
+LABEL "org.opencontainers.image.title"="${PROJECT_ARTIFACT_ID}"
+LABEL "org.opencontainers.image.description"="${PROJECT_DESCRIPTION}"
+LABEL "org.opencontainers.image.url"="${PROJECT_URL}"
 LABEL "org.opencontainers.image.licenses"="Apache License, Version 2.0"
-LABEL "org.opencontainers.image.revision"="${buildNumber}"
+LABEL "org.opencontainers.image.revision"="${BUILD_NUMBER}"
 LABEL "org.opencontainers.image.documentation"="https://www.tinymediamanager.org/docs/docker"
-LABEL "org.opencontainers.image.source "="${project.scm.url}"
+LABEL "org.opencontainers.image.source"="https://github.com/tinyMediaManager/tinyMediaManager"
 
 # Install tmm & requirements
 ADD tinyMediaManager /app
+
+# 确保二进制文件有执行权限
+RUN chmod +x /app/tinyMediaManager
 
 WORKDIR /app
 CMD ["/app/tinyMediaManager", "-Dtmm.contentfolder=/data"]

@@ -1,0 +1,358 @@
+name: Delete All Docker Versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deletion:
+        description: '确认删除所有Docker版本 (输入 DELETE_ALL_DOCKER 确认)'
+        required: true
+        type: string
+      keep_latest:
+        description: '保留latest标签'
+        required: true
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      keep_latest:
+        description: '保留latest标签'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+jobs:
+  delete-docker-versions:
+    name: Delete All Docker Package Versions
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Validate confirmation
+      run: |
+        # 检查是否为工作流调用（通过inputs参数判断）
+        if [ -z "${{ github.event.inputs.confirm_deletion }}" ]; then
+          echo "✅ 工作流调用，自动确认删除操作"
+          echo "🔍 事件类型: ${{ github.event_name }}"
+          echo "🔍 调用方式: workflow_call"
+        elif [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE_ALL_DOCKER" ]; then
+          echo "❌ 确认文本不正确，操作已取消"
+          echo "请输入: DELETE_ALL_DOCKER"
+          exit 1
+        else
+          echo "✅ 确认文本正确，继续执行删除操作"
+        fi
+
+    - name: Get package information
+      id: get-package
+      run: |
+        echo "🔍 获取Docker包信息..."
+        
+        # 设置包名
+        PACKAGE_NAME="tinymediamanager"
+        echo "📦 包名: $PACKAGE_NAME"
+        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+        
+        # 检查是否保留latest
+        KEEP_LATEST="${{ github.event.inputs.keep_latest || inputs.keep_latest }}"
+        echo "🏷️ 保留latest标签: $KEEP_LATEST"
+        echo "keep_latest=$KEEP_LATEST" >> $GITHUB_OUTPUT
+
+    - name: Get all package versions
+      id: get-versions
+      run: |
+        echo "🔍 获取所有Docker包版本..."
+        PACKAGE_NAME="${{ steps.get-package.outputs.package_name }}"
+
+        # 尝试orgs API
+        echo "🔍 尝试orgs API..."
+        ORGS_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/${PACKAGE_NAME}/versions" 2>/dev/null || echo "")
+
+        ORGS_BODY=$(echo "$ORGS_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+        ORGS_STATUS=$(echo "$ORGS_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+        echo "🔍 orgs API状态: $ORGS_STATUS"
+
+        if [ "$ORGS_STATUS" = "200" ] && [ -n "$ORGS_BODY" ] && [ "$ORGS_BODY" != "null" ]; then
+          VERSIONS_JSON="$ORGS_BODY"
+          echo "✅ 使用orgs API结果"
+        else
+          echo "⚠️ orgs API失败，尝试user API..."
+          USER_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/user/packages/container/${PACKAGE_NAME}/versions" 2>/dev/null || echo "")
+
+          USER_BODY=$(echo "$USER_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+          USER_STATUS=$(echo "$USER_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+          echo "🔍 user API状态: $USER_STATUS"
+
+          if [ "$USER_STATUS" = "200" ] && [ -n "$USER_BODY" ] && [ "$USER_BODY" != "null" ]; then
+            VERSIONS_JSON="$USER_BODY"
+            echo "✅ 使用user API结果"
+          else
+            echo "❌ 两个API都失败了"
+            echo "orgs API: $ORGS_STATUS - $ORGS_BODY"
+            echo "user API: $USER_STATUS - $USER_BODY"
+            echo "has_versions=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+        fi
+
+        # 验证JSON格式
+        if ! echo "$VERSIONS_JSON" | jq . >/dev/null 2>&1; then
+          echo "❌ 返回的不是有效的JSON格式"
+          echo "原始响应: $VERSIONS_JSON"
+          echo "has_versions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # 获取版本数量
+        VERSION_COUNT=$(echo "$VERSIONS_JSON" | jq '. | length' 2>/dev/null || echo "0")
+        echo "📊 找到 $VERSION_COUNT 个版本"
+
+        if [ "$VERSION_COUNT" -eq 0 ]; then
+          echo "ℹ️ 没有找到任何版本"
+          echo "has_versions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # 显示JSON结构用于调试
+        echo "🔍 JSON结构预览:"
+        echo "$VERSIONS_JSON" | jq '.[0] | keys' 2>/dev/null || echo "无法解析JSON结构"
+
+        # 显示所有版本的标签
+        echo "📦 所有版本的标签:"
+        echo "$VERSIONS_JSON" | jq -r '.[].metadata.container.tags[]?' 2>/dev/null | sort || echo "无标签信息"
+
+        # 保存版本信息
+        echo "$VERSIONS_JSON" > versions.json
+        echo "has_versions=true" >> $GITHUB_OUTPUT
+        echo "version_count=$VERSION_COUNT" >> $GITHUB_OUTPUT
+
+    - name: Filter versions to delete
+      if: steps.get-versions.outputs.has_versions == 'true'
+      id: filter-versions
+      run: |
+        echo "🔍 筛选要删除的版本..."
+        KEEP_LATEST="${{ steps.get-package.outputs.keep_latest }}"
+
+        # 首先验证JSON文件
+        if [ ! -f versions.json ]; then
+          echo "❌ versions.json文件不存在"
+          echo "has_deletions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # 检查JSON结构
+        echo "🔍 检查JSON结构..."
+        FIRST_ITEM=$(jq '.[0]' versions.json 2>/dev/null || echo "null")
+        if [ "$FIRST_ITEM" = "null" ]; then
+          echo "❌ JSON数组为空或格式错误"
+          echo "has_deletions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "🔍 第一个版本的结构:"
+        echo "$FIRST_ITEM" | jq . || echo "无法解析"
+
+        # 检查是否有id字段
+        HAS_ID=$(echo "$FIRST_ITEM" | jq 'has("id")' 2>/dev/null || echo "false")
+        if [ "$HAS_ID" != "true" ]; then
+          echo "❌ 版本对象中没有id字段"
+          echo "可用字段:"
+          echo "$FIRST_ITEM" | jq 'keys' 2>/dev/null || echo "无法获取字段列表"
+          echo "has_deletions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        if [ "$KEEP_LATEST" = "true" ]; then
+          echo "🏷️ 保留latest标签，筛选其他版本..."
+          # 筛选出不包含latest标签的版本
+          VERSIONS_TO_DELETE=$(jq -r '.[] | select((.metadata.container.tags // []) | map(. == "latest") | any | not) | .id' versions.json 2>/dev/null || echo "")
+        else
+          echo "🗑️ 删除所有版本..."
+          # 获取所有版本ID
+          VERSIONS_TO_DELETE=$(jq -r '.[].id' versions.json 2>/dev/null || echo "")
+        fi
+
+        if [ -z "$VERSIONS_TO_DELETE" ]; then
+          echo "ℹ️ 没有需要删除的版本"
+          echo "has_deletions=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # 计算要删除的数量
+        DELETE_COUNT=$(echo "$VERSIONS_TO_DELETE" | wc -l)
+        echo "📊 将删除 $DELETE_COUNT 个版本"
+
+        # 显示要删除的版本ID
+        echo "🗑️ 要删除的版本ID:"
+        echo "$VERSIONS_TO_DELETE"
+
+        # 保存要删除的版本ID
+        echo "$VERSIONS_TO_DELETE" > versions_to_delete.txt
+        echo "has_deletions=true" >> $GITHUB_OUTPUT
+        echo "delete_count=$DELETE_COUNT" >> $GITHUB_OUTPUT
+
+    - name: Delete package versions
+      if: steps.filter-versions.outputs.has_deletions == 'true'
+      run: |
+        echo "🗑️ 开始删除Docker包版本..."
+        echo "总计需要删除: ${{ steps.filter-versions.outputs.delete_count }} 个版本"
+        echo ""
+        
+        PACKAGE_NAME="${{ steps.get-package.outputs.package_name }}"
+        SUCCESS_COUNT=0
+        FAILED_COUNT=0
+        
+        while IFS= read -r version_id; do
+          if [ -n "$version_id" ]; then
+            echo "🗑️ 删除版本ID: $version_id"
+            
+            # 尝试orgs API删除
+            echo "🔍 尝试orgs API删除..."
+            ORGS_URL="https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/${PACKAGE_NAME}/versions/$version_id"
+            echo "🔗 orgs URL: $ORGS_URL"
+
+            ORGS_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "$ORGS_URL" 2>&1)
+
+            ORGS_BODY=$(echo "$ORGS_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+            ORGS_STATUS=$(echo "$ORGS_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+            echo "🔍 orgs API响应: $ORGS_STATUS"
+            if [ -n "$ORGS_BODY" ] && [ "$ORGS_BODY" != "$ORGS_RESPONSE" ]; then
+              echo "🔍 orgs API响应体: $ORGS_BODY"
+            fi
+
+            if [ "$ORGS_STATUS" = "204" ]; then
+              echo "✅ orgs API删除成功: $version_id"
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            else
+              echo "⚠️ orgs API删除失败 (HTTP: $ORGS_STATUS)，尝试user API..."
+
+              USER_URL="https://api.github.com/user/packages/container/${PACKAGE_NAME}/versions/$version_id"
+              echo "🔗 user URL: $USER_URL"
+
+              USER_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+                -X DELETE \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                "$USER_URL" 2>&1)
+
+              USER_BODY=$(echo "$USER_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+              USER_STATUS=$(echo "$USER_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+              echo "🔍 user API响应: $USER_STATUS"
+              if [ -n "$USER_BODY" ] && [ "$USER_BODY" != "$USER_RESPONSE" ]; then
+                echo "🔍 user API响应体: $USER_BODY"
+              fi
+
+              if [ "$USER_STATUS" = "204" ]; then
+                echo "✅ user API删除成功: $version_id"
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              else
+                echo "❌ 两个API都删除失败: $version_id"
+                echo "   orgs API: $ORGS_STATUS"
+                echo "   user API: $USER_STATUS"
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+              fi
+            fi
+
+            # 验证删除是否真的成功
+            echo "🔍 验证删除结果..."
+            VERIFY_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/user/packages/container/${PACKAGE_NAME}/versions/$version_id" 2>/dev/null)
+
+            VERIFY_STATUS=$(echo "$VERIFY_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+            if [ "$VERIFY_STATUS" = "404" ]; then
+              echo "✅ 验证成功：版本已不存在"
+            else
+              echo "⚠️ 验证失败：版本可能仍存在 (HTTP: $VERIFY_STATUS)"
+            fi
+            
+            # 添加延迟避免API限制
+            sleep 2
+          fi
+        done < versions_to_delete.txt
+        
+        echo ""
+        echo "📊 删除统计:"
+        echo "✅ 成功删除: $SUCCESS_COUNT 个版本"
+        echo "❌ 删除失败: $FAILED_COUNT 个版本"
+
+    - name: Verify deletion
+      if: steps.filter-versions.outputs.has_deletions == 'true'
+      run: |
+        echo "🔍 验证删除结果..."
+        PACKAGE_NAME="${{ steps.get-package.outputs.package_name }}"
+
+        # 重新获取版本信息，使用改进的API调用
+        echo "🔍 检查剩余版本..."
+
+        # 尝试orgs API
+        ORGS_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/${PACKAGE_NAME}/versions" 2>/dev/null || echo "")
+
+        ORGS_BODY=$(echo "$ORGS_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+        ORGS_STATUS=$(echo "$ORGS_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+        if [ "$ORGS_STATUS" = "200" ] && [ -n "$ORGS_BODY" ] && [ "$ORGS_BODY" != "null" ]; then
+          REMAINING_JSON="$ORGS_BODY"
+          echo "✅ 使用orgs API检查结果"
+        else
+          echo "⚠️ orgs API失败，尝试user API..."
+          USER_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/user/packages/container/${PACKAGE_NAME}/versions" 2>/dev/null || echo "")
+
+          USER_BODY=$(echo "$USER_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]{3}$//')
+          USER_STATUS=$(echo "$USER_RESPONSE" | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
+
+          if [ "$USER_STATUS" = "200" ] && [ -n "$USER_BODY" ] && [ "$USER_BODY" != "null" ]; then
+            REMAINING_JSON="$USER_BODY"
+            echo "✅ 使用user API检查结果"
+          else
+            echo "❌ 无法获取剩余版本信息"
+            echo "✅ Docker版本清理完成（无法验证结果）"
+            exit 0
+          fi
+        fi
+
+        # 验证JSON并获取数量
+        if echo "$REMAINING_JSON" | jq . >/dev/null 2>&1; then
+          REMAINING_VERSIONS=$(echo "$REMAINING_JSON" | jq '. | length' 2>/dev/null || echo "0")
+        else
+          echo "⚠️ 返回的不是有效JSON，可能包不存在了"
+          REMAINING_VERSIONS="0"
+        fi
+
+        echo "📊 剩余版本数量: $REMAINING_VERSIONS"
+
+        if [ "$REMAINING_VERSIONS" = "0" ]; then
+          echo "✅ 所有版本已删除，Docker包已清空"
+        else
+          echo "ℹ️ 还有 $REMAINING_VERSIONS 个版本剩余"
+
+          # 安全地显示剩余版本的标签
+          echo "📦 剩余版本的标签:"
+          if echo "$REMAINING_JSON" | jq -e '.[0].metadata.container.tags' >/dev/null 2>&1; then
+            echo "$REMAINING_JSON" | jq -r '.[].metadata.container.tags[]?' 2>/dev/null | sort || echo "无标签信息"
+          else
+            echo "⚠️ 无法解析标签信息，但版本仍存在"
+            echo "$REMAINING_JSON" | jq -r '.[].id' 2>/dev/null | head -5 || echo "无法获取版本ID"
+          fi
+        fi
+
+        echo ""
+        echo "✅ Docker版本清理完成"

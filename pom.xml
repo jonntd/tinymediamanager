@@ -91,12 +91,7 @@
     </properties>
     <dependencies>
         <!-- 破解许可证依赖 - 使用Maven仓库 -->
-        <dependency>
-            <groupId>org.tinymediamanager</groupId>
-            <artifactId>license</artifactId>
-            <version>5.2.1</version>
-            <!-- 从Maven本地仓库获取 -->
-        </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -1257,18 +1252,40 @@
             </properties>
         </profile>
 
-        <!-- 简化的Profile系统 - 现在license总是可用 -->
+        <!-- 智能License管理配置 -->
 
-        <!-- 默认profile: 使用license进行完整构建 -->
+        <!-- 本地构建: 使用本地lib/license.jar -->
         <profile>
-            <id>with-license</id>
+            <id>local-build</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
-            <properties>
-                <build.mode>with-license</build.mode>
-            </properties>
-            <!-- license依赖已在主dependencies中定义 -->
+            <dependencies>
+                <dependency>
+                    <groupId>org.tinymediamanager</groupId>
+                    <artifactId>license</artifactId>
+                    <version>5.2.1</version>
+                    <scope>system</scope>
+                    <systemPath>${project.basedir}/lib/license.jar</systemPath>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <!-- GitHub CI: 使用官方仓库license -->
+        <profile>
+            <id>github-ci</id>
+            <activation>
+                <property>
+                    <name>env.CI</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.tinymediamanager</groupId>
+                    <artifactId>license</artifactId>
+                    <version>5.2.1</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>

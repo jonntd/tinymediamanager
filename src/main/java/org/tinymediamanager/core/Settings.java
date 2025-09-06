@@ -155,7 +155,7 @@ public final class Settings extends AbstractSettings {
   private float                                            ardDarkLevelPct              = 7f;
   private float                                            ardDarkLevelMaxPct           = 13f;
 
-  private boolean                                          enableAutomaticUpdate        = true;
+  private boolean                                          enableAutomaticUpdate        = false;
   private int                                              automaticUpdateInterval      = 1;
   private String                                           mdbListApiKey                = "";
 
