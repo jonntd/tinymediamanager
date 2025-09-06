@@ -192,8 +192,7 @@ public class MetadataUtil {
     if (intObj == null) {
       return defaultValue;
     }
-    // Use the safe version that handles empty strings and exceptions
-    return parseInt(intObj.toString(), defaultValue);
+    return parseInt(intObj.toString());
   }
 
   /**

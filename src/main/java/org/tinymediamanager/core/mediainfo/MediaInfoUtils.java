@@ -22,7 +22,7 @@ package org.tinymediamanager.core.mediainfo;
  * @author Manuel Laggner
  */
 public class MediaInfoUtils {
-  private static final boolean USE_LIBMEDIAINFO = Boolean.parseBoolean(System.getProperty("tmm.uselibmediainfo", "false"));
+  private static final boolean USE_LIBMEDIAINFO = Boolean.parseBoolean(System.getProperty("tmm.uselibmediainfo", "true"));
 
   private MediaInfoUtils() {
     throw new IllegalAccessError();
