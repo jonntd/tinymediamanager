@@ -118,8 +118,10 @@ start_with_maven() {
 
     if [ "$DEBUG_MODE" = "true" ]; then
         print_info "启用 DEBUG 日志级别..."
+        mvn clean compile -DskipTests
         mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager" -Dexec.classpathScope=compile -Dtmm.consoleloglevel=DEBUG
     else
+        mvn clean compile -DskipTests
         mvn exec:java -Dexec.mainClass="org.tinymediamanager.TinyMediaManager" -Dexec.classpathScope=compile
     fi
 }

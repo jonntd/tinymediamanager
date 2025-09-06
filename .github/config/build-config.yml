@@ -175,7 +175,7 @@ quality:
 # 环境变量配置
 environment:
   global:
-    MAVEN_OPTS: "-Xmx2048m -Xms1024m -XX:+UseG1GC"
+    MAVEN_OPTS: "-Xmx2048m -Xms1024m -XX:+UseG1GC -Dtmm.consoleloglevel=DEBUG"
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
     
   development:
