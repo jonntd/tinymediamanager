@@ -1,0 +1,216 @@
+name: Delete All Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deletion:
+        description: '确认删除所有releases (输入 DELETE_ALL_RELEASES 确认)'
+        required: true
+        type: string
+      delete_tags:
+        description: '同时删除对应的Git tags'
+        required: true
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      delete_tags:
+        description: '同时删除对应的Git tags'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  delete-releases:
+    name: Delete All GitHub Releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Validate confirmation
+      run: |
+        # 检查是否为工作流调用（通过inputs参数判断）
+        if [ -z "${{ github.event.inputs.confirm_deletion }}" ]; then
+          echo "✅ 工作流调用，自动确认删除操作"
+          echo "🔍 事件类型: ${{ github.event_name }}"
+          echo "🔍 调用方式: workflow_call"
+        elif [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE_ALL_RELEASES" ]; then
+          echo "❌ 确认文本不正确，操作已取消"
+          echo "请输入: DELETE_ALL_RELEASES"
+          exit 1
+        else
+          echo "✅ 确认文本正确，继续执行删除操作"
+        fi
+
+    - name: Get all releases
+      id: get-releases
+      run: |
+        echo "🔍 获取所有 releases..."
+        
+        # 使用 GitHub API 获取所有 releases
+        RELEASES=$(gh api repos/${{ github.repository }}/releases --paginate --jq '.[].tag_name')
+        
+        if [ -z "$RELEASES" ]; then
+          echo "✅ 没有找到任何 releases"
+          echo "has_releases=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        echo "📋 找到以下 releases:"
+        echo "$RELEASES"
+        
+        # 计算 releases 数量
+        RELEASE_COUNT=$(echo "$RELEASES" | wc -l)
+        echo "📊 总计: $RELEASE_COUNT 个 releases"
+        
+        echo "has_releases=true" >> $GITHUB_OUTPUT
+        echo "release_count=$RELEASE_COUNT" >> $GITHUB_OUTPUT
+        
+        # 保存 release tags 到文件
+        echo "$RELEASES" > release_tags.txt
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Delete all releases
+      if: steps.get-releases.outputs.has_releases == 'true'
+      run: |
+        echo "🗑️ 开始删除所有 releases..."
+        echo "总计需要删除: ${{ steps.get-releases.outputs.release_count }} 个"
+        echo ""
+        
+        SUCCESS_COUNT=0
+        FAILED_COUNT=0
+        
+        while IFS= read -r tag; do
+          if [ -n "$tag" ]; then
+            echo "🗑️ 删除 release: $tag"
+            
+            if gh release delete "$tag" --yes 2>/dev/null; then
+              echo "✅ 成功删除 release: $tag"
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            else
+              echo "❌ 删除 release 失败: $tag"
+              FAILED_COUNT=$((FAILED_COUNT + 1))
+            fi
+            
+            # 添加延迟避免 API 限制
+            sleep 1
+          fi
+        done < release_tags.txt
+        
+        echo ""
+        echo "📊 Release 删除统计:"
+        echo "✅ 成功删除: $SUCCESS_COUNT 个"
+        echo "❌ 删除失败: $FAILED_COUNT 个"
+        
+        # 保存统计信息
+        echo "success_count=$SUCCESS_COUNT" >> $GITHUB_ENV
+        echo "failed_count=$FAILED_COUNT" >> $GITHUB_ENV
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Delete corresponding tags
+      if: steps.get-releases.outputs.has_releases == 'true' && (github.event.inputs.delete_tags == 'true' || (github.event.inputs.confirm_deletion == '' && inputs.delete_tags == true))
+      run: |
+        echo "🏷️ 开始删除对应的 Git tags..."
+        echo ""
+        
+        TAG_SUCCESS_COUNT=0
+        TAG_FAILED_COUNT=0
+        
+        while IFS= read -r tag; do
+          if [ -n "$tag" ]; then
+            echo "🗑️ 删除 tag: $tag"
+            
+            if git rev-parse --git-dir >/dev/null 2>&1; then
+            if git push origin --delete "$tag" 2>/dev/null; then
+              echo "✅ 成功删除 tag: $tag"
+              TAG_SUCCESS_COUNT=$((TAG_SUCCESS_COUNT + 1))
+            else
+              echo "❌ 删除 tag 失败: $tag (可能已不存在)"
+              TAG_FAILED_COUNT=$((TAG_FAILED_COUNT + 1))
+            fi
+          else
+            echo "⚠️ 非git仓库环境，跳过tag删除: $tag"
+            TAG_FAILED_COUNT=$((TAG_FAILED_COUNT + 1))
+          fi
+            
+            # 添加延迟
+            sleep 0.5
+          fi
+        done < release_tags.txt
+        
+        echo ""
+        echo "📊 Tag 删除统计:"
+        echo "✅ 成功删除: $TAG_SUCCESS_COUNT 个"
+        echo "❌ 删除失败: $TAG_FAILED_COUNT 个"
+
+    - name: Verify deletion
+      if: steps.get-releases.outputs.has_releases == 'true'
+      run: |
+        echo "🔍 验证删除结果..."
+        
+        # 检查剩余的 releases
+        REMAINING_RELEASES=$(gh api repos/${{ github.repository }}/releases --jq '.[].tag_name' 2>/dev/null || echo "")
+        
+        if [ -z "$REMAINING_RELEASES" ]; then
+          echo "✅ 所有 releases 已成功删除"
+        else
+          echo "⚠️ 仍有以下 releases 存在:"
+          echo "$REMAINING_RELEASES"
+        fi
+        
+        # 检查剩余的 tags（如果选择删除 tags）
+        if [ "${{ github.event.inputs.delete_tags }}" = "true" ]; then
+          echo ""
+          echo "🏷️ 检查剩余的 tags..."
+          
+          # 获取远程 tags
+          if git rev-parse --git-dir >/dev/null 2>&1; then
+            git fetch --tags
+            REMAINING_TAGS=$(git tag -l | grep -E '^v[0-9]' || echo "")
+          else
+            echo "⚠️ 非git仓库环境，跳过tag检查"
+            REMAINING_TAGS=""
+          fi
+          
+          if [ -z "$REMAINING_TAGS" ]; then
+            echo "✅ 所有相关 tags 已成功删除"
+          else
+            echo "⚠️ 仍有以下 tags 存在:"
+            echo "$REMAINING_TAGS"
+          fi
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Summary
+      if: always()
+      run: |
+        echo ""
+        echo "🎉 删除操作完成！"
+        echo "================================"
+        
+        if [ "${{ steps.get-releases.outputs.has_releases }}" = "true" ]; then
+          echo "📊 操作统计:"
+          echo "- 原始 releases 数量: ${{ steps.get-releases.outputs.release_count }}"
+          echo "- 成功删除 releases: ${success_count:-0}"
+          echo "- 删除失败 releases: ${failed_count:-0}"
+          
+          if [ "${{ github.event.inputs.delete_tags }}" = "true" ]; then
+            echo "- 同时删除了对应的 Git tags"
+          else
+            echo "- 保留了对应的 Git tags"
+          fi
+        else
+          echo "📋 没有找到任何 releases 需要删除"
+        fi
+        
+        echo ""
+        echo "⚠️ 注意: 此操作不可逆，已删除的 releases 无法恢复"

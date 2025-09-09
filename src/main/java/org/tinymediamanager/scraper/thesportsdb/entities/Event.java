@@ -1,0 +1,54 @@
+package org.tinymediamanager.scraper.thesportsdb.entities;
+
+import org.tinymediamanager.scraper.entities.BaseJsonEntity;
+
+public class Event extends BaseJsonEntity {
+  public String idEvent;
+  public String idAPIfootball;
+  public String strEvent;
+  public String strEventAlternate;
+  public String strFilename;
+  public String strSport;
+  public String idLeague;
+  public String strLeague;
+  public String strLeagueBadge;
+  public String strSeason;
+  public String strDescriptionEN;
+  public String strHomeTeam;
+  public String strAwayTeam;
+  public String intHomeScore;
+  public String intRound;
+  public String intAwayScore;
+  public String intSpectators;
+  public String strOfficial;
+  public String strTimestamp;
+  public String dateEvent;
+  public String dateEventLocal;
+  public String strTime;
+  public String strTimeLocal;
+  public String strGroup;
+  public String idHomeTeam;
+  public String strHomeTeamBadge;
+  public String idAwayTeam;
+  public String strAwayTeamBadge;
+  public String intScore;
+  public String intScoreVotes;
+  public String strResult;
+  public String idVenue;
+  public String strVenue;
+  public String strCountry;
+  public String strCity;
+  public String strPoster;
+  public String strSquare;
+  public String strFanart;
+  public String strThumb;
+  public String strBanner;
+  public String strMap;
+  public String strTweet1;
+  public String strTweet2;
+  public String strTweet3;
+  public String strVideo;
+  public String strStatus;
+  public String strPostponed;
+  public String strLocked;
+}

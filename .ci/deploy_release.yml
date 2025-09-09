@@ -1,0 +1,223 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  MAVEN_CLI_OPTS: "-s .ci/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  LFTP_OPTIONS: "set sftp:connect-program 'ssh -a -x -o StrictHostKeyChecking=no'; set net:timeout 5; set net:max-retries 2; set net:reconnect-interval-base 5;"
+  TMM_VERSION: "5.2.0"
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .m2/repository/
+
+build:
+  stage: build
+  image: tinymediamanager/packaging:20221121194626
+  environment:
+    name: release
+    url: https://release.tinymediamanager.org
+  allow_failure: false
+  tags:
+    - tmm # force running on own runners
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    ##
+    ## Install ssh-agent if not already installed, it is required by Docker.
+    ## (change apt-get to yum if you use an RPM-based image)
+    ##
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+
+    ##
+    ## Run ssh-agent (inside the build environment)
+    ##
+    - eval $(ssh-agent -s)
+
+    ##
+    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+    ## We're using tr to fix line endings which makes ed25519 keys work
+    ## without extra base64 encoding.
+    ## https://gitlab.com/gitlab-examples/ssh-private-key/issues/1#note_48526556
+    ##
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+
+    ##
+    ## Create the SSH directory and give it the right permissions
+    ##
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+
+    ##
+    ## set gpg key
+    ##
+    - echo "${GPG_PRIVATE_KEY}" | gpg --batch --import
+    - gpg --list-keys
+
+    ##
+    ## configure git for version push
+    ##
+    - git config --global user.name ${SSH_USER_NAME}
+    - git config --global user.email ${SSH_USER_EMAIL}
+    - git checkout -f ${CI_COMMIT_REF_NAME}
+    - git remote set-url origin git@gitlab.com:tinyMediaManager/${CI_PROJECT_NAME}.git
+
+    ##
+    ## perform the release
+    ##
+    - echo -e "\e[0Ksection_start:`date +%s`:maven_build\r\e[0KMaven build"
+    - echo -n "$CODE_SIGN_CERT" | base64 -d > "code-sign-cert.p12"
+    - mvn $MAVEN_CLI_OPTS -U -P dist -DbuildNumber=${CI_COMMIT_SHORT_SHA} -DskipSign=false -Dgetdown=getdown.txt -Dthread_pool_size=1 release:prepare release:perform -Dresume=false -DautoVersionSubmodules=true -DdryRun=false -Dmaven.test.skip=true -DskipITs -DscmCommentPrefix="[ci skip]"
+    - echo -e "\e[0Ksection_end:`date +%s`:maven_build\r\e[0K"
+
+    # build Windows installer
+    - echo -e "\e[0Ksection_start:`date +%s`:windows_installer\r\e[0KWindows installer"
+    - chmod 777 . dist
+    - sudo -u xclient PATH=$PATH:/opt/bin AppBundler/create_windows_installer.sh "$CODE_SIGN_CERT" "$CODE_SIGN_PASS"
+    - echo -e "\e[0Ksection_end:`date +%s`:windows_installer\r\e[0K"
+
+    # push the build to the webserver
+    - echo -e "\e[0Ksection_start:`date +%s`:ftp_upload\r\e[0KUpload"
+    - lftp -c "${LFTP_OPTIONS} open -u ${FTP_USER_RELEASE},${FTP_PASSWORD_RELEASE} -p 23 sftp://${FTP_HOST}; mirror -Rev --parallel=2 target/tinyMediaManager-getdown/ ./upload/v5/build; mirror -Rev --parallel=2 dist/ ./upload/v5/dist; chmod -R g+rw ./upload/v5"
+    - echo -e "\e[0Ksection_end:`date +%s`:ftp_upload\r\e[0K"
+
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - build/
+      - dist/
+      - target/docker # compiled Dockerfile
+      - target/tinyMediaManager*macos*.zip # for macOS build
+
+build-mac:
+  stage: build
+  environment:
+    name: release
+    url: https://release.tinymediamanager.org
+  needs:
+    - build
+  dependencies:
+    - build
+  allow_failure: false
+  tags:
+    - tmm-mac # force running on own macOS runners
+  script:
+    # remove Windows and linux build (no need to upload this twice)
+    - rm -f dist/*
+
+    # create macOS bundles
+    - sh AppBundler/create_mac_image.sh
+
+    # push the build to the webserver
+    - lftp -c "${LFTP_OPTIONS} open -u ${FTP_USER_RELEASE},${FTP_PASSWORD_RELEASE} -p 23 sftp://${FTP_HOST}; mirror -Rv dist/ ./upload/v5/dist; chmod -R g+rw ./upload/v5"
+
+deploy-docker-amd64:
+  stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [ "" ]
+  variables:
+    IMAGE_NAME: tinymediamanager/tinymediamanager
+  needs:
+    - build
+  tags:
+    - tmm # force running on own runners
+  script:
+    # create login credentials
+    - echo -e $DOCKERHUB_AUTH > /kaniko/.docker/config.json
+
+    # copy data
+    - tar xJf dist/tinyMediaManager*linux-amd64.tar.xz -C target/docker/
+    - cd target/docker
+
+    # build image
+    - VERSION=$(grep 'human.version' 'tinyMediaManager/version' | cut -d'=' -f2)
+    - |
+      /kaniko/executor \
+      --context "${CI_PROJECT_DIR}/target/docker" \
+      --dockerfile "${CI_PROJECT_DIR}/target/docker/Dockerfile.amd64" \
+      --custom-platform=linux/amd64/ \
+      --destination "${IMAGE_NAME}:${TMM_VERSION}-amd64"
+
+    #--destination "${IMAGE_NAME}:${$VERSION}" \
+
+deploy-docker-arm64:
+  stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [ "" ]
+  variables:
+    IMAGE_NAME: tinymediamanager/tinymediamanager
+  needs:
+    - build
+  tags:
+    - tmm-arm64 # force running on own runners
+  script:
+    # create login credentials
+    - echo -e $DOCKERHUB_AUTH > /kaniko/.docker/config.json
+
+    # copy data
+    - tar xJf dist/tinyMediaManager*linux-arm64.tar.xz -C target/docker/
+    - cd target/docker
+    - mv tinyMediaManager/tinyMediaManager-arm tinyMediaManager/tinyMediaManager
+
+    # build image
+    - VERSION=$(grep 'human.version' 'tinyMediaManager/version' | cut -d'=' -f2)
+    - |
+      /kaniko/executor \
+      --context "${CI_PROJECT_DIR}/target/docker" \
+      --dockerfile "${CI_PROJECT_DIR}/target/docker/Dockerfile.arm64" \
+      --custom-platform=linux/arm64/ \
+      --destination "${IMAGE_NAME}:${TMM_VERSION}-arm64"
+
+    #--destination "${IMAGE_NAME}:${$VERSION}" \
+
+deploy-docker:
+  stage: deploy
+  image:
+    name: curlimages/curl:8.1.1
+  needs:
+    - deploy-docker-amd64
+    - deploy-docker-arm64
+  dependencies: [ ]  # do not download any artifacts
+  tags:
+    - tmm # force running on own runners
+  script:
+    - cd /tmp
+    - curl -s -L https://github.com/estesp/manifest-tool/releases/download/v2.0.8/binaries-manifest-tool-2.0.8.tar.gz | tar xvz
+    - mv manifest-tool-linux-amd64 manifest-tool
+    - chmod +x manifest-tool
+
+    # create the manifest for multiarch tag
+    - ./manifest-tool --username $DOCKERHUB_USERNAME --password $DOCKERHUB_PASSWORD push from-args
+      --platforms linux/amd64,linux/arm64
+      --template tinymediamanager/tinymediamanager:${TMM_VERSION}-ARCH
+      --target tinymediamanager/tinymediamanager:${TMM_VERSION}
+    - ./manifest-tool --username $DOCKERHUB_USERNAME --password $DOCKERHUB_PASSWORD push from-args
+      --platforms linux/amd64,linux/arm64
+      --template tinymediamanager/tinymediamanager:${TMM_VERSION}-ARCH
+      --target tinymediamanager/tinymediamanager:latest
+
+deploy:
+  stage: deploy
+  image: curlimages/curl:7.85.0
+  environment:
+    name: release
+    url: https://release.tinymediamanager.org
+  dependencies: [ ]  # do not download any artifacts
+  tags:
+    - tmm # force running on own runners
+  variables:
+    PURGE_CF_CACHE: 'curl -X POST https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache -H "Content-Type: application/json" -H "Authorization:Bearer $CF_BEARER" --data "{\"hosts\": [\"release.tinymediamanager.org\"]}"'
+  script:
+    # and publish the files on the webserver
+    - curl https://release.tinymediamanager.org/${PUBLISH_ENDPOINT_V5}
+    - curl https://release.tinymediamanager.org/${CREATE_INDEX}
+    - curl https://release.tinymediamanager.org/${CREATE_INDEX_V5}
+
+    # purge CF cache
+    - 'eval "$PURGE_CF_CACHE"'

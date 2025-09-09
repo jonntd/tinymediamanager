@@ -1,0 +1,1005 @@
+name: Multi-Platform CI/CD Pipeline
+
+on:
+  push:
+    branches: [ devel, main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ devel, main ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+        - test
+        - release
+        - dist
+      create_release:
+        description: 'Create GitHub Release (仅当build_type为release时生效)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: '-Xmx4096m -Xms2048m -XX:+UseG1GC -XX:MaxMetaspaceSize=512m -Dtmm.consoleloglevel=DEBUG'
+  JAVA_TOOL_OPTIONS: '-Dfile.encoding=UTF-8'
+  BUILD_TIMEOUT: 90
+
+jobs:
+  # 预清理：在编译前删除所有历史releases和tags
+  pre-cleanup:
+    name: Pre-cleanup Releases and Tags
+    uses: ./.github/workflows/delete-all-releases.yml
+    if: github.event_name == 'push' && !contains(github.ref, 'SNAPSHOT')
+    with:
+      delete_tags: true
+  # 基础构建和测试作业 (简化版)
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: [pre-cleanup]
+    if: always() && (needs.pre-cleanup.result == 'success' || needs.pre-cleanup.result == 'skipped')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        server-id: github-maven
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Extract version
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/heads/devel ]]; then
+          VERSION="4.5-devel-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}"
+        elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 Project version: $VERSION"
+
+    - name: Check if should release
+      id: check-release
+      run: |
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/heads/devel ]]; then
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "🚀 This is a development pre-release build"
+        elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/v* && ! "${{ github.ref }}" == *"SNAPSHOT"* ]]; then
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "🚀 This is a release build"
+        elif [[ "${{ github.event.inputs.build_type }}" == "release" || "${{ github.event.inputs.build_type }}" == "dist" ]]; then
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "🚀 Manual release build requested"
+        else
+          echo "should-release=false" >> $GITHUB_OUTPUT
+          echo "🔨 This is a development build"
+        fi
+
+    - name: Skip tests for faster build
+      run: |
+        echo "⚡ Skipping tests for faster build..."
+    - name: Pre-download dependencies
+      run: |
+        echo "📦 Pre-downloading Maven dependencies..."
+        mvn dependency:go-offline --batch-mode -q
+        echo "✅ Dependencies cached and ready"
+        # Install license.jar from local lib directory
+        if [ -f "lib/license.jar" ]; then
+          echo "📦 Installing license.jar from local lib directory..."
+          mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+          echo "✅ license.jar installed successfully"
+        else
+          echo "⚠️ license.jar not found in lib directory, skipping local installation"
+        fi
+        
+        # Download and install license file (commented out for local build)
+        # mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+    # - name: Download and install license file (已禁用)
+    #   run: |
+    #     if [ -n "${{ secrets.LICENSE_DOWNLOAD_URL }}" ]; then
+    #       echo "📥 正在从自定义URL下载license.jar..."
+    #       mkdir -p lib/
+    #       if curl -L --fail "${{ secrets.LICENSE_DOWNLOAD_URL }}" -o lib/license.jar; then
+    #         echo "✅ 自定义license.jar下载成功"
+    #         mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+    #         echo "将使用本地license.jar进行构建"
+    #       else
+    #         echo "⚠️ 自定义license.jar下载失败，将使用tinyMediaManager官方版本"
+    #       fi
+    #     else
+    #       echo "⚠️ LICENSE_DOWNLOAD_URL未配置，将使用tinyMediaManager官方版本"
+    #     fi
+
+    - name: Build JAR
+      run: |
+        echo "🔨 Building JAR with performance optimizations..."
+        mvn clean package --batch-mode -T 2 -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Pgithub-ci -U
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        MAVEN_OPTS: "-Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication -Dtmm.consoleloglevel=DEBUG" 
+
+    - name: Upload base JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinymediamanager-jar-${{ steps.version.outputs.version }}
+        path: target/*.jar
+        retention-days: 30
+
+
+
+  # 多平台构建作业 (简化版)
+  build-platforms:
+    name: Build for ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    needs: build-and-test
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/devel'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: "Windows x64"
+            os: windows-latest
+            assembly: windows-amd64
+            artifact-name: windows-amd64
+            native-path: native/windows
+          - name: "Linux x64"
+            os: ubuntu-latest
+            assembly: linux-amd64
+            artifact-name: linux-amd64
+            native-path: native/linux
+          - name: "Linux ARM64"
+            os: ubuntu-latest
+            assembly: linux-arm64
+            artifact-name: linux-arm64
+            native-path: native/arm
+          - name: "macOS x64"
+            os: macos-13
+            assembly: macos-x86_64
+            artifact-name: macos-x86_64
+            native-path: native/mac
+          - name: "macOS ARM64"
+            os: macos-latest
+            assembly: macos-aarch64
+            artifact-name: macos-aarch64
+            native-path: native/mac
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        server-id: github-maven
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Verify native libraries
+      run: |
+        echo "🔍 Checking native libraries for ${{ matrix.platform.name }}..."
+        if [ -d "${{ matrix.platform.native-path }}" ]; then
+          echo "✅ Native libraries found:"
+          ls -la ${{ matrix.platform.native-path }}/
+        else
+          echo "⚠️ No native libraries found for this platform"
+        fi
+      shell: bash
+    - name: Pre-download dependencies
+      run: |
+        echo "📦 Pre-downloading Maven dependencies for ${{ matrix.platform.name }}..."
+        mvn dependency:go-offline --batch-mode -q
+        echo "✅ Dependencies cached and ready for ${{ matrix.platform.name }}"
+        # Install license.jar from local lib directory
+        if [ -f "lib/license.jar" ]; then
+          echo "📦 Installing license.jar from local lib directory for ${{ matrix.platform.name }}..."
+          mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+          echo "✅ license.jar installed successfully for ${{ matrix.platform.name }}"
+        else
+          echo "⚠️ license.jar not found in lib directory for ${{ matrix.platform.name }}, skipping local installation"
+        fi
+      shell: bash
+    - name: Download and install license file
+      run: |
+        if [ -f "lib/license.jar" ]; then
+          echo "📦 Installing license.jar from local lib directory for ${{ matrix.platform.name }}..."
+          mvn install:install-file -Dfile=lib/license.jar -DgroupId=org.tinymediamanager -DartifactId=license -Dversion=5.2.1 -Dpackaging=jar
+          echo "✅ license.jar installed successfully for ${{ matrix.platform.name }}"
+        else
+          echo "⚠️ license.jar not found in lib directory for ${{ matrix.platform.name }}, but build will continue"
+        fi
+      shell: bash
+
+    - name: Build platform distribution
+      run: |
+        echo "🏗️ Building distribution for ${{ matrix.platform.name }} with optimizations..."
+        echo "📋 Using Maven profile: ${{ matrix.platform.assembly }}"
+        echo "⚡ Performance: 2 threads, optimized JVM, incremental build"
+        mvn package -Pdist,${{ matrix.platform.assembly }} --batch-mode -T 2 -DskipTests=true -Dmaven.test.skip=true -DskipSign=true -Dmaven.javadoc.skip=true -U
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        MAVEN_OPTS: "-Xmx3g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+UseCompressedOops -Dtmm.consoleloglevel=DEBUG"
+      shell: bash
+
+    - name: Create platform package
+      run: |
+        echo "📦 Creating platform package for ${{ matrix.platform.name }}..."
+        echo "🔍 Looking for files matching pattern: tinyMediaManager-*-${{ matrix.platform.assembly }}.*"
+        ls -la dist/
+
+        # Check for any file matching the platform pattern
+        if ls dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.* 1> /dev/null 2>&1; then
+          echo "✅ Package created successfully for ${{ matrix.platform.name }}"
+          echo "📁 Found files:"
+          ls -la dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.*
+        else
+          echo "❌ No package found for ${{ matrix.platform.assembly }}"
+          echo "📁 Available files in dist/:"
+          ls -la dist/ || echo "No dist directory found"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Create professional macOS DMG (GitLab-style, unsigned)
+      if: startsWith(matrix.platform.assembly, 'macos-')
+      run: |
+        set -e  # Exit on any error
+
+        echo "🍎 Creating professional macOS DMG for ${{ matrix.platform.name }}..."
+        echo "📋 Using GitLab DMG creation method (without signing)"
+        echo "⚠️  Note: This DMG will be unsigned (no Apple Developer account)"
+        echo "📋 Users will need to manually allow the app: xattr -dr com.apple.quarantine tinyMediaManager.app"
+
+        # Create temporary directory for DMG creation (GitLab style)
+        mkdir -p macos_dmg_${{ matrix.platform.assembly }}
+        cd macos_dmg_${{ matrix.platform.assembly }}
+
+        # Extract the ZIP file (same as GitLab method) with error checking
+        ZIP_FILE="../dist/tinyMediaManager-*-${{ matrix.platform.assembly }}.zip"
+        if ! ls $ZIP_FILE 1> /dev/null 2>&1; then
+          echo "❌ Error: No ZIP file found matching pattern: $ZIP_FILE"
+          exit 1
+        fi
+
+        echo "📦 Extracting ZIP file..."
+        if ! unzip -q -X $ZIP_FILE -d tinyMediaManager; then
+          echo "❌ Error: Failed to extract ZIP file"
+          exit 1
+        fi
+
+        # Verify app bundle exists
+        if [[ ! -d "tinyMediaManager/tinyMediaManager.app" ]]; then
+          echo "❌ Error: tinyMediaManager.app not found in extracted files"
+          echo "📁 Available files:"
+          ls -la tinyMediaManager/ || true
+          exit 1
+        fi
+
+        # Get version (same as GitLab method) with error checking
+        VERSION_FILE="tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/version"
+        if [[ ! -f "$VERSION_FILE" ]]; then
+          echo "❌ Error: Version file not found: $VERSION_FILE"
+          exit 1
+        fi
+
+        VERSION=$(grep 'human.version' "$VERSION_FILE" | cut -d'=' -f2)
+        if [[ -z "$VERSION" ]]; then
+          echo "❌ Error: Could not extract version from $VERSION_FILE"
+          exit 1
+        fi
+        echo "📦 Version: $VERSION"
+
+        # Create .userdir file (same as GitLab method)
+        touch tinyMediaManager/tinyMediaManager.app/Contents/Resources/Java/.userdir
+
+        # Fix critical macOS app permissions (GitLab does this automatically)
+        echo "🔧 Fixing macOS app permissions and structure..."
+
+        # Ensure the main executable has correct permissions
+        MAIN_EXECUTABLE="tinyMediaManager/tinyMediaManager.app/Contents/MacOS/tinyMediaManager"
+        if [[ -f "$MAIN_EXECUTABLE" ]]; then
+          chmod +x "$MAIN_EXECUTABLE"
+          echo "✅ Set executable permissions for main app"
+        else
+          echo "❌ Warning: Main executable not found at $MAIN_EXECUTABLE"
+          echo "📁 Available files in MacOS directory:"
+          ls -la "tinyMediaManager/tinyMediaManager.app/Contents/MacOS/" || echo "MacOS directory not found"
+        fi
+
+        # Ensure Info.plist exists and is readable
+        INFO_PLIST="tinyMediaManager/tinyMediaManager.app/Contents/Info.plist"
+        if [[ -f "$INFO_PLIST" ]]; then
+          chmod 644 "$INFO_PLIST"
+          echo "✅ Set correct permissions for Info.plist"
+          echo "📋 Info.plist CFBundleExecutable: $(plutil -extract CFBundleExecutable raw "$INFO_PLIST" 2>/dev/null || echo 'Not found')"
+        else
+          echo "❌ Warning: Info.plist not found at $INFO_PLIST"
+        fi
+
+        # Set correct permissions for the entire app bundle
+        chmod -R u+rw,go+r "tinyMediaManager/tinyMediaManager.app"
+        find "tinyMediaManager/tinyMediaManager.app" -type d -exec chmod 755 {} \;
+        echo "✅ Set correct permissions for entire app bundle"
+
+        # Create comprehensive auto-fix script for users using printf
+        printf '#!/bin/bash\nset -e\n\necho "🛠️  tinyMediaManager macOS 安全修复工具"\necho "=================================="\necho ""\n\n# 查找tinyMediaManager.app\nAPP_PATH=""\n\n# 方法1: 检查常见位置\necho "🔍 正在搜索 tinyMediaManager.app..."\n\n# 检查下载文件夹\nif [[ -d "$HOME/Downloads/tinyMediaManager.app" ]]; then\n    APP_PATH="$HOME/Downloads/tinyMediaManager.app"\n    echo "✅ 在下载文件夹中找到: $APP_PATH"\nelif [[ -d "$HOME/Desktop/tinyMediaManager.app" ]]; then\n    APP_PATH="$HOME/Desktop/tinyMediaManager.app"\n    echo "✅ 在桌面找到: $APP_PATH"\nelif [[ -d "/Applications/tinyMediaManager.app" ]]; then\n    APP_PATH="/Applications/tinyMediaManager.app"\n    echo "✅ 在应用程序文件夹中找到: $APP_PATH"\nelse\n    # 方法2: 搜索整个用户目录\n    echo "🔍 正在搜索用户目录..."\n    FOUND_APPS=$(find "$HOME" -name "tinyMediaManager.app" -type d 2>/dev/null | head -5)\n    \n    if [[ -n "$FOUND_APPS" ]]; then\n        echo "找到以下 tinyMediaManager.app:"\n        echo "$FOUND_APPS"\n        APP_PATH=$(echo "$FOUND_APPS" | head -1)\n        echo "使用第一个找到的应用: $APP_PATH"\n    else\n        echo "❌ 未找到 tinyMediaManager.app"\n        echo ""\n        echo "💡 请确保："\n        echo "1. 已从DMG文件复制 tinyMediaManager.app 到某个位置"\n        echo "2. 应用程序名称正确"\n        echo ""\n        echo "🔍 您可以："\n        echo "- 手动拖拽 tinyMediaManager.app 到 /Applications 文件夹"\n        echo "- 或从DMG重新安装"\n        read -p "按回车键退出..."\n        exit 1\n    fi\nfi\n\necho ""\necho "🎯 修复目标: $APP_PATH"\necho ""\n\n# 步骤1: 移除隔离属性\necho "🔧 步骤 1: 移除隔离属性..."\nif xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then\n    echo "✅ 隔离属性移除成功"\nelif sudo xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null; then\n    echo "✅ 隔离属性移除成功 (需要管理员权限)"\nelse\n    echo "⚠️  隔离属性移除失败 (可能已移除或不需要)"\nfi\n\n# 步骤2: 修复文件权限\necho ""\necho "🔧 步骤 2: 修复文件权限..."\n\n# 修复主可执行文件\nMAIN_EXEC="$APP_PATH/Contents/MacOS/tinyMediaManager"\nif [[ -f "$MAIN_EXEC" ]]; then\n    chmod +x "$MAIN_EXEC" 2>/dev/null || sudo chmod +x "$MAIN_EXEC"\n    echo "✅ 主执行文件权限已修复"\nelse\n    echo "❌ 未找到主执行文件: $MAIN_EXEC"\nfi\n\n# 修复Java可执行文件\nJAVA_PATHS=(\n    "$APP_PATH/Contents/MacOS/jre/bin/java"\n    "$APP_PATH/Contents/MacOS/jre/Contents/Home/bin/java"\n    "$APP_PATH/Contents/PlugIns/jre/bin/java"\n)\n\nfor java_path in "${JAVA_PATHS[@]}"; do\n    if [[ -f "$java_path" ]]; then\n        chmod +x "$java_path" 2>/dev/null || sudo chmod +x "$java_path"\n        echo "✅ Java执行文件权限已修复: $(basename "$java_path")"\n    fi\ndone\n\n# 修复整个应用包权限\nchmod -R u+rw,go+r "$APP_PATH" 2>/dev/null || sudo chmod -R u+rw,go+r "$APP_PATH"\nfind "$APP_PATH" -type d -exec chmod 755 {} \\; 2>/dev/null || sudo find "$APP_PATH" -type d -exec chmod 755 {} \\;\necho "✅ 应用包权限已统一修复"\n\n# 步骤3: 验证应用程序完整性\necho ""\necho "🔧 步骤 3: 验证应用程序结构..."\n\nREQUIRED_FILES=(\n    "$APP_PATH/Contents/Info.plist"\n    "$APP_PATH/Contents/MacOS/tinyMediaManager"\n)\n\nALL_GOOD=true\nfor file in "${REQUIRED_FILES[@]}"; do\n    if [[ ! -e "$file" ]]; then\n        echo "❌ 缺少关键文件: $file"\n        ALL_GOOD=false\n    fi\ndone\n\nif [[ "$ALL_GOOD" = true ]]; then\n    echo "✅ 应用程序结构完整"\nelse\n    echo "⚠️  应用程序可能已损坏"\n    echo "💡 建议重新下载最新版本"\nfi\n\necho ""\necho "🎉 修复完成！"\necho ""\necho "🚀 现在您可以："\necho "1. 双击 $APP_PATH 启动"\necho "2. 或右键点击选择 '\''打开'\''"\necho "3. 如果仍有问题，请重启Mac"\necho ""\nread -p "按回车键关闭此窗口..."\n' > tinyMediaManager/Fix_macOS_Security.command
+
+        # Make the script executable
+        chmod +x tinyMediaManager/Fix_macOS_Security.command
+
+        # Create a README for users using printf
+        printf '🍎 tinyMediaManager for macOS (GitHub 构建版本)\n==========================================\n\n⚠️  重要提示：这是来自 GitHub Actions 的未签名构建版本。\nmacOS 会在您首次尝试运行 tinyMediaManager.app 时显示安全警告。\n\n🚀 快速修复方法（选择其中一种）：\n\n✅ 方法 1：双击 "Fix_macOS_Security.command" ⭐ 推荐\n   - 这个脚本会自动修复安全问题\n   - 只需按照提示操作即可\n   - 支持自动搜索应用程序位置\n\n✅ 方法 2：右键打开\n   - 右键点击 tinyMediaManager.app\n   - 选择 "打开"（不是双击）\n   - 在安全警告中点击 "打开"\n\n✅ 方法 3：终端命令\n   - 打开终端 (Terminal)\n   - 输入：xattr -dr com.apple.quarantine\n   - 将 tinyMediaManager.app 拖入终端\n   - 按回车执行\n\n✅ 方法 4：系统设置\n   - 尝试打开 tinyMediaManager.app（会失败）\n   - 前往 系统偏好设置 > 安全性与隐私 > 通用\n   - 点击 "仍要打开"（如果出现提示）\n\n🎯 使用任何上述方法后，tinyMediaManager.app 将正常运行。\n\n💡 提示：如果您经常使用 GitHub 构建的应用，建议使用方法 1 的自动修复脚本。\n\n📞 如需更多信息，请访问：https://github.com/jonntd/tinymediamanager\n\n🔧 故障排除：\n- 如果修复脚本找不到应用程序，请确保它们在同一文件夹中\n- 如果仍有问题，请尝试重新下载最新版本\n- 对于 macOS Ventura/Sonoma 用户，请查看 "系统设置" 而不是 "系统偏好设置"\n' > tinyMediaManager/README_macOS.txt
+
+        echo "📦 Creating professional DMG with GitLab styling..."
+
+        # Copy DS_Store if available (for proper Finder layout)
+        if [[ -f "../AppBundler/macos/DS_Store" ]]; then
+          cp ../AppBundler/macos/DS_Store tinyMediaManager/.DS_Store
+          echo "✅ Applied Finder layout settings"
+        fi
+
+        # Copy auto-launch script if available
+        if [[ -f "../AppBundler/macos/auto_launch.sh" ]]; then
+          cp ../AppBundler/macos/auto_launch.sh tinyMediaManager/
+          chmod +x tinyMediaManager/auto_launch.sh
+          echo "✅ Added auto-launch script"
+        fi
+
+        # Use GitLab's professional create-dmg tool if available
+        if [[ -f "../AppBundler/macos/bin/create-dmg" && -f "../AppBundler/macos/background.png" ]]; then
+          echo "🎨 Creating professional DMG with background and layout..."
+          chmod +x ../AppBundler/macos/bin/create-dmg
+
+
+
+          # Clean up any existing DMG and mounted volumes before creating
+          rm -f tinyMediaManager.dmg
+          # Force unmount any existing volumes with retry mechanism
+          for i in {1..5}; do
+            if hdiutil detach /Volumes/tinyMediaManager 2>/dev/null; then
+              echo "✅ Unmounted existing volume (attempt $i)"
+              break
+            fi
+            echo "⏳ Waiting for volume to unmount (attempt $i/5)..."
+            sleep 3
+          done
+
+          # Additional cleanup for GitHub Actions
+          sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+          sleep 5
+
+          # Build create-dmg arguments dynamically based on file existence
+          DMG_ARGS=(
+            --background ../AppBundler/macos/background.png
+            --volname "tinyMediaManager"
+            --window-pos 200 120
+            --window-size 660 400
+            --icon-size 100
+            --app-drop-link 500 300
+            --skip-jenkins
+            --format UDBZ
+          )
+
+          # Add icon positioning for files that exist
+          if [[ -d "tinyMediaManager/tinyMediaManager.app" ]]; then
+            DMG_ARGS+=(--icon "tinyMediaManager.app" 160 180)
+            DMG_ARGS+=(--hide-extension "tinyMediaManager.app")
+            echo "✅ Will position tinyMediaManager.app icon"
+          fi
+
+          # 使用美观的Fix Security应用
+          if [[ -d "tinyMediaManager/🔧 Fix Security.app" ]]; then
+            DMG_ARGS+=(--icon "🔧 Fix Security.app" 450 300)
+            DMG_ARGS+=(--hide-extension "🔧 Fix Security.app")
+            echo "✅ Will position 🔧 Fix Security.app as UI button (450, 300)"
+          fi
+
+          if [[ -f "tinyMediaManager/README_macOS.txt" ]]; then
+            DMG_ARGS+=(--icon "README_macOS.txt" 320 180)
+            echo "✅ Will position README_macOS.txt icon"
+          fi
+
+          # Create DMG with dynamic arguments and retry mechanism
+          DMG_SUCCESS=false
+          for attempt in {1..3}; do
+            echo "🔄 DMG creation attempt $attempt/3..."
+
+            # Additional cleanup before each attempt
+            rm -f tinyMediaManager.dmg
+            sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+            sleep 2
+
+            if ../AppBundler/macos/bin/create-dmg "${DMG_ARGS[@]}" tinyMediaManager.dmg tinyMediaManager; then
+              echo "✅ Professional DMG created successfully on attempt $attempt"
+              DMG_SUCCESS=true
+              break
+            else
+              echo "⚠️ DMG creation attempt $attempt failed, cleaning up..."
+              rm -f tinyMediaManager.dmg
+              # Force cleanup any stuck processes
+              sudo pkill -f hdiutil 2>/dev/null || true
+              sleep 5
+            fi
+          done
+
+          if [[ "$DMG_SUCCESS" != "true" ]]; then
+            echo "❌ Professional DMG creation failed after 3 attempts, falling back to standard DMG"
+            # Final cleanup
+            rm -f tinyMediaManager.dmg
+            sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+            sudo pkill -f hdiutil 2>/dev/null || true
+            sleep 5
+
+            # Use simple hdiutil create
+            hdiutil create -volname "tinyMediaManager" \
+              -srcfolder tinyMediaManager \
+              -ov -format UDZO \
+              tinyMediaManager.dmg
+          fi
+        else
+          echo "📦 Creating standard DMG (GitLab tools not found)..."
+          # Clean up any existing DMG and mounted volumes with retry
+          for i in {1..5}; do
+            if hdiutil detach /Volumes/tinyMediaManager 2>/dev/null; then
+              echo "✅ Unmounted existing volume (attempt $i)"
+              break
+            fi
+            echo "⏳ Waiting for volume to unmount (attempt $i/5)..."
+            sleep 3
+          done
+
+          rm -f tinyMediaManager.dmg
+          sudo diskutil list | grep tinyMediaManager | awk '{print $1}' | xargs -I {} sudo diskutil unmount {} 2>/dev/null || true
+          sleep 5
+
+          # Create standard DMG with timeout and retry
+          for attempt in {1..3}; do
+            echo "🔄 Standard DMG creation attempt $attempt/3..."
+            if hdiutil create -volname "tinyMediaManager" \
+              -srcfolder tinyMediaManager \
+              -ov -format UDZO \
+              tinyMediaManager.dmg; then
+              echo "✅ Standard DMG created successfully on attempt $attempt"
+              break
+            else
+              echo "⚠️ Standard DMG creation attempt $attempt failed"
+              rm -f tinyMediaManager.dmg
+              sudo pkill -f hdiutil 2>/dev/null || true
+              sleep 5
+            fi
+          done
+        fi
+
+        # Verify DMG was created successfully
+        if [[ ! -f "tinyMediaManager.dmg" ]]; then
+          echo "❌ Error: DMG file was not created"
+          exit 1
+        fi
+
+        # Copy unsigned DMG to dist (with clear naming) and verify
+        DMG_NAME="tinyMediaManager-$VERSION-${{ matrix.platform.assembly }}-unsigned.dmg"
+        if ! ditto tinyMediaManager.dmg "../dist/$DMG_NAME"; then
+          echo "❌ Error: Failed to copy DMG to dist directory"
+          exit 1
+        fi
+
+        # Verify final DMG exists and get size
+        if [[ -f "../dist/$DMG_NAME" ]]; then
+          DMG_SIZE=$(ls -lh "../dist/$DMG_NAME" | awk '{print $5}')
+          echo "✅ Created professional unsigned DMG: $DMG_NAME ($DMG_SIZE)"
+          echo "🎨 DMG includes professional layout and background (if available)"
+          echo "⚠️  Users must manually allow this app in macOS Security & Privacy settings"
+          echo "💡 Quick fix: xattr -dr com.apple.quarantine tinyMediaManager.app"
+        else
+          echo "❌ Error: Final DMG verification failed"
+          exit 1
+        fi
+
+        # Cleanup
+        cd ..
+        rm -rf macos_dmg_${{ matrix.platform.assembly }}
+        echo "🧹 Cleanup completed"
+      shell: bash
+
+    - name: Upload platform artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinymediamanager-${{ matrix.platform.artifact-name }}-${{ github.sha }}
+        path: |
+          dist/*.zip
+          dist/*.tar.xz
+          dist/*.dmg
+          dist/*.sha256
+        retention-days: 30
+
+    - name: Upload Docker build artifacts
+      if: matrix.platform.assembly == 'linux-amd64' || matrix.platform.assembly == 'linux-arm64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: tinyMediaManager-${{ matrix.platform.artifact-name }}
+        path: |
+          dist/tinyMediaManager-*-${{ matrix.platform.artifact-name }}.*
+        retention-days: 30
+
+  # 创建 GitHub Release（避免SNAPSHOT版本）
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-platforms]
+    if: |
+      always() && (
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'SNAPSHOT')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release' && github.event.inputs.create_release == 'true')
+      )
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Wait for platform builds
+      run: |
+        echo "⏳ 等待所有平台构建完成..."
+        sleep 30
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare release assets
+      run: |
+        echo "📦 准备发布资产..."
+        mkdir -p release-assets
+        
+        # 显示所有下载的artifacts
+        echo "📁 发现的构建产物:"
+        find artifacts -type f \( -name "*.zip" -o -name "*.tar.xz" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
+        
+        # 复制平台构建产物到发布目录
+        find artifacts -name "*.zip" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.xz" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.dmg" -exec cp {} release-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.sha256" -exec cp {} release-assets/ \; 2>/dev/null || true
+        
+        # 标准化文件名
+        cd release-assets
+        for file in *; do
+          if [[ -f "$file" ]]; then
+            new_name=$(echo "$file" | sed 's/tinymediamanager-/tinyMediaManager-/g' | sed 's/--/-/g')
+            if [[ "$file" != "$new_name" ]]; then
+              mv "$file" "$new_name"
+            fi
+          fi
+        done
+        cd ..
+
+        echo "✅ 发布资产准备完成:"
+        ls -la release-assets/
+        
+        TOTAL_SIZE=$(du -sh release-assets/ | cut -f1)
+        echo "📊 总发布大小: $TOTAL_SIZE"
+
+    - name: Extract version and tag info
+      id: release-info
+      run: |
+        # 提取版本信息
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+        else
+          # 从构建产物中获取版本信息
+          JAR_FILE=$(find artifacts -name "*.jar" | head -1)
+          if [[ -n "$JAR_FILE" ]]; then
+            VERSION=$(echo "$JAR_FILE" | sed 's/.*tinyMediaManager-\(.*\)\.jar/\1/')
+          else
+            if git rev-parse --git-dir >/dev/null 2>&1; then
+              VERSION="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+            else
+              VERSION="$(date +%Y%m%d)-$(date +%s | tail -c 7)"
+            fi
+          fi
+          TAG_NAME="v${VERSION}"
+        fi
+        
+        # 全局SNAPSHOT版本屏蔽
+        if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+          echo "❌ 检测到SNAPSHOT版本，全局屏蔽发布"
+          echo "🚫 屏蔽版本: $VERSION"
+          echo "skip-release=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip-release=false" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 发布版本: $VERSION"
+        echo "🏷️  Tag名称: $TAG_NAME"
+
+    - name: Generate enhanced release notes
+      id: release-notes
+      run: |
+        echo "📝 生成增强版发布说明..."
+        
+        TAG_NAME="${{ steps.release-info.outputs.tag }}"
+        VERSION="${{ steps.release-info.outputs.version }}"
+        
+        # 创建详细的发布说明
+        echo "# tinyMediaManager $VERSION" > release-notes.md
+        echo "" >> release-notes.md
+        echo "🎉 我们很高兴发布 tinyMediaManager $VERSION！" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 📥 下载" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "### 平台版本" >> release-notes.md
+        echo "- **Windows x64**: tinyMediaManager-$VERSION-windows-amd64.zip" >> release-notes.md
+        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.xz" >> release-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.xz" >> release-notes.md
+        echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
+        echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## ⚠️ macOS用户注意" >> release-notes.md
+        echo "macOS版本为未签名版本，首次运行时需要：" >> release-notes.md
+        echo "1. 双击随附的 \"Fix_macOS_Security.command\"" >> release-notes.md
+        echo "2. 或右键选择 \"打开\" 并确认安全警告" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🚀 快速开始" >> release-notes.md
+        echo "1. 下载对应平台的安装包" >> release-notes.md
+        echo "2. 解压/安装到您选择的目录" >> release-notes.md
+        echo "3. 运行 tinyMediaManager" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🔧 系统要求" >> release-notes.md
+        echo "- **Java**: 17或更高版本" >> release-notes.md
+        echo "- **内存**: 建议4GB以上" >> release-notes.md
+        echo "- **存储**: 根据媒体库大小预留空间" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "---" >> release-notes.md
+        echo "*发布于: $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")*" >> release-notes.md
+        echo "*GitHub Actions构建: #${{ github.run_number }}*" >> release-notes.md
+
+        echo "release-notes<<EOF" >> $GITHUB_OUTPUT
+        cat release-notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Check for SNAPSHOT in tag
+      run: |
+        if [[ "${{ steps.release-info.outputs.tag }}" == *"SNAPSHOT"* ]]; then
+          echo "❌ 检测到SNAPSHOT标签，跳过release创建"
+          echo "🚫 SNAPSHOT版本不应该创建GitHub Release"
+          echo "⚠️ 已屏蔽版本: ${{ steps.release-info.outputs.tag }}"
+          exit 1
+        fi
+        
+        # 额外检查版本号
+        if [[ "${{ steps.release-info.outputs.version }}" == *"5.2.1-SNAPSHOT"* ]]; then
+          echo "❌ 检测到5.2.1-SNAPSHOT版本，明确阻止发布"
+          echo "🚫 5.2.1-SNAPSHOT版本已屏蔽"
+          exit 1
+        fi
+        
+        echo "✅ 标签检查通过，继续创建release"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release-info.outputs.tag }}
+        name: tinyMediaManager ${{ steps.release-info.outputs.version }}
+        body: ${{ steps.release-notes.outputs.release-notes }}
+        files: release-assets/*
+        draft: false
+        prerelease: ${{ contains(steps.release-info.outputs.tag, 'beta') || contains(steps.release-info.outputs.tag, 'alpha') || contains(steps.release-info.outputs.tag, 'rc') }}
+        generate_release_notes: false
+        append_body: false
+
+  # 自动预发布（避免SNAPSHOT版本）
+  create-prerelease:
+    name: Create Auto Prerelease
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-platforms]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/devel' &&
+      needs.build-and-test.result == 'success' && !contains(github.ref, 'SNAPSHOT')
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Wait for platform builds
+      run: |
+        echo "⏳ 等待所有平台构建完成..."
+        sleep 30
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Generate prerelease version
+      id: prerelease-info
+      run: |
+        # 生成基于commit的预发布版本号
+        COMMIT_SHA=${GITHUB_SHA:0:7}
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        VERSION="4.5-devel-${TIMESTAMP}-${COMMIT_SHA}"
+        TAG_NAME="v${VERSION}"
+        
+        # 确保预发布版本不包含SNAPSHOT
+        if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+          echo "❌ 预发布版本检测到SNAPSHOT，跳过创建"
+          echo "skip-release=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip-release=false" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 预发布版本: $VERSION"
+        echo "🏷️  Tag名称: $TAG_NAME"
+
+    - name: Prepare prerelease assets
+      run: |
+        echo "📦 准备预发布资产..."
+        mkdir -p prerelease-assets
+        
+        # 显示所有下载的artifacts
+        echo "📁 发现的构建产物:"
+        find artifacts -type f \( -name "*.zip" -o -name "*.tar.xz" -o -name "*.dmg" -o -name "*.sha256" \) | head -20
+        
+        # 复制平台构建产物到预发布目录
+        find artifacts -name "*.zip" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.tar.xz" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.dmg" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        find artifacts -name "*.sha256" -exec cp {} prerelease-assets/ \; 2>/dev/null || true
+        
+        # 标准化文件名
+        cd prerelease-assets
+        for file in *; do
+          if [[ -f "$file" ]]; then
+            new_name=$(echo "$file" | sed 's/tinymediamanager-/tinyMediaManager-/g' | sed 's/--/-/g')
+            if [[ "$file" != "$new_name" ]]; then
+              mv "$file" "$new_name"
+            fi
+          fi
+        done
+        cd ..
+
+        echo "✅ 预发布资产准备完成:"
+        ls -la prerelease-assets/
+        
+        TOTAL_SIZE=$(du -sh prerelease-assets/ | cut -f1)
+        echo "📊 总预发布大小: $TOTAL_SIZE"
+
+    - name: Generate prerelease notes
+      id: prerelease-notes
+      run: |
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" --abbrev-commit)
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an")
+          COMMIT_DATE=$(git log -1 --pretty=format:"%cd" --date=format:"%Y-%m-%d %H:%M:%S")
+        else
+          COMMIT_MSG="CI构建版本"
+          COMMIT_AUTHOR="GitHub Actions"
+          COMMIT_DATE=$(date -u +"%Y-%m-%d %H:%M:%S")
+        fi
+        
+        echo "# tinyMediaManager 预发布版本 ${{ steps.prerelease-info.outputs.version }}" > prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "🔄 **自动预发布构建** - 基于最新开发分支" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## 📋 构建信息" >> prerelease-notes.md
+        echo "- **版本**: ${{ steps.prerelease-info.outputs.version }}" >> prerelease-notes.md
+        echo "- **提交**: ${GITHUB_SHA:0:7}" >> prerelease-notes.md
+        echo "- **提交信息**: $COMMIT_MSG" >> prerelease-notes.md
+        echo "- **提交作者**: $COMMIT_AUTHOR" >> prerelease-notes.md
+        echo "- **构建时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## ⚠️ 重要说明" >> prerelease-notes.md
+        echo "- 这是**开发版本**，可能包含未测试的功能" >> prerelease-notes.md
+        echo "- 建议仅用于测试环境，不建议在生产环境使用" >> prerelease-notes.md
+        echo "- 如需稳定版本，请使用正式发布的版本" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "## 📥 下载" >> prerelease-notes.md
+        echo "### 平台版本" >> prerelease-notes.md
+        echo "- **Windows x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-windows-amd64.zip" >> prerelease-notes.md
+        echo "- **Linux x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-amd64.tar.xz" >> prerelease-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-linux-arm64.tar.xz" >> prerelease-notes.md
+        echo "- **macOS x64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-x86_64.dmg" >> prerelease-notes.md
+        echo "- **macOS ARM64**: tinyMediaManager-${{ steps.prerelease-info.outputs.version }}-macos-aarch64.dmg" >> prerelease-notes.md
+        echo "" >> prerelease-notes.md
+        echo "---" >> prerelease-notes.md
+        echo "*自动构建于: $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> prerelease-notes.md
+        echo "*GitHub Actions构建: #${{ github.run_number }}*" >> prerelease-notes.md
+
+        echo "prerelease-notes<<EOF" >> $GITHUB_OUTPUT
+        cat prerelease-notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Prerelease
+      if: steps.prerelease-info.outputs.skip-release != 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.prerelease-info.outputs.tag }}
+        name: tinyMediaManager 预发布 ${{ steps.prerelease-info.outputs.version }}
+        body: ${{ steps.prerelease-notes.outputs.prerelease-notes }}
+        files: prerelease-assets/*
+        draft: false
+        prerelease: true
+        generate_release_notes: false
+        append_body: false
+
+    - name: Extract version and tag info
+      id: release-info
+      run: |
+        # 提取版本信息
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+        else
+          # 从构建产物中获取版本信息
+          JAR_FILE=$(find artifacts -name "*.jar" | head -1)
+          if [[ -n "$JAR_FILE" ]]; then
+            VERSION=$(echo "$JAR_FILE" | sed 's/.*tinyMediaManager-\(.*\)\.jar/\1/')
+          else
+            if git rev-parse --git-dir >/dev/null 2>&1; then
+              VERSION="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+            else
+              VERSION="$(date +%Y%m%d)-$(date +%s | tail -c 7)"
+            fi
+          fi
+          TAG_NAME="v${VERSION}"
+        fi
+        
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📋 发布版本: $VERSION"
+        echo "🏷️  Tag名称: $TAG_NAME"
+
+    - name: Generate enhanced release notes
+      id: release-notes
+      run: |
+        echo "📝 生成增强版发布说明..."
+        
+        TAG_NAME="${{ steps.release-info.outputs.tag }}"
+        VERSION="${{ steps.release-info.outputs.version }}"
+        
+        # 创建详细的发布说明
+        echo "# tinyMediaManager $VERSION" > release-notes.md
+        echo "" >> release-notes.md
+        echo "🎉 我们很高兴发布 tinyMediaManager $VERSION！" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 📥 下载" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "### 平台版本" >> release-notes.md
+        echo "- **Windows x64**: tinyMediaManager-$VERSION-windows-amd64.zip" >> release-notes.md
+        echo "- **Linux x64**: tinyMediaManager-$VERSION-linux-amd64.tar.xz" >> release-notes.md
+          echo "- **Linux ARM64**: tinyMediaManager-$VERSION-linux-arm64.tar.xz" >> release-notes.md
+        echo "- **macOS x64**: tinyMediaManager-$VERSION-macos-x86_64.dmg" >> release-notes.md
+        echo "- **macOS ARM64**: tinyMediaManager-$VERSION-macos-aarch64.dmg" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## ⚠️ macOS用户注意" >> release-notes.md
+        echo "macOS版本为未签名版本，首次运行时需要：" >> release-notes.md
+        echo "1. 双击随附的 \"Fix_macOS_Security.command\"" >> release-notes.md
+        echo "2. 或右键选择 \"打开\" 并确认安全警告" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🚀 快速开始" >> release-notes.md
+        echo "1. 下载对应平台的安装包" >> release-notes.md
+        echo "2. 解压/安装到您选择的目录" >> release-notes.md
+        echo "3. 运行 tinyMediaManager" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## 🔧 系统要求" >> release-notes.md
+        echo "- **Java**: 17或更高版本" >> release-notes.md
+        echo "- **内存**: 建议4GB以上" >> release-notes.md
+        echo "- **存储**: 根据媒体库大小预留空间" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "---" >> release-notes.md
+        echo "*发布于: $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> release-notes.md
+        echo "*GitHub Actions构建: #${{ github.run_number }}*" >> release-notes.md
+
+        echo "release-notes<<EOF" >> $GITHUB_OUTPUT
+        cat release-notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      if: steps.prerelease-info.outputs.skip-release != 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.prerelease-info.outputs.tag }}
+        name: tinyMediaManager ${{ steps.prerelease-info.outputs.version }}
+        body: ${{ steps.release-notes.outputs.release-notes }}
+        files: prerelease-assets/*
+        draft: false
+        prerelease: ${{ contains(steps.prerelease-info.outputs.tag, 'beta') || contains(steps.prerelease-info.outputs.tag, 'alpha') || contains(steps.prerelease-info.outputs.tag, 'rc') }}
+        generate_release_notes: false
+        append_body: false
+
+  # 构建状态通知
+  notify-status:
+    name: Notify Build Status
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-platforms]
+    if: always()
+
+    steps:
+    - name: Determine overall status
+      id: status
+      run: |
+        # 收集所有依赖作业的状态
+        TEST_RESULT="${{ needs.build-and-test.result }}"
+        PLATFORMS_RESULT="${{ needs.build-platforms.result }}"
+        
+        echo "构建状态汇总:"
+        echo "- 基础测试: $TEST_RESULT"
+        echo "- 平台构建: $PLATFORMS_RESULT"
+        
+        # 判断整体状态
+        if [[ "$TEST_RESULT" == "success" && "$PLATFORMS_RESULT" == "success" ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "message=✅ 所有构建成功完成" >> $GITHUB_OUTPUT
+        elif [[ "$TEST_RESULT" == "failure" || "$PLATFORMS_RESULT" == "failure" ]]; then
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "message=❌ 构建失败" >> $GITHUB_OUTPUT
+        elif [[ "$TEST_RESULT" == "cancelled" || "$PLATFORMS_RESULT" == "cancelled" ]]; then
+          echo "status=cancelled" >> $GITHUB_OUTPUT
+          echo "message=⏹️ 构建被取消" >> $GITHUB_OUTPUT
+        else
+          echo "status=unknown" >> $GITHUB_OUTPUT
+          echo "message=❓ 构建状态未知" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Print build summary
+      run: |
+        echo "🏗️ 构建摘要"
+        echo "=============="
+        echo "状态: ${{ steps.status.outputs.message }}"
+        echo "基础测试: ${{ needs.build-and-test.result }}"
+        echo "平台构建: ${{ needs.build-platforms.result }}"
+        echo "触发事件: ${{ github.event_name }}"
+        echo "分支/标签: ${{ github.ref }}"
+        echo "提交 SHA: ${{ github.sha }}"
+        echo "运行编号: #${{ github.run_number }}"

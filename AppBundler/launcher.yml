@@ -1,0 +1,31 @@
+javaHome: jre
+mainClass: org.tinymediamanager.TinyMediaManager
+classpath:
+  - tmm.jar
+  - /lib/*
+  - /addons/*
+  - CONTENT_DIR/addons/*
+jvmOpts:
+  - '-add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED'
+  - '-Xms64m'
+  - '-Xmx512m'
+  - '-Xss512k'
+  - '-XX:+IgnoreUnrecognizedVMOptions'
+  - '-XX:+UseStringDeduplication'
+  - '-Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine'
+  - '-Djava.net.preferIPv4Stack=true'
+  - '-Dfile.encoding=UTF-8'
+  - '-Dsun.jnu.encoding=UTF-8'
+  - '-Djna.nosys=true'
+  - '-Dtmm.consoleloglevel=DEBUG'
+  - '[macos] -Dapple.awt.graphics.UseQuartz=true'
+  - '[macos] -Xdock:name=tinyMediaManager'
+  - '[macos] -Dapple.awt.application.name=tinyMediaManager'
+  - '[macos] -Dapple.awt.application.appearance=system'
+  - '[macos] -Dapple.eawt.quitStrategy=CLOSE_ALL_WINDOWS'
+  - '[macos] -Djdk.nio.path.useNormalizationFormD=true'
+  - '[linux] -Dawt.useSystemAAFontSettings=on'
+  - '[linux] -Dswing.aatext=true'
+env:
+  - '[macos] LC_ALL=en_US.UTF-8'
+  - '[macos] LANG=en_US.UTF-8'

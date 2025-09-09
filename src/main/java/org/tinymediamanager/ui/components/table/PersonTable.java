@@ -1,0 +1,449 @@
+/*
+ * Copyright 2012 - 2025 Manuel Laggner
+ *  
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.tinymediamanager.ui.components.table;
+
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.entities.Person;
+import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.TmmUIHelper;
+import org.tinymediamanager.ui.dialogs.ImagePreviewDialog;
+import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
+import org.tinymediamanager.ui.panels.ModalPopupPanel;
+import org.tinymediamanager.ui.panels.PersonEditorPanel;
+
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.swing.GlazedListsSwing;
+
+/**
+ * This class is used to display Persons in a table
+ *
+ * @author Manuel Laggner
+ */
+public class PersonTable extends TmmEditorTable {
+  private static final Logger     LOGGER             = LoggerFactory.getLogger(PersonTable.class);
+
+  private final EventList<Person> personEventList;
+
+  private String                  addTitle           = "";
+  private String                  editTitle          = "";
+  private Person.Type[]           allowedEditorTypes = Person.Type.values();
+
+  /**
+   * create a PersonTable for display only
+   * 
+   * @param personEventList
+   *          the EventList containing the Persons
+   */
+  public PersonTable(EventList<Person> personEventList) {
+    super();
+
+    this.personEventList = personEventList;
+
+    setModel(new TmmTableModel<>(GlazedListsSwing.swingThreadProxyList(personEventList), new PersonTableFormat()));
+
+    adjustColumnPreferredWidths(3);
+  }
+
+  /**
+   * Utility to get the right {@link Person} for the given row
+   * 
+   * @param row
+   *          the row number to get the {@link Person} for
+   * @return the {@link Person}
+   */
+  private Person getPerson(int row) {
+    int index = convertRowIndexToModel(row);
+    return personEventList.get(index);
+  }
+
+  @Override
+  protected void editButtonClicked(int row) {
+    IModalPopupPanelProvider iModalPopupPanelProvider = IModalPopupPanelProvider.findModalProvider(this);
+    if (iModalPopupPanelProvider == null) {
+      return;
+    }
+
+    Person person = getPerson(row);
+
+    ModalPopupPanel popupPanel = iModalPopupPanelProvider.createModalPopupPanel();
+    popupPanel.setTitle(getEditTitle());
+    popupPanel.setOnCloseHandler(() -> onPersonChanged(person));
+
+    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, allowedEditorTypes);
+    popupPanel.setContent(personEditorPanel);
+    iModalPopupPanelProvider.showModalPopupPanel(popupPanel);
+  }
+
+  private String getEditTitle() {
+    if (StringUtils.isNotBlank(editTitle)) {
+      return editTitle;
+    }
+    else {
+      return TmmResourceBundle.getString("cast.edit");
+    }
+  }
+
+  public void onPersonChanged(Person person) {
+    // to override
+  }
+
+  @Override
+  protected boolean isLinkCell(int row, int column) {
+    return isEditorColumn(column) || (isProfileColumn(column) && isProfileAvailable(row)) || (isImageColumn(column) && isImageAvailable(row));
+  }
+
+  /**
+   * check if this column is the profile column
+   *
+   * @param column
+   *          the column index
+   * @return true/false
+   */
+  private boolean isProfileColumn(int column) {
+    if (column < 0) {
+      return false;
+    }
+
+    return "profileUrl".equals(getColumnModel().getColumn(column).getIdentifier());
+  }
+
+  /**
+   * checks whether a profile url is available or not
+   * 
+   * @param row
+   *          the row to get the data for
+   * @return true if a profile url is available, false otherwise
+   */
+  private boolean isProfileAvailable(int row) {
+    return hasProfileUrl(getPerson(row));
+  }
+
+  /**
+   * check if this column is the image column
+   *
+   * @param column
+   *          the column index
+   * @return true/false
+   */
+  private boolean isImageColumn(int column) {
+    if (column < 0) {
+      return false;
+    }
+
+    return "imageUrl".equals(getColumnModel().getColumn(column).getIdentifier());
+  }
+
+  /**
+   * checks whether an image url is available or not
+   *
+   * @param row
+   *          the row to get the data for
+   * @return true if an image url is available, false otherwise
+   */
+  private boolean isImageAvailable(int row) {
+    return StringUtils.isNotBlank(getPerson(row).getThumbUrl());
+  }
+
+  @Override
+  protected void linkClicked(int row, int column, MouseEvent mou) {
+    Person person = getPerson(row);
+
+    if (person != null) {
+      JPopupMenu popupMenu = new JPopupMenu();
+
+      if (isProfileColumn(column)) {
+        int linksAdded = 0;
+        String profileUrl = person.getProfileUrl();
+
+        if (StringUtils.isNotBlank(profileUrl)) {
+          String title;
+
+          if (profileUrl.contains("imdb.com")) {
+            title = "IMDb";
+          }
+          else if (profileUrl.contains("themoviedb.org")) {
+            title = "TMDB";
+          }
+          else if (profileUrl.contains("wikipedia.org")) {
+            title = "Wikipedia";
+          }
+          else if (profileUrl.contains("tvmaze.com")) {
+            title = "TVmaze";
+          }
+          else if (profileUrl.contains("thetvdb.com")) {
+            title = "TVDB";
+          }
+          else {
+            title = TmmResourceBundle.getString("profile.url");
+          }
+
+          JMenuItem item = new JMenuItem(title, IconManager.LINK);
+          item.addActionListener(e -> browseUrl(profileUrl));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        String imdbId = person.getIdAsString(MediaMetadata.IMDB);
+        if (StringUtils.isNotBlank(imdbId) && !profileUrl.contains("imdb.com")) {
+          JMenuItem item = new JMenuItem("IMDb", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.imdb.com/de/name/" + imdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tmdbId = person.getIdAsInt(MediaMetadata.TMDB);
+        if (tmdbId > 0 && !profileUrl.contains("themoviedb.org")) {
+          JMenuItem item = new JMenuItem("TMDB", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.themoviedb.org/person/" + tmdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tvdbId = person.getIdAsInt(MediaMetadata.TVDB);
+        if (tvdbId > 0 && !profileUrl.contains("thetvdb.com")) {
+          JMenuItem item = new JMenuItem("TVDB", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://thetvdb.com/people/" + tvdbId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        int tvmazeId = person.getIdAsInt(MediaMetadata.TVMAZE);
+        if (tvmazeId > 0 && !profileUrl.contains("tvmaze.com")) {
+          JMenuItem item = new JMenuItem("TVmaze", IconManager.LINK);
+          item.addActionListener(e -> browseUrl("https://www.tvmaze.com/people/" + tvmazeId));
+          popupMenu.add(item);
+
+          linksAdded++;
+        }
+
+        if (linksAdded == 1) {
+          JMenuItem firstItem = (JMenuItem) popupMenu.getComponent(0);
+          firstItem.doClick();
+        }
+        else if (linksAdded > 1) {
+          popupMenu.show(mou.getComponent(), mou.getX(), mou.getY());
+        }
+      }
+      else if (isImageColumn(column) && StringUtils.isNotBlank(person.getThumbUrl())) {
+        ImagePreviewDialog dialog = new ImagePreviewDialog(person.getThumbUrl());
+        dialog.setVisible(true);
+      }
+    }
+  }
+
+  private void browseUrl(String url) {
+    try {
+      TmmUIHelper.browseUrl(url);
+    }
+    catch (Exception ex) {
+      LOGGER.error("Could not open url in browser - '{}'", ex.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(new Message(Message.MessageLevel.ERROR, url, "message.erroropenurl", new String[] { ":", ex.getLocalizedMessage() }));
+    }
+  }
+
+  public void setAddTitle(String addTitle) {
+    this.addTitle = addTitle;
+  }
+
+  private String getAddTitle() {
+    if (StringUtils.isNotBlank(addTitle)) {
+      return addTitle;
+    }
+    else {
+      return TmmResourceBundle.getString("cast.add");
+    }
+  }
+
+  public void setEditTitle(String editTitle) {
+    this.editTitle = editTitle;
+  }
+
+  public void setAllowedEditorTypes(Person.Type[] newValues) {
+    allowedEditorTypes = newValues;
+  }
+
+  /**
+   * get all selected {@link Person}s
+   * 
+   * @return a {@link List} of all selected {@link Person}s
+   */
+  public List<Person> getSelectedPersons() {
+    List<Person> selectedPersons = new ArrayList<>();
+    for (int i : getSelectedRows()) {
+      Person person = getPerson(i);
+      if (person != null) {
+        selectedPersons.add(person);
+      }
+
+    }
+    return selectedPersons;
+  }
+
+  public void addPerson() {
+    IModalPopupPanelProvider iModalPopupPanelProvider = IModalPopupPanelProvider.findModalProvider(this);
+    if (iModalPopupPanelProvider == null) {
+      return;
+    }
+
+    String defaultName;
+    String defaultRole;
+
+    if (allowedEditorTypes != null && allowedEditorTypes.length == 1) {
+      Person.Type personType = allowedEditorTypes[0];
+
+      switch (personType) {
+        case ACTOR, GUEST -> {
+          defaultName = TmmResourceBundle.getString("cast.actor.unknown");
+          defaultRole = TmmResourceBundle.getString("cast.role.unknown");
+        }
+        case DIRECTOR -> {
+          defaultName = TmmResourceBundle.getString("director.name.unknown");
+          defaultRole = "Director";
+        }
+        case WRITER -> {
+          defaultName = TmmResourceBundle.getString("writer.name.unknown");
+          defaultRole = "Writer";
+        }
+        case PRODUCER -> {
+          defaultName = TmmResourceBundle.getString("producer.name.unknown");
+          defaultRole = TmmResourceBundle.getString("producer.role.unknown");
+        }
+        default -> {
+          defaultName = "";
+          defaultRole = "";
+        }
+      }
+    }
+    else {
+      defaultName = "";
+      defaultRole = "";
+    }
+
+    Person person = new Person(Person.Type.OTHER, defaultName, defaultRole);
+
+    ModalPopupPanel popupPanel = iModalPopupPanelProvider.createModalPopupPanel();
+    popupPanel.setTitle(getAddTitle());
+
+    popupPanel.setOnCloseHandler(() -> {
+      if (StringUtils.isNotBlank(person.getName()) && !person.getName().equals(defaultName)) {
+        if (person.getRole().equals(defaultRole)) {
+          person.setRole("");
+        }
+        personEventList.add(0, person);
+      }
+    });
+
+    PersonEditorPanel personEditorPanel = new PersonEditorPanel(person, allowedEditorTypes);
+    popupPanel.setContent(personEditorPanel);
+    iModalPopupPanelProvider.showModalPopupPanel(popupPanel);
+  }
+
+  private static boolean hasProfileUrl(Person person) {
+    if (person != null) {
+      if (StringUtils.isNotBlank(person.getThumbUrl())) {
+        return true;
+      }
+      if (StringUtils.isNotBlank(person.getIdAsString(MediaMetadata.IMDB))) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TMDB) > 0) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TVDB) > 0) {
+        return true;
+      }
+      else if (person.getIdAsInt(MediaMetadata.TVMAZE) > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * helper classes
+   */
+  private static class PersonTableFormat extends TmmTableFormat<Person> {
+    private PersonTableFormat() {
+      /*
+       * name
+       */
+      Column col = new Column(TmmResourceBundle.getString("metatag.name"), "name", Person::getName, String.class);
+      col.setColumnResizeable(true);
+      addColumn(col);
+
+      /*
+       * role
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.role"), "role", Person::getRole, String.class);
+      col.setColumnResizeable(true);
+      addColumn(col);
+
+      /*
+       * image
+       */
+      col = new Column(TmmResourceBundle.getString("image.url"), "imageUrl", person -> {
+        if (StringUtils.isNotBlank(person.getThumbUrl())) {
+          return IconManager.TABLE_OK;
+        }
+        return IconManager.TABLE_NOT_OK;
+      }, ImageIcon.class);
+      col.setColumnResizeable(false);
+      col.setHeaderIcon(IconManager.IMAGES);
+      addColumn(col);
+
+      /*
+       * profile
+       */
+      col = new Column(TmmResourceBundle.getString("profile.url"), "profileUrl", person -> {
+        if (hasProfileUrl(person)) {
+          return IconManager.TABLE_OK;
+        }
+        return IconManager.TABLE_NOT_OK;
+      }, ImageIcon.class);
+      col.setColumnResizeable(false);
+      col.setHeaderIcon(IconManager.IDCARD);
+      addColumn(col);
+
+      /*
+       * edit
+       */
+      col = new Column(TmmResourceBundle.getString("Button.edit"), "edit", person -> IconManager.EDIT, ImageIcon.class);
+      col.setColumnResizeable(false);
+      col.setHeaderIcon(IconManager.EDIT_HEADER);
+      addColumn(col);
+    }
+  }
+}

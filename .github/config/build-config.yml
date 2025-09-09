@@ -1,0 +1,205 @@
+# tinyMediaManager 构建配置文件
+# 用于统一管理构建参数和平台配置
+
+# 基础配置
+base:
+  java_version: "17"
+  maven_opts: "-Xmx2048m -Xms1024m"
+  artifact_retention_days: 30
+  nightly_retention_days: 7
+
+# 平台配置
+platforms:
+  windows-x64:
+    os: "windows-latest"
+    assembly: "windows-x64"
+    native_path: "native/windows"
+    output_format: "zip"
+    executable_suffix: ".exe"
+    jre_platform: "windows_x64"
+    
+  linux-x64:
+    os: "ubuntu-latest"
+    assembly: "linux-x64"
+    native_path: "native/linux"
+    output_format: "tar.bz2"
+    executable_suffix: ""
+    jre_platform: "linux_x64"
+    
+  linux-aarch64:
+    os: "ubuntu-latest"
+    assembly: "linux-aarch64"
+    native_path: "native/arm"
+    output_format: "tar.bz2"
+    executable_suffix: ""
+    jre_platform: "linux_aarch64"
+    
+  macos-x64:
+    os: "macos-13"
+    assembly: "macos-x64"
+    native_path: "native/mac"
+    output_format: "tar.bz2"
+    executable_suffix: ""
+    jre_platform: "macos_x64"
+    
+  macos-aarch64:
+    os: "macos-latest"
+    assembly: "macos-aarch64"
+    native_path: "native/mac"
+    output_format: "tar.bz2"
+    executable_suffix: ""
+    jre_platform: "macos_aarch64"
+
+# 构建类型配置
+build_types:
+  test:
+    description: "测试构建 - 仅编译和基础测试"
+    maven_goals: "clean compile test"
+    skip_tests: false
+    skip_sign: true
+    create_dist: false
+    
+  package:
+    description: "打包构建 - 创建 JAR 包"
+    maven_goals: "clean package"
+    skip_tests: true
+    skip_sign: true
+    create_dist: false
+    
+  dist:
+    description: "分发构建 - 创建完整分发包"
+    maven_goals: "clean package -Pdist"
+    skip_tests: true
+    skip_sign: true
+    create_dist: true
+    
+  release:
+    description: "发布构建 - 包含签名的完整构建"
+    maven_goals: "clean package -Pdist"
+    skip_tests: false
+    skip_sign: false
+    create_dist: true
+
+# 触发条件配置
+triggers:
+  push_branches:
+    - "devel"
+    - "main"
+    - "release/*"
+    
+  tag_pattern: "v*"
+  
+  pr_branches:
+    - "devel"
+    - "main"
+
+# 缓存配置
+cache:
+  maven:
+    paths:
+      - "~/.m2/repository"
+    key_prefix: "maven"
+    restore_keys:
+      - "maven-"
+      
+  gradle:
+    paths:
+      - "~/.gradle/caches"
+      - "~/.gradle/wrapper"
+    key_prefix: "gradle"
+    restore_keys:
+      - "gradle-"
+
+# 通知配置
+notifications:
+  success:
+    enabled: true
+    message: "✅ 构建成功完成"
+    
+  failure:
+    enabled: true
+    message: "❌ 构建失败"
+    
+  nightly:
+    enabled: true
+    message: "🌙 夜间构建完成"
+
+# 性能配置
+performance:
+  parallel_jobs: 5
+  timeout_minutes: 60
+  memory_limit: "4g"
+  
+  test_timeout: 30
+  build_timeout: 45
+  dist_timeout: 60
+
+# 安全配置 (简化版)
+security:
+  sign_artifacts: false  # 桌面应用不需要签名
+  basic_checks_only: true
+
+# 发布配置
+release:
+  draft: false
+  prerelease_patterns:
+    - "*-alpha*"
+    - "*-beta*"
+    - "*-rc*"
+    
+  asset_patterns:
+    - "dist/*.zip"
+    - "dist/*.tar.bz2"
+    - "dist/*.sha256"
+    - "target/*.jar"
+    
+  changelog:
+    enabled: true
+    sections:
+      - title: "🚀 新功能"
+        labels: ["enhancement", "feature"]
+      - title: "🐛 Bug 修复"
+        labels: ["bug", "fix"]
+      - title: "📚 文档"
+        labels: ["documentation"]
+      - title: "🔧 其他改进"
+        labels: ["improvement", "refactor"]
+
+# 质量检查配置 (简化版)
+quality:
+  basic_checks:
+    enabled: true
+    compile_warnings: true
+    test_coverage: false
+
+# 环境变量配置
+environment:
+  global:
+    MAVEN_OPTS: "-Xmx2048m -Xms1024m -XX:+UseG1GC -Dtmm.consoleloglevel=DEBUG"
+    JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
+    
+  development:
+    TMM_ENV: "development"
+    LOG_LEVEL: "DEBUG"
+    
+  production:
+    TMM_ENV: "production"
+    LOG_LEVEL: "INFO"
+
+# 工件配置
+artifacts:
+  jar:
+    name_pattern: "tinymediamanager-{version}.jar"
+    path: "target/*.jar"
+    
+  dist:
+    name_pattern: "tinymediamanager-{version}-{platform}.{format}"
+    path: "dist/*"
+    
+  checksums:
+    algorithms: ["sha256", "md5"]
+    
+  metadata:
+    include_build_info: true
+    include_git_info: true
+    include_system_info: true

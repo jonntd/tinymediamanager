@@ -1,0 +1,59 @@
+/*
+ * Copyright 2012 - 2025 Manuel Laggner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.tinymediamanager.scraper.exceptions;
+
+import java.util.ResourceBundle;
+
+/**
+ * the class {@link MissingIdException} indicates that there was no matching ID for the scrape
+ *
+ * @author Manuel Laggner
+ * @since 3.0
+ */
+public class MissingIdException extends ScrapeException {
+  private final String[] ids;
+
+  /**
+   * the following ids are supported with this scraper, but no one has been given
+   * 
+   * @param ids
+   *          an array of supported ids
+   */
+  public MissingIdException(String... ids) {
+    super();
+    this.ids = ids;
+  }
+
+  public String[] getIds() {
+    return ids;
+  }
+
+  @Override
+  public String getMessage() {
+    return "No ID available for scraping";
+  }
+
+  @Override
+  public String getLocalizedMessage() {
+    try {
+      return ResourceBundle.getBundle("messages").getString("missingid");
+    }
+    catch (Exception e) {
+      return getMessage();
+    }
+  }
+}

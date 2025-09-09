@@ -1,0 +1,697 @@
+/*
+ * Copyright 2012 - 2025 Manuel Laggner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.tinymediamanager.ui.moviesets.dialogs;
+
+import static java.util.Locale.ROOT;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.BACKGROUND;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.BANNER;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.CLEARART;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.CLEARLOGO;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.DISC;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.POSTER;
+import static org.tinymediamanager.scraper.entities.MediaArtwork.MediaArtworkType.THUMB;
+
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinymediamanager.core.MediaFileType;
+import org.tinymediamanager.core.Message;
+import org.tinymediamanager.core.MessageManager;
+import org.tinymediamanager.core.ScraperMetadataConfig;
+import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.MovieSetScraperMetadataConfig;
+import org.tinymediamanager.core.movie.MovieSetSearchAndScrapeOptions;
+import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.entities.MovieSet;
+import org.tinymediamanager.scraper.MediaMetadata;
+import org.tinymediamanager.scraper.MediaScraper;
+import org.tinymediamanager.scraper.MediaSearchResult;
+import org.tinymediamanager.scraper.ScraperType;
+import org.tinymediamanager.scraper.entities.MediaArtwork;
+import org.tinymediamanager.scraper.entities.MediaType;
+import org.tinymediamanager.scraper.interfaces.IMovieSetMetadataProvider;
+import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.TmmFontHelper;
+import org.tinymediamanager.ui.TmmUILayoutStore;
+import org.tinymediamanager.ui.components.NoBorderScrollPane;
+import org.tinymediamanager.ui.components.combobox.ScraperMetadataConfigCheckComboBox;
+import org.tinymediamanager.ui.components.label.ImageLabel;
+import org.tinymediamanager.ui.components.label.TmmLabel;
+import org.tinymediamanager.ui.components.table.TmmTable;
+import org.tinymediamanager.ui.components.table.TmmTableFormat;
+import org.tinymediamanager.ui.components.table.TmmTableModel;
+import org.tinymediamanager.ui.components.textfield.ReadOnlyTextPane;
+import org.tinymediamanager.ui.dialogs.ImageChooserDialog;
+import org.tinymediamanager.ui.dialogs.TmmDialog;
+import org.tinymediamanager.ui.moviesets.MovieSetChooserModel;
+import org.tinymediamanager.ui.moviesets.MovieSetChooserModel.MovieInSet;
+import org.tinymediamanager.ui.renderer.IntegerTableCellRenderer;
+
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.ObservableElementList;
+import ca.odell.glazedlists.swing.GlazedListsSwing;
+import net.miginfocom.swing.MigLayout;
+
+/**
+ * The Class MovieSetChooserPanel.
+ * 
+ * @author Manuel Laggner
+ */
+public class MovieSetChooserDialog extends TmmDialog implements ActionListener {
+  private static final Logger                                                     LOGGER         = LoggerFactory
+      .getLogger(MovieSetChooserDialog.class);
+
+  private final MovieSet                                                          movieSetToScrape;
+  private final EventList<MovieSetChooserModel>                                   searchResultEventList;
+  private final EventList<MovieInSet>                                             movieInSetEventList;
+
+  private MovieSetChooserModel                                                    selectedResult = null;
+
+  /**
+   * UI components
+   */
+  private final JLabel                                                            lblProgressAction;
+  private final JProgressBar                                                      progressBar;
+  private final JTextField                                                        tfMovieSetName;
+  private final TmmTable                                                          tableMovieSets;
+  private final JLabel                                                            lblMovieSetName;
+  private final ImageLabel                                                        lblMovieSetPoster;
+  private final TmmTable                                                          tableMovies;
+  private final JCheckBox                                                         cbAssignMovies;
+  private final JButton                                                           btnOk;
+  private final JTextPane                                                         tpPlot;
+  private final ScraperMetadataConfigCheckComboBox<MovieSetScraperMetadataConfig> cbScraperConfig;
+
+  private boolean                                                                 continueQueue  = true;
+
+  /**
+   * Instantiates a new movie set chooser panel.
+   * 
+   * @param movieSet
+   *          the movie set
+   */
+  public MovieSetChooserDialog(MovieSet movieSet, boolean inQueue) {
+    super(TmmResourceBundle.getString("movieset.search"), "movieSetChooser");
+    setMinimumSize(new Dimension(1000, 650));
+
+    movieSetToScrape = movieSet;
+
+    // table format for the search result
+    searchResultEventList = new ObservableElementList<>(GlazedListsSwing.swingThreadProxyList(GlazedLists.threadSafeList(new BasicEventList<>())),
+        GlazedLists.beanConnector(MovieSetChooserModel.class));
+
+    // table format for the castmembers
+    movieInSetEventList = new ObservableElementList<>(GlazedListsSwing.swingThreadProxyList(GlazedLists.threadSafeList(new BasicEventList<>())),
+        GlazedLists.beanConnector(MovieInSet.class));
+
+    {
+      JPanel panelHeader = new JPanel();
+      panelHeader.setLayout(new MigLayout("", "[grow][]", "[]"));
+
+      // also attach the actionlistener to the textfield to trigger the search on enter in the textfield
+      Action searchAction = new SearchAction();
+
+      tfMovieSetName = new JTextField();
+      tfMovieSetName.addActionListener(searchAction);
+      panelHeader.add(tfMovieSetName, "cell 0 0,growx");
+      tfMovieSetName.setColumns(10);
+
+      JButton btnSearch = new JButton(searchAction);
+      panelHeader.add(btnSearch, "cell 1 0");
+
+      setTopInformationPanel(panelHeader);
+    }
+    {
+      JPanel panelContent = new JPanel();
+      getContentPane().add(panelContent, BorderLayout.CENTER);
+      panelContent.setLayout(new MigLayout("", "[950lp,grow]", "[500,grow][][][]"));
+
+      JSplitPane splitPane = new JSplitPane();
+      splitPane.setName(getName() + ".splitPane");
+      TmmUILayoutStore.getInstance().install(splitPane);
+      panelContent.add(splitPane, "cell 0 0,grow");
+      {
+        JPanel panelResults = new JPanel();
+        panelResults.setLayout(new MigLayout("", "[300lp:400lp,grow]", "[300lp,grow]"));
+        JScrollPane panelSearchResults = new JScrollPane();
+        panelResults.add(panelSearchResults, "cell 0 0,grow");
+        splitPane.setLeftComponent(panelResults);
+        {
+          tableMovieSets = new TmmTable(new TmmTableModel<>(searchResultEventList, new SearchResultTableFormat()));
+          tableMovieSets.configureScrollPane(panelSearchResults);
+          tableMovieSets.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        }
+      }
+      {
+        JPanel panelSearchDetail = new JPanel();
+        splitPane.setRightComponent(panelSearchDetail);
+        panelSearchDetail
+            .setLayout(new MigLayout("", "[150lp:15%:20%,grow][15lp!][500lp:600lp,grow 3]", "[][15lp!][100lp:25%:40%,grow][100lp:25%:40%,grow][]"));
+        {
+          lblMovieSetName = new JLabel("");
+          TmmFontHelper.changeFont(lblMovieSetName, 1.166, Font.BOLD);
+          panelSearchDetail.add(lblMovieSetName, "cell 2 0,growx");
+        }
+        {
+          lblMovieSetPoster = new ImageLabel();
+          lblMovieSetPoster.setDesiredAspectRatio(2 / 3f);
+          panelSearchDetail.add(lblMovieSetPoster, "cell 0 0 1 3,grow");
+        }
+        {
+          JScrollPane scrollPane = new NoBorderScrollPane();
+          panelSearchDetail.add(scrollPane, "cell 2 2,grow");
+
+          tpPlot = new ReadOnlyTextPane();
+          scrollPane.setViewportView(tpPlot);
+        }
+        {
+          JScrollPane scrollPane = new JScrollPane();
+          panelSearchDetail.add(scrollPane, "cell 0 3 3 1,grow");
+
+          tableMovies = new TmmTable(new TmmTableModel<>(movieInSetEventList, new MovieInSetTableFormat()));
+          tableMovies.configureScrollPane(scrollPane);
+          scrollPane.setViewportView(tableMovies);
+        }
+        {
+          cbAssignMovies = new JCheckBox(TmmResourceBundle.getString("movieset.movie.assign"));
+          cbAssignMovies.setSelected(true);
+          panelSearchDetail.add(cbAssignMovies, "cell 0 4 3 1,growx,aligny top");
+        }
+      }
+      {
+        JSeparator separator = new JSeparator();
+        panelContent.add(separator, "cell 0 1,growx");
+      }
+      {
+        JLabel lblScrapeFollowingItems = new TmmLabel(TmmResourceBundle.getString("chooser.scrape"));
+        panelContent.add(lblScrapeFollowingItems, "cell 0 2");
+
+        cbScraperConfig = new ScraperMetadataConfigCheckComboBox(MovieSetScraperMetadataConfig.values());
+        cbScraperConfig.enableFilter(
+            (movieScraperMetadataConfig, s) -> movieScraperMetadataConfig.getDescription().toLowerCase(ROOT).startsWith(s.toLowerCase(ROOT)));
+        panelContent.add(cbScraperConfig, "cell 0 3,growx, wmin 0");
+      }
+    }
+
+    {
+      JPanel infoPanel = new JPanel();
+      infoPanel.setLayout(new MigLayout("hidemode 3", "[][grow]", "[]"));
+
+      progressBar = new JProgressBar();
+      infoPanel.add(progressBar, "cell 0 0");
+
+      lblProgressAction = new JLabel("");
+      infoPanel.add(lblProgressAction, "cell 1 0");
+
+      setBottomInformationPanel(infoPanel);
+    }
+    {
+      if (inQueue) {
+        JButton btnAbort = new JButton(TmmResourceBundle.getString("Button.abortqueue"));
+        btnAbort.setActionCommand("Abort");
+        btnAbort.setToolTipText(TmmResourceBundle.getString("Button.abortqueue"));
+        btnAbort.setIcon(IconManager.STOP_INV);
+        btnAbort.addActionListener(this);
+        addButton(btnAbort);
+      }
+
+      JButton btnCancel = new JButton(TmmResourceBundle.getString("Button.cancel"));
+      btnCancel.setActionCommand("Cancel");
+      btnCancel.setToolTipText(TmmResourceBundle.getString("Button.cancel"));
+      btnCancel.setIcon(IconManager.CANCEL_INV);
+      btnCancel.addActionListener(this);
+      addButton(btnCancel);
+
+      btnOk = new JButton(TmmResourceBundle.getString("Button.ok"));
+      btnOk.setActionCommand("Save");
+      btnOk.setToolTipText(TmmResourceBundle.getString("Button.ok"));
+      btnOk.setIcon(IconManager.APPLY_INV);
+      btnOk.addActionListener(this);
+      getRootPane().registerKeyboardAction(this, "Save",
+          KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), JComponent.WHEN_IN_FOCUSED_WINDOW);
+      addButton(btnOk);
+    }
+
+    tableMovies.adjustColumnPreferredWidths(5);
+
+    // add a change listener for the async loaded metadata
+    PropertyChangeListener listener = evt -> {
+      String property = evt.getPropertyName();
+      if ("scraped".equals(property)) {
+        int row = tableMovieSets.convertRowIndexToModel(tableMovieSets.getSelectedRow());
+        if (row > -1) {
+          setData(searchResultEventList.get(row));
+        }
+      }
+    };
+
+    ListSelectionModel rowSM = tableMovieSets.getSelectionModel();
+    rowSM.addListSelectionListener(e -> {
+      // Ignore extra messages.
+      if (e.getValueIsAdjusting()) {
+        return;
+      }
+
+      int index = tableMovieSets.convertRowIndexToModel(tableMovieSets.getSelectedRow());
+      if (selectedResult != null) {
+        selectedResult.removePropertyChangeListener(listener);
+      }
+      if (index > -1 && index < searchResultEventList.size()) {
+        MovieSetChooserModel model = searchResultEventList.get(index);
+        setData(model);
+
+        selectedResult = model;
+        selectedResult.addPropertyChangeListener(listener);
+      }
+      else {
+        selectedResult = null;
+      }
+
+      ListSelectionModel lsm = (ListSelectionModel) e.getSource();
+      if (!lsm.isSelectionEmpty()) {
+        int selectedRow = lsm.getMinSelectionIndex();
+        selectedRow = tableMovieSets.convertRowIndexToModel(selectedRow);
+        try {
+          MovieSetChooserModel model = searchResultEventList.get(selectedRow);
+          if (model != MovieSetChooserModel.EMPTY_RESULT && !model.isScraped()) {
+            ScrapeTask task = new ScrapeTask(model);
+            task.execute();
+          }
+        }
+        catch (Exception ex) {
+          LOGGER.debug("scraping", ex);
+        }
+      }
+    });
+    tableMovieSets.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        if (e.getClickCount() >= 2 && !e.isConsumed() && e.getButton() == MouseEvent.BUTTON1) {
+          actionPerformed(new ActionEvent(btnOk, ActionEvent.ACTION_PERFORMED, "Save"));
+        }
+      }
+    });
+
+    cbScraperConfig.setSelectedItems(MovieSetScraperMetadataConfig.values());
+
+    tfMovieSetName.setText(movieSet.getTitle());
+    searchMovieSet();
+  }
+
+  private void setData(MovieSetChooserModel model) {
+    movieInSetEventList.addAll(model.getMovies());
+    if (!model.getPosterUrl().equals(lblMovieSetPoster.getImageUrl())) {
+      lblMovieSetPoster.setImageUrl(model.getPosterUrl());
+    }
+    lblMovieSetName.setText(model.getName());
+    tpPlot.setText(model.getOverview());
+
+    movieInSetEventList.clear();
+    movieInSetEventList.addAll(model.getMovies());
+  }
+
+  private void searchMovieSet() {
+    SearchTask task = new SearchTask(tfMovieSetName.getText());
+    task.execute();
+  }
+
+  private class SearchTask extends SwingWorker<Void, Void> {
+    private final String            searchTerm;
+
+    private List<MediaSearchResult> searchResult;
+    private Throwable               error  = null;
+    boolean                         cancel = false;
+
+    public SearchTask(String searchTerm) {
+      this.searchTerm = searchTerm;
+    }
+
+    @Override
+    public Void doInBackground() {
+      startProgressBar(TmmResourceBundle.getString("chooser.searchingfor") + " " + searchTerm);
+      try {
+        List<MediaScraper> sets = MediaScraper.getMediaScrapers(ScraperType.MOVIE_SET);
+        if (sets != null && !sets.isEmpty()) {
+          MediaScraper first = sets.get(0); // just get first
+          IMovieSetMetadataProvider mp = (IMovieSetMetadataProvider) first.getMediaProvider();
+
+          MovieSetSearchAndScrapeOptions options = new MovieSetSearchAndScrapeOptions();
+          options.setSearchQuery(searchTerm);
+          options.setLanguage(MovieModuleManager.getInstance().getSettings().getScraperLanguage());
+
+          searchResult = mp.search(options);
+        }
+      }
+      catch (Exception e1) {
+        error = e1;
+        LOGGER.debug("SearchTask", e1);
+      }
+
+      return null;
+    }
+
+    @Override
+    public void done() {
+      stopProgressBar();
+
+      searchResultEventList.clear();
+      if (searchResult.isEmpty()) {
+        searchResultEventList.add(MovieSetChooserModel.EMPTY_RESULT);
+      }
+      else {
+        for (MediaSearchResult collection : searchResult) {
+          MovieSetChooserModel model = new MovieSetChooserModel(collection);
+          searchResultEventList.add(model);
+        }
+      }
+
+      if (!searchResultEventList.isEmpty()) {
+        tableMovieSets.setRowSelectionInterval(0, 0); // select first row
+      }
+    }
+  }
+
+  private class SearchAction extends AbstractAction {
+    SearchAction() {
+      putValue(NAME, TmmResourceBundle.getString("Button.search"));
+      putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movieset.search"));
+      putValue(SMALL_ICON, IconManager.SEARCH_INV);
+      putValue(LARGE_ICON_KEY, IconManager.SEARCH_INV);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      searchMovieSet();
+    }
+  }
+
+  @Override
+  public void actionPerformed(ActionEvent arg0) {
+    if ("Cancel".equals(arg0.getActionCommand())) {
+      // cancel
+      setVisible(false);
+    }
+
+    if ("Save".equals(arg0.getActionCommand())) {
+      // save it
+      int row = tableMovieSets.getSelectedRow();
+      if (row >= 0) {
+        MovieSetChooserModel model = searchResultEventList.get(row);
+        if (model != MovieSetChooserModel.EMPTY_RESULT) {
+          // when scraping was not successful, abort saving
+          if (!model.isScraped()) {
+            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, "MovieSetChooser", "message.scrape.threadcrashed"));
+            return;
+          }
+
+          MediaMetadata md = model.getMetadata();
+
+          // set scraped metadata
+          List<MovieSetScraperMetadataConfig> scraperConfig = cbScraperConfig.getSelectedItems();
+          movieSetToScrape.setMetadata(md, scraperConfig);
+          movieSetToScrape.setDummyMovies(model.getMovieSetMovies());
+
+          // assign movies
+          if (cbAssignMovies.isSelected()) {
+            movieSetToScrape.removeAllMovies();
+            for (int i = 0; i < model.getMovies().size(); i++) {
+              MovieInSet movieInSet = model.getMovies().get(i);
+              Movie movie = movieInSet.getMovie();
+              if (movie == null) {
+                continue;
+              }
+
+              // check if the found movie contains a matching set
+              if (movie.getMovieSet() != null) {
+                // unassign movie from set
+                MovieSet mSet = movie.getMovieSet();
+                mSet.removeMovie(movie, true);
+              }
+
+              movie.setMovieSet(movieSetToScrape);
+              movie.writeNFO();
+              movie.saveToDb();
+              movieSetToScrape.insertMovie(movie);
+            }
+
+            // and finally save assignments
+            movieSetToScrape.saveToDb();
+          }
+
+          // get images?
+          if (ScraperMetadataConfig.containsAnyArtwork(scraperConfig)) {
+            // let the user choose the images
+            if (!MovieModuleManager.getInstance().getSettings().isScrapeBestImageMovieSet()) {
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.POSTER)) {
+                chooseArtwork(MediaFileType.POSTER);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.FANART)) {
+                chooseArtwork(MediaFileType.FANART);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.BANNER)) {
+                chooseArtwork(MediaFileType.BANNER);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARLOGO)) {
+                chooseArtwork(MediaFileType.CLEARLOGO);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.CLEARART)) {
+                chooseArtwork(MediaFileType.CLEARART);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.DISCART)) {
+                chooseArtwork(MediaFileType.DISC);
+              }
+              if (scraperConfig.contains(MovieSetScraperMetadataConfig.THUMB)) {
+                chooseArtwork(MediaFileType.THUMB);
+              }
+              // write artwork urls to the NFO
+              movieSetToScrape.writeNFO();
+            }
+            else {
+              // get artwork asynchronous
+              model.startArtworkScrapeTask(movieSetToScrape, scraperConfig);
+            }
+          }
+        }
+        setVisible(false);
+      }
+    }
+
+    // Abort queue
+    if ("Abort".equals(arg0.getActionCommand())) {
+      continueQueue = false;
+      setVisible(false);
+    }
+  }
+
+  private void chooseArtwork(MediaFileType mediaFileType) {
+    MediaArtwork.MediaArtworkType imageType;
+
+    switch (mediaFileType) {
+      case POSTER:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetPosterFilenames().isEmpty()) {
+          return;
+        }
+        imageType = POSTER;
+        break;
+
+      case FANART:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetFanartFilenames().isEmpty()) {
+          return;
+        }
+        imageType = BACKGROUND;
+        break;
+
+      case BANNER:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetBannerFilenames().isEmpty()) {
+          return;
+        }
+        imageType = BANNER;
+        break;
+
+      case CLEARLOGO:
+      case LOGO:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetClearlogoFilenames().isEmpty()) {
+          return;
+        }
+        imageType = CLEARLOGO;
+        break;
+
+      case CLEARART:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetClearartFilenames().isEmpty()) {
+          return;
+        }
+        imageType = CLEARART;
+        break;
+
+      case DISC:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetDiscartFilenames().isEmpty()) {
+          return;
+        }
+        imageType = DISC;
+        break;
+
+      case THUMB:
+        if (MovieModuleManager.getInstance().getSettings().getMovieSetThumbFilenames().isEmpty()) {
+          return;
+        }
+        imageType = THUMB;
+        break;
+
+      default:
+        return;
+    }
+
+    Map<String, Object> newIds = new HashMap<>(movieSetToScrape.getIds());
+    String imageUrl = ImageChooserDialog.chooseImage(this, newIds, imageType,
+        MovieModuleManager.getInstance().getMovieList().getDefaultArtworkScrapers(), MediaType.MOVIE_SET,
+        MovieModuleManager.getInstance().getSettings().getMovieSetDataFolder());
+
+    movieSetToScrape.setArtworkUrl(imageUrl, mediaFileType);
+  }
+
+  private class ScrapeTask extends SwingWorker<Void, Void> {
+    private final MovieSetChooserModel model;
+
+    ScrapeTask(MovieSetChooserModel model) {
+      this.model = model;
+    }
+
+    @Override
+    public Void doInBackground() {
+      startProgressBar(TmmResourceBundle.getString("chooser.scrapeing") + " " + model.getName());
+
+      // disable ok button as long as its scraping
+      btnOk.setEnabled(false);
+      model.scrapeMetadata();
+      btnOk.setEnabled(true);
+
+      return null;
+    }
+
+    @Override
+    public void done() {
+      stopProgressBar();
+    }
+  }
+
+  private void startProgressBar(final String description) {
+    SwingUtilities.invokeLater(() -> {
+      lblProgressAction.setText(description);
+      progressBar.setVisible(true);
+      progressBar.setIndeterminate(true);
+    });
+  }
+
+  private void stopProgressBar() {
+    SwingUtilities.invokeLater(() -> {
+      lblProgressAction.setText("");
+      progressBar.setVisible(false);
+      progressBar.setIndeterminate(false);
+    });
+  }
+
+  /**
+   * Shows the dialog and returns whether the work on the queue should be continued.
+   * 
+   * @return true, if successful
+   */
+  public boolean showDialog() {
+    setVisible(true);
+    return continueQueue;
+  }
+
+  /**
+   * inner class for representing the result table
+   */
+  private static class SearchResultTableFormat extends TmmTableFormat<MovieSetChooserModel> {
+    private SearchResultTableFormat() {
+      /*
+       * title
+       */
+      Column col = new Column(TmmResourceBundle.getString("chooser.searchresult"), "title", MovieSetChooserModel::getName, String.class);
+      col.setCellTooltip(MovieSetChooserModel::getName);
+      addColumn(col);
+    }
+  }
+
+  /**
+   * inner class for representing the movies in this movie set
+   */
+  private static class MovieInSetTableFormat extends TmmTableFormat<MovieInSet> {
+    public MovieInSetTableFormat() {
+      /*
+       * title
+       */
+      Column col = new Column(TmmResourceBundle.getString("metatag.title"), "title", MovieInSet::getName, String.class);
+      addColumn(col);
+
+      /*
+       * year
+       */
+      col = new Column(TmmResourceBundle.getString("metatag.year"), "year", MovieInSet::getYear, Integer.class);
+      col.setCellRenderer(new IntegerTableCellRenderer());
+      col.setColumnResizeable(false);
+      col.setMinWidth(getFontMetrics().stringWidth("2000") + getCellPadding());
+      addColumn(col);
+
+      /*
+       * matched movie
+       */
+      col = new Column(TmmResourceBundle.getString("movieset.movie.matched"), "machtedTitle", movieInSet -> {
+        Movie movie = movieInSet.getMovie();
+        if (movie != null) {
+          return movie.getTitle();
+        }
+        return null;
+      }, String.class);
+      addColumn(col);
+    }
+  }
+}

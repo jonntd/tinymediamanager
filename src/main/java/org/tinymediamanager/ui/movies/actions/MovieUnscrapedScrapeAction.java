@@ -1,0 +1,76 @@
+/*
+ * Copyright 2012 - 2025 Manuel Laggner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.tinymediamanager.ui.movies.actions;
+
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.util.List;
+
+import javax.swing.KeyStroke;
+
+import org.tinymediamanager.core.TmmResourceBundle;
+import org.tinymediamanager.core.movie.MovieModuleManager;
+import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
+import org.tinymediamanager.core.movie.MovieSearchAndScrapeOptions;
+import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.tasks.MovieScrapeTask;
+import org.tinymediamanager.core.threading.TmmTaskManager;
+import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.ui.IconManager;
+import org.tinymediamanager.ui.MainWindow;
+import org.tinymediamanager.ui.actions.TmmAction;
+import org.tinymediamanager.ui.movies.dialogs.MovieScrapeMetadataDialog;
+
+/**
+ * The MovieUnscrapedScrapeAction - to scrape all unscraped movies
+ * 
+ * @author Manuel Laggner
+ */
+public class MovieUnscrapedScrapeAction extends TmmAction {
+  public MovieUnscrapedScrapeAction() {
+    putValue(NAME, TmmResourceBundle.getString("movie.scrape.unscraped"));
+    putValue(SHORT_DESCRIPTION, TmmResourceBundle.getString("movie.scrape.unscraped.desc"));
+    putValue(SMALL_ICON, IconManager.SEARCH);
+    putValue(LARGE_ICON_KEY, IconManager.SEARCH);
+    putValue(ACCELERATOR_KEY,
+        KeyStroke.getKeyStroke(KeyEvent.VK_A, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() + InputEvent.SHIFT_DOWN_MASK));
+  }
+
+  @Override
+  protected void processAction(ActionEvent e) {
+    List<Movie> unscrapedMovies = MovieModuleManager.getInstance().getMovieList().getUnscrapedMovies();
+    if (!unscrapedMovies.isEmpty()) {
+      MovieScrapeMetadataDialog dialog = new MovieScrapeMetadataDialog(TmmResourceBundle.getString("movie.scrape.unscraped"));
+      dialog.setLocationRelativeTo(MainWindow.getInstance());
+      dialog.setVisible(true);
+
+      // get options from dialog
+      MovieSearchAndScrapeOptions options = dialog.getMovieSearchAndScrapeOptions();
+      List<MovieScraperMetadataConfig> config = dialog.getMovieScraperMetadataConfig();
+      boolean overwrite = dialog.getOverwriteExistingItems();
+
+      // do we want to scrape?
+      if (dialog.shouldStartScrape()) {
+        // scrape
+        TmmThreadPool scrapeTask = new MovieScrapeTask(
+            new MovieScrapeTask.MovieScrapeParams(unscrapedMovies, options, config).setOverwriteExistingItems(overwrite));
+        TmmTaskManager.getInstance().addMainTask(scrapeTask);
+      }
+    }
+  }
+}

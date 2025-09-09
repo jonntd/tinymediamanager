@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+    <link rel="stylesheet" type="text/css" href="./style.css" />
+    <script type="text/javascript">
+     $(document).ready(function() {startUP();});
+    </script>
+    <div id="mainContainer"> 
+${foreach tvShows show}
+      <div id="tvshow_${index_show}" class="Container ">
+        <div class="poster">
+            <img alt="poster" 
+            src="images/${show;copyArtwork(type=POSTER, thumb=true, width=180, escape=true)}" />         
+        </div>
+        <div class="nfoText left">
+          <div class="">
+            <span class="value show">#${index_show} ${show.title}</span>
+          </div>
+          <div class="">
+            <span class="title">Date:</span>
+            <span class="value">${show.year}</span>
+          </div>
+          <div class="show"> 
+            <span class="value">${show.actors[0,1];array}</span>
+          </div>
+          <div class="">
+            <span class="title">Seasons/Episodes:</span>
+            <span class="value">${show.seasonCount} - ${show.episodeCount}</span>
+          </div>   
+          <div class="">
+            <span class="title">Rating:</span>
+            <span class="value">${show.rating} </span>
+          </div>
+          <div class="">
+            <span class="title">Genre(s):</span>
+            <span class="value">${show.genres[0,1];array}</span>
+          </div>          
+          <div class="">
+            <span class="title">Plot:</span>
+            <span class="value">${show.plot}</span>
+          </div>
+        </div>
+      </div>
+${end}
+

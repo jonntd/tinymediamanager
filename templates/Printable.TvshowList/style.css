@@ -1,0 +1,57 @@
+body {
+    width: 1245px;
+    height:3508px;
+    background-color: #ffffff;
+    color: #000000;
+    font-family: 'Lato', sans-serif;
+    font-size: 10px;
+}
+
+#mainContainer {
+    padding-top:5px;
+    display: block;
+    width: 1260px;
+
+}
+.Container {
+    float: left;
+    width: 400px;
+    height: 282px;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    overflow: auto;  
+}
+
+.show {
+    font-size: 10px;
+    color: #FF00FF;
+}
+
+.Container .poster {
+    padding-top:15px;
+    display: block;
+    float: right;
+    height: 250px;
+    width: 178px;
+
+}
+
+.title {
+    display: inline-block;
+    padding-right:5px;
+    color: #009933;
+}
+
+.nfoText {     
+    width: 210px;
+    min-width:210px;
+    padding-left: 5px;
+    padding-top: 5px;
+    height: 245px;
+    color: #000000
+}
+             
+.left {text-align: left;}
+.right{text-align: right;}
+.center{text-align: center;}
+

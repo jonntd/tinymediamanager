@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- removes the status log lines from logback startup -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+    
+    <!-- https://logback.qos.ch/manual/appenders.html -->
+
+    <!-- we log to three different locations:
+        1) the console (for CMD and IDE) -> INFO in CMD and DEBUG in IDE
+        2) a log file (INFO)
+        3) a memory appender for providing more logs in case of bug reporting (TRACE)
+    -->
+    <property name="logfolder" value="logs"/>
+	<timestamp key="bySecond" datePattern="yyyyMMdd-HHmmss"/>
+
+    <if condition='isDefined("tmm.logfolder")'>
+        <then>
+            <property name="logfolder" value="${tmm.logfolder}"/>
+        </then>
+    </if>
+    <if condition='isDefined("tmm.contentfolder")'>
+        <then>
+            <property name="logfolder" value="${tmm.contentfolder}/logs"/>
+        </then>
+    </if>
+
+    <!-- console appender; mainly for CMD and for the IDE -->
+    <!-- in the CMD the log level is reduced by the JVM arg -Dtmm.consoleloglevel=INFO -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <encoder>
+            <pattern>%d{ISO8601} %-5level [%thread] %logger{40}:%L - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- file appender - INFO and above -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+        <file>${logfolder}/tmm.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{ISO8601} %-5level [%thread] %logger{40}:%L - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${logfolder}/tmm.%d.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>80MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>500</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <appender-ref ref="FILE"/>
+    </appender>
+
+    <!-- file appender - for our trace logging; instead of InMemory keep a logfile per session -->
+    <appender name="FILE_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>TRACE</level>
+        </filter>
+        <file>${logfolder}/trace-${bySecond}.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%d{ISO8601} %-5level [%thread] %logger{40}:%L - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${logfolder}/trace.%d.%i.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>2</maxHistory>
+            <totalSizeCap>150MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+    <appender name="ASYNC_TRACE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>5000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <appender-ref ref="FILE_TRACE"/>
+    </appender>
+
+    <appender name="FILE_STARTUP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>TRACE</level>
+        </filter>
+        <file>${logfolder}/startup.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{ISO8601} %-5level [%thread] %logger{40}:%L - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${logfolder}/startup.%i.log.gz</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>2</maxIndex>
+        </rollingPolicy>
+
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>15MB</maxFileSize>
+        </triggeringPolicy>
+    </appender>
+    <appender name="STARTUP" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <appender-ref ref="FILE_STARTUP"/>
+    </appender>
+
+    <!-- default settings -->
+    <logger name="org.tinymediamanager" level="TRACE"/>
+
+    <!-- appender activation -->
+    <root>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ASYNC_TRACE"/>
+        <appender-ref ref="STARTUP"/>
+    </root>
+
+</configuration>

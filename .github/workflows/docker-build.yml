@@ -1,0 +1,1054 @@
+name: Docker Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Target platforms'
+        required: true
+        default: 'linux/amd64,linux/arm64'
+        type: choice
+        options:
+        - linux/amd64
+        - linux/arm64
+        - linux/amd64,linux/arm64
+  workflow_run:
+    workflows: ["Multi-Platform CI/CD Pipeline"]
+    types: [completed]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 清理旧的Docker版本
+  cleanup-docker-versions:
+    name: Cleanup Docker Versions
+    uses: ./.github/workflows/delete-all-docker-versions.yml
+    with:
+      keep_latest: false
+
+  # 检查构建环境
+  check-environment:
+    name: Check Environment
+    runs-on: ubuntu-latest
+    needs: cleanup-docker-versions
+    outputs:
+      has-upstream-artifacts: ${{ steps.check.outputs.has-upstream }}
+      build-type: ${{ steps.check.outputs.build-type }}
+      should-build: ${{ steps.check.outputs.should-build }}
+      version: ${{ steps.version.outputs.version }}
+      image-tags: ${{ steps.version.outputs.image-tags }}
+      is-release: ${{ steps.version.outputs.is-release }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK for version extraction
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Extract version information
+      id: version
+      run: |
+        echo "🔍 提取版本信息..."
+        echo "🔍 事件类型: ${{ github.event_name }}"
+        echo "🔍 GitHub Ref: ${{ github.ref }}"
+        echo "🔍 Repository: ${{ github.repository }}"
+
+        # 动态版本策略，使用基于Maven版本和commit的版本号
+        echo "📋 获取版本信息..."
+        MAVEN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null || echo "unknown")
+        echo "📋 Maven版本: $MAVEN_VERSION"
+
+        # 分析构建上下文
+        echo "📊 分析构建上下文..."
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+        BUILD_DATE=$(date +%Y%m%d-%H%M%S)
+
+        # 确定版本策略
+        IS_DEVEL_BUILD=false
+        IS_TAG_BUILD=false
+        RELEASE_VERSION=""
+
+        # 检查是否是tag构建
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          IS_TAG_BUILD=true
+          RELEASE_VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "🏷️ Tag构建版本: $RELEASE_VERSION"
+        elif [[ "${{ github.ref }}" == refs/heads/devel || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          IS_DEVEL_BUILD=true
+          echo "🚀 Devel分支构建"
+        else
+          echo "🔄 其他分支构建: ${{ github.ref }}"
+        fi
+
+        # 构造版本号
+        if [ "$IS_TAG_BUILD" = true ]; then
+          # Tag构建：使用清洁的版本号
+          VERSION="$RELEASE_VERSION"
+          IMAGE_TAGS="$RELEASE_VERSION"
+          echo "🏷️ Tag版本标签: $IMAGE_TAGS"
+        else
+          # 其他构建：使用commit信息
+          BASE_VERSION="${MAVEN_VERSION%-SNAPSHOT}"
+          VERSION="${BASE_VERSION}-${SHORT_SHA}"
+          IMAGE_TAGS="devel"
+
+          # 对于devel构建，也考虑添加时间戳
+          if [ "$IS_DEVEL_BUILD" = true ]; then
+            IMAGE_TAGS="$IMAGE_TAGS,dev-${SHORT_SHA}"
+          fi
+
+          echo "🏷️ Devel版本标签: $IMAGE_TAGS"
+        fi
+
+        # 设置输出变量
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "image-tags=$IMAGE_TAGS" >> $GITHUB_OUTPUT
+        echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+        echo "build-date=$BUILD_DATE" >> $GITHUB_OUTPUT
+        echo "📋 最终版本: $VERSION"
+        echo "🏷️ 镜像标签: $IMAGE_TAGS"
+
+    - name: Check for upstream artifacts
+      id: check
+      run: |
+        echo "🔍 检查构建环境..."
+
+        # 检查是否应该构建（只要有上游编译完成就构建）
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          echo "🔍 workflow_run事件详情："
+          echo "  工作流名称: ${{ github.event.workflow_run.name }}"
+          echo "  工作流结论: ${{ github.event.workflow_run.conclusion }}"
+          echo "  工作流状态: ${{ github.event.workflow_run.status }}"
+          echo "  头分支: ${{ github.event.workflow_run.head_branch }}"
+          echo "  头SHA: ${{ github.event.workflow_run.head_sha }}"
+          echo "  事件: ${{ github.event.workflow_run.event }}"
+
+          if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+            # 只要有成功的上游编译完成就构建Docker镜像
+            echo "should-build=true" >> $GITHUB_OUTPUT
+            echo "has-upstream=true" >> $GITHUB_OUTPUT
+            echo "build-type=auto" >> $GITHUB_OUTPUT
+            echo "✅ 上游CI工作流完成，开始Docker构建"
+          else
+            echo "should-build=false" >> $GITHUB_OUTPUT
+            echo "has-upstream=false" >> $GITHUB_OUTPUT
+            echo "build-type=none" >> $GITHUB_OUTPUT
+            echo "❌ 上游工作流未完成，跳过构建"
+          fi
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "should-build=true" >> $GITHUB_OUTPUT
+          echo "has-upstream=false" >> $GITHUB_OUTPUT
+          echo "build-type=local" >> $GITHUB_OUTPUT
+          echo "✅ 手动触发构建"
+        else
+          echo "should-build=false" >> $GITHUB_OUTPUT
+          echo "has-upstream=false" >> $GITHUB_OUTPUT
+          echo "build-type=none" >> $GITHUB_OUTPUT
+          echo "⚠️ 未知触发源，跳过构建"
+          echo "ℹ️ 只支持标签触发的CI完成后构建或手动触发"
+        fi
+
+  # 构建 AMD64 Docker 镜像
+  docker-build-amd64:
+    name: Build Docker Image (AMD64)
+    runs-on: ubuntu-latest
+    needs: check-environment
+    # 只在明确需要构建时执行（防止重复触发）
+    if: needs.check-environment.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref || 'devel') }}
+
+    - name: Download Linux AMD64 artifact (from upstream workflow)
+      if: needs.check-environment.outputs.has-upstream-artifacts == 'true' && github.event.workflow_run.conclusion == 'success'
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        run-id: ${{ github.event.workflow_run.id }}
+        pattern: "tinymediamanager-linux-amd64*"
+        path: artifacts
+
+    - name: Download Linux AMD64 artifact (from current workflow)
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        pattern: "tinymediamanager-linux-amd64*"
+        path: artifacts
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+    - name: Prepare Docker context
+      run: |
+        echo "🏗️ Preparing Docker context for AMD64..."
+        mkdir -p target/docker
+
+        # 调试信息
+        echo "📁 当前工作目录: $(pwd)"
+        echo "📁 src/docker目录内容:"
+        ls -la src/docker/
+        echo "📁 当前目录所有文件:"
+        find . -name "*Dockerfile*" -type f
+
+        # 显示下载的构建产物
+        echo "📁 下载的构建产物:"
+        ls -la . | grep -E "(tinyMediaManager|tinymediamanager)" || echo "未找到构建产物目录"
+
+        # 检查是否有构建产物
+        HAS_ARTIFACTS=false
+
+        # 首先检查是否有下载的构建产物目录（GitHub Actions download-artifact 会创建目录）
+        ARTIFACT_DIRS=$(find . -maxdepth 1 -type d -name "*linux*amd64*" -o -name "*tinymediamanager*amd64*" -o -name "tinymediamanager-linux-amd64*" | head -5)
+        echo "🔍 查找构件目录结果: $ARTIFACT_DIRS"
+
+        if [ -n "$ARTIFACT_DIRS" ]; then
+          echo "📦 找到构建产物目录:"
+          echo "$ARTIFACT_DIRS"
+
+          # 处理第一个找到的目录
+          ARTIFACT_DIR=$(echo "$ARTIFACT_DIRS" | head -1)
+          echo "📂 处理目录: $ARTIFACT_DIR"
+
+          # 显示目录内容
+          echo "📁 目录内容:"
+          ls -la "$ARTIFACT_DIR"
+
+          # 查找目录中的构建产物文件
+          BUILD_FILES=$(find "$ARTIFACT_DIR" -type f \( \
+            -name "*.tar.xz" -o \
+            -name "*.tar.gz" -o \
+            -name "*.zip" -o \
+            -name "*tinyMediaManager*" \
+          \) | head -10)
+          echo "🔍 在构件目录中查找文件结果: $BUILD_FILES"
+
+          if [ -n "$BUILD_FILES" ]; then
+            echo "✅ 找到构建产物文件:"
+            echo "$BUILD_FILES"
+
+            # 处理第一个找到的文件
+            BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+            echo "📦 处理文件: $BUILD_FILE"
+
+            # 创建目标目录
+            mkdir -p target/docker
+
+            # 根据文件类型处理
+            case "$BUILD_FILE" in
+              *.tar.xz)
+                echo "📦 解压 tar.xz 文件: $BUILD_FILE"
+                tar xJf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.xz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.tar.gz)
+                echo "📦 解压 tar.gz 文件: $BUILD_FILE"
+                tar xzf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.gz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.zip)
+                echo "📦 解压 zip 文件: $BUILD_FILE"
+                unzip -q "$BUILD_FILE" -d target/docker/ || {
+                  echo "❌ zip 解压失败"
+                  exit 1
+                }
+                ;;
+              *)
+                echo "📋 直接复制文件: $BUILD_FILE"
+                mkdir -p target/docker/tinyMediaManager
+                cp "$BUILD_FILE" target/docker/tinyMediaManager/
+                ;;
+            esac
+
+            HAS_ARTIFACTS=true
+          else
+            echo "⚠️ 目录中未找到可识别的构建产物文件"
+            echo "📁 尝试直接复制整个目录内容..."
+
+            # 如果没有找到特定文件，尝试复制整个目录
+            if [ -d "$ARTIFACT_DIR" ]; then
+              mkdir -p target/docker
+              cp -r "$ARTIFACT_DIR"/* target/docker/ 2>/dev/null || {
+                echo "⚠️ 直接复制失败"
+                exit 1
+              }
+
+              # 检查是否成功复制了 tinyMediaManager 目录
+              if [ -d "target/docker/tinyMediaManager" ]; then
+                echo "✅ 成功复制构建产物目录"
+                HAS_ARTIFACTS=true
+              else
+                echo "❌ 未能找到 tinyMediaManager 目录"
+                echo "📁 target/docker 目录内容:"
+                ls -la target/docker/
+                exit 1
+              fi
+            else
+              echo "❌ 构件目录不存在"
+              exit 1
+            fi
+          fi
+        else
+          echo "⚠️ 未找到构建产物目录，检查 artifacts 目录..."
+
+          # 检查传统的 artifacts 目录
+          if [ -d "artifacts" ]; then
+            echo "📦 处理 artifacts 目录..."
+            cd artifacts
+            echo "📁 artifacts 目录内容:"
+            ls -la .
+
+            # 查找所有可能的构建产物
+            echo "🔍 查找AMD64构建产物..."
+            BUILD_FILES=$(find . -type f \( \
+              -name "*linux*amd64*" -o \
+              -name "*amd64*linux*" -o \
+              -name "*tinymediamanager*amd64*" -o \
+              -name "*tinymediamanager*linux*amd64*" -o \
+              -name "tinymediamanager-linux-amd64*" \
+            \) | head -10)
+            echo "🔍 在artifacts目录中查找文件结果: $BUILD_FILES"
+
+            if [ -n "$BUILD_FILES" ]; then
+              echo "✅ 找到构建产物:"
+              echo "$BUILD_FILES"
+
+              # 处理第一个找到的文件
+              BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+              echo "📦 处理文件: $BUILD_FILE"
+
+              # 创建目标目录
+              mkdir -p ../target/docker/tinyMediaManager
+
+              # 根据文件类型处理
+              case "$BUILD_FILE" in
+                *.tar.*)
+                  echo "📦 解压 tar 文件: $BUILD_FILE"
+                  tar xf "$BUILD_FILE" -C ../target/docker/ || {
+                    echo "❌ tar 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *.zip)
+                  echo "📦 解压 zip 文件: $BUILD_FILE"
+                  unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                    echo "❌ zip 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *)
+                  echo "📋 直接复制文件: $BUILD_FILE"
+                  cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                  ;;
+              esac
+
+              cd ..
+              HAS_ARTIFACTS=true
+            else
+              echo "❌ artifacts 目录中未找到上游构建产物"
+              cd ..
+              exit 1
+            fi
+          else
+            echo "❌ 无上游构建产物，无法继续构建"
+            exit 1
+          fi
+        fi
+
+        # 验证构建产物是否存在
+        if [ "$HAS_ARTIFACTS" = "false" ]; then
+          echo "❌ 未能成功处理构建产物"
+          exit 1
+        fi
+
+        # 显示最终目录结构
+        echo "📁 最终目录结构:"
+        find target/docker -type f
+
+        # 验证tinyMediaManager目录是否存在
+        if [ ! -d "target/docker/tinyMediaManager" ]; then
+          echo "❌ 未找到 tinyMediaManager 目录"
+          echo "💡 请检查构件是否正确下载和处理"
+          echo "💡 可能的原因："
+          echo "   1. 上游工作流未提供正确的构件"
+          echo "   2. 构件名称与预期不匹配"
+          echo "   3. 构件下载失败"
+          echo "   4. 构件解压或处理失败"
+          exit 1
+        fi
+
+        # 验证tinyMediaManager二进制文件是否存在（支持架构特定命名）
+        if [ -f "target/docker/tinyMediaManager/tinyMediaManager" ]; then
+          echo "✅ 找到 tinyMediaManager 二进制文件"
+        elif [ -f "target/docker/tinyMediaManager/tinyMediaManager-arm" ]; then
+          echo "🔄 重命名 ARM64 二进制文件: tinyMediaManager-arm -> tinyMediaManager"
+          mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+          echo "✅ ARM64 二进制文件重命名完成"
+        elif [ -f "target/docker/tinyMediaManager/tinyMediaManager-amd64" ]; then
+          echo "🔄 重命名 AMD64 二进制文件: tinyMediaManager-amd64 -> tinyMediaManager"
+          mv target/docker/tinyMediaManager/tinyMediaManager-amd64 target/docker/tinyMediaManager/tinyMediaManager
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+          echo "✅ AMD64 二进制文件重命名完成"
+        else
+          echo "❌ 未找到 tinyMediaManager 二进制文件"
+          echo "📁 tinyMediaManager 目录内容:"
+          ls -la target/docker/tinyMediaManager/
+          echo "💡 请检查构件是否包含正确的二进制文件"
+          exit 1
+        fi
+
+        echo "✅ 构件处理完成，准备构建Docker镜像"
+
+        # 复制Dockerfile
+        if [ -f "src/docker/Dockerfile.amd64" ]; then
+          cp src/docker/Dockerfile.amd64 target/docker/Dockerfile
+          echo "✅ 成功复制Dockerfile.amd64"
+        else
+          echo "❌ 无法找到src/docker/Dockerfile.amd64"
+          echo "📁 src/docker目录内容:"
+          ls -la src/docker/
+          exit 1
+        fi
+
+        # 二进制文件重命名将在验证步骤中统一处理
+
+        echo "✅ Docker上下文准备完成"
+        echo "📁 最终目录结构:"
+        find target/docker -type f
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push AMD64 image
+      uses: docker/build-push-action@v5
+      with:
+        context: target/docker
+        file: target/docker/Dockerfile
+        platforms: linux/amd64
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-environment.outputs.version }}-amd64
+        labels: |
+          org.opencontainers.image.title=tinyMediaManager
+          org.opencontainers.image.description=A comprehensive media management tool for organizing and managing your movie and TV show collections. Features automatic metadata fetching, artwork downloading, and extensive customization options.
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.url=https://www.tinymediamanager.org
+          org.opencontainers.image.documentation=https://www.tinymediamanager.org/docs/docker
+          org.opencontainers.image.licenses=Apache-2.0
+          org.opencontainers.image.vendor=tinyMediaManager
+          org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ needs.check-environment.outputs.version }}
+
+  # 构建 ARM64 Docker 镜像
+  docker-build-arm64:
+    name: Build Docker Image (ARM64)
+    runs-on: ubuntu-latest
+    needs: check-environment
+    # 只在明确需要构建时执行（防止重复触发）
+    if: needs.check-environment.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref || 'devel') }}
+
+    - name: Download Linux ARM64 artifact (from upstream workflow)
+      if: needs.check-environment.outputs.has-upstream-artifacts == 'true' && github.event.workflow_run.conclusion == 'success'
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        run-id: ${{ github.event.workflow_run.id }}
+        pattern: "tinymediamanager-linux-arm64*"
+        path: artifacts
+
+    - name: Download Linux ARM64 artifact (from current workflow)
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GHCR_PAT }}
+        pattern: "tinymediamanager-linux-arm64*"
+        path: artifacts
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+    - name: Prepare Docker context
+      run: |
+        echo "🏗️ Preparing Docker context for ARM64..."
+        mkdir -p target/docker
+
+        # 调试信息
+        echo "📁 当前工作目录: $(pwd)"
+        echo "📁 src/docker目录内容:"
+        ls -la src/docker/
+        echo "📁 当前目录所有文件:"
+        find . -name "*Dockerfile*" -type f
+
+        # 显示下载的构建产物
+        echo "📁 下载的构建产物:"
+        ls -la . | grep -E "(tinyMediaManager|tinymediamanager)" || echo "未找到构建产物目录"
+
+        # 检查是否有构建产物
+        HAS_ARTIFACTS=false
+
+        # 首先检查是否有下载的构建产物目录（GitHub Actions download-artifact 会创建目录）
+        ARTIFACT_DIRS=$(find . -maxdepth 1 -type d -name "*linux*arm64*" -o -name "*tinymediamanager*arm64*" -o -name "tinymediamanager-linux-arm64*" | head -5)
+        echo "🔍 查找构件目录结果: $ARTIFACT_DIRS"
+
+        if [ -n "$ARTIFACT_DIRS" ]; then
+          echo "📦 找到构建产物目录:"
+          echo "$ARTIFACT_DIRS"
+
+          # 处理第一个找到的目录
+          ARTIFACT_DIR=$(echo "$ARTIFACT_DIRS" | head -1)
+          echo "📂 处理目录: $ARTIFACT_DIR"
+
+          # 显示目录内容
+          echo "📁 目录内容:"
+          ls -la "$ARTIFACT_DIR"
+
+          # 查找目录中的构建产物文件
+          BUILD_FILES=$(find "$ARTIFACT_DIR" -type f \( \
+            -name "*.tar.xz" -o \
+            -name "*.tar.gz" -o \
+            -name "*.zip" -o \
+            -name "*tinyMediaManager*" \
+          \) | head -10)
+          echo "🔍 在构件目录中查找文件结果: $BUILD_FILES"
+
+          if [ -n "$BUILD_FILES" ]; then
+            echo "✅ 找到构建产物文件:"
+            echo "$BUILD_FILES"
+
+            # 处理第一个找到的文件
+            BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+            echo "📦 处理文件: $BUILD_FILE"
+
+            # 创建目标目录
+            mkdir -p target/docker
+
+            # 根据文件类型处理
+            case "$BUILD_FILE" in
+              *.tar.xz)
+                echo "📦 解压 tar.xz 文件: $BUILD_FILE"
+                tar xJf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.xz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.tar.gz)
+                echo "📦 解压 tar.gz 文件: $BUILD_FILE"
+                tar xzf "$BUILD_FILE" -C target/docker/ || {
+                  echo "❌ tar.gz 解压失败"
+                  exit 1
+                }
+                ;;
+              *.zip)
+                echo "📦 解压 zip 文件: $BUILD_FILE"
+                unzip -q "$BUILD_FILE" -d target/docker/ || {
+                  echo "❌ zip 解压失败"
+                  exit 1
+                }
+                ;;
+              *)
+                echo "📋 直接复制文件: $BUILD_FILE"
+                mkdir -p target/docker/tinyMediaManager
+                cp "$BUILD_FILE" target/docker/tinyMediaManager/
+                ;;
+            esac
+
+            HAS_ARTIFACTS=true
+          else
+            echo "⚠️ 目录中未找到可识别的构建产物文件"
+            echo "📁 尝试直接复制整个目录内容..."
+
+            # 如果没有找到特定文件，尝试复制整个目录
+            if [ -d "$ARTIFACT_DIR" ]; then
+              mkdir -p target/docker
+              cp -r "$ARTIFACT_DIR"/* target/docker/ 2>/dev/null || {
+                echo "⚠️ 直接复制失败"
+                exit 1
+              }
+
+              # 检查是否成功复制了 tinyMediaManager 目录
+              if [ -d "target/docker/tinyMediaManager" ]; then
+                echo "✅ 成功复制构建产物目录"
+                HAS_ARTIFACTS=true
+              else
+                echo "❌ 未能找到 tinyMediaManager 目录"
+                echo "📁 target/docker 目录内容:"
+                ls -la target/docker/
+                exit 1
+              fi
+            else
+              echo "❌ 构件目录不存在"
+              exit 1
+            fi
+          fi
+        else
+          echo "⚠️ 未找到构建产物目录，检查 artifacts 目录..."
+
+          # 检查传统的 artifacts 目录
+          if [ -d "artifacts" ]; then
+            echo "📦 处理 artifacts 目录..."
+            cd artifacts
+            echo "📁 artifacts 目录内容:"
+            ls -la .
+
+            # 查找所有可能的构建产物
+            echo "🔍 查找ARM64构建产物..."
+            BUILD_FILES=$(find . -type f \( \
+              -name "*linux*arm64*" -o \
+              -name "*arm64*linux*" -o \
+              -name "*tinymediamanager*arm64*" -o \
+              -name "*tinymediamanager*linux*arm64*" -o \
+              -name "tinymediamanager-linux-arm64*" \
+            \) | head -10)
+            echo "🔍 在artifacts目录中查找文件结果: $BUILD_FILES"
+
+            if [ -n "$BUILD_FILES" ]; then
+              echo "✅ 找到构建产物:"
+              echo "$BUILD_FILES"
+
+              # 处理第一个找到的文件
+              BUILD_FILE=$(echo "$BUILD_FILES" | head -1)
+              echo "📦 处理文件: $BUILD_FILE"
+
+              # 创建目标目录
+              mkdir -p ../target/docker/tinyMediaManager
+
+              # 根据文件类型处理
+              case "$BUILD_FILE" in
+                *.tar.*)
+                  echo "📦 解压 tar 文件: $BUILD_FILE"
+                  tar xf "$BUILD_FILE" -C ../target/docker/ || {
+                    echo "❌ tar 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *.zip)
+                  echo "📦 解压 zip 文件: $BUILD_FILE"
+                  unzip -q "$BUILD_FILE" -d ../target/docker/ || {
+                    echo "❌ zip 解压失败"
+                    exit 1
+                  }
+                  ;;
+                *)
+                  echo "📋 直接复制文件: $BUILD_FILE"
+                  cp "$BUILD_FILE" ../target/docker/tinyMediaManager/
+                  ;;
+              esac
+
+              cd ..
+              HAS_ARTIFACTS=true
+            else
+              echo "❌ artifacts 目录中未找到上游构建产物"
+              cd ..
+              exit 1
+            fi
+          else
+            echo "❌ 无上游构建产物，无法继续构建"
+            exit 1
+          fi
+        fi
+
+        # 验证构建产物是否存在
+        if [ "$HAS_ARTIFACTS" = "false" ]; then
+          echo "❌ 未能成功处理构建产物"
+          exit 1
+        fi
+
+        # 显示最终目录结构
+        echo "📁 最终目录结构:"
+        find target/docker -type f
+
+        # 验证tinyMediaManager目录是否存在
+        if [ ! -d "target/docker/tinyMediaManager" ]; then
+          echo "❌ 未找到 tinyMediaManager 目录"
+          echo "💡 请检查构件是否正确下载和处理"
+          echo "💡 可能的原因："
+          echo "   1. 上游工作流未提供正确的构件"
+          echo "   2. 构件名称与预期不匹配"
+          echo "   3. 构件下载失败"
+          echo "   4. 构件解压或处理失败"
+          exit 1
+        fi
+
+        # 验证tinyMediaManager二进制文件是否存在（支持架构特定命名）
+        if [ -f "target/docker/tinyMediaManager/tinyMediaManager" ]; then
+          echo "✅ 找到 tinyMediaManager 二进制文件"
+        elif [ -f "target/docker/tinyMediaManager/tinyMediaManager-arm" ]; then
+          echo "🔄 重命名 ARM64 二进制文件: tinyMediaManager-arm -> tinyMediaManager"
+          mv target/docker/tinyMediaManager/tinyMediaManager-arm target/docker/tinyMediaManager/tinyMediaManager
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+          echo "✅ ARM64 二进制文件重命名完成"
+        elif [ -f "target/docker/tinyMediaManager/tinyMediaManager-amd64" ]; then
+          echo "🔄 重命名 AMD64 二进制文件: tinyMediaManager-amd64 -> tinyMediaManager"
+          mv target/docker/tinyMediaManager/tinyMediaManager-amd64 target/docker/tinyMediaManager/tinyMediaManager
+          chmod +x target/docker/tinyMediaManager/tinyMediaManager
+          echo "✅ AMD64 二进制文件重命名完成"
+        else
+          echo "❌ 未找到 tinyMediaManager 二进制文件"
+          echo "📁 tinyMediaManager 目录内容:"
+          ls -la target/docker/tinyMediaManager/
+          echo "💡 请检查构件是否包含正确的二进制文件"
+          exit 1
+        fi
+
+        echo "✅ 构件处理完成，准备构建Docker镜像"
+
+        # 复制Dockerfile
+        if [ -f "src/docker/Dockerfile.arm64" ]; then
+          cp src/docker/Dockerfile.arm64 target/docker/Dockerfile
+          echo "✅ 成功复制Dockerfile.arm64"
+        else
+          echo "❌ 无法找到src/docker/Dockerfile.arm64"
+          echo "📁 src/docker目录内容:"
+          ls -la src/docker/
+          exit 1
+        fi
+
+        # 二进制文件重命名将在验证步骤中统一处理
+
+        echo "✅ Docker上下文准备完成"
+        echo "📁 最终目录结构:"
+        find target/docker -type f
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push ARM64 image
+      uses: docker/build-push-action@v5
+      with:
+        context: target/docker
+        file: target/docker/Dockerfile
+        platforms: linux/arm64
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-environment.outputs.version }}-arm64
+        labels: |
+          org.opencontainers.image.title=tinyMediaManager
+          org.opencontainers.image.description=A comprehensive media management tool for organizing and managing your movie and TV show collections. Features automatic metadata fetching, artwork downloading, and extensive customization options.
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.url=https://www.tinymediamanager.org
+          org.opencontainers.image.documentation=https://www.tinymediamanager.org/docs/docker
+          org.opencontainers.image.licenses=Apache-2.0
+          org.opencontainers.image.vendor=tinyMediaManager
+          org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ needs.check-environment.outputs.version }}
+
+  # 创建多架构manifest
+  create-manifest:
+    name: Create Multi-Architecture Manifest
+    runs-on: ubuntu-latest
+    needs: [check-environment, docker-build-amd64, docker-build-arm64]
+    if: |
+      always() && (
+        needs.docker-build-amd64.result == 'success' ||
+        needs.docker-build-arm64.result == 'success'
+      )
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_PAT }}
+
+    - name: Create and push manifest
+      run: |
+        echo "🐳 创建多架构manifest..."
+        VERSION="${{ needs.check-environment.outputs.version }}"
+        IS_RELEASE="${{ needs.check-environment.outputs.is-release }}"
+
+        echo "📋 版本: $VERSION"
+        echo "🏷️ 是否正式版本: $IS_RELEASE"
+
+        # 检查镜像存在的函数
+        check_image_exists() {
+          local image_name="$1"
+          local max_retries=3
+          local retry_count=0
+          
+          echo "🔍 检查镜像: $image_name"
+          
+          while [ $retry_count -lt $max_retries ]; do
+            if docker manifest inspect "$image_name" >/dev/null 2>&1; then
+              echo "✅ 镜像存在: $image_name"
+              return 0
+            else
+              retry_count=$((retry_count + 1))
+              if [ $retry_count -lt $max_retries ]; then
+                echo "⚠️ 镜像检查失败，重试 $retry_count/$max_retries..."
+                sleep 5
+              fi
+            fi
+          done
+          
+          echo "❌ 镜像不存在或无法访问: $image_name"
+          return 1
+        }
+
+        # 检查并拉取各个架构的镜像
+        echo "📥 检查架构特定镜像..."
+        AMD64_EXISTS=false
+        ARM64_EXISTS=false
+
+        if check_image_exists "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-amd64"; then
+          AMD64_EXISTS=true
+        fi
+
+        if check_image_exists "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-arm64"; then
+          ARM64_EXISTS=true
+        fi
+
+        # 创建manifest的函数
+        create_and_push_manifest() {
+          local manifest_name="$1"
+          local amd64_image="$2"
+          local arm64_image="$3"
+          local max_retries=3
+          local retry_count=0
+          
+          echo "🚀 创建多架构版本manifest: $manifest_name"
+          
+          while [ $retry_count -lt $max_retries ]; do
+            # 清理可能存在的旧manifest
+            docker manifest rm "$manifest_name" 2>/dev/null || true
+            
+            # 检查镜像是否存在
+            if ! docker manifest inspect "$amd64_image" >/dev/null 2>&1; then
+              echo "❌ AMD64镜像不存在: $amd64_image"
+              return 1
+            fi
+            
+            if ! docker manifest inspect "$arm64_image" >/dev/null 2>&1; then
+              echo "❌ ARM64镜像不存在: $arm64_image"
+              return 1
+            fi
+            
+            echo "✅ 两个架构镜像都存在"
+            
+            # 使用buildx imagetools创建manifest（更robust的方法）
+            echo "🔄 使用buildx创建manifest..."
+            if docker buildx imagetools create \
+              --tag "$manifest_name" \
+              "$amd64_image" \
+              "$arm64_image" 2>/dev/null; then
+              echo "✅ 多架构版本manifest创建成功"
+              return 0
+            else
+              echo "⚠️ buildx方法失败，尝试传统方法..."
+              
+              # 尝试传统manifest方法
+              if docker manifest create --amend "$manifest_name" \
+                "$amd64_image" \
+                "$arm64_image"; then
+                
+                echo "📤 推送manifest: $manifest_name"
+                if docker manifest push "$manifest_name"; then
+                  echo "✅ 多架构版本manifest推送成功"
+                  return 0
+                else
+                  echo "⚠️ manifest推送失败"
+                fi
+              else
+                echo "⚠️ manifest创建失败"
+              fi
+            fi
+            
+            retry_count=$((retry_count + 1))
+            if [ $retry_count -lt $max_retries ]; then
+              echo "🔄 重试 $retry_count/$max_retries..."
+              sleep 15
+              # 清理Docker缓存
+              docker system prune -f --volumes 2>/dev/null || true
+            fi
+          done
+          
+          echo "❌ manifest创建和推送最终失败"
+          return 1
+        }
+
+        # 优雅降级处理函数
+        handle_single_architecture() {
+          local arch="$1"
+          local image_name="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
+          local source_image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-${arch}"
+          
+          echo "🏷️ 只有${arch}架构镜像，创建兼容版本: $VERSION"
+          
+          # 创建manifest（单架构）
+          if docker manifest create "$image_name" "$source_image" && \
+             docker manifest annotate "$image_name" "$source_image" \
+               --annotation "org.opencontainers.image.description=A comprehensive media management tool for organizing and managing your movie and TV show collections. Features automatic metadata fetching, artwork downloading, and extensive customization options." && \
+             docker manifest push "$image_name"; then
+            echo "✅ 单架构版本manifest创建成功: $arch"
+            return 0
+          else
+            echo "❌ 单架构版本manifest创建失败: $arch"
+            return 1
+          fi
+        }
+
+        # 根据可用架构创建manifest（优雅降级）
+        if [ "$AMD64_EXISTS" = true ] && [ "$ARM64_EXISTS" = true ]; then
+          if ! create_and_push_manifest "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" \
+               "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-amd64" \
+               "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-arm64"; then
+            echo "❌ 多架构版本manifest创建失败"
+            exit 1
+          fi
+        elif [ "$AMD64_EXISTS" = true ]; then
+          if ! handle_single_architecture "amd64"; then
+            exit 1
+          fi
+        elif [ "$ARM64_EXISTS" = true ]; then
+          if ! handle_single_architecture "arm64"; then
+            exit 1
+          fi
+        else
+          echo "❌ 没有找到任何架构的镜像，跳过manifest创建"
+          echo "💡 请检查以下可能的原因："
+          echo "   1. 构件处理失败，未成功构建架构特定镜像"
+          echo "   2. Docker构建步骤失败"
+          echo "   3. 网络问题导致镜像推送失败"
+          echo "   4. 权限问题导致无法访问容器注册表"
+          exit 1
+        fi
+
+        # 单架构latest处理函数
+        handle_single_architecture_for_latest() {
+          local arch="$1"
+          local image_name="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          local source_image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-${arch}"
+          
+          if docker manifest create "$image_name" "$source_image" && \
+             docker manifest annotate "$image_name" "$source_image" \
+               --annotation "org.opencontainers.image.description=A comprehensive media management tool for organizing and managing your movie and TV show collections. Features automatic metadata fetching, artwork downloading, and extensive customization options." && \
+             docker manifest push "$image_name"; then
+            echo "✅ latest标签创建成功: $arch"
+            return 0
+          else
+            return 1
+          fi
+        }
+
+        # 创建latest标签的函数
+        create_latest_manifest() {
+          local max_retries=3
+          local retry_count=0
+          
+          echo "🏷️ 更新latest标签..."
+          
+          while [ $retry_count -lt $max_retries ]; do
+            retry_count=$((retry_count + 1))
+            echo "🔄 第 $retry_count 次尝试更新latest标签..."
+            
+            # 清理可能存在的旧latest manifest
+            docker manifest rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>/dev/null || true
+            
+            # 清理Docker缓存
+            docker system prune -f --volumes 2>/dev/null || true
+            
+            if [ "$AMD64_EXISTS" = true ] && [ "$ARM64_EXISTS" = true ]; then
+              echo "🚀 创建多架构latest manifest..."
+              if create_and_push_manifest "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+                   "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-amd64" \
+                   "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-arm64"; then
+                echo "✅ latest标签更新成功"
+                return 0
+              fi
+            elif [ "$AMD64_EXISTS" = true ]; then
+              echo "🏷️ 只有AMD64镜像，创建latest"
+              if handle_single_architecture_for_latest "amd64"; then
+                return 0
+              fi
+            elif [ "$ARM64_EXISTS" = true ]; then
+              echo "🏷️ 只有ARM64镜像，创建latest"
+              if handle_single_architecture_for_latest "arm64"; then
+                return 0
+              fi
+            fi
+            
+            if [ $retry_count -lt $max_retries ]; then
+              echo "⚠️ latest标签更新失败，等待后重试..."
+              sleep 15
+            fi
+          done
+          
+          echo "❌ latest标签更新最终失败，跳过"
+          return 1
+        }
+
+        # 始终更新latest manifest，无论分支类型
+        RELEASE_VERSION="${{ needs.check-environment.outputs.release-version }}"
+        IS_TAG_BUILD="${{ needs.check-environment.outputs.release-version != '' }}"
+
+        echo "🔄 更新latest manifest（所有分支构建）..."
+        echo "🏷️ 是否Tag构建: $IS_TAG_BUILD"
+        echo "🏷️ Release版本: $RELEASE_VERSION"
+
+        # 无条件创建latest标签
+        create_latest_manifest || echo "⚠️ latest标签更新失败，但继续执行"
+
+        echo "✅ 多架构manifest创建完成"
+        echo "🎉 Docker镜像构建和推送全部完成"
+
+
+
+        # 获取远程 tags（处理git仓库问题）
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+          git fetch --tags
+          REMAINING_TAGS=$(git tag -l | grep -E '^v' || echo "")
+
+          if [ -n "$REMAINING_TAGS" ]; then
+            echo "✅ 剩余的 tags:"
+            echo "$REMAINING_TAGS"
+          else
+            echo "⚠️ 没有剩余的 tags"
+          fi
+        else
+          echo "⚠️ 非git仓库环境，跳过tag检查"
+        fi
+
+        echo ""
+        echo "✅ 清理完成！只保留最新版本"
+      env:
+        GH_TOKEN: ${{ secrets.GHCR_PAT }}
+
+
