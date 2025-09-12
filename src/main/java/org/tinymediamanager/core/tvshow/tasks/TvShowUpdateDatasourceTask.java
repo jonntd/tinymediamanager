@@ -895,12 +895,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * detect which mediafiles has to be parsed and start a thread to do that
    */
   private void gatherMediaInformationForUngatheredMediaFiles(TvShow tvShow) {
-    // always update file size and date information regardless of settings
+    boolean tvShowDirty = false;
     
     // get mediainfo for tv show (fanart/poster..)
     for (MediaFile mf : tvShow.getMediaFiles()) {
       // always update file size and date information
       boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+      
+      if (fileInfoChanged) {
+        tvShowDirty = true;
+      }
       
       // check if we should fetch detailed media information
       if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -924,12 +928,22 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
       }
     }
+    
+    if (tvShowDirty) {
+      tvShow.saveToDb();
+      LOGGER.debug("文件信息变化，保存电视剧到数据库: {}", tvShow.getTitle());
+    }
 
     // get mediainfo for all seasons within the TV show
     for (TvShowSeason season : new ArrayList<>(tvShow.getSeasons())) {
+      boolean seasonDirty = false;
       for (MediaFile mf : season.getMediaFiles()) {
         // always update file size and date information
         boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        
+        if (fileInfoChanged) {
+          seasonDirty = true;
+        }
         
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -953,13 +967,23 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           }
         }
       }
+      
+      if (seasonDirty) {
+        season.saveToDb();
+        LOGGER.debug("文件信息变化，保存电视剧季到数据库: {} - {}", tvShow.getTitle(), season.getSeason());
+      }
     }
 
     // get mediainfo for all episodes within this TV show
     for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
+      boolean episodeDirty = false;
       for (MediaFile mf : episode.getMediaFiles()) {
         // always update file size and date information
         boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        
+        if (fileInfoChanged) {
+          episodeDirty = true;
+        }
         
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -982,6 +1006,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, true));
           }
         }
+      }
+      
+      if (episodeDirty) {
+        episode.saveToDb();
+        LOGGER.debug("文件信息变化，保存电视剧集到数据库: {} - S{}E{}", 
+                     tvShow.getTitle(), episode.getSeason(), episode.getEpisode());
       }
     }
   }

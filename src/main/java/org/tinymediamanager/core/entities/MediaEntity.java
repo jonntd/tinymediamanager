@@ -1503,10 +1503,13 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   }
  /**
    * Update file size information for all media files (without full media information gathering)
-   * This method always runs regardless of fetchVideoInfoOnUpdate setting
+   * Only updates when file size has actually changed to avoid unnecessary database operations
    */
   public void updateFileSizeInformation() {
-    LOGGER.info("=== DEBUGGING: updateFileSizeInformation() called for entity: {} ===", this.getTitle());
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("updateFileSizeInformation() called for entity: {}", this.getTitle());
+    }
+    
     List<MediaFile> mfs = new ArrayList<>();
 
     try {
@@ -1517,46 +1520,51 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
       readWriteLock.readLock().unlock();
     }
 
-    LOGGER.info("=== DEBUGGING: Found {} media files to update ===", mfs.size());
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("Found {} media files to check", mfs.size());
+    }
 
+    boolean hasChanges = false;
     for (MediaFile mediaFile : mfs) {
-      LOGGER.info("=== DEBUGGING: Processing file: {} (current size: {}) ===",
-                  mediaFile.getFilename(), mediaFile.getFilesize());
-
-      // Force file size update even if file size was previously 0
       try {
         Path filePath = mediaFile.getFileAsPath();
-        LOGGER.info("=== DEBUGGING: File path: {} ===", filePath);
-
+        
         if (Files.exists(filePath)) {
           long actualSize = Files.size(filePath);
-          LOGGER.info("=== DEBUGGING: Actual file size: {} bytes ===", actualSize);
-
+          
+          // 只有当文件大小确实发生变化时才更新
           if (actualSize != mediaFile.getFilesize()) {
-            LOGGER.info("=== DEBUGGING: Updating file size for '{}': {} -> {} ===",
-                       mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
+            if (LOGGER.isDebugEnabled()) {
+              LOGGER.debug("Updating file size for '{}': {} -> {}",
+                         mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
+            }
             mediaFile.setFilesize(actualSize);
-            LOGGER.info("=== DEBUGGING: File size updated! New size: {} ===", mediaFile.getFilesize());
-
-            // 记录统计信息
             FixStatistics.recordFileSizeUpdate(actualSize);
-          } else {
-            LOGGER.info("=== DEBUGGING: File size unchanged: {} ===", actualSize);
+            hasChanges = true;
           }
         } else {
-          LOGGER.error("=== DEBUGGING: File does not exist: {} ===", filePath);
-          FixStatistics.recordFileSizeUpdateFailure();
+          // 文件不存在时，如果之前有大小记录，重置为0
+          if (mediaFile.getFilesize() > 0) {
+            LOGGER.warn("File does not exist, resetting size to 0: {}", filePath);
+            mediaFile.setFilesize(0);
+            FixStatistics.recordFileSizeUpdateFailure();
+            hasChanges = true;
+          }
         }
       }
       catch (IOException e) {
-        LOGGER.error("=== DEBUGGING: IOException getting file size for '{}': {} ===",
-                    mediaFile.getFileAsPath(), e.getMessage());
-        // Fallback to the original method
-        MediaFileHelper.gatherFileInformation(mediaFile);
+        LOGGER.warn("Failed to get file size for '{}': {}", mediaFile.getFileAsPath(), e.getMessage());
+        // 使用MediaFileHelper作为回退方案
+        boolean changed = MediaFileHelper.gatherFileInformation(mediaFile);
+        if (changed) {
+          hasChanges = true;
+        }
       }
     }
 
-    LOGGER.info("=== DEBUGGING: updateFileSizeInformation() completed ===");
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("updateFileSizeInformation() completed, changes detected: {}", hasChanges);
+    }
   }
   /**
    * Removes the from tags.

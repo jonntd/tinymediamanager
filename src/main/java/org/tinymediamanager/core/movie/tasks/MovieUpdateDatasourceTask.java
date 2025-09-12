@@ -1670,9 +1670,14 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
+      boolean movieDirty = false;
       for (MediaFile mf : new ArrayList<>(movie.getMediaFiles())) {
         // always update file size and date information regardless of settings
         boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
+        
+        if (fileInfoChanged) {
+          movieDirty = true;
+        }
         
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1689,6 +1694,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             submitTask(new MovieMediaFileInformationFetcherTask(mf, movie, true));
           }
         }
+      }
+      
+      // 如果文件信息有变化，保存到数据库
+      if (movieDirty) {
+        movie.saveToDb();
+        LOGGER.debug("文件信息变化，保存电影到数据库: {}", movie.getTitle());
       }
     }
     waitForCompletionOrCancel();
@@ -1712,9 +1723,14 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
+      boolean movieDirty = false;
       for (MediaFile mf : new ArrayList<>(movie.getMediaFiles())) {
         // always update file size and date information regardless of settings
         boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
+        
+        if (fileInfoChanged) {
+          movieDirty = true;
+        }
         
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1737,6 +1753,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             submitTask(new MovieMediaFileInformationFetcherTask(mf, movie, true));
           }
         }
+      }
+      
+      // 如果文件信息有变化，保存到数据库
+      if (movieDirty) {
+        movie.saveToDb();
+        LOGGER.debug("文件信息变化，保存电影到数据库: {}", movie.getTitle());
       }
 
       // upgrade MediaSource to UHD bluray, if video format says so
