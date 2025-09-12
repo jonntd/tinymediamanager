@@ -452,8 +452,8 @@ jobs:
           org.opencontainers.image.title=tinyMediaManager
           org.opencontainers.image.description=A comprehensive media management tool for organizing and managing your movie and TV show collections. Features automatic metadata fetching, artwork downloading, and extensive customization options.
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          org.opencontainers.image.url=https://www.tinymediamanager.org
-          org.opencontainers.image.documentation=https://www.tinymediamanager.org/docs/docker
+          org.opencontainers.image.url="https://github.com/jonntd/tinyMediaManager"
+          org.opencontainers.image.documentation="https://github.com/jonntd/tinyMediaManager"
           org.opencontainers.image.licenses=Apache-2.0
           org.opencontainers.image.vendor=tinyMediaManager
           org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
