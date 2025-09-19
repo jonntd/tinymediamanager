@@ -364,23 +364,11 @@ public class ChatGPTTvShowRecognitionService {
                         LOGGER.info("Raw extracted content: '{}'", content);
                         LOGGER.info("Content length: {} characters", content.length());
 
-                        // 尝试从AI的解释中提取数据库ID
-                        String extractedId = extractDatabaseIdFromResponse(content);
-                        if (extractedId != null) {
-                            LOGGER.info("Extracted database ID from AI response: '{}'", extractedId);
-                            content = extractedId;
-                        }
-
+                        // 移除ID提取逻辑，保持与电影AI识别一致的行为
+                        // 只返回清理后的标题，不进行ID格式转换
                         LOGGER.info("Final processed content: '{}'", content);
-                        LOGGER.info("Content type: {}", content.matches("^(TMDB|TVDB):\\d+$") ? "Database ID format" : "Title format");
-
-                        // 如果是数据库ID格式，添加验证警告
-                        if (content.matches("^(TMDB|TVDB):\\d+$")) {
-                            LOGGER.warn("=== Database ID Validation Required ===");
-                            LOGGER.warn("AI returned database ID: {}", content);
-                            LOGGER.warn("Please verify this ID matches the input TV show!");
-                            LOGGER.warn("Input path was: {}", originalPath);
-                        }
+                        LOGGER.info("Content type: Title format (consistent with movie AI)");
+                        LOGGER.warn("Input path was: {}", originalPath);
 
                         return content;
                     }
