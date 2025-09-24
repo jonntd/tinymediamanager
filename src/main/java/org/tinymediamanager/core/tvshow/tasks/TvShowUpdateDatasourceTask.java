@@ -899,8 +899,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     
     // get mediainfo for tv show (fanart/poster..)
     for (MediaFile mf : tvShow.getMediaFiles()) {
-      // always update file size and date information
-      boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+      // update file size and date information if enabled
+      boolean fileInfoChanged = false;
+      if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
+        fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+      }
       
       if (fileInfoChanged) {
         tvShowDirty = true;
@@ -938,8 +941,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     for (TvShowSeason season : new ArrayList<>(tvShow.getSeasons())) {
       boolean seasonDirty = false;
       for (MediaFile mf : season.getMediaFiles()) {
-        // always update file size and date information
-        boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        // update file size and date information if enabled
+        boolean fileInfoChanged = false;
+        if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
+          fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        }
         
         if (fileInfoChanged) {
           seasonDirty = true;
@@ -978,8 +984,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
       boolean episodeDirty = false;
       for (MediaFile mf : episode.getMediaFiles()) {
-        // always update file size and date information
-        boolean fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        // update file size and date information if enabled
+        boolean fileInfoChanged = false;
+        if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
+          fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
+        }
         
         if (fileInfoChanged) {
           episodeDirty = true;

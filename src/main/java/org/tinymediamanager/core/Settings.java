@@ -138,6 +138,9 @@ public final class Settings extends AbstractSettings {
   // whether to fetch video information during library updates
   private boolean                                          fetchVideoInfoOnUpdate       = false;
 
+  // whether to update file size during library updates
+  private boolean                                          updateFileSizeOnUpdate       = true;
+
   // aspect ratio detector
   boolean                                                  ardEnabled                   = false;
   private ArdSettings.Mode                                 ardMode                      = ArdSettings.Mode.DEFAULT;
@@ -1224,6 +1227,27 @@ public final class Settings extends AbstractSettings {
     boolean oldValue = this.fetchVideoInfoOnUpdate;
     this.fetchVideoInfoOnUpdate = newValue;
     firePropertyChange("fetchVideoInfoOnUpdate", oldValue, newValue);
+  }
+
+  /**
+   * should we update file size during library updates?
+   * 
+   * @return true/false
+   */
+  public boolean isUpdateFileSizeOnUpdate() {
+    return updateFileSizeOnUpdate;
+  }
+
+  /**
+   * should we update file size during library updates?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setUpdateFileSizeOnUpdate(boolean newValue) {
+    boolean oldValue = this.updateFileSizeOnUpdate;
+    this.updateFileSizeOnUpdate = newValue;
+    firePropertyChange("updateFileSizeOnUpdate", oldValue, newValue);
   }
 
   // aspect ratio detector

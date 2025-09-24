@@ -84,6 +84,7 @@ class TvShowSettingsPanel extends JPanel {
   private JCheckBox            chckbxSpecialSeason;
   private JCheckBox           chckbxCreateMissingSeasonItems;
   private JCheckBox           chckbxFetchVideoInfoOnUpdate;
+  private JCheckBox           chckbxUpdateFileSizeOnUpdate;
   private JCheckBox            chckbxResetNewFlag;
   private JCheckBox            chckbxReadNomedia;
 
@@ -234,7 +235,7 @@ class TvShowSettingsPanel extends JPanel {
     }
     {
       JPanel panelMisc = new JPanel();
-      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][][15lp!][][]")); // 16lp ~ width of the
+      panelMisc.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][16lp!][grow]", "[][][][][][15lp!][][][]")); // 16lp ~ width of the
 
       JLabel lblMiscT = new TmmLabel(TmmResourceBundle.getString("Settings.misc"), H3);
       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelMisc, lblMiscT, true);
@@ -285,6 +286,13 @@ class TvShowSettingsPanel extends JPanel {
         JLabel lblFetchVideoInfoOnUpdateHint = new JLabel(IconManager.HINT);
         lblFetchVideoInfoOnUpdateHint.setToolTipText(TmmResourceBundle.getString("Settings.fetchvideoinfoonupdate.desc"));
         panelMisc.add(lblFetchVideoInfoOnUpdateHint, "cell 1 9 2 1");
+
+        chckbxUpdateFileSizeOnUpdate = new JCheckBox(TmmResourceBundle.getString("Settings.updatefilesizeonupdate"));
+        panelMisc.add(chckbxUpdateFileSizeOnUpdate, "cell 1 10 2 1");
+
+        JLabel lblUpdateFileSizeOnUpdateHint = new JLabel(IconManager.HINT);
+        lblUpdateFileSizeOnUpdateHint.setToolTipText(TmmResourceBundle.getString("Settings.updatefilesizeonupdate.desc"));
+        panelMisc.add(lblUpdateFileSizeOnUpdateHint, "cell 1 10 2 1");
       }
     }
   }
@@ -399,5 +407,10 @@ class TvShowSettingsPanel extends JPanel {
     AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_1, chckbxFetchVideoInfoOnUpdate,
         jCheckBoxBeanProperty);
     autoBinding_19.bind();
+    //
+    Property globalSettingsBeanProperty_2 = BeanProperty.create("updateFileSizeOnUpdate");
+    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_2, chckbxUpdateFileSizeOnUpdate,
+        jCheckBoxBeanProperty);
+    autoBinding_20.bind();
   }
 }
