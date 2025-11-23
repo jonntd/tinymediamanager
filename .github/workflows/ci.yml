@@ -94,10 +94,20 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-v4
+        key: ${{ runner.os }}-maven-v5
         restore-keys: |
+          ${{ runner.os }}-maven-v4
           ${{ runner.os }}-maven-
-          ${{ runner.os }}-maven-v3
+
+    - name: Cache validation
+      run: |
+        echo "🔍 验证Maven缓存配置..."
+        echo "当前缓存键模式: ${{ runner.os }}-maven-v5"
+        if [ -d "~/.m2/repository" ]; then
+          echo "✅ Maven本地仓库存在"
+        else
+          echo "⚠️ Maven本地仓库不存在，首次构建将下载所有依赖"
+        fi
 
     - name: Extract version
       id: version
@@ -261,10 +271,20 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-v4
+        key: ${{ runner.os }}-maven-v5
         restore-keys: |
+          ${{ runner.os }}-maven-v4
           ${{ runner.os }}-maven-
-          ${{ runner.os }}-maven-v3
+
+    - name: Cache validation
+      run: |
+        echo "🔍 验证Maven缓存配置..."
+        echo "当前缓存键模式: ${{ runner.os }}-maven-v5"
+        if [ -d "~/.m2/repository" ]; then
+          echo "✅ Maven本地仓库存在"
+        else
+          echo "⚠️ Maven本地仓库不存在，首次构建将下载所有依赖"
+        fi
 
     - name: Verify native libraries
       run: |
