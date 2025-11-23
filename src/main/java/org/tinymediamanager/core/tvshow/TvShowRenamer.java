@@ -1191,8 +1191,10 @@ public class TvShowRenamer {
         e.addToMediaFiles(needed);
         e.setPath(episode.getPath());
 
-        // Always update file size information after rename (regardless of settings)
-        e.updateFileSizeInformation();
+        // Update file size information after rename based on settings
+        if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+          e.updateFileSizeInformation();
+        }
 
         // Only gather full media information if enabled in settings
         if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1429,8 +1431,10 @@ public class TvShowRenamer {
 
     tvShow.addToMediaFiles(needed);
 
-    // Always update file size information after rename (regardless of settings)
-    tvShow.updateFileSizeInformation();
+    // Update file size information after rename based on settings
+    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+      tvShow.updateFileSizeInformation();
+    }
 
     // Only gather full media information if enabled in settings
     if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1484,8 +1488,10 @@ public class TvShowRenamer {
 
     season.addToMediaFiles(needed);
 
-    // Always update file size information after rename (regardless of settings)
-    season.updateFileSizeInformation();
+    // Update file size information after rename based on settings
+    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+      season.updateFileSizeInformation();
+    }
 
     // Only gather full media information if enabled in settings
     if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1589,8 +1595,10 @@ public class TvShowRenamer {
 
     episode.addToMediaFiles(needed);
 
-    // Always update file size information after rename (regardless of settings)
-    episode.updateFileSizeInformation();
+    // Update file size information after rename based on settings
+    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+      episode.updateFileSizeInformation();
+    }
 
     // Only gather full media information if enabled in settings
     if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {

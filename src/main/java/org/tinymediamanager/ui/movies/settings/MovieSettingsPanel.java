@@ -81,6 +81,7 @@ public class MovieSettingsPanel extends JPanel {
   private JCheckBox           chckbxReadNomedia;
   private JCheckBox           chckbxFetchVideoInfoOnUpdate;
   private JCheckBox           chckbxUpdateFileSizeOnUpdate;
+  private JCheckBox           chckbxUpdateFileSizeOnRename;
 
   public MovieSettingsPanel() {
     // UI initializations
@@ -269,6 +270,13 @@ public class MovieSettingsPanel extends JPanel {
         JLabel lblUpdateFileSizeOnUpdateHint = new JLabel(IconManager.HINT);
         lblUpdateFileSizeOnUpdateHint.setToolTipText(TmmResourceBundle.getString("Settings.updatefilesizeonupdate.desc"));
         panelMisc.add(lblUpdateFileSizeOnUpdateHint, "cell 1 8 2 1");
+
+        chckbxUpdateFileSizeOnRename = new JCheckBox(TmmResourceBundle.getString("Settings.updatefilesizeonrename"));
+        panelMisc.add(chckbxUpdateFileSizeOnRename, "cell 1 9 2 1");
+
+        JLabel lblUpdateFileSizeOnRenameHint = new JLabel(IconManager.HINT);
+        lblUpdateFileSizeOnRenameHint.setToolTipText(TmmResourceBundle.getString("Settings.updatefilesizeonrename.desc"));
+        panelMisc.add(lblUpdateFileSizeOnRenameHint, "cell 1 9 2 1");
       }
     }
   }
@@ -362,5 +370,10 @@ public class MovieSettingsPanel extends JPanel {
     AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_2, chckbxUpdateFileSizeOnUpdate,
         jCheckBoxBeanProperty);
     autoBinding_22.bind();
+    //
+    Property globalSettingsBeanProperty_3 = BeanProperty.create("updateFileSizeOnRename");
+    AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_3, chckbxUpdateFileSizeOnRename,
+        jCheckBoxBeanProperty);
+    autoBinding_23.bind();
   }
 }

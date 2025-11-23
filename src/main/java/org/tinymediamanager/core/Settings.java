@@ -140,6 +140,8 @@ public final class Settings extends AbstractSettings {
 
   // whether to update file size during library updates
   private boolean                                          updateFileSizeOnUpdate       = true;
+  // whether to update file size during renaming operations
+  private boolean                                          updateFileSizeOnRename       = true;
 
   // aspect ratio detector
   boolean                                                  ardEnabled                   = false;
@@ -1248,6 +1250,27 @@ public final class Settings extends AbstractSettings {
     boolean oldValue = this.updateFileSizeOnUpdate;
     this.updateFileSizeOnUpdate = newValue;
     firePropertyChange("updateFileSizeOnUpdate", oldValue, newValue);
+  }
+  
+  /**
+   * should we update file size during renaming operations?
+   * 
+   * @return true/false
+   */
+  public boolean isUpdateFileSizeOnRename() {
+    return updateFileSizeOnRename;
+  }
+
+  /**
+   * should we update file size during renaming operations?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setUpdateFileSizeOnRename(boolean newValue) {
+    boolean oldValue = this.updateFileSizeOnRename;
+    this.updateFileSizeOnRename = newValue;
+    firePropertyChange("updateFileSizeOnRename", oldValue, newValue);
   }
 
   // aspect ratio detector
