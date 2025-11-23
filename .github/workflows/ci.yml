@@ -94,7 +94,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') || hashFiles('pom.xml') || format('{0}-maven-v2', runner.os) }}
+        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') || format('{0}-maven-v3', runner.os) }}
         restore-keys: |
           ${{ runner.os }}-maven-
           ${{ runner.os }}-maven-v2
@@ -261,7 +261,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') || hashFiles('pom.xml') || format('{0}-maven-v2', runner.os) }}
+        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') || format('{0}-maven-v3', runner.os) }}
         restore-keys: |
           ${{ runner.os }}-maven-
           ${{ runner.os }}-maven-v2
