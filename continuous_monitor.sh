@@ -95,7 +95,7 @@ print('|'.join(failed_jobs))
             # 备份当前配置
             cp .github/workflows/ci.yml .github/workflows/ci.yml.backup
             
-            # 创建简化版本
+            # 创建简化版本（使用安全的hashFiles格式）
             cat > .github/workflows/ci.yml << 'WORKFLOW_EOF'
 name: CI/CD Pipeline
 
@@ -143,9 +143,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-maven-${{ hashFiles(format('{0}/pom.xml', github.workspace)) || format('{0}-maven-v2', runner.os) }}
         restore-keys: |
-          ${{ runner.os }}-maven-
+          ${{ runner.os }}-maven-v2
     
     - name: Simple build
       run: |
