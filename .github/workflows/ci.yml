@@ -94,10 +94,10 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') || format('{0}-maven-v3', runner.os) }}
+        key: ${{ runner.os }}-maven-v4
         restore-keys: |
           ${{ runner.os }}-maven-
-          ${{ runner.os }}-maven-v2
+          ${{ runner.os }}-maven-v3
 
     - name: Extract version
       id: version
@@ -261,10 +261,10 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') || format('{0}-maven-v3', runner.os) }}
+        key: ${{ runner.os }}-maven-v4
         restore-keys: |
           ${{ runner.os }}-maven-
-          ${{ runner.os }}-maven-v2
+          ${{ runner.os }}-maven-v3
 
     - name: Verify native libraries
       run: |
