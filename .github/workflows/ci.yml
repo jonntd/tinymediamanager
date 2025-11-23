@@ -56,6 +56,31 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Verify working directory and files
+      run: |
+        echo "🔍 Verifying working directory and files..."
+        echo "Current working directory: $(pwd)"
+        echo "GitHub workspace: ${{ github.workspace }}"
+        echo "Listing files in current directory:"
+        ls -la
+        echo "Checking for pom.xml:"
+        if [ -f "pom.xml" ]; then
+          echo "✅ pom.xml found in current directory"
+          echo "pom.xml details:"
+          ls -la pom.xml
+        else
+          echo "❌ pom.xml not found in current directory"
+          echo "Searching for pom.xml..."
+          find . -name "pom.xml" -type f
+        fi
+        echo "Checking for .git directory:"
+        if [ -d ".git" ]; then
+          echo "✅ .git directory found"
+        else
+          echo "⚠️  .git directory not found"
+        fi
+      shell: bash
+
     - name: Set up JDK ${{ env.JAVA_VERSION }}
       uses: actions/setup-java@v4
       with:
@@ -69,7 +94,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
+        key: ${{ runner.os }}-maven-${{ hashFiles(format('{0}/pom.xml', github.workspace)) }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
@@ -197,6 +222,31 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Verify working directory and files
+      run: |
+        echo "🔍 Verifying working directory and files for ${{ matrix.platform.name }}..."
+        echo "Current working directory: $(pwd)"
+        echo "GitHub workspace: ${{ github.workspace }}"
+        echo "Listing files in current directory:"
+        ls -la
+        echo "Checking for pom.xml:"
+        if [ -f "pom.xml" ]; then
+          echo "✅ pom.xml found in current directory"
+          echo "pom.xml details:"
+          ls -la pom.xml
+        else
+          echo "❌ pom.xml not found in current directory"
+          echo "Searching for pom.xml..."
+          find . -name "pom.xml" -type f
+        fi
+        echo "Checking for .git directory:"
+        if [ -d ".git" ]; then
+          echo "✅ .git directory found"
+        else
+          echo "⚠️  .git directory not found"
+        fi
+      shell: bash
+
     - name: Set up JDK ${{ env.JAVA_VERSION }}
       uses: actions/setup-java@v4
       with:
@@ -210,7 +260,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
+        key: ${{ runner.os }}-maven-${{ hashFiles(format('{0}/pom.xml', github.workspace)) }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
