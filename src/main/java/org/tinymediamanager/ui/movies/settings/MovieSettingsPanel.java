@@ -371,7 +371,7 @@ public class MovieSettingsPanel extends JPanel {
         jCheckBoxBeanProperty);
     autoBinding_22.bind();
     //
-    Property globalSettingsBeanProperty_3 = BeanProperty.create("updateFileSizeOnRename");
+    Property globalSettingsBeanProperty_3 = BeanProperty.create("movieUpdateFileSizeOnRename");
     AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_3, chckbxUpdateFileSizeOnRename,
         jCheckBoxBeanProperty);
     autoBinding_23.bind();

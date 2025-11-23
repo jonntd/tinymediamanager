@@ -142,6 +142,14 @@ public final class Settings extends AbstractSettings {
   private boolean                                          updateFileSizeOnUpdate       = true;
   // whether to update file size during renaming operations
   private boolean                                          updateFileSizeOnRename       = true;
+  
+  // separate settings for movies and TV shows
+  // movie file size update settings
+  private boolean                                          movieUpdateFileSizeOnUpdate  = true;
+  private boolean                                          movieUpdateFileSizeOnRename  = true;
+  // TV show file size update settings
+  private boolean                                          tvShowUpdateFileSizeOnUpdate = true;
+  private boolean                                          tvShowUpdateFileSizeOnRename = true;
 
   // aspect ratio detector
   boolean                                                  ardEnabled                   = false;
@@ -1271,6 +1279,90 @@ public final class Settings extends AbstractSettings {
     boolean oldValue = this.updateFileSizeOnRename;
     this.updateFileSizeOnRename = newValue;
     firePropertyChange("updateFileSizeOnRename", oldValue, newValue);
+  }
+
+  /**
+   * should we update movie file size during library updates?
+   * 
+   * @return true/false
+   */
+  public boolean isMovieUpdateFileSizeOnUpdate() {
+    return movieUpdateFileSizeOnUpdate;
+  }
+
+  /**
+   * should we update movie file size during library updates?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setMovieUpdateFileSizeOnUpdate(boolean newValue) {
+    boolean oldValue = this.movieUpdateFileSizeOnUpdate;
+    this.movieUpdateFileSizeOnUpdate = newValue;
+    firePropertyChange("movieUpdateFileSizeOnUpdate", oldValue, newValue);
+  }
+
+  /**
+   * should we update movie file size during renaming operations?
+   * 
+   * @return true/false
+   */
+  public boolean isMovieUpdateFileSizeOnRename() {
+    return movieUpdateFileSizeOnRename;
+  }
+
+  /**
+   * should we update movie file size during renaming operations?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setMovieUpdateFileSizeOnRename(boolean newValue) {
+    boolean oldValue = this.movieUpdateFileSizeOnRename;
+    this.movieUpdateFileSizeOnRename = newValue;
+    firePropertyChange("movieUpdateFileSizeOnRename", oldValue, newValue);
+  }
+
+  /**
+   * should we update TV show file size during library updates?
+   * 
+   * @return true/false
+   */
+  public boolean isTvShowUpdateFileSizeOnUpdate() {
+    return tvShowUpdateFileSizeOnUpdate;
+  }
+
+  /**
+   * should we update TV show file size during library updates?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setTvShowUpdateFileSizeOnUpdate(boolean newValue) {
+    boolean oldValue = this.tvShowUpdateFileSizeOnUpdate;
+    this.tvShowUpdateFileSizeOnUpdate = newValue;
+    firePropertyChange("tvShowUpdateFileSizeOnUpdate", oldValue, newValue);
+  }
+
+  /**
+   * should we update TV show file size during renaming operations?
+   * 
+   * @return true/false
+   */
+  public boolean isTvShowUpdateFileSizeOnRename() {
+    return tvShowUpdateFileSizeOnRename;
+  }
+
+  /**
+   * should we update TV show file size during renaming operations?
+   * 
+   * @param newValue
+   *          true/false
+   */
+  public void setTvShowUpdateFileSizeOnRename(boolean newValue) {
+    boolean oldValue = this.tvShowUpdateFileSizeOnRename;
+    this.tvShowUpdateFileSizeOnRename = newValue;
+    firePropertyChange("tvShowUpdateFileSizeOnRename", oldValue, newValue);
   }
 
   // aspect ratio detector

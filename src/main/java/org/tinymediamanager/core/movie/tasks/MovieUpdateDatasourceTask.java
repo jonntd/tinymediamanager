@@ -1674,7 +1674,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       for (MediaFile mf : new ArrayList<>(movie.getMediaFiles())) {
         // update file size and date information if enabled
         boolean fileInfoChanged = false;
-        if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
+        if (Settings.getInstance().isMovieUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
         }
         
@@ -1730,7 +1730,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       for (MediaFile mf : new ArrayList<>(movie.getMediaFiles())) {
         // update file size and date information if enabled
         boolean fileInfoChanged = false;
-        if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
+        if (Settings.getInstance().isMovieUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
         }
         

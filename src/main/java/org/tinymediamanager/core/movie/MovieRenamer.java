@@ -367,8 +367,11 @@ public class MovieRenamer {
         }
 
         // Even if rename failed, try to update file size information for existing files
-        LOGGER.info("=== DEBUGGING: Rename failed, but updating file size information anyway ===");
-        movie.updateFileSizeInformation();
+        // Only update if enabled for movies
+        if (Settings.getInstance().isMovieUpdateFileSizeOnRename()) {
+          LOGGER.info("=== DEBUGGING: Rename failed, but updating file size information anyway ===");
+          movie.updateFileSizeInformation();
+        }
 
         return;
       }
@@ -552,8 +555,10 @@ public class MovieRenamer {
     movie.addToMediaFiles(needed);
     movie.setPath(newPathname);
 
-    // Always update file size information after rename (regardless of settings)
-    movie.updateFileSizeInformation();
+    // Update file size information after rename only if enabled for movies
+    if (Settings.getInstance().isMovieUpdateFileSizeOnRename()) {
+      movie.updateFileSizeInformation();
+    }
 
     // Only gather full media information if enabled in settings
     if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -732,8 +737,10 @@ public class MovieRenamer {
     movie.addToMediaFiles(needed);
     movie.setPath(movie.getRenameHistory().getOldPath());
 
-    // Always update file size information after rename (regardless of settings)
-    movie.updateFileSizeInformation();
+    // Update file size information after rename only if enabled for movies
+    if (Settings.getInstance().isMovieUpdateFileSizeOnRename()) {
+      movie.updateFileSizeInformation();
+    }
 
     // Only gather full media information if enabled in settings
     if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1526,8 +1533,10 @@ public class MovieRenamer {
    * @return the string
    */
   public static String createDestination(String template, Movie movie, boolean forFilename) {
-    // 在解析模板前确保文件大小信息是最新的
-    movie.updateFileSizeInformation();
+    // Update file size information before parsing template only if enabled for movies
+    if (Settings.getInstance().isMovieUpdateFileSizeOnRename()) {
+      movie.updateFileSizeInformation();
+    }
 
     String newDestination = getTokenValue(movie, template);
 

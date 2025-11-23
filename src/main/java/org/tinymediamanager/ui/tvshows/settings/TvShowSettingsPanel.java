@@ -416,12 +416,12 @@ class TvShowSettingsPanel extends JPanel {
         jCheckBoxBeanProperty);
     autoBinding_19.bind();
     //
-    Property globalSettingsBeanProperty_2 = BeanProperty.create("updateFileSizeOnUpdate");
+    Property globalSettingsBeanProperty_2 = BeanProperty.create("tvShowUpdateFileSizeOnUpdate");
     AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_2, chckbxUpdateFileSizeOnUpdate,
         jCheckBoxBeanProperty);
     autoBinding_20.bind();
     //
-    Property globalSettingsBeanProperty_3 = BeanProperty.create("updateFileSizeOnRename");
+    Property globalSettingsBeanProperty_3 = BeanProperty.create("tvShowUpdateFileSizeOnRename");
     AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_3, chckbxUpdateFileSizeOnRename,
         jCheckBoxBeanProperty);
     autoBinding_21.bind();

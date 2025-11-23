@@ -1191,10 +1191,10 @@ public class TvShowRenamer {
         e.addToMediaFiles(needed);
         e.setPath(episode.getPath());
 
-        // Update file size information after rename based on settings
-        if (Settings.getInstance().isUpdateFileSizeOnRename()) {
-          e.updateFileSizeInformation();
-        }
+        // Update file size information after rename based on TV show settings
+    if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
+      e.updateFileSizeInformation();
+    }
 
         // Only gather full media information if enabled in settings
         if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1431,8 +1431,8 @@ public class TvShowRenamer {
 
     tvShow.addToMediaFiles(needed);
 
-    // Update file size information after rename based on settings
-    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+    // Update file size information after rename based on TV show settings
+    if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
       tvShow.updateFileSizeInformation();
     }
 
@@ -1488,8 +1488,8 @@ public class TvShowRenamer {
 
     season.addToMediaFiles(needed);
 
-    // Update file size information after rename based on settings
-    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+    // Update file size information after rename based on TV show settings
+    if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
       season.updateFileSizeInformation();
     }
 
@@ -1595,8 +1595,8 @@ public class TvShowRenamer {
 
     episode.addToMediaFiles(needed);
 
-    // Update file size information after rename based on settings
-    if (Settings.getInstance().isUpdateFileSizeOnRename()) {
+    // Update file size information after rename based on TV show settings
+    if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
       episode.updateFileSizeInformation();
     }
 
