@@ -399,7 +399,10 @@ public class TvShowChooserModel extends AbstractModelObject {
   public void setEpisodeGroup(MediaEpisodeGroup newValue) {
     MediaEpisodeGroup oldValue = this.episodeGroup;
     this.episodeGroup = newValue;
-    firePropertyChange("episodeGroup", oldValue, newValue);
+    // 避免当oldValue为null时可能发生的空指针异常
+    if (oldValue != newValue) {
+      firePropertyChange("episodeGroup", oldValue, newValue);
+    }
   }
 
   public List<MediaMetadata> getEpisodeList() {
