@@ -49,6 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [pre-cleanup]
     if: always() && (needs.pre-cleanup.result == 'success' || needs.pre-cleanup.result == 'skipped')
+    defaults:
+      run:
+        shell: bash
 
     steps:
     - name: Checkout code
@@ -103,8 +106,20 @@ jobs:
       run: |
         echo "🔍 验证Maven缓存配置..."
         echo "当前缓存键模式: ${{ runner.os }}-maven-v5"
-        if [ -d "~/.m2/repository" ]; then
+        echo "当前操作系统: ${{ runner.os }}"
+        
+        # 根据操作系统处理不同的Maven仓库路径
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          MAVEN_REPO="$HOME/.m2/repository"
+        else
+          MAVEN_REPO="$HOME/.m2/repository"
+        fi
+        
+        echo "检查Maven仓库路径: $MAVEN_REPO"
+        if [ -d "$MAVEN_REPO" ]; then
           echo "✅ Maven本地仓库存在"
+          echo "仓库内容:"
+          ls -la "$MAVEN_REPO" | head -10
         else
           echo "⚠️ Maven本地仓库不存在，首次构建将下载所有依赖"
         fi
@@ -197,6 +212,10 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     needs: build-and-test
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/devel'
+    defaults:
+      run:
+        # 为所有步骤设置默认shell，对于Windows使用bash
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -280,8 +299,21 @@ jobs:
       run: |
         echo "🔍 验证Maven缓存配置..."
         echo "当前缓存键模式: ${{ runner.os }}-maven-v5"
-        if [ -d "~/.m2/repository" ]; then
+        echo "当前操作系统: ${{ runner.os }}"
+        echo "当前平台名称: ${{ matrix.platform.name }}"
+        
+        # 根据操作系统处理不同的Maven仓库路径
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          MAVEN_REPO="$HOME/.m2/repository"
+        else
+          MAVEN_REPO="$HOME/.m2/repository"
+        fi
+        
+        echo "检查Maven仓库路径: $MAVEN_REPO"
+        if [ -d "$MAVEN_REPO" ]; then
           echo "✅ Maven本地仓库存在"
+          echo "仓库内容:"
+          ls -la "$MAVEN_REPO" | head -10
         else
           echo "⚠️ Maven本地仓库不存在，首次构建将下载所有依赖"
         fi
