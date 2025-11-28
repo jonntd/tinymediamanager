@@ -69,7 +69,7 @@ public class BatchChatGPTMovieRecognitionService {
      * @return 电影ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
-        return batchRecognizeMovieTitles(movies, 20, 6);
+        return batchRecognizeMovieTitles(movies, 10, 6);
     }
     
     /**

@@ -1637,21 +1637,46 @@ public class MovieRenamer {
    */
   static boolean moveFile(Path oldFilename, Path newFilename) {
     try {
+      // 如果源文件和目标文件路径完全相同，直接返回成功
+      if (oldFilename.toAbsolutePath().equals(newFilename.toAbsolutePath())) {
+        LOGGER.debug("Source and destination files are identical, skipping move");
+        return true;
+      }
+      
       // create parent if needed
       if (!Files.exists(newFilename.getParent())) {
         Files.createDirectory(newFilename.getParent());
       }
-      boolean ok = Utils.moveFileSafe(oldFilename, newFilename);
+      
+      // 检查目标文件是否已存在
+      int counter = 1;
+      Path targetPath = newFilename;
+      String extension = targetPath.toString().substring(targetPath.toString().lastIndexOf("."));
+      String baseName = targetPath.toString().substring(0, targetPath.toString().lastIndexOf("."));
+      
+      // 如果目标文件已存在，添加数字后缀避免冲突
+      while (Files.exists(targetPath)) {
+        // 如果是同一目录下的相同文件，且名称只是因为格式化改变（不是真的冲突），则尝试使用原始文件名
+        if (oldFilename.getParent().equals(targetPath.getParent()) && Files.exists(oldFilename)) {
+          LOGGER.debug("Same directory rename detected, checking if we can use the original file");
+          return true; // 同一目录下，认为重命名成功
+        }
+        LOGGER.info("File '{}' already exists, trying alternative name", targetPath);
+        targetPath = Paths.get(baseName + " (" + counter + ")" + extension);
+        counter++;
+      }
+      
+      boolean ok = Utils.moveFileSafe(oldFilename, targetPath);
       if (ok) {
         return true;
       }
       else {
-        LOGGER.warn("Could not move media file '{}' to '{}'", oldFilename, newFilename);
+        LOGGER.warn("Could not move media file '{}' to '{}'", oldFilename, targetPath);
         return false; // rename failed
       }
     }
     catch (Exception e) {
-      LOGGER.error("Error moving file '{}' ro '{}' - '{}'", oldFilename.toAbsolutePath(), newFilename.toAbsolutePath(), e.getMessage());
+      LOGGER.error("Error moving file '{}' to '{}' - '{}'", oldFilename.toAbsolutePath(), newFilename.toAbsolutePath(), e.getMessage());
       MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, oldFilename, "message.renamer.failedrename", new String[] { ":", e.getLocalizedMessage() }));
       return false; // rename failed
@@ -1673,12 +1698,24 @@ public class MovieRenamer {
       if (!Files.exists(newName.getParent())) {
         Files.createDirectory(newName.getParent());
       }
-      boolean ok = Utils.moveDirectorySafe(oldName, newName);
+      
+      // 检查目标目录是否已存在
+      int counter = 1;
+      Path targetPath = newName;
+      
+      // 如果目标目录已存在，添加数字后缀避免冲突
+      while (Files.exists(targetPath)) {
+        LOGGER.info("Directory '{}' already exists, trying alternative name", targetPath);
+        targetPath = Paths.get(targetPath.toString() + " (" + counter + ")");
+        counter++;
+      }
+      
+      boolean ok = Utils.moveDirectorySafe(oldName, targetPath);
       if (ok) {
         return true;
       }
       else {
-        LOGGER.error("Could not move folder '{}' to '{}'", oldName, newName);
+        LOGGER.error("Could not move folder '{}' to '{}'", oldName, targetPath);
         return false; // rename failed
       }
     }

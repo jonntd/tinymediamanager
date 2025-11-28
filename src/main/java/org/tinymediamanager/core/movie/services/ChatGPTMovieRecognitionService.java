@@ -215,32 +215,37 @@ public class ChatGPTMovieRecognitionService {
             // 构建请求JSON - 使用电影专用提示词（保留主人的联网搜索功能）
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 电影专用的新提示词 - 基于专业AI电影识别刮削系统
-                systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" +
-                              "## 核心要求\n\n" +
-                              "### 1. 输入处理\n" +
-                              "- 接收电影文件路径作为输入\n" +
-                              "- 从文件名中提取可能的电影标题、年份、分辨率等信息\n" +
-                              "- 忽略文件扩展名（.mp4, .mkv, .avi等）\n" +
-                              "- 过滤掉常见的发布组标识、编码信息、分辨率标记等无关内容\n\n" +
-                              "### 2. 搜索策略\n" +
-                              "- 优先使用提取的标题和年份进行精确搜索\n" +
-                              "- 查找官方来源：IMDb、豆瓣电影、The Movie Database (TMDb)等\n" +
-                              "- 验证搜索结果的准确性和权威性\n\n" +
-                              "### 3. 输出格式要求\n" +
-                              "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" +
-                              "```\n标题 年份\n```\n" +
-                              "- 标题使用官方中文名称（如果有），否则使用英文原名\n" +
-                              "- 标题和年份之间用一个空格分隔\n" +
-                              "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
-                              "- 如果文件名中没有年份，必须通过搜索找到正确的发行年份\n" +
-                              "- 年份不能为空，不能省略，这是强制要求\n" +
-                              "- 不包含任何其他符号、括号或额外信息\n" +
-                              "- 如果搜索失败，输出：未知电影 1900\n" +
-                              "- 禁止返回'I am unable to'或任何错误说明\n\n" +
-                              "### 4. 示例\n" +
-                              "输入：`Inception.2010.1080p.BluRay.mkv` → 输出：`盗梦空间 2010`\n" +
-                              "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
+                // 电影专用的优化提示词 - 改进版
+            systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" +
+                          "## 核心要求\n\n" +
+                          "### 1. 输入处理\n" +
+                          "- 接收电影文件路径作为输入\n" +
+                          "- 专注于识别电影标题，忽略所有格式标签如：\n" +
+                          "  - 分辨率标签(720p, 1080p, 2160p, 4K)\n" +
+                          "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n" +
+                          "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" +
+                          "  - 发布组(RARBG, YTS, 各种中文字母组)\n" +
+                          "  - 版本信息(Director's Cut, Extended)\n" +
+                          "- 过滤掉文件扩展名和无关技术信息\n\n" +
+                          "### 2. 搜索策略\n" +
+                          "- 使用提取的标题关键词进行精确匹配搜索\n" +
+                          "- 优先查找知名权威来源：TMDB、IMDB、豆瓣电影等\n" +
+                          "- 确保识别结果与官方发行名称完全一致\n\n" +
+                          "### 3. 输出格式要求 - 请严格遵守！\n" +
+                          "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" +
+                          "```\n标题 年份\n```\n" +
+                          "- 标题使用官方中文名称（如果有中文发行）\n" +
+                          "- 如无官方中文名称，使用英文原名\n" +
+                          "- 标题和年份之间用一个空格分隔\n" +
+                          "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
+                          "- 如果无法确定年份，必须通过搜索找到准确的发行年份\n" +
+                          "- 年份不能为空，不能省略，这是强制要求\n" +
+                          "- 不包含任何其他符号、括号或额外信息\n" +
+                          "- 如果搜索失败，输出：未知电影 1900\n\n" +
+                          "### 4. 示例\n" +
+                          "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`星际穿越 2014`\n" +
+                          "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`疯狂动物城 2016`\n" +
+                          "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`";
             }
             
             LOGGER.info("=== Movie AI Recognition Debug ===");
@@ -324,10 +329,11 @@ public class ChatGPTMovieRecognitionService {
     }
     
     /**
-     * 清理和验证识别结果（增强版，参考电视剧AI识别）
+     * 清理和验证识别结果 - 增强版，添加更严格的格式验证
      */
     String cleanAndValidateTitle(String recognizedTitle) {
         if (recognizedTitle == null || recognizedTitle.trim().isEmpty()) {
+            LOGGER.warn("识别结果为空");
             return null;
         }
 
@@ -338,23 +344,60 @@ public class ChatGPTMovieRecognitionService {
             .replaceAll("\\s+", " ")              // 规范化空格
             .trim();
 
-        // 验证结果不为空且不是明显的错误（参考电视剧AI识别）
-        if (cleaned.isEmpty() ||
-            cleaned.toLowerCase().contains("error") ||
-            cleaned.toLowerCase().contains("failed") ||
-            cleaned.toLowerCase().contains("unknown")) {
-            LOGGER.warn("Invalid recognition result: {}", recognizedTitle);
+        // 检查是否包含错误提示词
+        String lowerCleaned = cleaned.toLowerCase();
+        if (lowerCleaned.contains("error") || lowerCleaned.contains("failed") ||
+            lowerCleaned.contains("unable") || lowerCleaned.contains("cannot") ||
+            lowerCleaned.contains("unable to") || lowerCleaned.contains("not possible") ||
+            lowerCleaned.contains("i'm") || lowerCleaned.contains("i am") ||
+            lowerCleaned.contains("sorry") || lowerCleaned.contains("apologize")) {
+            LOGGER.warn("识别结果包含错误提示词: {}", cleaned);
             return null;
         }
 
-        // 基本验证：长度合理
-        if (cleaned.length() >= 2 && cleaned.length() <= 100) {
-            LOGGER.debug("Cleaned title: '{}' -> '{}'", recognizedTitle, cleaned);
-            return cleaned;
+        // 检查是否是未知电影格式
+        if (lowerCleaned.equals("未知电影") || lowerCleaned.equals("unknown movie")) {
+            LOGGER.warn("识别结果为未知电影");
+            return "未知电影 1900"; // 返回标准未知电影格式
         }
 
-        LOGGER.warn("Invalid title length: {}", cleaned.length());
-        return null;
+        // 验证是否符合"标题 年份"格式
+        // 提取年份（最后4个数字）
+        int lastSpaceIndex = cleaned.lastIndexOf(' ');
+        if (lastSpaceIndex <= 0 || lastSpaceIndex >= cleaned.length() - 4) {
+            LOGGER.warn("识别结果不符合'标题 年份'格式: {}", cleaned);
+            return null;
+        }
+
+        // 提取可能的年份部分
+        String yearPart = cleaned.substring(lastSpaceIndex + 1);
+        if (!yearPart.matches("\\d{4}")) {
+            LOGGER.warn("年份格式不正确，必须是4位数字: {}", yearPart);
+            return null;
+        }
+
+        // 验证年份范围
+        try {
+            int year = Integer.parseInt(yearPart);
+            int currentYear = java.time.Year.now().getValue();
+            if (year < 1888 || year > currentYear + 2) {
+                LOGGER.warn("年份超出有效范围(1888-{})", currentYear + 2);
+                return null;
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.warn("无法解析年份: {}", yearPart);
+            return null;
+        }
+
+        // 提取标题部分
+        String titlePart = cleaned.substring(0, lastSpaceIndex).trim();
+        if (titlePart.isEmpty() || titlePart.length() < 2 || titlePart.length() > 90) {
+            LOGGER.warn("标题部分长度不合理: {}", titlePart);
+            return null;
+        }
+
+        LOGGER.debug("清理并验证后的标题: '{}' -> '{}'", recognizedTitle, cleaned);
+        return cleaned;
     }
 
     /**
@@ -387,72 +430,146 @@ public class ChatGPTMovieRecognitionService {
     }
 
     /**
-     * 重试AI识别，明确要求年份
+     * 带年份要求的AI识别重试 - 增强版
      */
     private String retryWithYearRequirement(String pathContext) {
-        try {
-            String apiKey = settings.getOpenAiApiKey();
-            String apiUrl = settings.getOpenAiApiUrl();
-            String model = settings.getOpenAiModel();
+        // 定义一个更严格的提示词，明确要求年份
+        String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，联网搜索并识别出正确的电影标题和发行年份。\n\n" +
+                             "**关键要求**：\n" +
+                             "1. 你的回答必须包含4位数字的年份\n" +
+                             "2. 格式：电影标题 年份（用空格分隔）\n" +
+                             "3. 年份范围：1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
+                             "4. 如果不确定年份，请搜索确认\n" +
+                             "5. 绝对不能省略年份\n" +
+                             "6. 如果搜索失败，输出：未知电影 1900\n" +
+                             "7. 禁止返回'I am unable to'或任何错误说明\n\n" +
+                             "示例：\n" +
+                             "输入：`Inception.2010.mkv` → 输出：`盗梦空间 2010`\n" +
+                             "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
 
-            // 更强烈的年份要求提示词
-            String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，联网搜索并识别出正确的电影标题和发行年份。\n\n" +
-                                 "**关键要求**：\n" +
-                                 "1. 你的回答必须包含4位数字的年份\n" +
-                                 "2. 格式：电影标题 年份（用空格分隔）\n" +
-                                 "3. 年份范围：1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
-                                 "4. 如果不确定年份，请搜索确认\n" +
-                                 "5. 绝对不能省略年份\n" +
-                                 "6. 如果搜索失败，输出：未知电影 1900\n" +
-                                 "7. 禁止返回'I am unable to'或任何错误说明\n\n" +
-                                 "示例：\n" +
-                                 "输入：`Inception.2010.mkv` → 输出：`盗梦空间 2010`\n" +
-                                 "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
+        Exception lastException = null;
+        final int maxRetries = 3;
 
-            String requestBody = String.format(
-                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.1}",
-                model,
-                systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"),
-                pathContext.replace("\"", "\\\"").replace("\n", "\\n")
-            );
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            long startTime = System.currentTimeMillis();
+            boolean success = false;
 
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .timeout(Duration.ofSeconds(30))
-                .build();
+            try {
+                LOGGER.info("=== 开始电影AI识别重试 (尝试 {}/{}) ===", attempt, maxRetries);
+                LOGGER.info("待识别路径: {}", pathContext);
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                // 检查API频率限制
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
+                    LOGGER.warn("API频率限制超出，等待重试...");
+                    long waitTime = 1000L * (1L << (attempt - 1)); // 指数退避
+                    Thread.sleep(waitTime);
+                    continue;
+                }
 
-            if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                LOGGER.debug("Retry API response: {}", responseBody);
+                String apiKey = settings.getOpenAiApiKey();
+                String apiUrl = settings.getOpenAiApiUrl();
+                String model = settings.getOpenAiModel();
 
-                // 解析响应
-                int contentStart = responseBody.indexOf("\"content\":\"");
-                if (contentStart != -1) {
-                    contentStart += "\"content\":\"".length();
-                    int contentEnd = responseBody.indexOf('"', contentStart);
-                    if (contentEnd != -1) {
-                        String content = responseBody.substring(contentStart, contentEnd)
-                            .replace("\\\"", "\"")
-                            .replace("\\n", "\n")
-                            .trim();
-                        LOGGER.debug("Retry extracted content: {}", content);
-                        return cleanAndValidateTitle(content);
+                String requestBody = String.format(
+                    "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.1}",
+                    model,
+                    systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"),
+                    pathContext.replace("\"", "\\\"").replace("\n", "\\n")
+                );
+
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .timeout(Duration.ofSeconds(30))
+                    .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                long responseTime = System.currentTimeMillis() - startTime;
+
+                // 记录性能指标
+                LOGGER.info("API响应时间: {}ms, 状态码: {}", responseTime, response.statusCode());
+
+                if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+                    LOGGER.debug("Retry API response: {}", responseBody);
+
+                    // 解析响应
+                    int contentStart = responseBody.indexOf("\"content\":\"");
+                    if (contentStart != -1) {
+                        contentStart += "\"content\":\"" .length();
+                        int contentEnd = responseBody.indexOf('"', contentStart);
+                        if (contentEnd != -1) {
+                            String content = responseBody.substring(contentStart, contentEnd)
+                                .replace("\\\"", "\"")
+                                .replace("\\n", "\n")
+                                .trim();
+                            LOGGER.debug("Retry extracted content: {}", content);
+                            
+                            // 验证结果
+                            String cleanedResult = cleanAndValidateTitle(content);
+                            if (cleanedResult != null) {
+                                success = true;
+                                LOGGER.info("=== 电影AI识别重试成功 ===");
+                                return cleanedResult;
+                            }
+                        }
+                    }
+                } else {
+                    LOGGER.warn("Retry API request failed with status: {}, 响应: {}", response.statusCode(), response.body());
+                }
+
+                // 指数退避重试
+                if (attempt < maxRetries) {
+                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    LOGGER.info("重试失败，等待 {}ms 后重试", delayMs);
+                    Thread.sleep(delayMs);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.warn("重试过程被中断");
+                break;
+            } catch (Exception e) {
+                lastException = e;
+                long responseTime = System.currentTimeMillis() - startTime;
+                LOGGER.warn("重试过程中发生错误 ({}ms): {}", responseTime, e.getMessage());
+
+                // 分类处理不同类型的错误
+                if (e.getMessage() != null) {
+                    String errorMsg = e.getMessage().toLowerCase();
+                    // 针对特定错误类型的处理
+                    if (errorMsg.contains("rate limit") || errorMsg.contains("quota") || errorMsg.contains("limit") || errorMsg.contains("usage")) {
+                        LOGGER.warn("遇到API限制错误，增加等待时间");
+                        try {
+                            Thread.sleep(5000L * attempt); // 更长的等待时间
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
                     }
                 }
-            } else {
-                LOGGER.warn("Retry API request failed with status: {}", response.statusCode());
-            }
 
-        } catch (Exception e) {
-            LOGGER.warn("Retry AI recognition failed: {}", e.getMessage());
+                // 普通重试的指数退避
+                if (attempt < maxRetries) {
+                    try {
+                        long delayMs = 1000L * (1L << (attempt - 1));
+                        LOGGER.info("等待 {}ms 后重试", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
         }
 
-        return null;
+        LOGGER.info("=== 电影AI识别所有重试均失败 ===");
+        if (lastException != null) {
+            LOGGER.error("最后一次错误: ", lastException);
+        }
+        return "未知电影 1900";
     }
 
 }
