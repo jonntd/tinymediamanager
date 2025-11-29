@@ -70,13 +70,6 @@ public class ChatGPTMovieRecognitionService {
         }
         
         try {
-            // 检查API频率限制并记录统计
-            AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-            if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
-                LOGGER.warn("API rate limit exceeded for movie recognition");
-                throw new RuntimeException("API rate limit exceeded");
-            }
-
             // 获取电影的主要媒体文件路径
             String moviePath = extractMoviePath(movie);
             if (moviePath == null || moviePath.trim().isEmpty()) {
@@ -97,45 +90,86 @@ public class ChatGPTMovieRecognitionService {
 
             // 记录AI识别尝试
             FixStatistics.recordAIRecognitionAttempt();
-
-            // 调用ChatGPT API，传递倒数三层目录信息
-            String recognizedTitle = callChatGPTAPI(pathContext);
-
-            LOGGER.info("=== AI Recognition Complete ===");
-            LOGGER.info("Raw AI response: '{}'", recognizedTitle);
             
-            if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
-                // 清理和验证识别结果
-                String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
-                LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
+            // 添加空结果重试逻辑
+            String recognizedTitle = null;
+            String cleanedTitle = null;
+            int retryCount = 0;
+            
+            while (retryCount <= maxRetries) {
+                // 检查API频率限制
+                AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+                if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
+                    LOGGER.warn("API rate limit exceeded for movie recognition, attempt {}/{}", retryCount + 1, maxRetries);
+                    throw new RuntimeException("API rate limit exceeded");
+                }
+                
+                if (retryCount > 0) {
+                    LOGGER.info("Retrying AI recognition, attempt {}/{}", retryCount + 1, maxRetries);
+                    // 指数退避
+                    long delayMs = 1000L * (1L << (retryCount - 1)); // 1s, 2s, 4s...
+                    try {
+                        LOGGER.info("Waiting {}ms before retry", delayMs);
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+                
+                // 调用ChatGPT API，传递倒数三层目录信息
+                recognizedTitle = callChatGPTAPI(pathContext);
 
-                // 验证是否包含年份
-                if (cleanedTitle != null && !containsValidYear(cleanedTitle)) {
-                    LOGGER.warn("AI response does not contain valid year: '{}'", cleanedTitle);
-                    LOGGER.warn("Attempting to retry with explicit year requirement...");
+                LOGGER.info("=== AI Recognition Complete (Attempt {}/{}) ===", retryCount + 1, maxRetries);
+                LOGGER.info("Raw AI response: '{}'", recognizedTitle);
+                
+                // 如果获得了非空响应，进行处理
+                if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+                    // 清理和验证识别结果
+                    cleanedTitle = cleanAndValidateTitle(recognizedTitle);
+                    LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
 
-                    // 记录重试统计
-                    FixStatistics.recordAIRecognitionRetry();
+                    // 验证是否包含年份
+                    if (cleanedTitle != null && !containsValidYear(cleanedTitle)) {
+                        LOGGER.warn("AI response does not contain valid year: '{}'", cleanedTitle);
+                        LOGGER.warn("Attempting to retry with explicit year requirement...");
 
-                    // 重试一次，明确要求年份
-                    String retryResult = retryWithYearRequirement(pathContext);
-                    if (retryResult != null && containsValidYear(retryResult)) {
-                        LOGGER.info("Retry successful with year: '{}'", retryResult);
-                        FixStatistics.recordAIRecognitionRetrySuccess();
+                        // 记录重试统计
+                        FixStatistics.recordAIRecognitionRetry();
+
+                        // 重试一次，明确要求年份
+                        String retryResult = retryWithYearRequirement(pathContext);
+                        if (retryResult != null && containsValidYear(retryResult)) {
+                            LOGGER.info("Retry successful with year: '{}'", retryResult);
+                            FixStatistics.recordAIRecognitionRetrySuccess();
+                            FixStatistics.recordAIRecognitionWithYear();
+                            return retryResult;
+                        } else {
+                            LOGGER.warn("Retry failed, returning original result: '{}'", cleanedTitle);
+                            return cleanedTitle;
+                        }
+                    } else if (cleanedTitle != null && containsValidYear(cleanedTitle)) {
+                        // 第一次就包含年份，记录成功
                         FixStatistics.recordAIRecognitionWithYear();
-                        return retryResult;
-                    } else {
-                        LOGGER.warn("Retry failed, returning original result: '{}'", cleanedTitle);
                         return cleanedTitle;
                     }
-                } else if (cleanedTitle != null && containsValidYear(cleanedTitle)) {
-                    // 第一次就包含年份，记录成功
-                    FixStatistics.recordAIRecognitionWithYear();
+                    
+                    // 如果清理后的标题不为空，也可以返回
+                    if (cleanedTitle != null) {
+                        return cleanedTitle;
+                    }
                 }
-
-                return cleanedTitle;
-            } else {
-                LOGGER.warn("AI returned empty or null result");
+                
+                // 如果是最后一次重试或者获得了空结果，继续循环
+                if (recognizedTitle == null || recognizedTitle.trim().isEmpty()) {
+                    LOGGER.warn("AI returned empty or null result, attempt {}/{}", retryCount + 1, maxRetries);
+                    retryCount++;
+                    // 记录空结果重试统计
+                    FixStatistics.recordAIRecognitionRetry();
+                } else {
+                    // 其他情况，退出循环
+                    break;
+                }
             }
             
         } catch (Exception e) {

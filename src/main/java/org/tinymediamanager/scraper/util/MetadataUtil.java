@@ -152,27 +152,64 @@ public class MetadataUtil {
    *           an exception if none of the parsing methods worked
    */
   public static int parseInt(String intAsString) throws NumberFormatException, NullPointerException {
-    // first try to parse that with the interal parsing logic
+    // first try to parse that with the internal parsing logic
     try {
+      if (StringUtils.isBlank(intAsString)) {
+        throw new NumberFormatException("empty String");
+      }
       return Integer.parseInt(intAsString);
     }
     catch (NumberFormatException e) {
-      // did not work; try to remove digit separators
+      // did not work; try to remove digit separators and handle decimals
       try {
-        // since we do not know for which locale the separators has been written, remove . and , and all whitespaces
-        return Integer.parseInt(intAsString.replaceAll("[,\\.\\s]*", ""));
+        // Check if this is a decimal number that starts with a dot (like ".11")
+        // In this case, we should not remove the dot
+        String cleanedString = intAsString.trim();
+        
+        // If string starts with dot and followed by digits (like ".11"), try with leading zero
+        if (cleanedString.matches("\\.\\d+")) {
+          cleanedString = "0" + cleanedString;
+        }
+        
+        // Remove only commas and spaces/whitespaces, but preserve dots for decimal handling
+        // Also handle multiple separators like "1,234.56" -> "1234.56"
+        cleanedString = cleanedString.replaceAll("(?<=\\d)[,\\s]+", "");
+        cleanedString = cleanedString.replaceAll("(?<=\\.)[,\\s]+", "");
+        cleanedString = cleanedString.replaceAll("[,\\s]+(?=\\d)", "");
+        
+        // If after all cleaning we still have only separators, fail
+        if (StringUtils.isBlank(cleanedString) || cleanedString.matches("^[,\\.\\s]+$")) {
+          throw new NumberFormatException("empty String");
+        }
+        
+        // Check if we still have a decimal point - if so, use double parsing
+        if (cleanedString.contains(".")) {
+          double doubleValue = Double.parseDouble(cleanedString);
+          // check if the value is within integer range
+          if (doubleValue > Integer.MAX_VALUE || doubleValue < Integer.MIN_VALUE) {
+            throw new NumberFormatException("Value out of integer range: " + doubleValue);
+          }
+          return (int) doubleValue;
+        }
+        
+        return Integer.parseInt(cleanedString);
       }
       catch (NumberFormatException e2) {
-        // still did not work; try to parse as scientific notation
+        // still did not work; try to parse as scientific notation or general decimal
         try {
           // handle incomplete scientific notation like "2019E" (missing exponent)
-          String cleanedString = intAsString;
+          String cleanedString = intAsString.trim();
           if (cleanedString.matches(".*[Ee]$")) {
             // if string ends with E or e without exponent, assume exponent is 0
             cleanedString = cleanedString + "0";
           }
 
-          // use Double.parseDouble to handle scientific notation, then convert to int
+          // Check if string is empty after handling scientific notation
+          if (StringUtils.isBlank(cleanedString)) {
+            throw new NumberFormatException("empty String");
+          }
+          
+          // use Double.parseDouble to handle scientific notation and decimals, then convert to int
           double doubleValue = Double.parseDouble(cleanedString);
           // check if the value is within integer range
           if (doubleValue > Integer.MAX_VALUE || doubleValue < Integer.MIN_VALUE) {

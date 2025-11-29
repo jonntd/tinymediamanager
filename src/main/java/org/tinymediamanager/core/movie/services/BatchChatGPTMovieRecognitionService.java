@@ -69,7 +69,7 @@ public class BatchChatGPTMovieRecognitionService {
      * @return 电影ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
-        return batchRecognizeMovieTitles(movies, 10, 6);
+        return batchRecognizeMovieTitles(movies, 5, 6);
     }
     
     /**
@@ -223,6 +223,25 @@ public class BatchChatGPTMovieRecognitionService {
                 if (response != null && !response.trim().isEmpty()) {
                     // 解析批量响应
                     Map<String, String> batchResults = parseBatchResponse(response, batch);
+                    
+                    // 如果parseBatchResponse返回null，表示API返回了空内容，需要重试
+                    if (batchResults == null) {
+                        LOGGER.warn("AI returned empty content, retrying...");
+                        retryCount++;
+                        
+                        if (retryCount <= maxRetries) {
+                            // 指数退避重试
+                            long delayMs = 1000L * (1L << (retryCount - 1)); // 1s, 2s, 4s...
+                            try {
+                                LOGGER.info("Retrying after {}ms delay due to empty AI content", delayMs);
+                                Thread.sleep(delayMs);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                        }
+                        continue;
+                    }
                     
                     // 验证结果数量
                     if (batchResults.size() == batch.size()) {
@@ -452,8 +471,9 @@ public class BatchChatGPTMovieRecognitionService {
             // 尝试解析JSON格式的响应
             String content = extractContentFromResponse(response);
             if (content == null || content.trim().isEmpty()) {
-                LOGGER.warn("Empty content in API response");
-                return results;
+                LOGGER.warn("Empty content in API response - needs retry");
+                // 返回null表示需要重试，而不是空Map
+                return null;
             }
             
             // 按行分割结果

@@ -496,7 +496,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       textFieldSearchString.setText(movieToScrape.getTitle());
       lblPath.setText(movieToScrape.getPathNIO().resolve(movieToScrape.getMainFile().getFilename()).toString());
       // initial search with IDs
-      searchMovie(textFieldSearchString.getText(), true);
+      // searchMovie(textFieldSearchString.getText(), true);
       
       // automatically trigger AI fix on startup
       SwingUtilities.invokeLater(() -> {
