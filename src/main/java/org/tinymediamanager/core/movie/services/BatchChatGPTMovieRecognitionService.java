@@ -230,8 +230,8 @@ public class BatchChatGPTMovieRecognitionService {
                         retryCount++;
                         
                         if (retryCount <= maxRetries) {
-                            // 指数退避重试
-                            long delayMs = 1000L * (1L << (retryCount - 1)); // 1s, 2s, 4s...
+                            // 指数退避重试 - 增加基础延迟
+                            long delayMs = 3000L * (1L << (retryCount - 1)); // 3s, 6s, 12s...
                             try {
                                 LOGGER.info("Retrying after {}ms delay due to empty AI content", delayMs);
                                 Thread.sleep(delayMs);
@@ -268,9 +268,9 @@ public class BatchChatGPTMovieRecognitionService {
                         retryCount++;
                         
                         if (retryCount <= maxRetries) {
-                            // 重试前等待
+                            // 重试前等待 - 增加延迟
                             try {
-                                Thread.sleep(2000 * retryCount);
+                                Thread.sleep(5000 * retryCount);
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
                                 break;
@@ -287,7 +287,7 @@ public class BatchChatGPTMovieRecognitionService {
                 
                 if (retryCount <= maxRetries) {
                     try {
-                        Thread.sleep(2000 * retryCount);
+                        Thread.sleep(5000 * retryCount);
                     } catch (InterruptedException ex) {
                         Thread.currentThread().interrupt();
                         break;
@@ -431,8 +431,8 @@ public class BatchChatGPTMovieRecognitionService {
                 }
 
                 if (attempt < maxRetries) {
-                    // 指数退避重试
-                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    // 指数退避重试 - 增加基础延迟
+                    long delayMs = 3000L * (1L << (attempt - 1)); // 3s, 6s, 12s...
                     LOGGER.info("Retrying batch movie API after {}ms delay", delayMs);
                     Thread.sleep(delayMs);
                 }
@@ -442,8 +442,8 @@ public class BatchChatGPTMovieRecognitionService {
                 LOGGER.warn("Batch movie API failed on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
 
                 if (attempt < maxRetries) {
-                    // 指数退避重试
-                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    // 指数退避重试 - 增加基础延迟
+                    long delayMs = 3000L * (1L << (attempt - 1)); // 3s, 6s, 12s...
                     try {
                         LOGGER.info("Retrying batch movie API after {}ms delay", delayMs);
                         Thread.sleep(delayMs);

@@ -106,8 +106,8 @@ public class ChatGPTMovieRecognitionService {
                 
                 if (retryCount > 0) {
                     LOGGER.info("Retrying AI recognition, attempt {}/{}", retryCount + 1, maxRetries);
-                    // 指数退避
-                    long delayMs = 1000L * (1L << (retryCount - 1)); // 1s, 2s, 4s...
+                    // 指数退避 - 增加基础延迟
+                    long delayMs = 3000L * (1L << (retryCount - 1)); // 3s, 6s, 12s...
                     try {
                         LOGGER.info("Waiting {}ms before retry", delayMs);
                         Thread.sleep(delayMs);
@@ -496,7 +496,7 @@ public class ChatGPTMovieRecognitionService {
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
                 if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
                     LOGGER.warn("API频率限制超出，等待重试...");
-                    long waitTime = 1000L * (1L << (attempt - 1)); // 指数退避
+                    long waitTime = 3000L * (1L << (attempt - 1)); // 指数退避 - 增加基础延迟
                     Thread.sleep(waitTime);
                     continue;
                 }
@@ -555,9 +555,9 @@ public class ChatGPTMovieRecognitionService {
                     LOGGER.warn("Retry API request failed with status: {}, 响应: {}", response.statusCode(), response.body());
                 }
 
-                // 指数退避重试
+                // 指数退避重试 - 增加基础延迟
                 if (attempt < maxRetries) {
-                    long delayMs = 1000L * (1L << (attempt - 1)); // 1s, 2s, 4s...
+                    long delayMs = 3000L * (1L << (attempt - 1)); // 3s, 6s, 12s...
                     LOGGER.info("重试失败，等待 {}ms 后重试", delayMs);
                     Thread.sleep(delayMs);
                 }
@@ -577,7 +577,7 @@ public class ChatGPTMovieRecognitionService {
                     if (errorMsg.contains("rate limit") || errorMsg.contains("quota") || errorMsg.contains("limit") || errorMsg.contains("usage")) {
                         LOGGER.warn("遇到API限制错误，增加等待时间");
                         try {
-                            Thread.sleep(5000L * attempt); // 更长的等待时间
+                            Thread.sleep(10000L * attempt); // 更长的等待时间
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
                             break;
@@ -585,10 +585,10 @@ public class ChatGPTMovieRecognitionService {
                     }
                 }
 
-                // 普通重试的指数退避
+                // 普通重试的指数退避 - 增加基础延迟
                 if (attempt < maxRetries) {
                     try {
-                        long delayMs = 1000L * (1L << (attempt - 1));
+                        long delayMs = 3000L * (1L << (attempt - 1));
                         LOGGER.info("等待 {}ms 后重试", delayMs);
                         Thread.sleep(delayMs);
                     } catch (InterruptedException ie) {
