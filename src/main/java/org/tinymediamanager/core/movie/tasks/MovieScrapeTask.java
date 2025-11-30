@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.swing.SwingUtilities;
@@ -31,6 +32,7 @@ import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.ScraperMetadataConfig;
+import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaRating;
 import org.tinymediamanager.core.entities.MediaTrailer;
@@ -118,8 +120,13 @@ public class MovieScrapeTask extends TmmThreadPool {
       }
     }
 
-    // 批量AI识别优化：在启动线程池前统一处理
-    Map<String, String> aiRecognitionResults = null;
+    // 初始化线程池，移到AI识别之前，以便并行处理
+    initThreadPool(3, "scrape");
+
+    // 使用线程安全的Map存储AI识别结果
+    ConcurrentHashMap<String, String> aiRecognitionResults = new ConcurrentHashMap<>();
+    
+    // 批量AI识别优化：批次处理，识别一部分就刮削一部分
     if (movieScrapeParams.doSearch && !movieScrapeParams.moviesToScrape.isEmpty()) {
       // 检查是否配置了 OpenAI API Key
       String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -135,9 +142,37 @@ public class MovieScrapeTask extends TmmThreadPool {
               new Message(MessageLevel.INFO, "批量电影AI识别", startMsg));
 
           BatchChatGPTMovieRecognitionService batchService = new BatchChatGPTMovieRecognitionService();
-          aiRecognitionResults = batchService.batchRecognizeMovieTitles(movieScrapeParams.moviesToScrape);
-
-          LOGGER.info("Batch AI recognition completed for {} movies", aiRecognitionResults.size());
+          
+          // 手动拆分批次，从设置中获取批次大小
+          int batchSize = Settings.getInstance().getAiBatchSize();
+          int totalMovies = movieScrapeParams.moviesToScrape.size();
+          int totalBatches = (int) Math.ceil((double) totalMovies / batchSize);
+          
+          LOGGER.info("Processing {} movies in {} batches of {} movies each", totalMovies, totalBatches, batchSize);
+          
+          // 循环处理每个批次
+          for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            int startIndex = batchIndex * batchSize;
+            int endIndex = Math.min(startIndex + batchSize, totalMovies);
+            List<Movie> currentBatch = movieScrapeParams.moviesToScrape.subList(startIndex, endIndex);
+            
+            LOGGER.info("Processing batch {}/{} ({} movies)", batchIndex + 1, totalBatches, currentBatch.size());
+            
+            // 处理当前批次的AI识别
+            Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(currentBatch);
+            
+            // 将当前批次的识别结果添加到总结果中
+            aiRecognitionResults.putAll(batchResults);
+            
+            LOGGER.info("Batch {} AI recognition completed for {} movies", batchIndex + 1, batchResults.size());
+            
+            // 立即提交当前批次的刮削任务
+            for (Movie movie : currentBatch) {
+              submitTask(new Worker(movie, aiRecognitionResults));
+            }
+          }
+          
+          LOGGER.info("All batches AI recognition completed for {} movies", aiRecognitionResults.size());
 
           // 发送批量AI识别完成消息到Message history
           int successCount = aiRecognitionResults.size();
@@ -154,20 +189,31 @@ public class MovieScrapeTask extends TmmThreadPool {
           String failMsg = String.format("批量电影AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
           MessageManager.getInstance().pushMessage(
               new Message(MessageLevel.WARN, "批量电影AI识别", failMsg));
+          
+          // 即使AI识别失败，也要提交所有电影的刮削任务
+          for (Movie movie : movieScrapeParams.moviesToScrape) {
+            submitTask(new Worker(movie, aiRecognitionResults));
+          }
         }
       } else {
         LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
+        
+        // 直接提交所有电影的刮削任务
+        for (Movie movie : movieScrapeParams.moviesToScrape) {
+          submitTask(new Worker(movie, aiRecognitionResults));
+        }
       }
     } else {
       LOGGER.debug("Batch AI recognition skipped: doSearch={}, movieCount={}",
                    movieScrapeParams.doSearch, movieScrapeParams.moviesToScrape.size());
+      
+      // 直接提交所有电影的刮削任务
+      for (Movie movie : movieScrapeParams.moviesToScrape) {
+        submitTask(new Worker(movie, aiRecognitionResults));
+      }
     }
-
-    initThreadPool(3, "scrape");
-
-    for (Movie movie : movieScrapeParams.moviesToScrape) {
-      submitTask(new Worker(movie, aiRecognitionResults));
-    }
+    
+    // 等待所有刮削任务完成
     waitForCompletionOrCancel();
 
     // initiate smart scrape

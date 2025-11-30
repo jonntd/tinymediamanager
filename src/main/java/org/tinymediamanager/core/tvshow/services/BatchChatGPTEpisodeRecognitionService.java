@@ -148,8 +148,8 @@ public class BatchChatGPTEpisodeRecognitionService {
 
                 // 检查API频率限制并记录统计
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-                if (!rateLimiter.requestPermission("BatchChatGPTEpisodeRecognition")) {
-                    LOGGER.warn("API rate limit exceeded for batch episode recognition on attempt {}/{}", attempt, maxRetries);
+                if (!rateLimiter.waitForPermission("BatchChatGPTEpisodeRecognition", 30000)) {
+                    LOGGER.warn("API call timed out for batch episode recognition after 30 seconds, attempt {}/{}", attempt, maxRetries);
                     throw new RuntimeException("API rate limit exceeded");
                 }
                 Settings settings = Settings.getInstance();

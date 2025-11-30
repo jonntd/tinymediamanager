@@ -260,8 +260,8 @@ public class BatchChatGPTTvShowRecognitionService {
 
                 // 检查API频率限制并记录统计
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-                if (!rateLimiter.requestPermission("BatchChatGPTTvShowRecognition")) {
-                    LOGGER.warn("API rate limit exceeded for batch TV show recognition on attempt {}/{}", attempt, maxRetries);
+                if (!rateLimiter.waitForPermission("BatchChatGPTTvShowRecognition", 30000)) {
+                    LOGGER.warn("API call timed out for batch TV show recognition after 30 seconds, attempt {}/{}", attempt, maxRetries);
                     throw new RuntimeException("API rate limit exceeded");
                 }
             String apiKey = settings.getOpenAiApiKey();

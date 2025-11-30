@@ -116,6 +116,7 @@ class SystemSettingsPanel extends JPanel {
   private JSpinner            spAiMaxCallsPerHour;
   private JSpinner            spAiMinIntervalSeconds;
   private JCheckBox           chkAiIndividualFallbackEnabled;
+  private JSpinner            spAiBatchSize;
   private JLabel              lblAiStatistics;
   private JButton             btnResetAiStatistics;
 
@@ -342,18 +343,23 @@ class SystemSettingsPanel extends JPanel {
       spAiMinIntervalSeconds = new JSpinner(new SpinnerNumberModel(1, 0, 60, 1));
       panelOpenAI.add(spAiMinIntervalSeconds, "cell 2 10");
 
+      JLabel lblAiBatchSize = new JLabel("AI Batch Size:");
+      panelOpenAI.add(lblAiBatchSize, "cell 1 11,alignx trailing");
+      spAiBatchSize = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
+      panelOpenAI.add(spAiBatchSize, "cell 2 11");
+
       chkAiIndividualFallbackEnabled = new JCheckBox("Enable individual AI fallback");
-      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 11,spanx 2");
+      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 12,spanx 2");
 
       // AI Statistics Display
       JLabel lblAiStatsTitle = new JLabel("AI API Statistics:");
-      panelOpenAI.add(lblAiStatsTitle, "cell 1 12,alignx trailing");
+      panelOpenAI.add(lblAiStatsTitle, "cell 1 13,alignx trailing");
       lblAiStatistics = new JLabel("Loading...");
-      panelOpenAI.add(lblAiStatistics, "cell 2 12");
+      panelOpenAI.add(lblAiStatistics, "cell 2 13");
 
       btnResetAiStatistics = new JButton("Reset Statistics");
       btnResetAiStatistics.addActionListener(e -> resetAiStatistics());
-      panelOpenAI.add(btnResetAiStatistics, "cell 2 13,alignx right");
+      panelOpenAI.add(btnResetAiStatistics, "cell 2 14,alignx right");
 
       add(collapsiblePanel, "cell 0 6,growx,wmin 0");
     }
@@ -597,6 +603,13 @@ class SystemSettingsPanel extends JPanel {
     AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_21, chkAiIndividualFallbackEnabled,
         jCheckBoxBeanProperty_2);
     autoBinding_22.bind();
+
+    // AI Batch Size
+    Property settingsBeanProperty_22 = BeanProperty.create("aiBatchSize");
+    Property jSpinnerBeanProperty_4 = BeanProperty.create("value");
+    AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_22, spAiBatchSize,
+        jSpinnerBeanProperty_4);
+    autoBinding_23.bind();
 
     // 启动统计更新定时器
     updateAiStatistics();

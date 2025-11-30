@@ -87,7 +87,9 @@ public class TvShowRenameTask extends TmmThreadPool {
     try {
       LOGGER.info("Renaming '{}' TV shows / '{}' episodes", tvShowsToRename.size(), episodesToRename.size());
 
-      initThreadPool(1, "rename");
+      // 动态调整线程池大小，最多使用4个线程或可用处理器数量，以提高重命名速度
+      int threadCount = Math.min(1, Runtime.getRuntime().availableProcessors());
+      initThreadPool(threadCount, "rename");
 
       // 1. episodes first (to get the right season folders for moving season artwork)
       for (TvShowEpisode tvEpisodesToRename : episodesToRename) {

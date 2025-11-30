@@ -99,8 +99,8 @@ public class ChatGPTMovieRecognitionService {
             while (retryCount <= maxRetries) {
                 // 检查API频率限制
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-                if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
-                    LOGGER.warn("API rate limit exceeded for movie recognition, attempt {}/{}", retryCount + 1, maxRetries);
+                if (!rateLimiter.waitForPermission("ChatGPTMovieRecognition", 30000)) {
+                    LOGGER.warn("API call timed out for movie recognition after 30 seconds, attempt {}/{} ", retryCount + 1, maxRetries);
                     throw new RuntimeException("API rate limit exceeded");
                 }
                 
@@ -237,6 +237,14 @@ public class ChatGPTMovieRecognitionService {
      */
     private String callChatGPTAPI(String moviePath) {
         try {
+            // 检查缓存
+            AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+            String cacheKey = "ChatGPTMovieRecognition:" + moviePath;
+            String cachedResult = rateLimiter.getFromCache(cacheKey);
+            if (cachedResult != null) {
+                return cachedResult;
+            }
+            
             String apiKey = settings.getOpenAiApiKey();
             String apiUrl = settings.getOpenAiApiUrl();
             String model = settings.getOpenAiModel();
@@ -328,6 +336,12 @@ public class ChatGPTMovieRecognitionService {
                                 .replace("\\n", "\n")
                                 .trim();
                             LOGGER.debug("Extracted content: {}", content);
+                            
+                            // 将结果存入缓存
+                            // 缓存操作已在前面完成，此处无需再次声明 rateLimiter
+                            // 缓存键已在方法开头定义，直接使用即可
+                            rateLimiter.addToCache(cacheKey, content);
+                            
                             return content;
                         }
                     }
@@ -494,10 +508,8 @@ public class ChatGPTMovieRecognitionService {
 
                 // 检查API频率限制
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-                if (!rateLimiter.requestPermission("ChatGPTMovieRecognition")) {
-                    LOGGER.warn("API频率限制超出，等待重试...");
-                    long waitTime = 3000L * (1L << (attempt - 1)); // 指数退避 - 增加基础延迟
-                    Thread.sleep(waitTime);
+                if (!rateLimiter.waitForPermission("ChatGPTMovieRecognition", 30000)) {
+                    LOGGER.warn("API调用超时，等待重试...");
                     continue;
                 }
 
@@ -525,8 +537,11 @@ public class ChatGPTMovieRecognitionService {
 
                 // 记录性能指标
                 LOGGER.info("API响应时间: {}ms, 状态码: {}", responseTime, response.statusCode());
-
+                
                 if (response.statusCode() == 200) {
+                    // 记录成功调用，减少动态等待时间
+                    rateLimiter.recordSuccessfulCall();
+                    
                     String responseBody = response.body();
                     LOGGER.debug("Retry API response: {}", responseBody);
 
@@ -553,6 +568,14 @@ public class ChatGPTMovieRecognitionService {
                     }
                 } else {
                     LOGGER.warn("Retry API request failed with status: {}, 响应: {}", response.statusCode(), response.body());
+                    
+                    // 处理429错误，增加动态等待时间
+                    if (response.statusCode() == 429) {
+                        rateLimiter.record429Error();
+                    } else {
+                        // 非429错误，记录成功调用，逐渐恢复
+                        rateLimiter.recordSuccessfulCall();
+                    }
                 }
 
                 // 指数退避重试 - 增加基础延迟

@@ -154,23 +154,29 @@ public class BatchChatGPTMovieRecognitionService {
             return results;
         }
         
-        // 分组处理
-        int totalBatches = (int) Math.ceil((double) needRecognition.size() / batchSize);
-        LOGGER.info("Processing {} movies in {} batches", needRecognition.size(), totalBatches);
+        // 智能批次处理
+        AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+        int processedCount = 0;
+        int batchNumber = 0;
         
-        for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            int startIndex = batchIndex * batchSize;
-            int endIndex = Math.min(startIndex + batchSize, needRecognition.size());
-            List<Movie> currentBatch = needRecognition.subList(startIndex, endIndex);
+        while (processedCount < needRecognition.size()) {
+            // 每次处理前重新计算最佳批次大小
+            int optimalBatchSize = rateLimiter.calculateOptimalBatchSize(batchSize);
+            batchNumber++;
             
-            LOGGER.info("Processing batch {}/{} ({} movies)", 
-                       batchIndex + 1, totalBatches, currentBatch.size());
+            int endIndex = Math.min(processedCount + optimalBatchSize, needRecognition.size());
+            List<Movie> currentBatch = needRecognition.subList(processedCount, endIndex);
+            
+            LOGGER.info("Processing batch {}/? ({} movies, optimal batch size: {})", 
+                       batchNumber, currentBatch.size(), optimalBatchSize);
             
             Map<String, String> batchResults = processBatchWithRetry(currentBatch, maxRetries);
             results.putAll(batchResults);
             
+            processedCount += currentBatch.size();
+            
             // 添加小延迟避免API限制
-            if (batchIndex < totalBatches - 1) {
+            if (processedCount < needRecognition.size()) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -198,8 +204,8 @@ public class BatchChatGPTMovieRecognitionService {
 
         // 检查API频率限制
         AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-        if (!rateLimiter.requestPermission("BatchChatGPTMovieRecognition")) {
-            LOGGER.warn("API rate limit exceeded, skipping batch of {} movies", batch.size());
+        if (!rateLimiter.waitForPermission("BatchChatGPTMovieRecognition", 30000)) {
+            LOGGER.warn("API call timed out for batch movie recognition after 30 seconds, skipping batch of {} movies", batch.size());
             return results;
         }
 

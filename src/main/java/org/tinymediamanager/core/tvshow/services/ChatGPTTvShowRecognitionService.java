@@ -87,8 +87,8 @@ public class ChatGPTTvShowRecognitionService {
 
                 // 检查API频率限制并记录统计
                 AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-                if (!rateLimiter.requestPermission("ChatGPTTvShowRecognition")) {
-                    LOGGER.warn("API rate limit exceeded for TV show recognition on attempt {}/{}", attempt, maxRetries);
+                if (!rateLimiter.waitForPermission("ChatGPTTvShowRecognition", 30000)) {
+                    LOGGER.warn("API call timed out for TV show recognition after 30 seconds, attempt {}/{}", attempt, maxRetries);
                     throw new RuntimeException("API rate limit exceeded");
                 }
 

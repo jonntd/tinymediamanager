@@ -186,6 +186,7 @@ public final class Settings extends AbstractSettings {
   private int                                              aiMaxCallsPerHour            = 1000;
   private int                                              aiMinIntervalSeconds         = 1;
   private boolean                                          aiIndividualFallbackEnabled  = true;
+  private int                                              aiBatchSize                  = 5;
 
   /**
    * Instantiates a new settings.
@@ -1740,5 +1741,16 @@ public final class Settings extends AbstractSettings {
     boolean oldValue = this.aiIndividualFallbackEnabled;
     this.aiIndividualFallbackEnabled = newValue;
     firePropertyChange("aiIndividualFallbackEnabled", oldValue, newValue);
+  }
+
+  // AI Batch Size
+  public int getAiBatchSize() {
+    return aiBatchSize;
+  }
+
+  public void setAiBatchSize(int newValue) {
+    int oldValue = this.aiBatchSize;
+    this.aiBatchSize = newValue;
+    firePropertyChange("aiBatchSize", oldValue, newValue);
   }
 }
