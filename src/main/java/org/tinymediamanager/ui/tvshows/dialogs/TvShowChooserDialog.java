@@ -546,7 +546,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       lblPath.setText(tvShowToScrape.getPathNIO().toString());
       textFieldSearchString.setText(tvShowToScrape.getTitle());
       // initial search with IDs
-      searchTvShow(textFieldSearchString.getText(), true);
+      // searchTvShow(textFieldSearchString.getText(), true);
 
       // automatically trigger AI fix on startup
       SwingUtilities.invokeLater(() -> {
