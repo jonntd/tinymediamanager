@@ -382,39 +382,41 @@ public class MovieRenamer {
     // ## rename POSTER, FANART, BANNER, CLEARART, THUMB, LOGO, CLEARLOGO, DISCART, KEYART (copy 1:N)
     // ######################################################################
     // we can have multiple ones, just get the newest one and copy(overwrite) them to all needed
-    List<MediaFile> mfs = new ArrayList<>();
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.FANART));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.POSTER));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.BANNER));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.CLEARART));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.THUMB));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.LOGO));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.CLEARLOGO));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.DISC));
-    mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.KEYART));
-    mfs.removeAll(Collections.singleton(null)); // remove all NULL ones!
-    for (MediaFile mf : mfs) {
-      LOGGER.trace("Rename 1:N {} - {}", mf.getType(), mf.getFileAsPath());
-      List<MediaFile> newMFs = generateFilename(movie, mf, newVideoBasename); // 1:N
-      for (MediaFile newMF : newMFs) {
-        posterRenamed = true;
-        fanartRenamed = true;
-        boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
-        if (ok) {
-          needed.add(newMF);
-          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), newMF.getFileAsPath()));
+    if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      List<MediaFile> mfs = new ArrayList<>();
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.FANART));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.POSTER));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.BANNER));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.CLEARART));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.THUMB));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.LOGO));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.CLEARLOGO));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.DISC));
+      mfs.add(movie.getNewestMediaFilesOfType(MediaFileType.KEYART));
+      mfs.removeAll(Collections.singleton(null)); // remove all NULL ones!
+      for (MediaFile mf : mfs) {
+        LOGGER.trace("Rename 1:N {} - {}", mf.getType(), mf.getFileAsPath());
+        List<MediaFile> newMFs = generateFilename(movie, mf, newVideoBasename); // 1:N
+        for (MediaFile newMF : newMFs) {
+          posterRenamed = true;
+          fanartRenamed = true;
+          boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
+          if (ok) {
+            needed.add(newMF);
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), newMF.getFileAsPath()));
 
-          // update the cached image by just COPYing it around (1:N)
-          if (ImageCache.isImageCached(mf.getFileAsPath())) {
-            Path oldCache = ImageCache.getAbsolutePath(mf);
-            Path newCache = ImageCache.getAbsolutePath(newMF);
-            LOGGER.trace("updating imageCache {} -> {}", oldCache, newCache);
-            // just use plain copy here, since we do not need all the safety checks done in our method
-            try {
-              Files.copy(oldCache, newCache);
-            }
-            catch (IOException e) {
-              LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
+            // update the cached image by just COPYing it around (1:N)
+            if (ImageCache.isImageCached(mf.getFileAsPath())) {
+              Path oldCache = ImageCache.getAbsolutePath(mf);
+              Path newCache = ImageCache.getAbsolutePath(newMF);
+              LOGGER.trace("updating imageCache {} -> {}", oldCache, newCache);
+              // just use plain copy here, since we do not need all the safety checks done in our method
+              try {
+                Files.copy(oldCache, newCache);
+              }
+              catch (IOException e) {
+                LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
+              }
             }
           }
         }
@@ -424,47 +426,49 @@ public class MovieRenamer {
     // ######################################################################
     // ## rename NFO (copy 1:N) - only TMM NFOs
     // ######################################################################
-    // we need to find the newest, valid TMM NFO
-    MediaFile nfo = MediaFile.EMPTY_MEDIAFILE;
-    for (MediaFile mf : movie.getMediaFiles(MediaFileType.NFO)) {
-      if (mf.getFiledate() >= nfo.getFiledate() && MovieConnectors.isValidNFO(mf.getFileAsPath())) {
-        nfo = new MediaFile(mf);
+    if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      // we need to find the newest, valid TMM NFO
+      MediaFile nfo = MediaFile.EMPTY_MEDIAFILE;
+      for (MediaFile mf : movie.getMediaFiles(MediaFileType.NFO)) {
+        if (mf.getFiledate() >= nfo.getFiledate() && MovieConnectors.isValidNFO(mf.getFileAsPath())) {
+          nfo = new MediaFile(mf);
+        }
       }
-    }
 
-    if (nfo != MediaFile.EMPTY_MEDIAFILE) { // one valid found? copy our NFO to all variants
-      List<MediaFile> newNFOs = generateFilename(movie, nfo, newVideoBasename); // 1:N
-      if (!newNFOs.isEmpty()) {
-        // ok, at least one has been set up
-        for (MediaFile newNFO : newNFOs) {
-          boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
-          if (ok) {
-            needed.add(newNFO);
-            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, nfo.getFileAsPath(), newNFO.getFileAsPath()));
+      if (nfo != MediaFile.EMPTY_MEDIAFILE) { // one valid found? copy our NFO to all variants
+        List<MediaFile> newNFOs = generateFilename(movie, nfo, newVideoBasename); // 1:N
+        if (!newNFOs.isEmpty()) {
+          // ok, at least one has been set up
+          for (MediaFile newNFO : newNFOs) {
+            boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
+            if (ok) {
+              needed.add(newNFO);
+              fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, nfo.getFileAsPath(), newNFO.getFileAsPath()));
+            }
           }
+        }
+        else {
+          // list was empty, so even remove this NFO
+          cleanup.add(nfo);
         }
       }
       else {
-        // list was empty, so even remove this NFO
-        cleanup.add(nfo);
+        LOGGER.trace("No valid NFO found for this movie");
       }
-    }
-    else {
-      LOGGER.trace("No valid NFO found for this movie");
-    }
 
-    // now iterate over all non-tmm NFOs, and add them for cleanup or not
-    for (MediaFile mf : movie.getMediaFiles(MediaFileType.NFO)) {
-      if (MovieConnectors.isValidNFO(mf.getFileAsPath())) {
-        cleanup.add(mf);
-      }
-      else {
-        if (MovieModuleManager.getInstance().getSettings().isRenamerNfoCleanup()) {
+      // now iterate over all non-tmm NFOs, and add them for cleanup or not
+      for (MediaFile mf : movie.getMediaFiles(MediaFileType.NFO)) {
+        if (MovieConnectors.isValidNFO(mf.getFileAsPath())) {
           cleanup.add(mf);
         }
         else {
-          needed.add(mf);
-          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), mf.getFileAsPath()));
+          if (MovieModuleManager.getInstance().getSettings().isRenamerNfoCleanup()) {
+            cleanup.add(mf);
+          }
+          else {
+            needed.add(mf);
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, mf.getFileAsPath(), mf.getFileAsPath()));
+          }
         }
       }
     }
@@ -472,25 +476,27 @@ public class MovieRenamer {
     // ######################################################################
     // ## rename all other types (copy 1:1)
     // ######################################################################
-    mfs = new ArrayList<>(movie.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
-        MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
-        MediaFileType.KEYART, MediaFileType.SUBTITLE));
-    mfs.removeAll(Collections.singleton(null)); // remove all NULL ones!
-    for (MediaFile other : mfs) {
-      LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
+    if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      List<MediaFile> mfs = new ArrayList<>(movie.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
+          MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
+          MediaFileType.KEYART, MediaFileType.SUBTITLE));
+      mfs.removeAll(Collections.singleton(null)); // remove all NULL ones!
+      for (MediaFile other : mfs) {
+        LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
 
-      List<MediaFile> newMFs = generateFilename(movie, other, newVideoBasename, oldVideoBasename); // 1:N
-      newMFs.removeAll(Collections.singleton(null)); // remove all NULL ones!
-      for (MediaFile newMF : newMFs) {
-        boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
-        if (ok) {
-          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), newMF.getFileAsPath()));
-          needed.add(newMF);
-        }
-        else {
-          // FIXME: what to do? not copied/exception... keep it for now...
-          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), other.getFileAsPath()));
-          needed.add(other);
+        List<MediaFile> newMFs = generateFilename(movie, other, newVideoBasename, oldVideoBasename); // 1:N
+        newMFs.removeAll(Collections.singleton(null)); // remove all NULL ones!
+        for (MediaFile newMF : newMFs) {
+          boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
+          if (ok) {
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), newMF.getFileAsPath()));
+            needed.add(newMF);
+          }
+          else {
+            // FIXME: what to do? not copied/exception... keep it for now...
+            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, other.getFileAsPath(), other.getFileAsPath()));
+            needed.add(other);
+          }
         }
       }
     }
@@ -498,29 +504,31 @@ public class MovieRenamer {
     // ######################################################################
     // ## rename SUBTITLEs (copy 1:1)
     // ######################################################################
-    for (MediaFile sub : movie.getMediaFiles(MediaFileType.SUBTITLE)) {
-      LOGGER.trace("Rename 1:1 {} - {}", sub.getType(), sub.getFileAsPath());
-      MediaFile newMF = generateFilename(movie, sub, newVideoBasename, oldVideoBasename).get(0);
-      boolean ok = moveFile(sub.getFileAsPath(), newMF.getFileAsPath());
-      if (ok) {
-        if (sub.getFilename().endsWith(".sub")) {
-          // when having a .sub, also rename .idx (don't care if error)
-          try {
-            Path oldidx = sub.getFileAsPath().resolveSibling(sub.getFilename().replaceFirst("sub$", "idx"));
-            Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().toString().replaceFirst("sub$", "idx"));
-            Utils.moveFileSafe(oldidx, newidx);
-            fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, oldidx, newidx));
+    if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      for (MediaFile sub : movie.getMediaFiles(MediaFileType.SUBTITLE)) {
+        LOGGER.trace("Rename 1:1 {} - {}", sub.getType(), sub.getFileAsPath());
+        MediaFile newMF = generateFilename(movie, sub, newVideoBasename, oldVideoBasename).get(0);
+        boolean ok = moveFile(sub.getFileAsPath(), newMF.getFileAsPath());
+        if (ok) {
+          if (sub.getFilename().endsWith(".sub")) {
+            // when having a .sub, also rename .idx (don't care if error)
+            try {
+              Path oldidx = sub.getFileAsPath().resolveSibling(sub.getFilename().replaceFirst("sub$", "idx"));
+              Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().toString().replaceFirst("sub$", "idx"));
+              Utils.moveFileSafe(oldidx, newidx);
+              fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, oldidx, newidx));
+            }
+            catch (Exception e) {
+              // no idx found or error - ignore
+            }
           }
-          catch (Exception e) {
-            // no idx found or error - ignore
-          }
+          needed.add(newMF);
+          fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, sub.getFileAsPath(), newMF.getFileAsPath()));
         }
-        needed.add(newMF);
-        fileNameHistory.addFilenameHistory(createFilenameHistory(newPathname, sub.getFileAsPath(), newMF.getFileAsPath()));
-      }
-      else {
-        LOGGER.warn("Could not rename subtitle file '{}'", sub.getFileAsPath());
-        needed.add(sub);
+        else {
+          LOGGER.warn("Could not rename subtitle file '{}'", sub.getFileAsPath());
+          needed.add(sub);
+        }
       }
     }
 
@@ -543,7 +551,7 @@ public class MovieRenamer {
     // ######################################################################
     // ## build up image cache
     // ######################################################################
-    if (Settings.getInstance().isImageCache()) {
+    if (Settings.getInstance().isImageCache() && !MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
       for (MediaFile gfx : needed) {
         ImageCache.cacheImageSilently(gfx, false);
       }
@@ -573,61 +581,63 @@ public class MovieRenamer {
     // ######################################################################
     // ## CLEANUP - delete all files marked for cleanup, which are not "needed"
     // ######################################################################
-    LOGGER.debug("Cleanup...");
+    if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      LOGGER.debug("Cleanup...");
 
-    // get all existing files in the movie dir, since Files.exist is not reliable in OSX
-    List<Path> existingFiles;
-    if (movie.isMultiMovieDir()) {
-      // no recursive search in MMD needed
-      existingFiles = Utils.listFiles(movie.getPathNIO());
-    }
-    else {
-      // search all files recursive for deeper cleanup
-      existingFiles = Utils.listFilesRecursive(movie.getPathNIO());
-    }
+      // get all existing files in the movie dir, since Files.exist is not reliable in OSX
+      List<Path> existingFiles;
+      if (movie.isMultiMovieDir()) {
+        // no recursive search in MMD needed
+        existingFiles = Utils.listFiles(movie.getPathNIO());
+      }
+      else {
+        // search all files recursive for deeper cleanup
+        existingFiles = Utils.listFilesRecursive(movie.getPathNIO());
+      }
 
-    // also add all files from the old path (if upgraded from MMD)
-    existingFiles.addAll(Utils.listFiles(Paths.get(oldPathname)));
+      // also add all files from the old path (if upgraded from MMD)
+      existingFiles.addAll(Utils.listFiles(Paths.get(oldPathname)));
 
-    for (int i = cleanup.size() - 1; i >= 0; i--) {
-      MediaFile cl = cleanup.get(i);
+      for (int i = cleanup.size() - 1; i >= 0; i--) {
+        MediaFile cl = cleanup.get(i);
 
-      // cleanup files which are not needed
-      if (!needed.contains(cl)) {
-        if (cl.getFileAsPath().equals(Paths.get(movie.getDataSource())) || cl.getFileAsPath().equals(movie.getPathNIO())
-            || cl.getFileAsPath().equals(Paths.get(oldPathname))) {
-          LOGGER.warn("Wohoo! We tried to remove complete datasource / movie folder. Nooo way...! '{}' / '{}'", cl.getType(), cl.getFileAsPath());
-          // happens when iterating eg over the getNFONaming and we return a "" string.
-          // then the path+filename = movie path and we want to delete :/
-          continue;
-        }
-
-        movie.removeFromMediaFiles(cl);
-
-        if (existingFiles.contains(cl.getFileAsPath())) {
-          LOGGER.debug("Deleting {}", cl.getFileAsPath());
-          Utils.deleteFileWithBackup(cl.getFileAsPath(), movie.getDataSource());
-          // also cleanup the cache for deleted mfs
-          if (cl.isGraphic()) {
-            ImageCache.invalidateCachedImage(cl);
+        // cleanup files which are not needed
+        if (!needed.contains(cl)) {
+          if (cl.getFileAsPath().equals(Paths.get(movie.getDataSource())) || cl.getFileAsPath().equals(movie.getPathNIO())
+              || cl.getFileAsPath().equals(Paths.get(oldPathname))) {
+            LOGGER.warn("Wohoo! We tried to remove complete datasource / movie folder. Nooo way...! '{}' / '{}'", cl.getType(), cl.getFileAsPath());
+            // happens when iterating eg over the getNFONaming and we return a "" string.
+            // then the path+filename = movie path and we want to delete :/
+            continue;
           }
-        }
 
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
-          if (!directoryStream.iterator().hasNext()) {
-            // no iterator = empty
-            LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
-            Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+          movie.removeFromMediaFiles(cl);
+
+          if (existingFiles.contains(cl.getFileAsPath())) {
+            LOGGER.debug("Deleting {}", cl.getFileAsPath());
+            Utils.deleteFileWithBackup(cl.getFileAsPath(), movie.getDataSource());
+            // also cleanup the cache for deleted mfs
+            if (cl.isGraphic()) {
+              ImageCache.invalidateCachedImage(cl);
+            }
           }
-        }
-        catch (IOException e) {
-          LOGGER.debug("could not search for empty dir: {}", e.getMessage());
+
+          try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
+            if (!directoryStream.iterator().hasNext()) {
+              // no iterator = empty
+              LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
+              Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+            }
+          }
+          catch (IOException e) {
+            LOGGER.debug("could not search for empty dir: {}", e.getMessage());
+          }
         }
       }
-    }
 
-    cleanupUnwantedFiles(movie);
-    removeEmptySubfolders(movie);
+      cleanupUnwantedFiles(movie);
+      removeEmptySubfolders(movie);
+    }
 
     // rename history
     fileNameHistory.setOldPath(oldPathname);

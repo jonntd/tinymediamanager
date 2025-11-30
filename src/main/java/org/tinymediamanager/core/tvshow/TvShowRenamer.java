@@ -1002,39 +1002,41 @@ public class TvShowRenamer {
     // ######################################################################
     // ## rename POSTER, FANART, BANNER, CLEARART, THUMB, LOGO, CLEARLOGO, DISCART (copy 1:N)
     // ######################################################################
-    // we can have multiple ones, just get the newest one and copy(overwrite) them to all needed
-    List<MediaFile> mfs = new ArrayList<>();
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.FANART));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.POSTER));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.BANNER));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CLEARART));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.THUMB));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.LOGO));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CLEARLOGO));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.DISC));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CHARACTERART));
-    mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.KEYART));
-    mfs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
-    for (MediaFile mf : mfs) {
-      LOGGER.trace("Rename 1:N {} {}", mf.getType(), mf.getFileAsPath());
-      List<MediaFile> newMFs = generateEpisodeFilenames(episode.getTvShow(), mf, oldVideoBasename); // 1:N
-      for (MediaFile newMF : newMFs) {
-        boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
-        if (ok) {
-          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, mf.getFileAsPath(), newMF.getFileAsPath()));
-          needed.add(newMF);
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      // we can have multiple ones, just get the newest one and copy(overwrite) them to all needed
+      List<MediaFile> mfs = new ArrayList<>();
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.FANART));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.POSTER));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.BANNER));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CLEARART));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.THUMB));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.LOGO));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CLEARLOGO));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.DISC));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.CHARACTERART));
+      mfs.add(episode.getNewestMediaFilesOfType(MediaFileType.KEYART));
+      mfs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
+      for (MediaFile mf : mfs) {
+        LOGGER.trace("Rename 1:N {} {}", mf.getType(), mf.getFileAsPath());
+        List<MediaFile> newMFs = generateEpisodeFilenames(episode.getTvShow(), mf, oldVideoBasename); // 1:N
+        for (MediaFile newMF : newMFs) {
+          boolean ok = copyFile(mf.getFileAsPath(), newMF.getFileAsPath());
+          if (ok) {
+            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, mf.getFileAsPath(), newMF.getFileAsPath()));
+            needed.add(newMF);
 
-          // update the cached image by just COPYing it around
-          if (ImageCache.isImageCached(mf.getFileAsPath())) {
-            Path oldCache = ImageCache.getAbsolutePath(mf);
-            Path newCache = ImageCache.getAbsolutePath(newMF);
-            LOGGER.trace("updating imageCache {} -> {}", oldCache, newCache);
-            // just use plain copy here, since we do not need all the safety checks done in our method
-            try {
-              Files.copy(oldCache, newCache);
-            }
-            catch (IOException e) {
-              LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
+            // update the cached image by just COPYing it around
+            if (ImageCache.isImageCached(mf.getFileAsPath())) {
+              Path oldCache = ImageCache.getAbsolutePath(mf);
+              Path newCache = ImageCache.getAbsolutePath(newMF);
+              LOGGER.trace("updating imageCache {} -> {}", oldCache, newCache);
+              // just use plain copy here, since we do not need all the safety checks done in our method
+              try {
+                Files.copy(oldCache, newCache);
+              }
+              catch (IOException e) {
+                LOGGER.warn("Error moving cached file '{}' - '{}'", oldCache, e.getMessage());
+              }
             }
           }
         }
@@ -1044,95 +1046,101 @@ public class TvShowRenamer {
     // ######################################################################
     // ## rename NFO (copy 1:N) - only TMM NFOs
     // ######################################################################
-    // we need to find the newest, valid TMM NFO
-    MediaFile nfo = MediaFile.EMPTY_MEDIAFILE;
-    for (MediaFile mf : episode.getMediaFiles(MediaFileType.NFO)) {
-      if (mf.getFiledate() >= nfo.getFiledate()) {// && TvShowEpisodeConnectors.isValidNFO(mf.getFileAsPath())) { //FIXME
-        nfo = new MediaFile(mf);
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      // we need to find the newest, valid TMM NFO
+      MediaFile nfo = MediaFile.EMPTY_MEDIAFILE;
+      for (MediaFile mf : episode.getMediaFiles(MediaFileType.NFO)) {
+        if (mf.getFiledate() >= nfo.getFiledate()) {// && TvShowEpisodeConnectors.isValidNFO(mf.getFileAsPath())) { //FIXME
+          nfo = new MediaFile(mf);
+        }
       }
-    }
 
-    if (nfo != MediaFile.EMPTY_MEDIAFILE) { // one valid found? copy our NFO to all variants
-      List<MediaFile> newNFOs = generateEpisodeFilenames(episode.getTvShow(), nfo, oldVideoBasename); // 1:N
-      if (!newNFOs.isEmpty()) {
-        // ok, at least one has been set up
-        for (MediaFile newNFO : newNFOs) {
-          boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
-          if (ok) {
-            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, nfo.getFileAsPath(), newNFO.getFileAsPath()));
-            needed.add(newNFO);
+      if (nfo != MediaFile.EMPTY_MEDIAFILE) { // one valid found? copy our NFO to all variants
+        List<MediaFile> newNFOs = generateEpisodeFilenames(episode.getTvShow(), nfo, oldVideoBasename); // 1:N
+        if (!newNFOs.isEmpty()) {
+          // ok, at least one has been set up
+          for (MediaFile newNFO : newNFOs) {
+            boolean ok = copyFile(nfo.getFileAsPath(), newNFO.getFileAsPath());
+            if (ok) {
+              fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, nfo.getFileAsPath(), newNFO.getFileAsPath()));
+              needed.add(newNFO);
+            }
           }
+        }
+        else {
+          // list was empty, so even remove this NFO
+          cleanup.add(nfo);
         }
       }
       else {
-        // list was empty, so even remove this NFO
-        cleanup.add(nfo);
+        LOGGER.trace("No valid NFO found for this episode");
       }
-    }
-    else {
-      LOGGER.trace("No valid NFO found for this episode");
     }
 
     // ######################################################################
     // ## rename subtitles (copy 1:1)
     // ######################################################################
-    for (MediaFile subtitle : episode.getMediaFiles(MediaFileType.SUBTITLE)) {
-      LOGGER.trace("Rename 1:1 {} {}", subtitle.getType(), subtitle.getFileAsPath());
-      MediaFile newMF = generateEpisodeFilenames(episode.getTvShow(), subtitle, oldVideoBasename).get(0); // there can be only one
-      boolean ok = moveFile(subtitle.getFileAsPath(), newMF.getFileAsPath());
-      if (ok) {
-        if (newMF.getFilename().endsWith(".sub")) {
-          // when having a .sub, also rename .idx (don't care if error)
-          try {
-            Path oldidx = subtitle.getFileAsPath().resolveSibling(subtitle.getFilename().replaceFirst("sub$", "idx"));
-            Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().replaceFirst("sub$", "idx"));
-            Utils.moveFileSafe(oldidx, newidx);
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      for (MediaFile subtitle : episode.getMediaFiles(MediaFileType.SUBTITLE)) {
+        LOGGER.trace("Rename 1:1 {} {}", subtitle.getType(), subtitle.getFileAsPath());
+        MediaFile newMF = generateEpisodeFilenames(episode.getTvShow(), subtitle, oldVideoBasename).get(0); // there can be only one
+        boolean ok = moveFile(subtitle.getFileAsPath(), newMF.getFileAsPath());
+        if (ok) {
+          if (newMF.getFilename().endsWith(".sub")) {
+            // when having a .sub, also rename .idx (don't care if error)
+            try {
+              Path oldidx = subtitle.getFileAsPath().resolveSibling(subtitle.getFilename().replaceFirst("sub$", "idx"));
+              Path newidx = newMF.getFileAsPath().resolveSibling(newMF.getFilename().replaceFirst("sub$", "idx"));
+              Utils.moveFileSafe(oldidx, newidx);
 
-            MediaFile idx = new MediaFile(newidx);
-            needed.add(idx);
-            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, oldidx, newidx));
+              MediaFile idx = new MediaFile(newidx);
+              needed.add(idx);
+              fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, oldidx, newidx));
+            }
+            catch (Exception e) {
+              // no idx found or error - ignore
+            }
           }
-          catch (Exception e) {
-            // no idx found or error - ignore
-          }
+          needed.add(newMF);
+          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, subtitle.getFileAsPath(), newMF.getFileAsPath()));
         }
-        needed.add(newMF);
-        fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, subtitle.getFileAsPath(), newMF.getFileAsPath()));
-      }
-      else {
-        LOGGER.error("Could not rename subtitle file '{}'", subtitle.getFileAsPath());
-        needed.add(subtitle);
+        else {
+          LOGGER.error("Could not rename subtitle file '{}'", subtitle.getFileAsPath());
+          needed.add(subtitle);
+        }
       }
     }
 
     // ######################################################################
     // ## rename all other types (copy 1:1)
     // ######################################################################
-    mfs = new ArrayList<>(episode.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
-        MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
-        MediaFileType.CHARACTERART, MediaFileType.KEYART, MediaFileType.SUBTITLE));
-    mfs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
-    for (MediaFile other : mfs) {
-      LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      List<MediaFile> mfs = new ArrayList<>(episode.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
+          MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
+          MediaFileType.CHARACTERART, MediaFileType.KEYART, MediaFileType.SUBTITLE));
+      mfs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
+      for (MediaFile other : mfs) {
+        LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
 
-      if ("idx".equalsIgnoreCase(other.getExtension())) {
-        // .idx is a sidecar file for .sub - we handled this above
-        continue;
-      }
-
-      List<MediaFile> newMFs = generateEpisodeFilenames(episode.getTvShow(), other, oldVideoBasename); // 1:N
-      newMFs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
-
-      for (MediaFile newMF : newMFs) {
-        boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
-        if (ok) {
-          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), newMF.getFileAsPath()));
-          needed.add(newMF);
+        if ("idx".equalsIgnoreCase(other.getExtension())) {
+          // .idx is a sidecar file for .sub - we handled this above
+          continue;
         }
-        else {
-          // FIXME: what to do? not copied/exception... keep it for now...
-          fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), other.getFileAsPath()));
-          needed.add(other);
+
+        List<MediaFile> newMFs = generateEpisodeFilenames(episode.getTvShow(), other, oldVideoBasename); // 1:N
+        newMFs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
+
+        for (MediaFile newMF : newMFs) {
+          boolean ok = copyFile(other.getFileAsPath(), newMF.getFileAsPath());
+          if (ok) {
+            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), newMF.getFileAsPath()));
+            needed.add(newMF);
+          }
+          else {
+            // FIXME: what to do? not copied/exception... keep it for now...
+            fileNameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, other.getFileAsPath(), other.getFileAsPath()));
+            needed.add(other);
+          }
         }
       }
     }
@@ -1140,8 +1148,10 @@ public class TvShowRenamer {
     // ######################################################################
     // ## invalidate image cache
     // ######################################################################
-    for (MediaFile gfx : episode.getMediaFiles()) {
-      ImageCache.invalidateCachedImage(gfx);
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      for (MediaFile gfx : episode.getMediaFiles()) {
+        ImageCache.invalidateCachedImage(gfx);
+      }
     }
 
     // remove duplicate MediaFiles
@@ -1153,24 +1163,26 @@ public class TvShowRenamer {
     // ## CLEANUP - delete all files marked for cleanup, which are not "needed"
     // ######################################################################
     LOGGER.debug("Cleanup...");
-    for (int i = cleanup.size() - 1; i >= 0; i--) {
-      // cleanup files which are not needed
-      if (!needed.contains(cleanup.get(i))) {
-        MediaFile cl = cleanup.get(i);
-        if (Files.exists(cl.getFileAsPath())) { // unneeded, but for not displaying wrong deletes in logger...
-          LOGGER.debug("Deleting {}", cl.getFileAsPath());
-          Utils.deleteFileWithBackup(cl.getFileAsPath(), episode.getTvShow().getDataSource());
-        }
-
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
-          if (!directoryStream.iterator().hasNext()) {
-            // no iterator = empty
-            LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
-            Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+    if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      for (int i = cleanup.size() - 1; i >= 0; i--) {
+        // cleanup files which are not needed
+        if (!needed.contains(cleanup.get(i))) {
+          MediaFile cl = cleanup.get(i);
+          if (Files.exists(cl.getFileAsPath())) { // unneeded, but for not displaying wrong deletes in logger...
+            LOGGER.debug("Deleting {}", cl.getFileAsPath());
+            Utils.deleteFileWithBackup(cl.getFileAsPath(), episode.getTvShow().getDataSource());
           }
-        }
-        catch (IOException e) {
-          LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+
+          try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
+            if (!directoryStream.iterator().hasNext()) {
+              // no iterator = empty
+              LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
+              Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+            }
+          }
+          catch (IOException e) {
+            LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+          }
         }
       }
     }
@@ -1209,7 +1221,7 @@ public class TvShowRenamer {
         // ######################################################################
         // ## build up image cache
         // ######################################################################
-        if (Settings.getInstance().isImageCache()) {
+        if (Settings.getInstance().isImageCache() && !TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
           for (MediaFile gfx : e.getMediaFiles()) {
             ImageCache.cacheImageSilently(gfx, false);
           }

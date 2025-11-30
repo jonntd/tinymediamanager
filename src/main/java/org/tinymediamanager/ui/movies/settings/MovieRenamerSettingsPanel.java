@@ -102,6 +102,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
   private JTextField          tfFirstCharacter;
   private JCheckBox           chckbxAllowMerge;
   private JCheckBox           chckbxAutomaticRename;
+  private JCheckBox           chckbxRenamerOnlyVideoFiles;
   private JHintCheckBox       chckbxAsciiReplacement;
   private JHintCheckBox       chckbxUnicodeReplacement;
 
@@ -305,6 +306,11 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
       {
         chckbxAllowMerge = new JCheckBox(TmmResourceBundle.getString("Settings.renamer.movie.allowmerge"));
         panelAdvancedOptions.add(chckbxAllowMerge, "cell 1 4 2 1");
+      }
+      {
+        chckbxRenamerOnlyVideoFiles = new JCheckBox(TmmResourceBundle.getString("Settings.movie.renamer.onlyvideofiles"));
+        chckbxRenamerOnlyVideoFiles.setToolTipText(TmmResourceBundle.getString("Settings.movie.renamer.onlyvideofiles.desc"));
+        panelAdvancedOptions.add(chckbxRenamerOnlyVideoFiles, "cell 1 5 2 1");
       }
     }
     {
@@ -605,5 +611,10 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
     AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_4, chckbxUnicodeReplacement,
         jCheckBoxBeanProperty);
     autoBinding_9.bind();
+    //
+    Property movieSettingsBeanProperty_5 = BeanProperty.create("renamerOnlyVideoFiles");
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_5, chckbxRenamerOnlyVideoFiles,
+        jCheckBoxBeanProperty);
+    autoBinding_12.bind();
   }
 }

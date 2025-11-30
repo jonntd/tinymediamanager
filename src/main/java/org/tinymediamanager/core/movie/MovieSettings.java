@@ -177,6 +177,7 @@ public final class MovieSettings extends AbstractSettings {
   boolean                                   asciiReplacement                       = false;
   boolean                                   unicodeReplacement                     = false;
   boolean                                   allowMultipleMoviesInSameDir           = false;
+  boolean                                   renamerOnlyVideoFiles                  = false;
 
   // meta data scraper
   String                                    movieScraper                           = MediaMetadata.TMDB;
@@ -1287,6 +1288,16 @@ public final class MovieSettings extends AbstractSettings {
     boolean oldValue = this.renamerNfoCleanup;
     this.renamerNfoCleanup = newValue;
     firePropertyChange("renamerNfoCleanup", oldValue, newValue);
+  }
+
+  public boolean isRenamerOnlyVideoFiles() {
+    return renamerOnlyVideoFiles;
+  }
+
+  public void setRenamerOnlyVideoFiles(boolean newValue) {
+    boolean oldValue = this.renamerOnlyVideoFiles;
+    this.renamerOnlyVideoFiles = newValue;
+    firePropertyChange("renamerOnlyVideoFiles", oldValue, newValue);
   }
 
   public boolean isSkipFoldersWithNomedia() {

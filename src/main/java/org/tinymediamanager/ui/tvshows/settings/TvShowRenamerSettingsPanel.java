@@ -109,6 +109,7 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
   private JTextField                               tfFirstCharacter;
   private JCheckBox                                chckbxAutomaticRename;
   private JCheckBox                                chckbxCleanupUnwanted;
+  private JCheckBox                                chckbxRenamerOnlyVideoFiles;
 
   public TvShowRenamerSettingsPanel() {
     // UI initializations
@@ -312,6 +313,11 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
       {
         chckbxCleanupUnwanted = new JCheckBox(TmmResourceBundle.getString("Settings.cleanupfiles"));
         panelAdvancedOptions.add(chckbxCleanupUnwanted, "cell 1 1 2 1");
+      }
+      {
+        chckbxRenamerOnlyVideoFiles = new JCheckBox(TmmResourceBundle.getString("Settings.tvshow.renamer.onlyvideofiles"));
+        chckbxRenamerOnlyVideoFiles.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.renamer.onlyvideofiles.desc"));
+        panelAdvancedOptions.add(chckbxRenamerOnlyVideoFiles, "cell 1 2 2 1");
       }
     }
     {
@@ -715,6 +721,11 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
     AutoBinding autoBinding_9 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6, chckbxCleanupUnwanted,
         jCheckBoxBeanProperty);
     autoBinding_9.bind();
+    //
+    Property tvShowSettingsBeanProperty_10 = BeanProperty.create("renamerOnlyVideoFiles");
+    AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_10, chckbxRenamerOnlyVideoFiles,
+        jCheckBoxBeanProperty);
+    autoBinding_11.bind();
     //
     Property tvShowSettingsBeanProperty_9 = BeanProperty.create("unicodeReplacement");
     AutoBinding autoBinding_10 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_9,
