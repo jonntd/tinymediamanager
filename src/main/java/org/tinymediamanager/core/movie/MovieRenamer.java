@@ -546,6 +546,12 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
+    // 保存所有非视频文件的引用，当仅处理视频文件时使用
+    List<MediaFile> nonVideoFiles = new ArrayList<>();
+    if (MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      nonVideoFiles.addAll(movie.getMediaFilesExceptType(MediaFileType.VIDEO));
+    }
+
     movie.removeAllMediaFiles();
 
     // ######################################################################
@@ -559,6 +565,11 @@ public class MovieRenamer {
 
     // give the file system a bit to write the files
     ThreadUtils.sleep(250);
+
+    // 当仅处理视频文件时，将非视频文件添加回needed列表
+    if (MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      needed.addAll(nonVideoFiles);
+    }
 
     movie.addToMediaFiles(needed);
     movie.setPath(newPathname);

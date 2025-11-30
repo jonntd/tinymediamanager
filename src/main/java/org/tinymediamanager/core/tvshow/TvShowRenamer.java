@@ -1159,6 +1159,15 @@ public class TvShowRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
+    // 保存所有非视频文件的引用，当仅处理视频文件时使用
+    List<MediaFile> nonVideoFiles = new ArrayList<>();
+    if (TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      // 获取第一个剧集的非视频文件引用
+      if (!episodes.isEmpty()) {
+        nonVideoFiles.addAll(episodes.get(0).getMediaFilesExceptType(MediaFileType.VIDEO));
+      }
+    }
+
     // ######################################################################
     // ## CLEANUP - delete all files marked for cleanup, which are not "needed"
     // ######################################################################
@@ -1200,7 +1209,14 @@ public class TvShowRenamer {
       // update paths/mfs for all relevant episodes
       for (TvShowEpisode e : episodes) {
         e.removeAllMediaFiles();
-        e.addToMediaFiles(needed);
+        
+        // 当仅处理视频文件时，将非视频文件添加回needed列表
+        List<MediaFile> finalNeeded = new ArrayList<>(needed);
+        if (TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+          finalNeeded.addAll(nonVideoFiles);
+        }
+        
+        e.addToMediaFiles(finalNeeded);
         e.setPath(episode.getPath());
 
         // Update file size information after rename based on TV show settings

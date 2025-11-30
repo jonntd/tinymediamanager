@@ -370,22 +370,34 @@ public class BatchChatGPTMovieRecognitionService {
             // 构建批量请求JSON
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 使用专业的批量电影AI识别提示词
+                // 使用专业的批量电影AI识别提示词 - 增强版
                 systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径列表，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" +
                               "## 核心要求\n\n" +
                               "### 1. 输入处理\n" +
                               "- 接收电影文件路径列表作为输入，每行一个\n" +
-                              "- 从每个文件名中提取电影标题、年份等信息\n" +
-                              "- 忽略文件扩展名和技术标记\n\n" +
+                              "- 从每个文件路径中提取核心电影标题信息\n" +
+                              "- **完全忽略**所有格式标签、技术信息和无关内容：\n" +
+                              "  - 分辨率标签：720p, 1080p, 2160p, 4K, 8K, HD, FullHD, UHD等\n" +
+                              "  - 视频编码：H.264, H.265, x264, x265, HEVC, AVC, MPEG-4等\n" +
+                              "  - 音频格式：DTS-HD, TrueHD, Atmos, AAC, AC3, FLAC, MP3等\n" +
+                              "  - 发布组：RARBG, YTS, HDSky, DIY, 各种中文字母组等\n" +
+                              "  - 版本信息：Director's Cut, Extended, Unrated, Theatrical等\n" +
+                              "  - 语言信息：国粤英三语, 中英字幕, 双语字幕等\n" +
+                              "  - 文件扩展名：.mp4, .mkv, .avi, .mov等\n" +
+                              "  - 其他技术标签：REMUX, BluRay, WEB-DL, HDR, DV, Dolby Vision等\n" +
+                              "- 仅提取核心电影标题，忽略所有括号、括号内内容和特殊字符\n\n" +
                               "### 2. 搜索策略\n" +
-                              "- 对每个文件进行独立的精确搜索\n" +
-                              "- 查找官方来源：IMDb、豆瓣电影、TMDb等\n" +
-                              "- 验证搜索结果的准确性\n\n" +
+                              "- 对每个文件进行**独立的精确搜索**\n" +
+                              "- 优先查找**权威来源**：TMDB、IMDB、豆瓣电影、烂番茄等\n" +
+                              "- 确保识别结果与**官方发行名称完全一致**\n" +
+                              "- 对于中文电影名称，**必须同时查找英文原名**\n" +
+                              "- 对于英文电影名称，直接使用原名\n\n" +
                               "### 3. 输出格式要求\n" +
                               "**严格按照以下格式输出，每行一个结果，绝对不要返回任何解释、错误信息或其他内容：**\n" +
-                              "```\n标题 年份\n```\n" +
-                              "- 标题优先使用英文原名作为主要标识符，仅在英文名称不可用时才考虑中文名称\n" +
-                              "- 标题和年份之间用一个空格分隔\n" +
+                              "```\n英文原名 年份\n```\n" +
+                              "- **标题必须使用英文原名**，这是强制要求！\n" +
+                              "- 仅在英文名称完全不可用时才考虑中文名称\n" +
+                              "- 标题和年份之间用**一个空格**分隔\n" +
                               "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                               "- 如果文件名中没有年份，必须通过搜索找到正确的发行年份\n" +
                               "- 年份不能为空，不能省略，这是强制要求\n" +
@@ -393,8 +405,8 @@ public class BatchChatGPTMovieRecognitionService {
                               "- 如果搜索失败，输出：未知电影 1900\n" +
                               "- 禁止返回'I am unable to'或任何错误说明\n\n" +
                               "### 4. 示例\n" +
-                              "输入：\n```\nInception.2010.mkv\nAvatar.2009.4K.mkv\n```\n" +
-                              "输出：\n```\nInception 2010\nAvatar 2009\n```";
+                              "输入：\n```\nInception.2010.mkv\nAvatar.2009.4K.mkv\n卡普尔和儿子们 Kapoor and Sons.mkv\n```\n" +
+                              "输出：\n```\nInception 2010\nAvatar 2009\nKapoor & Sons 2016\n```";
                 LOGGER.debug("Using professional Chinese extraction prompt with search capabilities");
             }
             

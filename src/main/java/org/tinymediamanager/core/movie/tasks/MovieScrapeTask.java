@@ -44,6 +44,7 @@ import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.core.services.AIApiRateLimiter;
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -66,7 +67,6 @@ import org.tinymediamanager.scraper.util.ParserUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 import org.tinymediamanager.ui.movies.dialogs.MovieChooserDialog;
-import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
 import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService;
 
 /**
@@ -121,7 +121,8 @@ public class MovieScrapeTask extends TmmThreadPool {
     }
 
     // 初始化线程池，移到AI识别之前，以便并行处理
-    initThreadPool(3, "scrape");
+    // 减少线程池大小，避免短时间内发起过多AI调用
+    initThreadPool(1, "scrape");
 
     // 使用线程安全的Map存储AI识别结果
     ConcurrentHashMap<String, String> aiRecognitionResults = new ConcurrentHashMap<>();
@@ -572,10 +573,20 @@ public class MovieScrapeTask extends TmmThreadPool {
             return aiResult;
           } else {
             LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold ({})", aiResult.getScore(), scraperTreshold);
+            // 尝试单个文件AI识别回退
+            MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+            if (fallbackResult != null) {
+              return fallbackResult;
+            }
             aiResult = null; // 重置结果，继续常规搜索
           }
         } else {
           LOGGER.info("No results found for AI recognized title: '{}'", aiProcessedTitle);
+          // 尝试单个文件AI识别回退
+          MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+          if (fallbackResult != null) {
+            return fallbackResult;
+          }
         }
       }
       
@@ -590,7 +601,13 @@ public class MovieScrapeTask extends TmmThreadPool {
           MediaSearchResult result2 = results.get(1);
           // if both results have the same score - do not take any result
           if (result.getScore() == result2.getScore()) {
-            LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", movie.getTitle());
+            LOGGER.warn("Two identical results for '{}', can't decide which to take - attempting individual AI recognition fallback", movie.getTitle());
+            // 尝试单个文件AI识别回退
+            MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+            if (fallbackResult != null) {
+              return fallbackResult;
+            }
+            LOGGER.warn("Individual AI recognition also failed, returning null to show smart scrape dialog");
             MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.toosimilar"));
             return null;
           }
@@ -600,7 +617,13 @@ public class MovieScrapeTask extends TmmThreadPool {
         final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
         LOGGER.debug("using threshold from settings of {}", scraperTreshold);
         if (result.getScore() < scraperTreshold) {
-          LOGGER.warn("Score ({}) is lower than minimum score ({}) for '{}' - ignore result", result.getScore(), scraperTreshold, movie.getTitle());
+          LOGGER.warn("Score ({}) is lower than minimum score ({}) for '{}' - attempting individual AI recognition fallback", result.getScore(), scraperTreshold, movie.getTitle());
+          // 尝试单个文件AI识别回退
+          MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+          if (fallbackResult != null) {
+            return fallbackResult;
+          }
+          LOGGER.warn("Individual AI recognition also failed, returning null to show smart scrape dialog");
           MessageManager.getInstance()
               .pushMessage(
                   new Message(MessageLevel.ERROR, movie, "movie.scrape.toolowscore", new String[] { String.format("%.2f", scraperTreshold) }));
@@ -608,13 +631,93 @@ public class MovieScrapeTask extends TmmThreadPool {
         }
       }
       else {
-        LOGGER.info("No result found for '{}'", movie.getTitle());
+        LOGGER.info("No result found for '{}' after regular search - attempting individual AI recognition fallback", movie.getTitle());
+        // 尝试单个文件AI识别回退
+        MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+        if (fallbackResult != null) {
+          return fallbackResult;
+        }
+        LOGGER.warn("Individual AI recognition also failed, returning null to show smart scrape dialog");
         MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, movie, "movie.scrape.nomatchfound"));
       }
 
       return result;
     }
 
+    /**
+     * 回退到单个文件AI识别
+     */
+    private MediaSearchResult fallbackToIndividualAIRecognition(Movie movie, String processedTitle, Integer processedYear, MediaScraper mediaMetadataProvider) {
+      try {
+        LOGGER.info("Attempting individual AI recognition fallback for movie: '{}'", movie.getTitle());
+        
+        // 检查用户是否启用了个体回退
+        org.tinymediamanager.core.Settings settings = org.tinymediamanager.core.Settings.getInstance();
+        if (settings == null || !settings.isAiIndividualFallbackEnabled()) {
+          LOGGER.debug("Individual AI fallback disabled by user");
+          return null;
+        }
+        
+        // 检查速率限制
+        AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+        if (!rateLimiter.waitForPermission("ChatGPTMovieRecognition", 30000)) {
+          LOGGER.warn("API call timed out for individual AI recognition fallback after 30 seconds");
+          return null;
+        }
+        
+        // 使用单个文件AI识别服务
+        ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
+        String recognizedTitle = individualService.recognizeMovieTitle(movie);
+        
+        if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+          LOGGER.info("Individual AI recognition successful: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+          
+          // 解析AI识别结果
+          String[] aiParserInfo = ParserUtils.detectCleanTitleAndYear(recognizedTitle, Collections.emptyList());
+          String aiProcessedTitle = recognizedTitle;
+          Integer aiProcessedYear = null;
+          
+          if (aiParserInfo != null && aiParserInfo.length >= 2) {
+            aiProcessedTitle = aiParserInfo[0];
+            if (StringUtils.isNotBlank(aiParserInfo[1])) {
+              try {
+                aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
+              } catch (NumberFormatException e) {
+                LOGGER.debug("Could not parse year from individual AI result: {}", aiParserInfo[1]);
+              }
+            }
+          }
+          
+          // 验证年份
+          if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
+            LOGGER.warn("Individual AI returned invalid year: {} for movie '{}'", aiProcessedYear, movie.getTitle());
+            aiProcessedYear = null;
+          }
+          
+          // 使用单个AI识别结果进行搜索
+          List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, aiProcessedYear, movie.getIds(), mediaMetadataProvider);
+          
+          if (ListUtils.isNotEmpty(aiResults)) {
+            MediaSearchResult aiResult = aiResults.get(0);
+            final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
+            
+            if (aiResult.getScore() >= scraperTreshold) {
+              LOGGER.info("Individual AI recognition successful! Found match with score: {}", aiResult.getScore());
+              return aiResult;
+            } else {
+              LOGGER.warn("Individual AI recognized title found, but score ({}) is lower than threshold ({})", aiResult.getScore(), scraperTreshold);
+            }
+          } else {
+            LOGGER.info("No results found for individual AI recognized title: '{}'", aiProcessedTitle);
+          }
+        }
+      } catch (Exception e) {
+        LOGGER.error("Error during individual AI recognition fallback: {}", e.getMessage());
+      }
+      
+      return null;
+    }
+    
     private List<MediaArtwork> getArtwork(Movie movie, MediaMetadata metadata, List<MediaScraper> artworkScrapers) {
       ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
       List<MediaArtwork> artwork = new ArrayList<>();
