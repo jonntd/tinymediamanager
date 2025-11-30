@@ -406,20 +406,8 @@ public class AIApiRateLimiter {
      * @return 缓存结果，如果没有则返回null
      */
     public String getFromCache(String cacheKey) {
-        if (cacheKey == null) {
-            return null;
-        }
-        
-        // 清理过期缓存
-        cleanupExpiredCache();
-        
-        CacheEntry entry = aiCache.get(cacheKey);
-        if (entry != null && !entry.isExpired()) {
-            LOGGER.debug("Cache hit for key: {}", cacheKey);
-            return entry.getResult();
-        }
-        
-        LOGGER.debug("Cache miss for key: {}", cacheKey);
+        // 关闭缓存，直接返回null
+        LOGGER.debug("Cache disabled, skipping cache check for key: {}", cacheKey);
         return null;
     }
     
@@ -429,25 +417,8 @@ public class AIApiRateLimiter {
      * @param result 缓存结果
      */
     public void addToCache(String cacheKey, String result) {
-        if (cacheKey == null || result == null) {
-            return;
-        }
-        
-        // 清理过期缓存
-        cleanupExpiredCache();
-        
-        // 如果缓存已满，清理一半
-        if (aiCache.size() >= MAX_CACHE_SIZE) {
-            LOGGER.debug("Cache is full, cleaning up old entries");
-            // 简单实现：移除一半的条目
-            List<String> keysToRemove = new ArrayList<>(aiCache.keySet()).subList(0, aiCache.size() / 2);
-            for (String key : keysToRemove) {
-                aiCache.remove(key);
-            }
-        }
-        
-        aiCache.put(cacheKey, new CacheEntry(result));
-        LOGGER.debug("Added to cache: {}", cacheKey);
+        // 关闭缓存，不执行任何操作
+        LOGGER.debug("Cache disabled, skipping cache addition for key: {}", cacheKey);
     }
     
     /**
