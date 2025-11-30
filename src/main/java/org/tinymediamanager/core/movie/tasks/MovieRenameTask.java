@@ -59,7 +59,7 @@ public class MovieRenameTask extends TmmThreadPool {
       LOGGER.info("Renaming '{}' movies", moviesToRename.size());
 
       // 动态调整线程池大小，最多使用4个线程或可用处理器数量，以提高重命名速度
-      int threadCount = Math.min(1, Runtime.getRuntime().availableProcessors());
+      int threadCount = Math.min(4, Runtime.getRuntime().availableProcessors());
       initThreadPool(threadCount, "rename");
 
       List<MediaFile> imageFiles = new ArrayList<>();
