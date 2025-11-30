@@ -276,8 +276,8 @@ public class ChatGPTMovieRecognitionService {
                           "### 3. 输出格式要求 - 请严格遵守！\n" +
                           "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" +
                           "```\n标题 年份\n```\n" +
-                          "- 标题使用官方中文名称（如果有中文发行）\n" +
-                          "- 如无官方中文名称，使用英文原名\n" +
+                          "- 标题优先使用英文原名作为主要标识符\n" +
+                          "- 仅在英文名称不可用时才考虑中文名称\n" +
                           "- 标题和年份之间用一个空格分隔\n" +
                           "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                           "- 如果无法确定年份，必须通过搜索找到准确的发行年份\n" +
@@ -285,8 +285,8 @@ public class ChatGPTMovieRecognitionService {
                           "- 不包含任何其他符号、括号或额外信息\n" +
                           "- 如果搜索失败，输出：未知电影 1900\n\n" +
                           "### 4. 示例\n" +
-                          "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`星际穿越 2014`\n" +
-                          "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`疯狂动物城 2016`\n" +
+                          "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`Interstellar 2014`\n" +
+                          "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`Zootopia 2016`\n" +
                           "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`";
             }
             

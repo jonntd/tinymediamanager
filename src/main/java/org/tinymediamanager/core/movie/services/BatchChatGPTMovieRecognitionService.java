@@ -384,7 +384,7 @@ public class BatchChatGPTMovieRecognitionService {
                               "### 3. 输出格式要求\n" +
                               "**严格按照以下格式输出，每行一个结果，绝对不要返回任何解释、错误信息或其他内容：**\n" +
                               "```\n标题 年份\n```\n" +
-                              "- 标题使用官方中文名称（如果有），否则使用英文原名\n" +
+                              "- 标题优先使用英文原名作为主要标识符，仅在英文名称不可用时才考虑中文名称\n" +
                               "- 标题和年份之间用一个空格分隔\n" +
                               "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                               "- 如果文件名中没有年份，必须通过搜索找到正确的发行年份\n" +
@@ -393,8 +393,8 @@ public class BatchChatGPTMovieRecognitionService {
                               "- 如果搜索失败，输出：未知电影 1900\n" +
                               "- 禁止返回'I am unable to'或任何错误说明\n\n" +
                               "### 4. 示例\n" +
-                              "输入：\n```\nInception.2010.1080p.mkv\nAvatar.2009.4K.mkv\n```\n" +
-                              "输出：\n```\n盗梦空间 2010\n阿凡达 2009\n```";
+                              "输入：\n```\nInception.2010.mkv\nAvatar.2009.4K.mkv\n```\n" +
+                              "输出：\n```\nInception 2010\nAvatar 2009\n```";
                 LOGGER.debug("Using professional Chinese extraction prompt with search capabilities");
             }
             
