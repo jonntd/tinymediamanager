@@ -1173,11 +1173,14 @@ public class TvShowRenamer {
     // ######################################################################
     LOGGER.debug("Cleanup...");
     if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
+      // get all existing files in the episode dir, since Files.exist is not reliable in OSX
+      List<Path> existingFiles = Utils.listFilesRecursive(episode.getPathNIO());
+
       for (int i = cleanup.size() - 1; i >= 0; i--) {
         // cleanup files which are not needed
         if (!needed.contains(cleanup.get(i))) {
           MediaFile cl = cleanup.get(i);
-          if (Files.exists(cl.getFileAsPath())) { // unneeded, but for not displaying wrong deletes in logger...
+          if (existingFiles.contains(cl.getFileAsPath())) { // 使用现有文件列表，减少Files.exists()调用
             LOGGER.debug("Deleting {}", cl.getFileAsPath());
             Utils.deleteFileWithBackup(cl.getFileAsPath(), episode.getTvShow().getDataSource());
           }
@@ -1194,6 +1197,10 @@ public class TvShowRenamer {
           }
         }
       }
+
+      // 调用额外的清理方法，与电影重命名保持一致
+      // cleanupUnwantedFiles(episode);
+      // removeEmptySubfolders(episode);
     }
 
     // check if there has been _any_ change (or if that EP has already been renamed before that)
@@ -2677,6 +2684,34 @@ public class TvShowRenamer {
   private static void cleanupUnwantedFiles(TvShow show) {
     if (TvShowModuleManager.getInstance().getSettings().renamerCleanupUnwanted) {
       Utils.deleteUnwantedFilesAndFoldersFor(show);
+    }
+  }
+
+  /**
+   * Deletes "unwanted files" according to settings. Same as the action, but w/o GUI.
+   * 
+   * @param episode
+   *          the {@link TvShowEpisode} to clean up
+   */
+  private static void cleanupUnwantedFiles(TvShowEpisode episode) {
+    if (TvShowModuleManager.getInstance().getSettings().renamerCleanupUnwanted) {
+      Utils.deleteUnwantedFilesAndFoldersFor(episode);
+    }
+  }
+
+  /**
+   * remove empty subfolders in this folder after renaming
+   *
+   * @param episode
+   *          the episode to clean
+   */
+  private static void removeEmptySubfolders(TvShowEpisode episode) {
+    // check all subfolders if they're empty (recursively)
+    try {
+      Utils.deleteEmptyDirectoryRecursive(episode.getPathNIO());
+    }
+    catch (IOException e) {
+      LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", episode.getPathNIO(), e.getMessage());
     }
   }
 
