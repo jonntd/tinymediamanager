@@ -257,33 +257,28 @@ public class ChatGPTMovieRecognitionService {
             // 构建请求JSON - 使用电影专用提示词（保留主人的联网搜索功能）
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 电影专用的优化提示词 - 增强版，提高识别准确性
+                // 电影专用的优化提示词 - 改进版
             systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" +
                           "## 核心要求\n\n" +
                           "### 1. 输入处理\n" +
                           "- 接收电影文件路径作为输入\n" +
-                          "- 专注于识别电影标题，**完全忽略**所有格式标签、技术信息和无关内容：\n" +
-                          "  - 分辨率标签：720p, 1080p, 2160p, 4K, 8K, HD, FullHD, UHD等\n" +
-                          "  - 视频编码：H.264, H.265, x264, x265, HEVC, AVC, MPEG-4等\n" +
-                          "  - 音频格式：DTS-HD, TrueHD, Atmos, AAC, AC3, FLAC, MP3等\n" +
-                          "  - 发布组：RARBG, YTS, HDSky, DIY, 各种中文字母组等\n" +
-                          "  - 版本信息：Director's Cut, Extended, Unrated, Theatrical等\n" +
-                          "  - 语言信息：国粤英三语, 中英字幕, 双语字幕等\n" +
-                          "  - 文件扩展名：.mp4, .mkv, .avi, .mov等\n" +
-                          "  - 其他技术标签：REMUX, BluRay, WEB-DL, HDR, DV, Dolby Vision等\n" +
-                          "- 仅提取核心电影标题信息，忽略所有括号、括号内内容和特殊字符\n\n" +
+                          "- 专注于识别电影标题，忽略所有格式标签如：\n" +
+                          "  - 分辨率标签(720p, 1080p, 2160p, 4K)\n" +
+                          "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n" +
+                          "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" +
+                          "  - 发布组(RARBG, YTS, 各种中文字母组)\n" +
+                          "  - 版本信息(Director's Cut, Extended)\n" +
+                          "- 过滤掉文件扩展名和无关技术信息\n\n" +
                           "### 2. 搜索策略\n" +
-                          "- 使用提取的核心标题关键词进行**精确匹配搜索**\n" +
-                          "- 优先查找**权威来源**：TMDB、IMDB、豆瓣电影、烂番茄等\n" +
-                          "- 确保识别结果与**官方发行名称完全一致**\n" +
-                          "- 对于中文电影名称，**必须同时查找英文原名**\n" +
-                          "- 对于英文电影名称，直接使用原名\n\n" +
+                          "- 使用提取的标题关键词进行精确匹配搜索\n" +
+                          "- 优先查找知名权威来源：TMDB、IMDB、豆瓣电影等\n" +
+                          "- 确保识别结果与官方发行名称完全一致\n\n" +
                           "### 3. 输出格式要求 - 请严格遵守！\n" +
-                          "**严格按照以下格式输出，绝对不要返回任何解释、错误信息或额外内容：**\n" +
-                          "```\n英文原名 年份\n```\n" +
-                          "- **标题必须使用英文原名**，这是强制要求！\n" +
-                          "- 仅在英文名称完全不可用时才考虑中文名称\n" +
-                          "- 标题和年份之间用**一个空格**分隔\n" +
+                          "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" +
+                          "```\n标题 年份\n```\n" +
+                          "- 标题优先使用英文原名作为主要标识符\n" +
+                          "- 仅在英文名称不可用时才考虑中文名称\n" +
+                          "- 标题和年份之间用一个空格分隔\n" +
                           "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n" +
                           "- 如果无法确定年份，必须通过搜索找到准确的发行年份\n" +
                           "- 年份不能为空，不能省略，这是强制要求\n" +
@@ -292,9 +287,7 @@ public class ChatGPTMovieRecognitionService {
                           "### 4. 示例\n" +
                           "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`Interstellar 2014`\n" +
                           "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`Zootopia 2016`\n" +
-                          "输入：`/电影/卡普尔和儿子们 Kapoor and Sons.mkv` → 输出：`Kapoor & Sons 2016`\n" +
-                          "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`\n" +
-                          "输入：`/电影/盗梦空间.Inception.2010.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`Inception 2010`";
+                          "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`";
             }
             
             LOGGER.info("=== Movie AI Recognition Debug ===");
@@ -330,33 +323,14 @@ public class ChatGPTMovieRecognitionService {
                 LOGGER.info("Response status: {}", response.statusCode());
                 LOGGER.info("Response body: {}", responseBody);
                 
-                // 改进的JSON响应解析，支持多种API格式和复杂内容
+                // 改进的JSON响应解析，支持多种API格式
                 try {
                     // 首先尝试OpenAI格式: {"choices": [{"message": {"content": "电影名称"}}]}
                     int contentStart = responseBody.indexOf("\"content\":\"");
                     if (contentStart != -1) {
                         contentStart += "\"content\":\"".length();
-                        
-                        // 改进的contentEnd查找：处理包含转义引号的内容
-                        int contentEnd = contentStart;
-                        boolean inString = true;
-                        boolean escaped = false;
-                        
-                        while (contentEnd < responseBody.length()) {
-                            char currentChar = responseBody.charAt(contentEnd);
-                            
-                            if (escaped) {
-                                escaped = false;
-                            } else if (currentChar == '\\') {
-                                escaped = true;
-                            } else if (currentChar == '"' && inString) {
-                                break;
-                            }
-                            
-                            contentEnd++;
-                        }
-                        
-                        if (contentEnd != contentStart) {
+                        int contentEnd = responseBody.indexOf('"', contentStart);
+                        if (contentEnd != -1) {
                             String content = responseBody.substring(contentStart, contentEnd)
                                 .replace("\\\"", "\"")
                                 .replace("\\n", "\n")
@@ -364,6 +338,8 @@ public class ChatGPTMovieRecognitionService {
                             LOGGER.debug("Extracted content: {}", content);
                             
                             // 将结果存入缓存
+                            // 缓存操作已在前面完成，此处无需再次声明 rateLimiter
+                            // 缓存键已在方法开头定义，直接使用即可
                             rateLimiter.addToCache(cacheKey, content);
                             
                             return content;
@@ -409,36 +385,8 @@ public class ChatGPTMovieRecognitionService {
             return null;
         }
 
-        // 处理多行响应：分割成单独的行，从最后一行开始查找有效标题
-        String[] lines = recognizedTitle.split("\\r?\\n");
-        String validLine = null;
-        
-        // 从最后一行开始，查找符合要求的行
-        for (int i = lines.length - 1; i >= 0; i--) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) {
-                continue;
-            }
-            
-            // 跳过代码块标记和JSON格式标记
-            if (line.startsWith("```") || line.startsWith("[") || line.startsWith("{") || line.contains(": {") || line.contains(", {") || line.contains("\"url\":")) {
-                continue;
-            }
-            
-            // 检查是否包含年份格式
-            if (line.matches(".*\\s\\d{4}$")) {
-                validLine = line;
-                break;
-            }
-        }
-        
-        // 如果没有找到符合要求的行，尝试使用整个文本
-        if (validLine == null) {
-            validLine = recognizedTitle.trim();
-        }
-        
         // 清理逻辑 - 移除标点符号和规范化空格
-        String cleaned = validLine
+        String cleaned = recognizedTitle
             .replaceAll("^[\\s\\p{Punct}]+", "")  // 移除开头的标点符号
             .replaceAll("[\\s\\p{Punct}]+$", "")  // 移除结尾的标点符号
             .replaceAll("\\s+", " ")              // 规范化空格

@@ -122,7 +122,7 @@ public class MovieScrapeTask extends TmmThreadPool {
 
     // 初始化线程池，移到AI识别之前，以便并行处理
     // 减少线程池大小，避免短时间内发起过多AI调用
-    initThreadPool(1, "scrape");
+    initThreadPool(3, "scrape");
 
     // 使用线程安全的Map存储AI识别结果
     ConcurrentHashMap<String, String> aiRecognitionResults = new ConcurrentHashMap<>();
@@ -392,6 +392,14 @@ public class MovieScrapeTask extends TmmThreadPool {
                 && MovieModuleManager.getInstance().getSettings().isWriteActorImages()) {
               movie.writeActorImages(movieScrapeParams.overwriteExistingItems);
             }
+          }
+          else if (result1 != null) {
+            // 如果搜索结果正常，但刮削失败（md为null），将电影添加到智能刮削列表，触发手动刮削窗口
+            LOGGER.warn("Scraping returned null metadata for movie '{}', but search result was found. Adding to smart scrape list.", movie.getTitle());
+            synchronized (smartScrapeList) {
+              smartScrapeList.add(movie);
+            }
+            return;
           }
 
           if (cancel) {
