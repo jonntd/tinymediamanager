@@ -280,6 +280,12 @@ public class ChatGPTTvShowRecognitionService {
                 LOGGER.warn("OpenAI API key is not configured");
                 return null;
             }
+            
+            // 验证API URL格式
+            if (apiUrl == null || !apiUrl.startsWith("http")) {
+                LOGGER.error("Invalid OpenAI API URL: {}", apiUrl);
+                return null;
+            }
 
             // 构建请求JSON - 使用专门的电视剧识别提示词
             String systemPrompt = getTvShowRecognitionPrompt();
@@ -392,12 +398,36 @@ public class ChatGPTTvShowRecognitionService {
                 return null;
             }
 
-
-
+        } catch (java.net.http.HttpConnectTimeoutException e) {
+            LOGGER.error("ChatGPT API call failed: Connection timed out - please check network connectivity and API URL");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.net.http.HttpTimeoutException e) {
+            LOGGER.error("ChatGPT API call failed: Request timed out - API server may be slow or overloaded");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.net.ConnectException e) {
+            LOGGER.error("ChatGPT API call failed: Could not connect to server - please check API URL and network settings");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (javax.net.ssl.SSLHandshakeException e) {
+            LOGGER.error("ChatGPT API call failed: SSL handshake failed - please check if the API URL uses valid SSL certificate");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (javax.net.ssl.SSLException e) {
+            LOGGER.error("ChatGPT API call failed: SSL error - please check SSL configuration");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.io.IOException e) {
+            LOGGER.error("ChatGPT API call failed: IO error - {}", e.getMessage());
+            // 特别处理"HTTP/1.1 header parser received no bytes"错误
+            if (e.getMessage() != null && e.getMessage().contains("header parser received no bytes")) {
+                LOGGER.error("This error typically occurs when:");
+                LOGGER.error("1. API URL is invalid or points to non-existent endpoint");
+                LOGGER.error("2. API server closed connection without sending response");
+                LOGGER.error("3. Network connectivity issues (firewall, proxy)");
+                LOGGER.error("4. Invalid API key causing server to reject connection");
+            }
         } catch (Exception e) {
-            LOGGER.error("Error calling ChatGPT API: {}", e.getMessage());
-            return null;
+            LOGGER.error("ChatGPT API call failed: {}", e.getMessage());
+            LOGGER.error("Full stack trace:", e);
         }
+        return null;
     }
     
     /**

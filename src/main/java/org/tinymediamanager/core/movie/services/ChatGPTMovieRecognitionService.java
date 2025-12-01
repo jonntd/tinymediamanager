@@ -254,6 +254,12 @@ public class ChatGPTMovieRecognitionService {
                 return null;
             }
             
+            // 验证API URL格式
+            if (apiUrl == null || !apiUrl.startsWith("http")) {
+                LOGGER.error("Invalid OpenAI API URL: {}", apiUrl);
+                return null;
+            }
+            
             // 构建请求JSON - 使用电影专用提示词（保留主人的联网搜索功能）
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
@@ -338,8 +344,6 @@ public class ChatGPTMovieRecognitionService {
                             LOGGER.debug("Extracted content: {}", content);
                             
                             // 将结果存入缓存
-                            // 缓存操作已在前面完成，此处无需再次声明 rateLimiter
-                            // 缓存键已在方法开头定义，直接使用即可
                             rateLimiter.addToCache(cacheKey, content);
                             
                             return content;
@@ -369,8 +373,34 @@ public class ChatGPTMovieRecognitionService {
                 LOGGER.error("API request failed with status: {}, response: {}", response.statusCode(), response.body());
             }
             
+        } catch (java.net.http.HttpConnectTimeoutException e) {
+            LOGGER.error("ChatGPT API call failed: Connection timed out - please check network connectivity and API URL");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.net.http.HttpTimeoutException e) {
+            LOGGER.error("ChatGPT API call failed: Request timed out - API server may be slow or overloaded");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.net.ConnectException e) {
+            LOGGER.error("ChatGPT API call failed: Could not connect to server - please check API URL and network settings");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (javax.net.ssl.SSLHandshakeException e) {
+            LOGGER.error("ChatGPT API call failed: SSL handshake failed - please check if the API URL uses valid SSL certificate");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (javax.net.ssl.SSLException e) {
+            LOGGER.error("ChatGPT API call failed: SSL error - please check SSL configuration");
+            LOGGER.error("Detailed error: {}", e.getMessage());
+        } catch (java.io.IOException e) {
+            LOGGER.error("ChatGPT API call failed: IO error - {}", e.getMessage());
+            // 特别处理"HTTP/1.1 header parser received no bytes"错误
+            if (e.getMessage() != null && e.getMessage().contains("header parser received no bytes")) {
+                LOGGER.error("This error typically occurs when:");
+                LOGGER.error("1. API URL is invalid or points to non-existent endpoint");
+                LOGGER.error("2. API server closed connection without sending response");
+                LOGGER.error("3. Network connectivity issues (firewall, proxy)");
+                LOGGER.error("4. Invalid API key causing server to reject connection");
+            }
         } catch (Exception e) {
             LOGGER.error("ChatGPT API call failed: {}", e.getMessage());
+            LOGGER.error("Full stack trace:", e);
         }
         
         return null;
