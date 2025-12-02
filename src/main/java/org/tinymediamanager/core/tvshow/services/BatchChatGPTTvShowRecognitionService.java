@@ -105,19 +105,11 @@ public class BatchChatGPTTvShowRecognitionService {
             return fallbackToIndividualRecognition(tvShows);
         }
         
-        // 过滤有效的电视剧并检查缓存
+        // 过滤有效的电视剧，禁用缓存，每次都实时处理
         List<TvShow> validTvShows = new ArrayList<>();
         for (TvShow tvShow : tvShows) {
             if (tvShow == null || tvShow.getDbId() == null) {
                 LOGGER.warn("Skipping invalid TV show: {}", tvShow);
-                continue;
-            }
-            
-            String cacheKey = generateCacheKey(tvShow);
-            if (recognitionCache.containsKey(cacheKey)) {
-                String cachedResult = recognitionCache.get(cacheKey);
-                results.put(tvShow.getDbId().toString(), cachedResult);
-                LOGGER.debug("Using cached result for TV show: {} (Key: {})", tvShow.getTitle(), cacheKey);
                 continue;
             }
             
@@ -126,7 +118,7 @@ public class BatchChatGPTTvShowRecognitionService {
         }
         
         if (validTvShows.isEmpty()) {
-            LOGGER.debug("All TV shows already cached, skipping API call");
+            LOGGER.debug("No valid TV shows to process");
             return results;
         }
         
@@ -169,14 +161,7 @@ public class BatchChatGPTTvShowRecognitionService {
                     if (!parsedResults.isEmpty()) {
                         results.putAll(parsedResults);
                         
-                        // 缓存成功的结果
-                        for (TvShow tvShow : batch) {
-                            String tvShowId = tvShow.getDbId().toString();
-                            if (parsedResults.containsKey(tvShowId)) {
-                                String cacheKey = generateCacheKey(tvShow);
-                                recognitionCache.put(cacheKey, parsedResults.get(tvShowId));
-                            }
-                        }
+                        // 禁用缓存，不保存识别结果
                         
                         success = true;
                         LOGGER.debug("Batch processing successful on attempt {}", attempt);
@@ -207,8 +192,7 @@ public class BatchChatGPTTvShowRecognitionService {
                     String title = individualService.recognizeTvShowTitle(tvShow);
                     if (title != null) {
                         results.put(tvShow.getDbId().toString(), title);
-                        String cacheKey = generateCacheKey(tvShow);
-                        recognitionCache.put(cacheKey, title);
+                        // 禁用缓存，不保存识别结果
                     }
                 } catch (Exception ex) {
                     LOGGER.error("Individual recognition failed for TV show {}: {}", tvShow.getTitle(), ex.getMessage());
@@ -449,16 +433,18 @@ public class BatchChatGPTTvShowRecognitionService {
      * 获取电视剧批量识别的优化提示词
      */
     private String getTvShowBatchRecognitionPrompt() {
-        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径列表，联网搜索并找到最准确的官方电视剧信息，然后严格按照指定格式输出结果。\n\n" +
+        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径列表，严格按照路径内容识别电视剧，然后严格按照指定格式输出结果。\n\n" +
                "## 核心要求\n\n" +
                "### 1. 输入处理\n" +
                "- 接收电视剧文件路径列表，每行格式：\"ID: 路径\"\n" +
+               "- **必须严格基于每个路径中的实际内容进行识别**，不得猜测或返回示例内容\n" +
                "- 从每个路径中提取电视剧标题\n" +
                "- 忽略技术信息和无关内容\n\n" +
                "### 2. 搜索策略\n" +
                "- 对每个电视剧进行独立搜索\n" +
                "- 查找官方来源：TMDB、TVDB、豆瓣等\n" +
-               "- 验证搜索结果的准确性\n\n" +
+               "- 验证搜索结果的准确性\n" +
+               "- **如果无法确定准确匹配，必须返回\"未知电视剧\"**\n\n" +
                "### 3. 输出格式要求\n" +
                "**严格按照以下格式输出，每行一个结果：**\n" +
                "```\nID: 标题\n```\n" +
@@ -466,8 +452,8 @@ public class BatchChatGPTTvShowRecognitionService {
                "- 输出行数必须与输入行数完全一致\n" +
                "- 保持ID顺序不变\n\n" +
                "### 4. 示例\n" +
-               "输入：\n```\n123: /TV Shows/Breaking.Bad.S01/\n456: /电视剧/庆余年.第一季/\n```\n" +
-               "输出：\n```\n123: 绝命毒师\n456: 庆余年\n```";
+               "输入：\n```\n123: /TV Shows/Breaking.Bad.S01/\n456: /电视剧/庆余年.第一季/\n789: /Series/Cheer.S01.HD2160p.WebRip/\n999: /path/to/unknown.tvshow/\n```\n" +
+               "输出：\n```\n123: 绝命毒师\n456: 庆余年\n789: 啦啦队\n999: 未知电视剧\n```";
     }
     
     /**

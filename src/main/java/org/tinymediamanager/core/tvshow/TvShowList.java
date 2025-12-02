@@ -39,6 +39,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
@@ -94,6 +98,12 @@ import ca.odell.glazedlists.ObservableElementList;
 public final class TvShowList extends AbstractModelObject {
   private static final Logger                            LOGGER        = LoggerFactory.getLogger(TvShowList.class);
   private static TvShowList                              instance      = null;
+  // Static executor service for queued delete operations
+  private static final ExecutorService                   DELETE_EXECUTOR = Executors.newSingleThreadExecutor(runnable -> {
+    Thread t = new Thread(runnable, "TvShowDeleteThread");
+    t.setDaemon(true);
+    return t;
+  });
 
   private final List<TvShow>                             tvShows;
 
@@ -413,8 +423,7 @@ public final class TvShowList extends AbstractModelObject {
     tvShows.remove(tvShow);
     readWriteLock.writeLock().unlock();
 
-    tvShow.deleteFilesSafely();
-
+    // Step 1: Delete all episodes from DB and clean cache
     for (TvShowEpisode episode : tvShow.getEpisodes()) {
       TvShowModuleManager.getInstance().getTvShowList().removeEpisodeFromDb(episode);
 
@@ -426,7 +435,7 @@ public final class TvShowList extends AbstractModelObject {
       }
     }
 
-    // and remove it and all seasons from the DB
+    // Step 2: Delete all seasons from DB
     for (TvShowSeason season : tvShow.getSeasons()) {
       try {
         TvShowModuleManager.getInstance().removeSeasonFromDb(season);
@@ -436,6 +445,7 @@ public final class TvShowList extends AbstractModelObject {
       }
     }
 
+    // Step 3: Delete TV show from DB
     try {
       TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
       // only need to trigger a remove of the whole TV show
@@ -445,16 +455,32 @@ public final class TvShowList extends AbstractModelObject {
       LOGGER.error("Error removing TV show '{}' from DB - '{}'", tvShow.getTitle(), e.getMessage());
     }
 
-    // and remove the image cache
+    // Step 4: Remove the image cache for the TV show
     for (MediaFile mf : tvShow.getMediaFiles()) {
       if (mf.isGraphic()) {
         ImageCache.invalidateCachedImage(mf);
       }
     }
 
+    // Step 5: Fire property changes to update UI immediately
     firePropertyChange(TV_SHOWS, null, tvShows);
     firePropertyChange(REMOVED_TV_SHOW, null, tvShow);
     firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
+
+    // Step 6: Delete files safely asynchronously in a queued manner
+    // This way, the user sees the TV show removed from UI immediately
+    // and the file deletion happens in the background, one after another
+    DELETE_EXECUTOR.submit(() -> {
+      LOGGER.info("Starting asynchronous delete for TV show: {}", tvShow.getTitle());
+      try {
+        long startTime = System.currentTimeMillis();
+        tvShow.deleteFilesSafely();
+        long duration = System.currentTimeMillis() - startTime;
+        LOGGER.info("Asynchronous delete completed in {}ms for TV show: {}", duration, tvShow.getTitle());
+      } catch (Exception e) {
+        LOGGER.error("Asynchronous delete failed for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+      }
+    });
   }
 
   /**

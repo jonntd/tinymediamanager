@@ -173,16 +173,7 @@ public class ChatGPTTvShowRecognitionService {
         LOGGER.info("Full TV show path: {}", tvShowPath);
         LOGGER.info("Extracted directory context: {}", pathContext);
 
-            // 检查缓存，避免重复识别
-            String cacheKey = pathContext;
-            String cachedResult = recognitionCache.get(cacheKey);
-            if (cachedResult != null) {
-                LOGGER.info("=== Cache Hit ===");
-                LOGGER.info("Using cached result: '{}'", cachedResult);
-                return cachedResult;
-            }
-
-            // 调用ChatGPT API，传递倒数三层目录信息
+            // 调用ChatGPT API，传递倒数三层目录信息（禁用缓存，每次都实时处理）
             String recognizedTitle = callChatGPTAPI(pathContext, tvShowPath);
 
             LOGGER.info("=== AI Recognition Complete ===");
@@ -192,19 +183,6 @@ public class ChatGPTTvShowRecognitionService {
                 // 清理和验证识别结果
                 String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
                 LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
-
-                // 缓存成功的识别结果
-                if (cleanedTitle != null && !cleanedTitle.trim().isEmpty()) {
-                    // 如果缓存过大，清理一半
-                    if (recognitionCache.size() >= MAX_CACHE_SIZE) {
-                        LOGGER.info("Cache size limit reached, clearing half of the cache");
-                        recognitionCache.entrySet().removeIf(entry ->
-                            recognitionCache.size() > MAX_CACHE_SIZE / 2);
-                    }
-                    recognitionCache.put(cacheKey, cleanedTitle);
-                    LOGGER.debug("Cached recognition result for: {} (cache size: {})",
-                        cacheKey, recognitionCache.size());
-                }
 
                 return cleanedTitle;
             } else {
@@ -557,27 +535,41 @@ public class ChatGPTTvShowRecognitionService {
             return customPrompt;
         }
 
-        // 电视剧专用的优化提示词 - 简洁高效
-        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径，联网搜索并找到最准确的官方电视剧信息，然后严格按照指定格式输出结果。\n\n" +
+        // 电视剧专用的优化提示词 - 参考电影AI识别体系，更全面专业
+        return "你是一个专业的电视剧信息识别和刮削助手。根据提供的文件路径，严格按照路径内容识别电视剧，然后严格按照指定格式输出结果。\n\n" +
                "## 核心要求\n\n" +
                "### 1. 输入处理\n" +
                "- 接收电视剧文件路径作为输入\n" +
-               "- 从路径中提取电视剧标题\n" +
-               "- 忽略季数、集数、分辨率、发布组等技术信息\n\n" +
-               "### 2. 搜索策略\n" +
-               "- 使用提取的标题进行精确搜索\n" +
-               "- 查找官方来源：TMDB、TVDB、豆瓣等\n" +
-               "- 验证搜索结果的准确性\n\n" +
-               "### 3. 输出格式要求\n" +
+               "- **必须严格基于路径中的实际内容进行识别**，不得猜测或返回示例内容\n" +
+               "- 从路径中提取电视剧标题，忽略以下无关信息：\n" +
+               "  - 季数、集数(S01E01, 第1季)\n" +
+               "  - 分辨率(720p, 1080p, 2160p, 4K)\n" +
+               "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n" +
+               "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" +
+               "  - 发布组(各种中文字母组, RARBG, YTS等)\n" +
+               "  - 版本信息(Director's Cut, Extended)\n" +
+               "  - 语言标签(中文字幕, 双语)\n" +
+               "  - 其他技术信息\n\n" +
+               "### 2. 识别策略\n" +
+               "- 对提取的标题进行精确匹配搜索\n" +
+               "- 优先查找官方权威来源：TMDB、TVDB、豆瓣、IMDB等\n" +
+               "- 综合分析文件名中的关键元素（如场景描述、角色名、情节关键词）提高识别准确性\n" +
+               "- 验证搜索结果的准确性，确保与官方发行信息一致\n" +
+               "- **如果无法确定准确匹配，必须返回\"未知电视剧\"**\n\n" +
+               "### 3. 输出格式要求 - 请严格遵守！\n" +
                "**只输出电视剧标题，绝对不要返回任何解释或错误信息：**\n" +
                "- 使用官方中文名称（如果有），否则使用英文原名\n" +
-               "- 不包含年份、括号、解释文字\n" +
-               "- 不包含任何符号或额外信息\n" +
+               "- 不包含年份、季数、集数、括号或其他额外信息\n" +
+               "- 不包含任何符号或解释文字\n" +
+               "- 保持简洁，只返回核心标题\n" +
                "- 如果搜索失败，输出：未知电视剧\n" +
                "- 禁止返回'I am unable to'或任何错误说明\n\n" +
                "### 4. 示例\n" +
                "输入：`/TV Shows/Breaking.Bad.S01/` → 输出：`绝命毒师`\n" +
-               "输入：`/电视剧/庆余年.第一季/` → 输出：`庆余年`";
+               "输入：`/电视剧/庆余年.第一季/` → 输出：`庆余年`\n" +
+               "输入：`/Series/Cheer.S01.HD2160p.WebRip/` → 输出：`啦啦队`\n" +
+               "输入：`/Series/Sense8.S02.HD2160p.WebRip/` → 输出：`超感八人组`\n" +
+               "输入：`/path/to/unknown.tvshow/` → 输出：`未知电视剧`";
     }
     
     /**

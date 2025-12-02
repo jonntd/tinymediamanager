@@ -266,16 +266,16 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         panelSearchField.add(textFieldSearchString, "cell 2 0,growx");
         textFieldSearchString.setColumns(10);
 
-        JButton btnAiFix = new JButton("AI fix");
-        btnAiFix.setToolTipText("Use AI to analyze TV show file and fill search terms");
-        btnAiFix.addActionListener(e -> aiFixSearchTerms());
-        panelSearchField.add(btnAiFix, "cell 3 0");
-
         JButton btnSearch = new JButton(TmmResourceBundle.getString("Button.search"));
         btnSearch.setIcon(IconManager.SEARCH_INV);
         panelSearchField.add(btnSearch, "cell 3 0");
         btnSearch.addActionListener(searchAction);
         getRootPane().setDefaultButton(btnSearch);
+
+        JButton btnAiFix = new JButton("AI fix");
+        btnAiFix.setToolTipText("Use AI to analyze TV show file and fill search terms");
+        btnAiFix.addActionListener(e -> aiFixSearchTerms());
+        panelSearchField.add(btnAiFix, "cell 4 0");
       }
       {
         JLabel lblLanguage = new TmmLabel("Language");
