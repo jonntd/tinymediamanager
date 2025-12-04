@@ -1081,10 +1081,52 @@ public class MovieRenamer {
         // For WebDAV, extract relative path using string manipulation
         String moviePath = movie.getPath();
         String datasource = movie.getDataSource();
+        
+        // Normalize both paths for comparison - handle URL encoding differences
+        String normalizedMoviePath = moviePath;
+        String normalizedDatasource = datasource;
+        
+        // Normalize protocol to double slashes
+        normalizedMoviePath = normalizedMoviePath.replaceFirst("webdav:/", "webdav://");
+        normalizedDatasource = normalizedDatasource.replaceFirst("webdav:/", "webdav://");
+        
+        // Ensure both paths end with slash for consistent comparison
+        if (!normalizedMoviePath.endsWith("/")) {
+          normalizedMoviePath = normalizedMoviePath + "/";
+        }
+        if (!normalizedDatasource.endsWith("/")) {
+          normalizedDatasource = normalizedDatasource + "/";
+        }
+        
+        // Try direct comparison first
         if (moviePath.startsWith(datasource)) {
           newPathname = moviePath.substring(datasource.length());
+        }
+        // If direct comparison fails, try with normalized paths
+        else if (normalizedMoviePath.startsWith(normalizedDatasource)) {
+          newPathname = normalizedMoviePath.substring(normalizedDatasource.length());
+        }
+        // If still no match, try to decode datasource and compare again
+        else {
+          try {
+            String decodedDatasource = java.net.URLDecoder.decode(datasource, "UTF-8");
+            if (moviePath.startsWith(decodedDatasource)) {
+              newPathname = moviePath.substring(decodedDatasource.length());
+            }
+          }
+          catch (Exception e) {
+            LOGGER.debug("Error decoding datasource path: {}", e.getMessage());
+          }
+        }
+        
+        // Clean up the newPathname
+        if (newPathname != null) {
           if (newPathname.startsWith("/")) {
             newPathname = newPathname.substring(1);
+          }
+          // Remove trailing slash if present
+          if (newPathname.endsWith("/")) {
+            newPathname = newPathname.substring(0, newPathname.length() - 1);
           }
         }
       }
@@ -1131,11 +1173,29 @@ public class MovieRenamer {
     // extra clone, just for easy adding the "default" ones ;)
     MediaFile defaultMF = new MediaFile(mf);
     if (isWebDav) {
-      // For WebDAV, manually replace path
+      // For WebDAV, manually replace path with proper URL normalization
       String oldPath = movie.getPath();
       String newPath = newMovieDir.toString();
       String filePath = mf.getFileAsPath().toString();
-      if (filePath.startsWith(oldPath)) {
+      
+      // Normalize all paths for consistent comparison
+      String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
+      String normalizedNewPath = newPath.replaceFirst("webdav:/", "webdav://");
+      String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
+      
+      // Ensure old path ends with slash
+      if (!normalizedOldPath.endsWith("/")) {
+        normalizedOldPath = normalizedOldPath + "/";
+      }
+      
+      // Try with normalized paths for comparison
+      if (normalizedFilePath.startsWith(normalizedOldPath)) {
+        String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
+        String newFilePath = normalizedNewPath.endsWith("/") ? normalizedNewPath + relativePart : normalizedNewPath + "/" + relativePart;
+        defaultMF.setFile(Paths.get(newFilePath));
+      }
+      // Fallback to original comparison if normalization fails
+      else if (filePath.startsWith(oldPath)) {
         String relativePart = filePath.substring(oldPath.length());
         String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
         defaultMF.setFile(Paths.get(newFilePath));
@@ -1147,10 +1207,29 @@ public class MovieRenamer {
 
     Path relativePathOfMediafile;
     if (isWebDav) {
-      // For WebDAV, use string manipulation to get relative path
+      // For WebDAV, use string manipulation with proper URL normalization to get relative path
       String moviePath = movie.getPath();
       String filePath = mf.getFileAsPath().toString();
-      if (filePath.startsWith(moviePath)) {
+      
+      // Normalize both paths for comparison
+      String normalizedMoviePath = moviePath.replaceFirst("webdav:/", "webdav://");
+      String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
+      
+      // Ensure movie path ends with slash for consistent comparison
+      if (!normalizedMoviePath.endsWith("/")) {
+        normalizedMoviePath = normalizedMoviePath + "/";
+      }
+      
+      // Try with normalized paths first
+      if (normalizedFilePath.startsWith(normalizedMoviePath)) {
+        String relativePath = normalizedFilePath.substring(normalizedMoviePath.length());
+        if (relativePath.startsWith("/")) {
+          relativePath = relativePath.substring(1);
+        }
+        relativePathOfMediafile = Paths.get(relativePath);
+      }
+      // Fallback to original paths
+      else if (filePath.startsWith(moviePath)) {
         String relativePath = filePath.substring(moviePath.length());
         if (relativePath.startsWith("/")) {
           relativePath = relativePath.substring(1);
@@ -1177,16 +1256,34 @@ public class MovieRenamer {
         if (movie.isDisc() || mf.isDiscFile()) {
           // just replace new path and return file (do not change names!)
           if (isWebDav) {
-            // For WebDAV, manually replace path
-            String oldPath = movie.getPath();
-            String newPath = newMovieDir.toString();
-            String filePath = mf.getFileAsPath().toString();
-            if (filePath.startsWith(oldPath)) {
-              String relativePart = filePath.substring(oldPath.length());
-              String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
-              vid.setFile(Paths.get(newFilePath));
+              // For WebDAV, manually replace path with proper URL normalization
+              String oldPath = movie.getPath();
+              String newPath = newMovieDir.toString();
+              String filePath = mf.getFileAsPath().toString();
+              
+              // Normalize all paths for consistent comparison
+              String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
+              String normalizedNewPath = newPath.replaceFirst("webdav:/", "webdav://");
+              String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
+              
+              // Ensure old path ends with slash
+              if (!normalizedOldPath.endsWith("/")) {
+                normalizedOldPath = normalizedOldPath + "/";
+              }
+              
+              // Try with normalized paths for comparison
+              if (normalizedFilePath.startsWith(normalizedOldPath)) {
+                String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
+                String newFilePath = normalizedNewPath.endsWith("/") ? normalizedNewPath + relativePart : normalizedNewPath + "/" + relativePart;
+                vid.setFile(Paths.get(newFilePath));
+              }
+              // Fallback to original comparison if normalization fails
+              else if (filePath.startsWith(oldPath)) {
+                String relativePart = filePath.substring(oldPath.length());
+                String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
+                vid.setFile(Paths.get(newFilePath));
+              }
             }
-          }
           else {
             vid.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
           }
@@ -1200,24 +1297,12 @@ public class MovieRenamer {
           String filePath = mf.getFileAsPath().toString();
           
           // Normalize URLs for comparison - handle single vs double slashes in protocol
-          String normalizedOldPath = oldPath;
-          String normalizedFilePath = filePath;
-          if (isWebDav) {
-            // Normalize protocol to double slashes for consistent comparison
-            normalizedOldPath = normalizedOldPath.replaceFirst("webdav:/", "webdav://");
-            normalizedFilePath = normalizedFilePath.replaceFirst("webdav:/", "webdav://");
-          }
+          String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
+          String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
           
           // Ensure old path ends with slash for correct subdirectory matching
           if (!normalizedOldPath.endsWith("/")) {
             normalizedOldPath = normalizedOldPath + "/";
-          }
-          if (!normalizedFilePath.endsWith("/")) {
-            // For files, we don't add slash at the end
-            int lastSlashIndex = normalizedFilePath.lastIndexOf('/');
-            if (lastSlashIndex > 0) {
-              // Keep the filename without slash
-            }
           }
           
           if (normalizedFilePath.startsWith(normalizedOldPath)) {
