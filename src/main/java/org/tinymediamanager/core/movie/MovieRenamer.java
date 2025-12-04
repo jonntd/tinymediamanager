@@ -1208,6 +1208,18 @@ public class MovieRenamer {
             normalizedFilePath = normalizedFilePath.replaceFirst("webdav:/", "webdav://");
           }
           
+          // Ensure old path ends with slash for correct subdirectory matching
+          if (!normalizedOldPath.endsWith("/")) {
+            normalizedOldPath = normalizedOldPath + "/";
+          }
+          if (!normalizedFilePath.endsWith("/")) {
+            // For files, we don't add slash at the end
+            int lastSlashIndex = normalizedFilePath.lastIndexOf('/');
+            if (lastSlashIndex > 0) {
+              // Keep the filename without slash
+            }
+          }
+          
           if (normalizedFilePath.startsWith(normalizedOldPath)) {
             // Extract the subdirectory path from the original file path
             String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
