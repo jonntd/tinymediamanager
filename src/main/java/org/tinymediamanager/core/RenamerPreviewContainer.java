@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.tinymediamanager.core.entities.MediaEntity;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 /**
  * The class RenamerPreviewContainer. To hold all relevant data for the renamer preview
@@ -42,7 +43,22 @@ public class RenamerPreviewContainer {
     this.files = new ArrayList<>();
 
     if (entity != null && !entity.getDataSource().isEmpty()) {
-      this.oldPath = entity.getPathNIO();
+      // For WebDAV paths, use Paths.get(entity.getPath()) instead of getPathNIO()
+      // to avoid the toAbsolutePath() issue
+      if (WebDavDataSourceHelper.isWebDavPath(entity.getPath())) {
+        // URL decode the path to display readable characters
+        String pathToUse = entity.getPath();
+        try {
+          pathToUse = java.net.URLDecoder.decode(entity.getPath(), "UTF-8");
+        }
+        catch (Exception e) {
+          // If decoding fails, use the original path
+        }
+        this.oldPath = Paths.get(pathToUse);
+      }
+      else {
+        this.oldPath = entity.getPathNIO();
+      }
     }
     else {
       this.oldPath = null;
@@ -57,21 +73,167 @@ public class RenamerPreviewContainer {
     return oldPath;
   }
 
+  /**
+   * Get the old path as a readable string (URL decoded if needed)
+   */
+  public String getOldPathReadable() {
+    if (oldPath == null) {
+      return "";
+    }
+    String pathStr = oldPath.toString();
+    // URL decode the path to display readable characters
+    try {
+      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+    }
+    catch (Exception e) {
+      return pathStr;
+    }
+  }
+
+  /**
+   * Get the old path relative to the datasource
+   */
   public Path getOldPathRelative() {
-    return Paths.get(entity.getDataSource()).relativize(entity.getPathNIO());
+    // For WebDAV paths, we need to handle path operations differently
+    if (WebDavDataSourceHelper.isWebDavPath(entity.getPath())) {
+      // Extract the relative path by removing the datasource prefix
+      String fullPath = entity.getPath();
+      String datasource = entity.getDataSource();
+
+      // URL decode both paths to ensure proper comparison
+      try {
+        fullPath = java.net.URLDecoder.decode(fullPath, "UTF-8");
+        datasource = java.net.URLDecoder.decode(datasource, "UTF-8");
+      }
+      catch (Exception e) {
+        // If decoding fails, use the original paths
+      }
+
+      // Remove datasource prefix to get relative path
+      if (fullPath.startsWith(datasource)) {
+        String relativePath = fullPath.substring(datasource.length());
+        // Remove leading slash if present
+        if (relativePath.startsWith("/")) {
+          relativePath = relativePath.substring(1);
+        }
+        return Paths.get(relativePath);
+      }
+      // Fallback: if we can't extract relative path, return just the folder name
+      return Paths.get(fullPath.substring(fullPath.lastIndexOf('/') + 1));
+    }
+    else {
+      return Paths.get(entity.getDataSource()).relativize(entity.getPathNIO());
+    }
   }
 
   public Path getNewPath() {
     return newPath;
   }
 
+  /**
+   * Get the new path as a readable string (URL decoded if needed)
+   */
+  public String getNewPathReadable() {
+    if (newPath == null) {
+      return "";
+    }
+    String pathStr = newPath.toString();
+    // URL decode the path to display readable characters
+    try {
+      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+    }
+    catch (Exception e) {
+      return pathStr;
+    }
+  }
+
+  /**
+   * Get the new path relative to the datasource
+   */
   public Path getNewPathRelative() {
-    return Paths.get(entity.getDataSource()).relativize(newPath);
+    // For WebDAV paths, we need to handle path operations differently
+    if (WebDavDataSourceHelper.isWebDavPath(entity.getPath())) {
+      // Extract the relative path by removing the datasource prefix
+      String fullPath = newPath.toString();
+      String datasource = entity.getDataSource();
+
+      // URL decode both paths to ensure proper comparison
+      try {
+        fullPath = java.net.URLDecoder.decode(fullPath, "UTF-8");
+        datasource = java.net.URLDecoder.decode(datasource, "UTF-8");
+      }
+      catch (Exception e) {
+        // If decoding fails, use the original paths
+      }
+
+      // Remove datasource prefix to get relative path
+      if (fullPath.startsWith(datasource)) {
+        String relativePath = fullPath.substring(datasource.length());
+        // Remove leading slash if present
+        if (relativePath.startsWith("/")) {
+          relativePath = relativePath.substring(1);
+        }
+        return Paths.get(relativePath);
+      }
+      // Fallback: if we can't extract relative path, return just the folder name
+      return Paths.get(fullPath.substring(fullPath.lastIndexOf('/') + 1));
+    }
+    else {
+      return Paths.get(entity.getDataSource()).relativize(newPath);
+    }
+  }
+
+  /**
+   * Get the old path relative as a readable string (URL decoded if needed)
+   */
+  public String getOldPathRelativeReadable() {
+    Path relativePath = getOldPathRelative();
+    String pathStr = relativePath.toString();
+    // URL decode the path to display readable characters
+    try {
+      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+    }
+    catch (Exception e) {
+      return pathStr;
+    }
+  }
+
+  /**
+   * Get the new path relative as a readable string (URL decoded if needed)
+   */
+  public String getNewPathRelativeReadable() {
+    Path relativePath = getNewPathRelative();
+    String pathStr = relativePath.toString();
+    // URL decode the path to display readable characters
+    try {
+      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+    }
+    catch (Exception e) {
+      return pathStr;
+    }
   }
 
   public boolean isNeedsRename() {
-    if (!entity.getPathNIO().equals(newPath)) {
-      return true;
+    // For WebDAV paths, compare using string representation after URL decoding
+    if (WebDavDataSourceHelper.isWebDavPath(entity.getPath())) {
+      try {
+        String decodedOldPath = java.net.URLDecoder.decode(entity.getPath(), "UTF-8");
+        String decodedNewPath = java.net.URLDecoder.decode(newPath.toString(), "UTF-8");
+        if (!decodedOldPath.equals(decodedNewPath)) {
+          return true;
+        }
+      }
+      catch (Exception e) {
+        // If decoding fails, fall back to original comparison
+        if (!entity.getPath().equals(newPath.toString())) {
+          return true;
+        }
+      }
+    }
+    else {
+      if (!entity.getPathNIO().equals(newPath)) {
+        return true;
+      }
     }
     return files.stream().anyMatch(mftc -> !mftc.isUnchanged());
   }

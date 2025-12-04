@@ -17,6 +17,7 @@ package org.tinymediamanager.ui.movies.settings;
 
 import static org.tinymediamanager.ui.TmmFontHelper.H3;
 
+import java.awt.Component;
 import java.awt.Cursor;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -52,10 +54,13 @@ import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.button.SquareIconButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
 import org.tinymediamanager.ui.components.panel.CollapsiblePanel;
+import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.webdav.WebDavSource;
 import org.tinymediamanager.ui.dialogs.ExchangeDatasourceDialog;
 import org.tinymediamanager.ui.panels.IModalPopupPanelProvider;
 import org.tinymediamanager.ui.panels.ModalPopupPanel;
 import org.tinymediamanager.ui.panels.RegexInputPanel;
+import org.tinymediamanager.ui.panels.WebDavBrowserPanel;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -83,6 +88,7 @@ class MovieDatasourceSettingsPanel extends JPanel {
   private JButton             btnMoveUpDatasoure;
   private JButton             btnMoveDownDatasource;
   private JButton             btnExchangeDatasource;
+  private JButton             btnAddWebDavDatasource;
 
   /**
    * Instantiates a new movie settings panel.
@@ -119,6 +125,62 @@ class MovieDatasourceSettingsPanel extends JPanel {
         TmmProperties.getInstance().putProperty("movie.datasource.path", file.toAbsolutePath().toString());
         panelDatasources.revalidate();
       }
+    });
+
+    btnAddWebDavDatasource.addActionListener(arg0 -> {
+      List<WebDavSource> webDavSources = Settings.getInstance().getWebDavSources();
+      if (webDavSources.isEmpty()) {
+        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.error.nosources"),
+            TmmResourceBundle.getString("webdav.sources"), JOptionPane.WARNING_MESSAGE);
+        return;
+      }
+
+      // Show WebDAV source selection dialog
+      String[] sourceNames = webDavSources.stream().map(WebDavSource::getName).toArray(String[]::new);
+      String selectedName = (String) JOptionPane.showInputDialog(this,
+          TmmResourceBundle.getString("webdav.selectsource"),
+          TmmResourceBundle.getString("webdav.sources"),
+          JOptionPane.QUESTION_MESSAGE, null, sourceNames, sourceNames[0]);
+
+      if (selectedName == null) {
+        return;
+      }
+
+      WebDavSource selectedSource = webDavSources.stream()
+          .filter(s -> s.getName().equals(selectedName))
+          .findFirst()
+          .orElse(null);
+
+      if (selectedSource == null) {
+        return;
+      }
+
+      // Show WebDAV browser panel
+      IModalPopupPanelProvider provider = IModalPopupPanelProvider.findModalProvider(this);
+      if (provider == null) {
+        return;
+      }
+
+      ModalPopupPanel popupPanel = provider.createModalPopupPanel();
+      popupPanel.setTitle(TmmResourceBundle.getString("webdav.browser.title"));
+
+      WebDavBrowserPanel browserPanel = new WebDavBrowserPanel(selectedSource);
+
+      popupPanel.setOnCloseHandler(() -> {
+        String selectedPath = browserPanel.getSelectedPath();
+        if (StringUtils.isNotBlank(selectedPath)) {
+          // Create WebDAV datasource path: webdav://[source-id]/remote/path
+          if (!selectedPath.startsWith("/")) {
+            selectedPath = "/" + selectedPath;
+          }
+          String webDavPath = "webdav://" + selectedSource.getId() + selectedPath;
+          settings.addMovieDataSources(webDavPath);
+          panelDatasources.revalidate();
+        }
+      });
+
+      popupPanel.setContent(browserPanel);
+      provider.showModalPopupPanel(popupPanel);
     });
 
     btnAddSkipFolder.addActionListener(e -> {
@@ -250,11 +312,17 @@ class MovieDatasourceSettingsPanel extends JPanel {
 
         listDatasources = new JList();
         listDatasources.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        // Set custom renderer to decode WebDAV paths
+        listDatasources.setCellRenderer(new DatasourceListCellRenderer());
         scrollPaneDataSources.setViewportView(listDatasources);
 
         btnAddDatasource = new SquareIconButton(IconManager.ADD_INV);
         panelDatasources.add(btnAddDatasource, "flowy,cell 2 0,growx,aligny top");
         btnAddDatasource.setToolTipText(TmmResourceBundle.getString("Button.add"));
+
+        btnAddWebDavDatasource = new SquareIconButton(IconManager.CLOUD);
+        panelDatasources.add(btnAddWebDavDatasource, "cell 2 0,growx,aligny top");
+        btnAddWebDavDatasource.setToolTipText(TmmResourceBundle.getString("webdav.datasource.add"));
 
         btnRemoveDatasource = new SquareIconButton(IconManager.REMOVE_INV);
         panelDatasources.add(btnRemoveDatasource, "cell 2 0,growx,aligny top");
@@ -350,5 +418,35 @@ class MovieDatasourceSettingsPanel extends JPanel {
     JListBinding<String, MovieSettings, JList> jListBinding_2 = SwingBindings.createJListBinding(UpdateStrategy.READ_WRITE, settings,
         settingsBeanProperty_12, listSkipFolder);
     jListBinding_2.bind();
+  }
+
+  /**
+   * Custom ListCellRenderer to decode WebDAV paths for display
+   */
+  private static class DatasourceListCellRenderer extends DefaultListCellRenderer {
+    @Override
+    public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+      String displayValue = value != null ? value.toString() : "";
+
+      // Decode WebDAV paths (webdav://[id]/path)
+      if (displayValue.startsWith("webdav://")) {
+        try {
+          // Find the second slash after webdav://
+          int firstSlash = displayValue.indexOf('/', 9); // 9 = length of "webdav://"
+          if (firstSlash != -1) {
+            String prefix = displayValue.substring(0, firstSlash + 1);
+            String path = displayValue.substring(firstSlash + 1);
+            // Decode the path part
+            String decodedPath = java.net.URLDecoder.decode(path, "UTF-8");
+            displayValue = prefix + decodedPath;
+          }
+        }
+        catch (Exception e) {
+          // If decoding fails, use original value
+        }
+      }
+
+      return super.getListCellRendererComponent(list, displayValue, index, isSelected, cellHasFocus);
+    }
   }
 }

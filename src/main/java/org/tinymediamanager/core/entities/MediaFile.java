@@ -47,6 +47,7 @@ import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
@@ -454,16 +455,40 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   public Path getFileAsPath() {
 
     if (file == null) {
-      Path f = Paths.get(this.path, this.filename);
-      file = f.toAbsolutePath();
+      // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
+      if (WebDavDataSourceHelper.isWebDavPath(this.path)) {
+        // For WebDAV, construct path using string concatenation
+        String fullPath = this.path.endsWith("/") ? this.path + this.filename : this.path + "/" + this.filename;
+        file = Paths.get(fullPath);
+      }
+      else {
+        Path f = Paths.get(this.path, this.filename);
+        file = f.toAbsolutePath();
+      }
     }
     return file;
   }
 
   public void setFile(Path file) {
     setFilename(file.getFileName().toString());
-    setPath(file.toAbsolutePath().getParent().toString());
-    this.file = file.toAbsolutePath();
+
+    // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
+    String fileStr = file.toString();
+    if (WebDavDataSourceHelper.isWebDavPath(fileStr)) {
+      // For WebDAV, extract parent path using string manipulation
+      int lastSlash = fileStr.lastIndexOf('/');
+      if (lastSlash > 0) {
+        setPath(fileStr.substring(0, lastSlash));
+      }
+      else {
+        setPath(fileStr);
+      }
+      this.file = file;
+    }
+    else {
+      setPath(file.toAbsolutePath().getParent().toString());
+      this.file = file.toAbsolutePath();
+    }
   }
 
   /**
@@ -527,7 +552,13 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
       newPathToSet = newPath;
     }
     // LOGGER.trace("MF replace: ({}, {}) -> {} results in {}", oldPath, newPath, getPath(), newPathToSet);
-    setPath(newPathToSet.toAbsolutePath().toString());
+    // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
+    if (WebDavDataSourceHelper.isWebDavPath(newPathToSet.toString())) {
+      setPath(newPathToSet.toString());
+    }
+    else {
+      setPath(newPathToSet.toAbsolutePath().toString());
+    }
   }
 
   public String getFilename() {

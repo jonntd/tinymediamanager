@@ -90,6 +90,7 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -371,6 +372,10 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   public Path getPathNIO() {
     if (StringUtils.isBlank(path)) {
       return null;
+    }
+    // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      return Paths.get(path);
     }
     return Paths.get(path).toAbsolutePath();
   }

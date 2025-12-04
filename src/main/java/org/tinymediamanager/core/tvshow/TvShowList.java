@@ -292,7 +292,7 @@ public final class TvShowList extends AbstractModelObject {
 
   /**
    * Removes the datasource.
-   * 
+   *
    * @param path
    *          the path
    */
@@ -301,9 +301,24 @@ public final class TvShowList extends AbstractModelObject {
       return;
     }
 
+    // For WebDAV paths, use string comparison instead of Path comparison
+    // because Paths.get() doesn't handle webdav:// URLs correctly
+    boolean isWebDav = path.startsWith("webdav://");
+
     for (int i = tvShows.size() - 1; i >= 0; i--) {
       TvShow tvShow = tvShows.get(i);
-      if (Paths.get(path).equals(Paths.get(tvShow.getDataSource()))) {
+      boolean matches;
+
+      if (isWebDav) {
+        // For WebDAV, compare strings directly
+        matches = path.equals(tvShow.getDataSource());
+      }
+      else {
+        // For local paths, use Path comparison
+        matches = Paths.get(path).equals(Paths.get(tvShow.getDataSource()));
+      }
+
+      if (matches) {
         removeTvShow(tvShow);
       }
     }

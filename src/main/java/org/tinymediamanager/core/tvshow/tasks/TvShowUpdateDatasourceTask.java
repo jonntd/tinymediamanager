@@ -97,6 +97,8 @@ import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
+import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
+import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.thesportsdb.TheSportsDbHelper;
 import org.tinymediamanager.scraper.thesportsdb.entities.League;
 import org.tinymediamanager.scraper.util.ListUtils;
@@ -104,6 +106,10 @@ import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavFile;
+import org.tinymediamanager.core.webdav.WebDavSource;
 import org.tinymediamanager.thirdparty.KodiRPC;
 import org.tinymediamanager.thirdparty.VSMeta;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
@@ -455,6 +461,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
         // update selected data sources
         for (String ds : dataSources) {
+          // Check if this is a WebDAV data source
+          if (WebDavDataSourceHelper.isWebDavPath(ds)) {
+            updateWebDavDatasource(ds);
+            continue;
+          }
+
           Path dsAsPath = Paths.get(ds);
 
           // check the special case, that the data source is also an ignore folder
@@ -736,6 +748,247 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.error("Could not update data sources for TV shows - '{}'", e.getMessage());
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "message.update.threadcrashed"));
     }
+  }
+
+  /**
+   * Update a WebDAV data source for TV shows
+   *
+   * @param ds
+   *          the WebDAV data source path (webdav://[source-id]/remote/path)
+   */
+  private void updateWebDavDatasource(String ds) {
+    LOGGER.info("Starting \"update data sources\" on WebDAV datasource: {}", ds);
+
+    String[] parsed = WebDavDataSourceHelper.parseWebDavPath(ds);
+    if (parsed == null) {
+      LOGGER.error("Invalid WebDAV path: {}", ds);
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+      return;
+    }
+
+    String sourceId = parsed[0];
+    String remotePath = parsed[1];
+
+    WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+    if (source == null) {
+      LOGGER.error("WebDAV source not found for ID: {}", sourceId);
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+      return;
+    }
+
+    initThreadPool(3, "update-webdav");
+    setTaskName(TmmResourceBundle.getString("update.datasource") + " 'WebDAV: " + source.getName() + remotePath + "'");
+    publishState();
+
+    WebDavClient client = WebDavDataSourceHelper.createClient(source);
+    if (client == null) {
+      LOGGER.error("Could not connect to WebDAV source: {}", source.getName());
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+      return;
+    }
+
+    try {
+      // List root directories - each should be a TV show folder
+      List<WebDavFile> rootDirs = client.list(remotePath);
+      LOGGER.debug("Found '{}' items in WebDAV root", rootDirs.size());
+
+      for (WebDavFile dir : rootDirs) {
+        if (dir.isDirectory() && !dir.getName().startsWith(".") && !dir.getName().startsWith("@")) {
+          // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
+          String dirPath = dir.getPath();
+          String decodedDirPath = dirPath;
+          try {
+            decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+          }
+          catch (Exception e) {
+            LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
+          }
+
+          // Build show path: webdav://[source-id]/dirPath
+          String showPath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+          // Normalize path (remove trailing slash)
+          if (showPath.endsWith("/")) {
+            showPath = showPath.substring(0, showPath.length() - 1);
+          }
+          LOGGER.debug("Processing WebDAV TV show: datasource={}, dirPath={}, decodedDirPath={}, showPath={}", ds, dirPath, decodedDirPath, showPath);
+          processWebDavTvShowDirectory(ds, sourceId, source, client, decodedDirPath, showPath);
+        }
+      }
+
+      waitForCompletionOrCancel();
+      LOGGER.info("Finished updating WebDAV data source: {}", ds);
+    }
+    catch (Exception e) {
+      LOGGER.error("Error updating WebDAV data source '{}': {}", ds, e.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+    }
+    finally {
+      client.disconnect();
+    }
+  }
+
+  /**
+   * Process a WebDAV directory as a TV show folder
+   */
+  private void processWebDavTvShowDirectory(String datasource, String sourceId, WebDavSource source, WebDavClient client,
+      String dirPath, String showPath) {
+
+    // Check if TV show already exists
+    TvShow existingShow = tvShowList.getTvShowByPath(Paths.get(showPath));
+    if (existingShow != null && existingShow.isLocked()) {
+      LOGGER.debug("TV Show '{}' is locked, skipping", existingShow.getTitle());
+      return;
+    }
+
+    TvShow tvShow = existingShow;
+    if (tvShow == null) {
+      tvShow = new TvShow();
+      tvShow.setNewlyAdded(true);
+    }
+
+    // Set basic show info
+    tvShow.setPath(showPath);
+    // The datasource should be the user-configured datasource path
+    tvShow.setDataSource(datasource);
+
+    // Try to detect title from folder name
+    // Note: dirPath is already decoded at this point
+    String folderName = dirPath.substring(dirPath.lastIndexOf('/') + 1);
+    if (StringUtils.isBlank(tvShow.getTitle())) {
+      String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName,
+          TvShowModuleManager.getInstance().getSettings().getBadWord());
+      tvShow.setTitle(titleYear[0]);
+      if (!titleYear[1].isEmpty()) {
+        try {
+          tvShow.setYear(Integer.parseInt(titleYear[1]));
+        }
+        catch (Exception ignored) {
+          // ignore
+        }
+      }
+    }
+
+    try {
+      // List all files in the show directory recursively
+      List<WebDavFile> allFiles = listWebDavFilesRecursive(client, dirPath);
+
+      // Find video files (episodes)
+      for (WebDavFile file : allFiles) {
+        if (!file.isDirectory() && file.isVideoFile()) {
+          // Create episode from video file
+          TvShowEpisode episode = createEpisodeFromWebDavFile(tvShow, file, source);
+          if (episode != null) {
+            tvShow.addEpisode(episode);
+          }
+        }
+      }
+
+      // Only add show if it has episodes
+      if (!tvShow.getEpisodes().isEmpty()) {
+        LOGGER.debug("Adding WebDAV TV show: {} with {} episodes", tvShow.getTitle(), tvShow.getEpisodes().size());
+        if (existingShow == null) {
+          tvShowList.addTvShow(tvShow);
+        }
+        tvShow.saveToDb();
+      }
+    }
+    catch (Exception e) {
+      LOGGER.warn("Could not process WebDAV TV show directory '{}': {}", dirPath, e.getMessage());
+    }
+  }
+
+  /**
+   * List all files in a WebDAV directory recursively
+   */
+  private List<WebDavFile> listWebDavFilesRecursive(WebDavClient client, String path) {
+    return listWebDavFilesRecursive(client, path, new java.util.HashSet<>());
+  }
+
+  /**
+   * List all files in a WebDAV directory recursively with visited path tracking
+   */
+  private List<WebDavFile> listWebDavFilesRecursive(WebDavClient client, String path, java.util.Set<String> visitedPaths) {
+    List<WebDavFile> allFiles = new ArrayList<>();
+
+    // Normalize path for comparison (remove trailing slash)
+    String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+
+    // Check if we've already visited this path
+    if (visitedPaths.contains(normalizedPath)) {
+      LOGGER.debug("Skipping already visited path: {}", path);
+      return allFiles;
+    }
+
+    // Mark this path as visited
+    visitedPaths.add(normalizedPath);
+
+    try {
+      List<WebDavFile> files = client.list(path);
+      LOGGER.debug("Listed {} items in WebDAV directory: {}", files.size(), path);
+
+      for (WebDavFile file : files) {
+        allFiles.add(file);
+        if (file.isDirectory()) {
+          String name = file.getName().toUpperCase(Locale.ROOT);
+          if (!SKIP_FOLDERS.contains(name) && !file.getName().startsWith(".") && !file.getName().startsWith("@")) {
+            allFiles.addAll(listWebDavFilesRecursive(client, file.getPath(), visitedPaths));
+          }
+        }
+      }
+    }
+    catch (Exception e) {
+      LOGGER.warn("Could not list WebDAV directory '{}': {}", path, e.getMessage());
+    }
+    return allFiles;
+  }
+
+  /**
+   * Create a TvShowEpisode from a WebDAV video file
+   */
+  private TvShowEpisode createEpisodeFromWebDavFile(TvShow tvShow, WebDavFile videoFile, WebDavSource source) {
+    TvShowEpisode episode = new TvShowEpisode();
+    episode.setNewlyAdded(true);
+    episode.setTvShow(tvShow);
+    episode.setPath(videoFile.getPath());
+
+    // Create MediaFile for the video
+    MediaFile mf = new MediaFile();
+    mf.setPath(videoFile.getPath());
+    mf.setFilename(videoFile.getName());
+    mf.setFilesize(videoFile.getSize());
+    mf.setType(MediaFileType.VIDEO);
+    if (videoFile.getModified() != null) {
+      mf.setDateLastModified(videoFile.getModified());
+    }
+    episode.addToMediaFiles(mf);
+
+    // Try to parse episode info from filename
+    String filename = videoFile.getName();
+    EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(filename, tvShow.getTitle());
+
+    if (!result.episodes.isEmpty()) {
+      int seasonNum = result.season != -1 ? result.season : 1;
+      int episodeNum = result.episodes.get(0);
+      MediaEpisodeNumber epNum = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, seasonNum, episodeNum);
+      episode.setEpisode(epNum);
+    }
+    else {
+      // Could not parse episode info - set to unknown
+      MediaEpisodeNumber epNum = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, -1, -1);
+      episode.setEpisode(epNum);
+    }
+
+    // Set title from filename if not parsed
+    if (StringUtils.isBlank(episode.getTitle())) {
+      String baseName = FilenameUtils.getBaseName(filename);
+      episode.setTitle(baseName);
+    }
+
+    return episode;
   }
 
   private void cleanup(List<TvShow> shows) {

@@ -364,6 +364,12 @@
             <version>${okhttp.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- WebDAV client library -->
+        <dependency>
+            <groupId>com.github.lookfirst</groupId>
+            <artifactId>sardine</artifactId>
+            <version>5.12</version>
+        </dependency>
     </dependencies>
     <repositories>
         <repository>

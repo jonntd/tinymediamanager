@@ -214,7 +214,7 @@ public final class MovieList extends AbstractModelObject {
 
   /**
    * Removes the datasource.
-   * 
+   *
    * @param datasource
    *          the path
    */
@@ -223,15 +223,35 @@ public final class MovieList extends AbstractModelObject {
       return;
     }
 
+    LOGGER.info("Removing datasource: {}", datasource);
     List<Movie> moviesToRemove = new ArrayList<>();
-    Path path = Paths.get(datasource);
+    // For WebDAV paths, use string comparison instead of Path comparison
+    // because Paths.get() doesn't handle webdav:// URLs correctly
+    boolean isWebDav = datasource.startsWith("webdav://");
+    LOGGER.debug("Is WebDAV datasource: {}", isWebDav);
+
     for (int i = movieList.size() - 1; i >= 0; i--) {
       Movie movie = movieList.get(i);
-      if (path.equals(Paths.get(movie.getDataSource()))) {
+      boolean matches;
+
+      if (isWebDav) {
+        // For WebDAV, compare strings directly
+        matches = datasource.equals(movie.getDataSource());
+        LOGGER.debug("Comparing WebDAV: '{}' == '{}' ? {}", datasource, movie.getDataSource(), matches);
+      }
+      else {
+        // For local paths, use Path comparison
+        Path path = Paths.get(datasource);
+        matches = path.equals(Paths.get(movie.getDataSource()));
+      }
+
+      if (matches) {
+        LOGGER.debug("Adding movie to remove list: {}", movie.getTitle());
         moviesToRemove.add(movie);
       }
     }
 
+    LOGGER.info("Found {} movies to remove", moviesToRemove.size());
     removeMovies(moviesToRemove);
   }
 

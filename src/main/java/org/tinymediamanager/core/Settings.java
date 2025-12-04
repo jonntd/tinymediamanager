@@ -38,6 +38,7 @@ import org.tinymediamanager.core.http.TmmHttpServer;
 import org.tinymediamanager.scraper.http.ProxySettings;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.core.webdav.WebDavSource;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -62,6 +63,7 @@ public final class Settings extends AbstractSettings {
   private static final String                              CLEANUP_FILE_TYPE            = "cleanupFileType";
   private static final String                              WOL_DEVICES                  = "wolDevices";
   private static final String                              CUSTOM_ASPECT_RATIOS         = "customAspectRatios";
+  private static final String                              WEBDAV_SOURCES               = "webDavSources";
 
   /**
    * statics
@@ -77,6 +79,7 @@ public final class Settings extends AbstractSettings {
   private final List<String>                               cleanupFileTypes             = ObservableCollections.observableList(new ArrayList<>());
   private final List<WolDevice>                            wolDevices                   = ObservableCollections.observableList(new ArrayList<>());
   private final List<String>                               customAspectRatios           = ObservableCollections.observableList(new ArrayList<>());
+  private final List<WebDavSource>                         webDavSources                = ObservableCollections.observableList(new ArrayList<>());
 
   private String                                           version                      = "";
 
@@ -872,6 +875,43 @@ public final class Settings extends AbstractSettings {
     wolDevices.clear();
     wolDevices.addAll(newValues);
     firePropertyChange(WOL_DEVICES, null, wolDevices);
+  }
+
+  // WebDAV Sources management
+  public void addWebDavSource(WebDavSource newSource) {
+    webDavSources.add(newSource);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  public void removeWebDavSource(WebDavSource source) {
+    webDavSources.remove(source);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  public List<WebDavSource> getWebDavSources() {
+    return webDavSources;
+  }
+
+  public void setWebDavSources(List<WebDavSource> newValues) {
+    webDavSources.clear();
+    webDavSources.addAll(newValues);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  /**
+   * Get a WebDAV source by its ID
+   *
+   * @param id
+   *          the ID of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceById(String id) {
+    for (WebDavSource source : webDavSources) {
+      if (source.getId().equals(id)) {
+        return source;
+      }
+    }
+    return null;
   }
 
   @JsonSerialize(using = EncryptedStringSerializer.class)
