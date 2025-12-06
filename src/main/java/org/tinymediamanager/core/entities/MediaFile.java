@@ -458,8 +458,12 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
       // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
       if (WebDavDataSourceHelper.isWebDavPath(this.path)) {
         // For WebDAV, construct path using string concatenation
-        String fullPath = this.path.endsWith("/") ? this.path + this.filename : this.path + "/" + this.filename;
-        file = Paths.get(fullPath);
+        // Apply normalization to fix any malformed paths (e.g., UUID followed by encoded path without separator)
+        String normalizedPath = WebDavDataSourceHelper.normalizeWebDavPath(this.path);
+        String fullPath = normalizedPath.endsWith("/") ? normalizedPath + this.filename : normalizedPath + "/" + this.filename;
+
+        // Use central helper to create path safe for current OS (e.g. Windows colon issue)
+        file = WebDavDataSourceHelper.getWebDavPath(fullPath);
       }
       else {
         Path f = Paths.get(this.path, this.filename);
@@ -473,7 +477,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     setFilename(file.getFileName().toString());
 
     // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
-    String fileStr = file.toString();
+    String fileStr = WebDavDataSourceHelper.normalizeWebDavPath(file.toString());
     if (WebDavDataSourceHelper.isWebDavPath(fileStr)) {
       // For WebDAV, extract parent path using string manipulation
       int lastSlash = fileStr.lastIndexOf('/');
@@ -483,7 +487,7 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
       else {
         setPath(fileStr);
       }
-      this.file = file;
+      this.file = Paths.get(fileStr);
     }
     else {
       setPath(file.toAbsolutePath().getParent().toString());
@@ -521,6 +525,35 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
     this.path = newValue;
     invalidateFileHandle();
     firePropertyChange("path", oldValue, newValue);
+  }
+
+  /**
+   * Gets the decoded path for display purposes (URL-decoded for WebDAV paths).
+   *
+   * @return the decoded path
+   */
+  public String getPathDecoded() {
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      return WebDavDataSourceHelper.decodeWebDavPath(path);
+    }
+    return path;
+  }
+
+  /**
+   * Gets the decoded filename for display purposes (URL-decoded for WebDAV paths).
+   *
+   * @return the decoded filename
+   */
+  public String getFilenameDecoded() {
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      try {
+        return java.net.URLDecoder.decode(filename, "UTF-8");
+      }
+      catch (Exception e) {
+        return filename;
+      }
+    }
+    return filename;
   }
 
   /**

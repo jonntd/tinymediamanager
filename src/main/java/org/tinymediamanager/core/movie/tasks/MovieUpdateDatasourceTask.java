@@ -98,6 +98,7 @@ import org.tinymediamanager.scraper.entities.MediaArtwork;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.core.webdav.WebDavClient;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
@@ -113,34 +114,37 @@ import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
  * @author Myron Boyle
  */
 public class MovieUpdateDatasourceTask extends TmmThreadPool {
-  private static final Logger          LOGGER           = LoggerFactory.getLogger(MovieUpdateDatasourceTask.class);
+  private static final Logger          LOGGER               = LoggerFactory.getLogger(MovieUpdateDatasourceTask.class);
 
-  private static long                  preDir           = 0;
-  private static long                  postDir          = 0;
-  private static long                  visFile          = 0;
-  private static long                  preDirAll        = 0;
-  private static long                  postDirAll       = 0;
-  private static long                  visFileAll       = 0;
+  private static long                  preDir               = 0;
+  private static long                  postDir              = 0;
+  private static long                  visFile              = 0;
+  private static long                  preDirAll            = 0;
+  private static long                  postDirAll           = 0;
+  private static long                  visFileAll           = 0;
 
   // skip well-known, but unneeded folders (UPPERCASE)
-  private static final List<String>    SKIP_FOLDERS     = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
+  private static final List<String>    SKIP_FOLDERS         = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
       "SYSTEM VOLUME INFORMATION", "@EADIR", "ADV_OBJ", "PLEX VERSIONS", "LOST.DIR");
 
   // skip folders starting with a SINGLE "." or "._" (exception for movie ".45")
-  private static final String          SKIP_REGEX       = "(?i)^[.@](?!45|buelos)[\\w@]+.*";
+  private static final String          SKIP_REGEX           = "(?i)^[.@](?!45|buelos)[\\w@]+.*";
   // MMD detected as single movie in a structured folder such as /A/, /2010/ or decade
-  public static final String           FOLDER_STRUCTURE = "(?i)^(\\w|\\d{4}|\\d{4}s|\\d{4}\\-\\d{4})$";
-  private static final Pattern         VIDEO_3D_PATTERN = Pattern.compile("(?i)[ .,_\\(\\[-]3D[ .,_\\)\\]-]?");
+  public static final String           FOLDER_STRUCTURE     = "(?i)^(\\w|\\d{4}|\\d{4}s|\\d{4}\\-\\d{4})$";
+  private static final Pattern         VIDEO_3D_PATTERN     = Pattern.compile("(?i)[ .,_\\(\\[-]3D[ .,_\\)\\]-]?");
 
   private final List<String>           dataSources;
-  private final List<Pattern>          skipFolders      = new ArrayList<>();
-  private final List<Movie>            moviesToUpdate   = new ArrayList<>();
-  private final MovieList              movieList        = MovieModuleManager.getInstance().getMovieList();
-  private final Set<Path>              filesFound       = new HashSet<>();
-  private final ReentrantReadWriteLock fileLock         = new ReentrantReadWriteLock();
-  private final List<Runnable>         miTasks          = Collections.synchronizedList(new ArrayList<>());
-  private final List<Path>             existingMovies   = new ArrayList<>();
-  private final List<MediaFile>        imageFiles       = new ArrayList<>();
+  private final List<Pattern>          skipFolders          = new ArrayList<>();
+  private final List<Movie>            moviesToUpdate       = new ArrayList<>();
+  private final MovieList              movieList            = MovieModuleManager.getInstance().getMovieList();
+  private final Set<Path>              filesFound           = new HashSet<>();
+  private final ReentrantReadWriteLock fileLock             = new ReentrantReadWriteLock();
+  private final List<Runnable>         miTasks              = Collections.synchronizedList(new ArrayList<>());
+  private final List<Path>             existingMovies       = new ArrayList<>();
+  private final List<MediaFile>        imageFiles           = new ArrayList<>();
+
+  // Lock for WebDAV movie processing to prevent race conditions
+  private final Object                 webDavProcessingLock = new Object();
 
   public MovieUpdateDatasourceTask() {
     this(MovieModuleManager.getInstance().getSettings().getMovieDataSource());
@@ -441,8 +445,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.datasource") + " 'WebDAV: " + source.getName() + remotePath + "'");
     publishState();
 
-    WebDavClient client = WebDavDataSourceHelper.createClient(source);
-    if (client == null) {
+    // Use a temporary client just to list root directories
+    WebDavClient listClient = WebDavDataSourceHelper.createClient(source);
+    if (listClient == null) {
       LOGGER.error("Could not connect to WebDAV source: {}", source.getName());
       MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
@@ -450,32 +455,25 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
 
     try {
-      // List all files in the WebDAV directory recursively
-      List<WebDavFile> allFiles = listWebDavFilesRecursive(client, remotePath);
-      LOGGER.debug("Found '{}' files in WebDAV data source", allFiles.size());
+      // List root directories - each should be a movie folder
+      List<WebDavFile> rootDirs = listClient.list(remotePath);
+      LOGGER.debug("Found '{}' items in WebDAV root", rootDirs.size());
 
-      // Group files by directory (potential movie folders)
-      java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
-      for (WebDavFile file : allFiles) {
-        if (!file.isDirectory()) {
-          String parentPath = getParentPath(file.getPath());
-          filesByDir.computeIfAbsent(parentPath, k -> new ArrayList<>()).add(file);
-        }
-      }
+      // Submit parallel tasks for each directory
+      for (WebDavFile dir : rootDirs) {
+        if (dir.isDirectory() && !dir.getName().startsWith(".") && !dir.getName().startsWith("@")) {
+          String dirPath = dir.getPath();
+          String decodedDirPath = dirPath;
+          try {
+            decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+          }
+          catch (Exception e) {
+            LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
+          }
 
-      // Process each directory as a potential movie folder
-      for (java.util.Map.Entry<String, List<WebDavFile>> entry : filesByDir.entrySet()) {
-        String dirPath = entry.getKey();
-        List<WebDavFile> filesInDir = entry.getValue();
-
-        // Check if there are video files in this directory
-        List<WebDavFile> videoFiles = filesInDir.stream()
-            .filter(WebDavFile::isVideoFile)
-            .collect(java.util.stream.Collectors.toList());
-
-        if (!videoFiles.isEmpty()) {
-          // This directory contains video files - process as movie
-          processWebDavMovieDirectory(ds, source, dirPath, filesInDir, videoFiles);
+          // Submit task for parallel processing
+          LOGGER.debug("Submitting WebDAV movie task: datasource={}, dirPath={}", ds, decodedDirPath);
+          submitTask(new FindWebDavMovieTask(ds, sourceId, source, decodedDirPath));
         }
       }
 
@@ -489,7 +487,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
     }
     finally {
-      client.disconnect();
+      listClient.disconnect();
     }
   }
 
@@ -560,8 +558,188 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   /**
    * Process a WebDAV directory as a movie folder
    */
-  private void processWebDavMovieDirectory(String datasource, WebDavSource source, String dirPath,
-      List<WebDavFile> allFilesInDir, List<WebDavFile> videoFiles) {
+  private void processWebDavMovieDirectory(String datasource, WebDavSource source, String dirPath, List<WebDavFile> allFilesInDir,
+      List<WebDavFile> videoFiles) {
+
+    // Check if this is a multi-movie directory (multiple video files in one directory)
+    if (videoFiles.size() > 1) {
+      processWebDavMultiMovieDirectory(datasource, source, dirPath, allFilesInDir, videoFiles);
+      return;
+    }
+
+    // Single movie directory - use existing logic
+    processWebDavSingleMovieDirectory(datasource, source, dirPath, allFilesInDir, videoFiles);
+  }
+
+  /**
+   * Process a WebDAV directory with multiple movies (multiple video files)
+   */
+  private void processWebDavMultiMovieDirectory(String datasource, WebDavSource source, String dirPath, List<WebDavFile> allFilesInDir,
+      List<WebDavFile> videoFiles) {
+
+    LOGGER.debug("Processing WebDAV multi-movie directory: {} with {} video files", dirPath, videoFiles.size());
+
+    // Process each video file as a separate movie
+    for (WebDavFile videoFile : videoFiles) {
+      // Create a unique path for this movie based on the directory, not the filename
+      String sourceId = WebDavDataSourceHelper.parseWebDavPath(datasource)[0];
+      String decodedDirPath = dirPath;
+      try {
+        decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+      }
+      catch (Exception e) {
+        LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
+      }
+
+      // For multi-movie directory, use the directory path as the movie path
+      // This is consistent with local file handling
+      String moviePath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+
+      // Normalize path
+      if (moviePath.endsWith("/")) {
+        moviePath = moviePath.substring(0, moviePath.length() - 1);
+      }
+
+      String videoFilename = videoFile.getName();
+      String basename = FilenameUtils.getBaseName(videoFilename);
+
+      LOGGER.debug("Processing WebDAV multi-movie: videoFile={}, moviePath={}", videoFilename, moviePath);
+
+      // For multi-movie directories, we need to find the movie by its video file, not by path
+      // because all movies in the same directory share the same path
+      String videoFilePath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath) + "/"
+          + videoFilename;
+
+      // Check if movie already exists by looking for a movie that contains this video file
+      List<Movie> candidateMovies = new ArrayList<>(movieList.getMoviesByPath(WebDavDataSourceHelper.getWebDavPath(moviePath)));
+
+      // Fallback: also check invalid/encoded path if not found
+      if (candidateMovies.isEmpty()) {
+        // try the raw dirPath (which might be encoded)
+        String rawMoviePath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
+        if (rawMoviePath.endsWith("/")) {
+          rawMoviePath = rawMoviePath.substring(0, rawMoviePath.length() - 1);
+        }
+        candidateMovies.addAll(movieList.getMoviesByPath(WebDavDataSourceHelper.getWebDavPath(rawMoviePath)));
+      }
+
+      Movie existingMovie = null;
+      for (Movie m : candidateMovies) {
+        for (MediaFile mediaFile : m.getMediaFiles(MediaFileType.VIDEO)) {
+          if (matchesWebDavPath(mediaFile.getFileAsPath().toString(), videoFilePath)) {
+            existingMovie = m;
+            break;
+          }
+        }
+        if (existingMovie != null) {
+          break;
+        }
+      }
+
+      if (existingMovie != null && existingMovie.isLocked()) {
+        LOGGER.debug("Movie '{}' is locked, skipping", existingMovie.getTitle());
+        continue;
+      }
+
+      Movie movie = existingMovie;
+      if (movie == null) {
+        movie = new Movie();
+        movie.setNewlyAdded(true);
+      }
+
+      // Set basic movie info
+      movie.setPath(moviePath);
+      movie.setDataSource(datasource);
+
+      // Try to detect title and year from video filename (not folder name)
+      if (StringUtils.isBlank(movie.getTitle())) {
+        String[] titleYear = ParserUtils.detectCleanTitleAndYear(videoFilename, MovieModuleManager.getInstance().getSettings().getBadWord());
+        movie.setTitle(titleYear[0]);
+        if (!titleYear[1].isEmpty()) {
+          try {
+            movie.setYear(Integer.parseInt(titleYear[1]));
+          }
+          catch (Exception ignored) {
+            // ignore
+          }
+        }
+      }
+
+      // Add this video file as MediaFile (only if it's not already there)
+      boolean videoFileExists = false;
+      for (MediaFile existingMf : movie.getMediaFiles(MediaFileType.VIDEO)) {
+        if (matchesWebDavPath(existingMf.getFileAsPath().toString(), videoFilePath)) {
+          videoFileExists = true;
+          break;
+        }
+      }
+
+      if (!videoFileExists) {
+        MediaFile mf = createMediaFileFromWebDav(videoFile, source);
+        mf.setType(MediaFileType.VIDEO);
+        movie.addToMediaFiles(mf);
+      }
+
+      // Remember original filename
+      if (StringUtils.isBlank(movie.getOriginalFilename())) {
+        movie.setOriginalFilename(videoFile.getName());
+      }
+
+      // Add associated files (same basename as video file)
+      for (WebDavFile file : allFilesInDir) {
+        if (!file.isDirectory() && !videoFiles.contains(file)) {
+          // Check if this file is associated with the current video file (same basename)
+          String fileBasename = FilenameUtils.getBaseName(file.getName());
+          if (fileBasename.startsWith(basename) || fileBasename.equals(basename)) {
+            MediaFile associatedMf = createMediaFileFromWebDav(file, source);
+            // Detect media file type
+            MediaFileType type = MediaFileHelper.parseMediaFileType(Paths.get(file.getName()), Paths.get(dirPath));
+            associatedMf.setType(type);
+            if (type != MediaFileType.UNKNOWN) {
+              movie.addToMediaFiles(associatedMf);
+            }
+          }
+        }
+      }
+
+      // Only add movie if it has video files
+      if (!movie.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
+        LOGGER.debug("Adding WebDAV multi-movie: {} ({})", movie.getTitle(), moviePath);
+
+        // Synchronized to prevent race conditions from parallel tasks
+        synchronized (webDavProcessingLock) {
+          // Double-check for multi-movie: verify this video file isn't already added
+          if (existingMovie == null) {
+            boolean alreadyExists = false;
+            for (Movie m : movieList.getMoviesByPath(Paths.get(moviePath))) {
+              for (MediaFile mf : m.getMediaFiles(MediaFileType.VIDEO)) {
+                if (matchesWebDavPath(mf.getFileAsPath().toString(), videoFilePath)) {
+                  alreadyExists = true;
+                  break;
+                }
+              }
+              if (alreadyExists)
+                break;
+            }
+            if (!alreadyExists) {
+              movieList.addMovie(movie);
+            }
+            else {
+              LOGGER.debug("Movie already added by another task, skipping: {}", videoFilePath);
+              continue;
+            }
+          }
+          movie.saveToDb();
+        }
+      }
+    }
+  }
+
+  /**
+   * Process a WebDAV directory with a single movie
+   */
+  private void processWebDavSingleMovieDirectory(String datasource, WebDavSource source, String dirPath, List<WebDavFile> allFilesInDir,
+      List<WebDavFile> videoFiles) {
 
     // Build a virtual path for this movie
     // datasource is like: webdav://[source-id]/remote/path
@@ -585,10 +763,21 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       moviePath = moviePath.substring(0, moviePath.length() - 1);
     }
 
-    LOGGER.debug("Processing WebDAV movie directory: datasource={}, dirPath={}, decodedDirPath={}, moviePath={}", datasource, dirPath, decodedDirPath, moviePath);
+    LOGGER.debug("Processing WebDAV single movie directory: datasource={}, dirPath={}, decodedDirPath={}, moviePath={}", datasource, dirPath,
+        decodedDirPath, moviePath);
 
     // Check if movie already exists
     Movie existingMovie = movieList.getMovieByPath(Paths.get(moviePath));
+
+    // Fallback: check encoded path if not found via decoded path
+    if (existingMovie == null) {
+      String rawMoviePath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
+      if (rawMoviePath.endsWith("/")) {
+        rawMoviePath = rawMoviePath.substring(0, rawMoviePath.length() - 1);
+      }
+      existingMovie = movieList.getMovieByPath(Paths.get(rawMoviePath));
+    }
+
     if (existingMovie != null && existingMovie.isLocked()) {
       LOGGER.debug("Movie '{}' is locked, skipping", existingMovie.getTitle());
       return;
@@ -605,12 +794,19 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // The datasource should be the user-configured datasource path
     movie.setDataSource(datasource);
 
-    // Try to detect title and year from folder name
-    // Use decodedDirPath instead of dirPath to get the correct folder name
-    String folderName = decodedDirPath.substring(decodedDirPath.lastIndexOf('/') + 1);
+    WebDavFile videoFile = videoFiles.get(0);
+
+    // Try to detect title and year from folder name or video filename
     if (StringUtils.isBlank(movie.getTitle())) {
-      String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName,
-          MovieModuleManager.getInstance().getSettings().getBadWord());
+      // First try from folder name
+      String folderName = decodedDirPath.substring(decodedDirPath.lastIndexOf('/') + 1);
+      String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName, MovieModuleManager.getInstance().getSettings().getBadWord());
+
+      // If no title from folder name, try from video filename
+      if (StringUtils.isBlank(titleYear[0])) {
+        titleYear = ParserUtils.detectCleanTitleAndYear(videoFile.getName(), MovieModuleManager.getInstance().getSettings().getBadWord());
+      }
+
       movie.setTitle(titleYear[0]);
       if (!titleYear[1].isEmpty()) {
         try {
@@ -623,14 +819,14 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
 
     // Add video files as MediaFiles
-    for (WebDavFile videoFile : videoFiles) {
-      MediaFile mf = createMediaFileFromWebDav(videoFile, source);
+    for (WebDavFile vf : videoFiles) {
+      MediaFile mf = createMediaFileFromWebDav(vf, source);
       mf.setType(MediaFileType.VIDEO);
       movie.addToMediaFiles(mf);
 
       // Remember original filename
       if (StringUtils.isBlank(movie.getOriginalFilename())) {
-        movie.setOriginalFilename(videoFile.getName());
+        movie.setOriginalFilename(vf.getName());
       }
     }
 
@@ -649,11 +845,50 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     // Only add movie if it has video files
     if (!movie.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
-      LOGGER.debug("Adding WebDAV movie: {} ({})", movie.getTitle(), moviePath);
-      if (existingMovie == null) {
-        movieList.addMovie(movie);
+      LOGGER.debug("Adding WebDAV single movie: {} ({})", movie.getTitle(), moviePath);
+
+      // Synchronized to prevent race conditions from parallel tasks
+      synchronized (webDavProcessingLock) {
+        // Double-check: verify movie still doesn't exist (another thread may have added it)
+        if (existingMovie == null) {
+          Movie doubleCheck = movieList.getMovieByPath(Paths.get(moviePath));
+          if (doubleCheck == null) {
+            movieList.addMovie(movie);
+          }
+          else {
+            LOGGER.debug("Movie already added by another task, skipping: {}", moviePath);
+            return;
+          }
+        }
+        movie.saveToDb();
       }
-      movie.saveToDb();
+    }
+  }
+
+  /**
+   * Robustly check if two WebDAV paths match, ignoring URL encoding differences
+   */
+  private boolean matchesWebDavPath(String path1, String path2) {
+    if (StringUtils.isBlank(path1) || StringUtils.isBlank(path2)) {
+      return false;
+    }
+
+    // Normalize
+    String p1 = WebDavDataSourceHelper.normalizeWebDavPath(path1);
+    String p2 = WebDavDataSourceHelper.normalizeWebDavPath(path2);
+
+    if (p1.equals(p2)) {
+      return true;
+    }
+
+    // Try decoding
+    try {
+      String d1 = java.net.URLDecoder.decode(p1, "UTF-8");
+      String d2 = java.net.URLDecoder.decode(p2, "UTF-8");
+      return d1.equals(d2);
+    }
+    catch (Exception e) {
+      return false;
     }
   }
 
@@ -664,23 +899,28 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     MediaFile mf = new MediaFile();
 
     // Construct WebDAV path in format: webdav://source-id/relative-path
-    String relativePath = webDavFile.getPath();
-    // Remove leading slash if present
-    if (relativePath.startsWith("/")) {
-      relativePath = relativePath.substring(1);
-    }
-    // Remove filename from path to get parent directory
-    int lastSlash = relativePath.lastIndexOf('/');
+    String filePath = webDavFile.getPath();
+
+    // Get parent directory path
     String parentPath;
+    int lastSlash = filePath.lastIndexOf('/');
     if (lastSlash > 0) {
-      parentPath = relativePath.substring(0, lastSlash);
+      parentPath = filePath.substring(0, lastSlash);
     }
     else {
       parentPath = "";
     }
 
     // Construct full WebDAV path
-    String webdavPath = "webdav://" + source.getId() + (parentPath.isEmpty() ? "" : "/" + parentPath);
+    String webdavPath;
+    if (parentPath.isEmpty()) {
+      // Top level directory
+      webdavPath = "webdav://" + source.getId();
+    }
+    else {
+      // Add the full parent path to ensure correct directory structure
+      webdavPath = "webdav://" + source.getId() + parentPath;
+    }
 
     mf.setPath(webdavPath);
     mf.setFilename(webDavFile.getName());
@@ -859,6 +1099,87 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     // mediainfo
     gatherMediainfo(moviesToCleanup);
+  }
+
+  /**
+   * ThreadpoolWorker to process ONE WebDAV movie directory in parallel
+   */
+  private class FindWebDavMovieTask implements Callable<Object> {
+    private final String       datasource;
+    private final String       sourceId;
+    private final WebDavSource source;
+    private final String       dirPath;
+    private final long         uniqueId;
+
+    public FindWebDavMovieTask(String datasource, String sourceId, WebDavSource source, String dirPath) {
+      this.datasource = datasource;
+      this.sourceId = sourceId;
+      this.source = source;
+      this.dirPath = dirPath;
+      this.uniqueId = TmmTaskManager.getInstance().GLOB_THRD_CNT.incrementAndGet();
+    }
+
+    @Override
+    public Object call() throws Exception {
+      String name = Thread.currentThread().getName();
+      if (!name.contains("-G")) {
+        name = name + "-G0";
+      }
+      name = name.replaceAll("\\-G\\d+", "-G" + uniqueId);
+      Thread.currentThread().setName(name);
+
+      if (cancel) {
+        return null;
+      }
+
+      // Create a new WebDavClient for this task (thread safety)
+      WebDavClient client = WebDavDataSourceHelper.createClient(source);
+      if (client == null) {
+        LOGGER.warn("Could not connect to WebDAV source for task: {}", dirPath);
+        return null;
+      }
+
+      try {
+        LOGGER.debug("Processing WebDAV movie directory in parallel: {}", dirPath);
+        publishState(dirPath);
+
+        // List all files in this directory recursively
+        List<WebDavFile> allFiles = listWebDavFilesRecursive(client, dirPath);
+
+        // Group files by their directory
+        java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
+        for (WebDavFile file : allFiles) {
+          if (!file.isDirectory()) {
+            String filePath = file.getPath();
+            String parentPath;
+            int lastSlash = filePath.lastIndexOf('/');
+            if (lastSlash <= 0) {
+              parentPath = dirPath;
+            }
+            else {
+              parentPath = filePath.substring(0, lastSlash);
+            }
+            filesByDir.computeIfAbsent(parentPath, k -> new ArrayList<>()).add(file);
+          }
+        }
+
+        // Process each directory with video files
+        for (java.util.Map.Entry<String, List<WebDavFile>> entry : filesByDir.entrySet()) {
+          String subDirPath = entry.getKey();
+          List<WebDavFile> filesInDir = entry.getValue();
+          List<WebDavFile> videoFiles = filesInDir.stream().filter(WebDavFile::isVideoFile).collect(java.util.stream.Collectors.toList());
+
+          if (!videoFiles.isEmpty()) {
+            processWebDavMovieDirectory(datasource, source, subDirPath, filesInDir, videoFiles);
+          }
+        }
+      }
+      finally {
+        client.disconnect();
+      }
+
+      return null;
+    }
   }
 
   /**
@@ -1543,7 +1864,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         }
         movie.setDataSource(dataSource.toString());
         movie.setNewlyAdded(true);
-        movie.setPath(mf.getPath());
+        // Use movieDir instead of mf.getPath() to ensure we set the directory path, not file path
+        LOGGER.debug("MMD: Setting movie path - movieDir: {}, mf.getPath(): {}, mf.getFilename(): {}", movieDir.toAbsolutePath().toString(),
+            mf.getPath(), mf.getFilename());
+        movie.setPath(movieDir.toAbsolutePath().toString());
 
         // remember the filename the first time the movie gets added to tmm
         if (StringUtils.isBlank(movie.getOriginalFilename())) {
@@ -1972,16 +2296,16 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         if (Settings.getInstance().isMovieUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
         }
-        
+
         if (fileInfoChanged) {
           movieDirty = true;
         }
-        
+
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
           continue;
         }
-        
+
         if (StringUtils.isBlank(mf.getContainerFormat())) {
           submitTask(new MovieMediaFileInformationFetcherTask(mf, movie, false));
         }
@@ -1993,7 +2317,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           }
         }
       }
-      
+
       // 如果文件信息有变化，保存到数据库
       if (movieDirty) {
         movie.saveToDb();
@@ -2028,16 +2352,16 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         if (Settings.getInstance().isMovieUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf);
         }
-        
+
         if (fileInfoChanged) {
           movieDirty = true;
         }
-        
+
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
           continue;
         }
-        
+
         if (StringUtils.isBlank(mf.getContainerFormat())) {
           submitTask(new MovieMediaFileInformationFetcherTask(mf, movie, false));
         }
@@ -2055,7 +2379,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           }
         }
       }
-      
+
       // 如果文件信息有变化，保存到数据库
       if (movieDirty) {
         movie.saveToDb();

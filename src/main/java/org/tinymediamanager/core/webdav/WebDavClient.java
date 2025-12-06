@@ -155,7 +155,7 @@ public class WebDavClient {
       }
     }
     catch (IOException e) {
-      LOGGER.error("Failed to list WebDAV directory '{}': {}", fullUrl, e.getMessage());
+      LOGGER.error("Failed to list WebDAV directory '{}': {}", safeDecode(fullUrl), e.getMessage());
       throw e;
     }
 
@@ -194,13 +194,20 @@ public class WebDavClient {
     try {
       String sourceUrl = buildUrl(sourcePath);
       String destUrl = buildUrl(destPath);
-      LOGGER.debug("Moving WebDAV file from '{}' to '{}'", sourceUrl, destUrl);
-      LOGGER.debug("Raw source path: '{}', raw dest path: '{}'", sourcePath, destPath);
+
+      // Check if source and destination are the same
+      if (sourceUrl.equals(destUrl)) {
+        LOGGER.info("Source and destination are the same, skipping move: {}", safeDecode(sourcePath));
+        return true;
+      }
+
+      LOGGER.debug("Moving WebDAV file from '{}' to '{}'", safeDecode(sourcePath), safeDecode(destPath));
+      LOGGER.debug("Raw source path: '{}', raw dest path: '{}'", safeDecode(sourcePath), safeDecode(destPath));
       sardine.move(sourceUrl, destUrl);
       return true;
     }
     catch (IOException e) {
-      LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
+      LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
       LOGGER.error("Exception details: {}", e.toString());
       LOGGER.debug("Full stack trace:", e);
       return false;
@@ -221,12 +228,12 @@ public class WebDavClient {
     try {
       String sourceUrl = buildUrl(sourcePath);
       String destUrl = buildUrl(destPath);
-      LOGGER.debug("Copying WebDAV file from '{}' to '{}'", sourceUrl, destUrl);
+      LOGGER.debug("Copying WebDAV file from '{}' to '{}'", safeDecode(sourcePath), safeDecode(destPath));
       sardine.copy(sourceUrl, destUrl);
       return true;
     }
     catch (IOException e) {
-      LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
+      LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
       return false;
     }
   }
@@ -242,12 +249,18 @@ public class WebDavClient {
     ensureConnected();
     try {
       String url = buildUrl(path);
-      LOGGER.debug("Creating WebDAV directory '{}'", url);
+      LOGGER.debug("Creating WebDAV directory '{}'", safeDecode(url));
       sardine.createDirectory(url);
       return true;
     }
     catch (IOException e) {
-      LOGGER.error("Failed to create WebDAV directory '{}': {}", path, e.getMessage());
+      // 423 Locked is common in concurrent operations - log as warning instead of error
+      if (e.getMessage() != null && e.getMessage().contains("423")) {
+        LOGGER.warn("WebDAV directory '{}' is locked (concurrent operation): {}", safeDecode(path), e.getMessage());
+      }
+      else {
+        LOGGER.error("Failed to create WebDAV directory '{}': {}", safeDecode(path), e.getMessage());
+      }
       return false;
     }
   }
@@ -263,12 +276,12 @@ public class WebDavClient {
     ensureConnected();
     try {
       String url = buildUrl(path);
-      LOGGER.debug("Deleting WebDAV file/directory '{}'", url);
+      LOGGER.debug("Deleting WebDAV file/directory '{}'", safeDecode(url));
       sardine.delete(url);
       return true;
     }
     catch (IOException e) {
-      LOGGER.error("Failed to delete WebDAV file/directory '{}': {}", path, e.getMessage());
+      LOGGER.error("Failed to delete WebDAV file/directory '{}': {}", safeDecode(path), e.getMessage());
       return false;
     }
   }
@@ -296,50 +309,57 @@ public class WebDavClient {
       path = path.substring(1);
     }
 
-    // URL encode the path - split by "/" and encode each segment
-    // This handles both already-encoded and non-encoded paths
+    // For WebDAV paths, we need to be careful with URL encoding
+    // The path might already be URL encoded from the WebDAV client
+    // Just ensure proper URL format without double encoding
     try {
-      String[] segments = path.split("/");
+      // First, decode the entire path to handle any existing encoding
+      String decodedPath = java.net.URLDecoder.decode(path, "UTF-8");
+
+      // Then split into segments and encode each segment properly
+      String[] segments = decodedPath.split("/");
       StringBuilder encodedPath = new StringBuilder();
+
       for (int i = 0; i < segments.length; i++) {
         if (i > 0) {
           encodedPath.append("/");
         }
         String segment = segments[i];
         if (!segment.isEmpty()) {
-          // Only decode if the segment contains percent-encoded characters
-          if (segment.contains("%")) {
-            try {
-              // Decode first (in case it's already encoded), then encode
-              String decoded = java.net.URLDecoder.decode(segment, "UTF-8");
-              String encoded = java.net.URLEncoder.encode(decoded, "UTF-8")
-                  .replace("+", "%20")  // URLEncoder uses + for space, but we need %20
-                  .replace("%2F", "/"); // Don't encode forward slashes
-              encodedPath.append(encoded);
-            }
-            catch (IllegalArgumentException e) {
-              // If decoding fails, use the original segment
-              LOGGER.warn("Failed to decode segment '{}': {}", segment, e.getMessage());
-              encodedPath.append(segment);
-            }
-          }
-          else {
-            // If no percent-encoded characters, just encode directly
-            String encoded = java.net.URLEncoder.encode(segment, "UTF-8")
-                .replace("+", "%20")  // URLEncoder uses + for space, but we need %20
-                .replace("%2F", "/"); // Don't encode forward slashes
-            encodedPath.append(encoded);
-          }
+          // Encode each segment properly
+          String encodedSegment = java.net.URLEncoder.encode(segment, "UTF-8")
+              .replace("+", "%20") // Replace + with %20 for spaces
+              .replace("%2F", "/"); // Don't encode forward slashes
+          encodedPath.append(encodedSegment);
         }
       }
+
       String finalUrl = baseUrl + encodedPath.toString();
-      LOGGER.debug("Built URL: {} from path: {}", finalUrl, path);
+      // Use safeDecode for logging
+      LOGGER.debug("Built URL: {} from path: {}", finalUrl, safeDecode(path));
       return finalUrl;
     }
     catch (Exception e) {
-      LOGGER.warn("Failed to URL encode path '{}': {}", path, e.getMessage());
-      return baseUrl + path;
+      LOGGER.warn("Failed to URL encode path '{}': {}", safeDecode(path), e.getMessage());
+      // Fallback: use the original path as-is
+      String finalUrl = baseUrl + path;
+      LOGGER.debug("Fallback URL: {} from path: {}", finalUrl, safeDecode(path));
+      return finalUrl;
+    }
+  }
+
+  /**
+   * Safe decode for logging purposes
+   */
+  private String safeDecode(String path) {
+    if (path == null) {
+      return "";
+    }
+    try {
+      return java.net.URLDecoder.decode(path, "UTF-8");
+    }
+    catch (Exception e) {
+      return path;
     }
   }
 }
-

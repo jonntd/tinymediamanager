@@ -121,53 +121,56 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
  */
 
 public class TvShowUpdateDatasourceTask extends TmmThreadPool {
-  private static final Logger                  LOGGER         = LoggerFactory.getLogger(TvShowUpdateDatasourceTask.class);
+  private static final Logger                  LOGGER                    = LoggerFactory.getLogger(TvShowUpdateDatasourceTask.class);
 
   // skip well-known, but unneeded folders (UPPERCASE)
-  private static final List<String>            SKIP_FOLDERS   = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
+  private static final List<String>            SKIP_FOLDERS              = Arrays.asList(".", "..", "CERTIFICATE", "$RECYCLE.BIN", "RECYCLER",
       "SYSTEM VOLUME INFORMATION", "@EADIR", "ADV_OBJ", "EXTRATHUMB", "PLEX VERSIONS");
 
   // skip folders starting with a SINGLE "." or "._"
-  private static final String                  SKIP_REGEX     = "^[.][\\w@]+.*";
+  private static final String                  SKIP_REGEX                = "^[.][\\w@]+.*";
 
-  private static long                          preDir         = 0;
-  private static long                          postDir        = 0;
-  private static long                          visFile        = 0;
+  private static long                          preDir                    = 0;
+  private static long                          postDir                   = 0;
+  private static long                          visFile                   = 0;
 
-  private final List<String>                   dataSources    = new ArrayList<>();
-  private final List<Pattern>                  skipFolders    = new ArrayList<>();
-  private final List<TvShow>                   showsToUpdate  = new ArrayList<>();
+  private final List<String>                   dataSources               = new ArrayList<>();
+  private final List<Pattern>                  skipFolders               = new ArrayList<>();
+  private final List<TvShow>                   showsToUpdate             = new ArrayList<>();
   private final TvShowList                     tvShowList;
-  private final Set<Path>                      filesFound     = new HashSet<>();
-  private final Map<Path, BasicFileAttributes> fileAttributes = new HashMap<>();
-  private final ReentrantReadWriteLock         fileLock       = new ReentrantReadWriteLock();
+  private final Set<Path>                      filesFound                = new HashSet<>();
+  private final Map<Path, BasicFileAttributes> fileAttributes            = new HashMap<>();
+  private final ReentrantReadWriteLock         fileLock                  = new ReentrantReadWriteLock();
+
+  // Lock for WebDAV processing to prevent race conditions
+  private final Object                         webDavProcessingLock      = new Object();
 
   // 收集需要AI识别的文件信息，用于批量处理（轻量级）
-  private final List<PendingAIRecognition>     pendingAIRecognitions = new ArrayList<>();
+  private final List<PendingAIRecognition>     pendingAIRecognitions     = new ArrayList<>();
 
   // 批量处理状态跟踪
   private volatile boolean                     batchProcessingInProgress = false;
-  private final Object                         batchProcessingLock = new Object();
+  private final Object                         batchProcessingLock       = new Object();
 
   // 性能指标收集
-  private final AIRecognitionMetrics          aiMetrics = new AIRecognitionMetrics();
+  private final AIRecognitionMetrics           aiMetrics                 = new AIRecognitionMetrics();
 
   // 实时进度反馈
-  private final ProgressReporter               progressReporter = new ProgressReporter();
+  private final ProgressReporter               progressReporter          = new ProgressReporter();
 
   // 配置热更新支持
-  private volatile AIConfigurationSnapshot    currentAIConfig = null;
-  private final Object                         configUpdateLock = new Object();
+  private volatile AIConfigurationSnapshot     currentAIConfig           = null;
+  private final Object                         configUpdateLock          = new Object();
 
   /**
    * AI配置快照，用于热更新检测
    */
   private static class AIConfigurationSnapshot {
-    final String apiKey;
-    final String apiUrl;
+    final String  apiKey;
+    final String  apiUrl;
     final boolean aiEnabled;
-    final int maxRetries;
-    final long timestamp;
+    final int     maxRetries;
+    final long    timestamp;
 
     AIConfigurationSnapshot() {
       Settings settings = Settings.getInstance();
@@ -179,17 +182,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
 
     boolean hasChanged(AIConfigurationSnapshot other) {
-      if (other == null) return true;
-      return !java.util.Objects.equals(this.apiKey, other.apiKey) ||
-             !java.util.Objects.equals(this.apiUrl, other.apiUrl) ||
-             this.aiEnabled != other.aiEnabled ||
-             this.maxRetries != other.maxRetries;
+      if (other == null)
+        return true;
+      return !java.util.Objects.equals(this.apiKey, other.apiKey) || !java.util.Objects.equals(this.apiUrl, other.apiUrl)
+          || this.aiEnabled != other.aiEnabled || this.maxRetries != other.maxRetries;
     }
 
     @Override
     public String toString() {
-      return String.format("AIConfig{enabled=%s, url=%s, retries=%d, timestamp=%d}",
-                          aiEnabled, apiUrl != null ? "***" : "null", maxRetries, timestamp);
+      return String.format("AIConfig{enabled=%s, url=%s, retries=%d, timestamp=%d}", aiEnabled, apiUrl != null ? "***" : "null", maxRetries,
+          timestamp);
     }
   }
 
@@ -197,13 +199,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * 实时进度反馈器
    */
   private static class ProgressReporter {
-    private volatile int totalFiles = 0;
-    private volatile int processedFiles = 0;
-    private volatile int successfulFiles = 0;
-    private volatile int failedFiles = 0;
-    private volatile String currentFile = "";
-    private volatile String currentStage = "";
-    private volatile long startTime = 0;
+    private volatile int    totalFiles      = 0;
+    private volatile int    processedFiles  = 0;
+    private volatile int    successfulFiles = 0;
+    private volatile int    failedFiles     = 0;
+    private volatile String currentFile     = "";
+    private volatile String currentStage    = "";
+    private volatile long   startTime       = 0;
 
     void startBatchProcessing(int total) {
       this.totalFiles = total;
@@ -225,7 +227,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       this.processedFiles++;
       if (success) {
         this.successfulFiles++;
-      } else {
+      }
+      else {
         this.failedFiles++;
       }
       this.currentFile = filename;
@@ -245,24 +248,21 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       long estimatedTotal = processedFiles > 0 ? (elapsedTime * totalFiles / processedFiles) : 0;
       long remainingTime = estimatedTotal - elapsedTime;
 
-      String progressMsg = String.format(
-          "AI Recognition Progress: %.1f%% (%d/%d) - %s: %s - ETA: %s",
-          percentage, processedFiles, totalFiles, currentStage,
-          currentFile.length() > 50 ? "..." + currentFile.substring(currentFile.length() - 47) : currentFile,
-          formatTime(remainingTime)
-      );
+      String progressMsg = String.format("AI Recognition Progress: %.1f%% (%d/%d) - %s: %s - ETA: %s", percentage, processedFiles, totalFiles,
+          currentStage, currentFile.length() > 50 ? "..." + currentFile.substring(currentFile.length() - 47) : currentFile,
+          formatTime(remainingTime));
 
       // 发送进度消息
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), progressMsg));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), progressMsg));
 
       // 详细日志
-      LOGGER.debug("Progress: {:.1f}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]",
-                  percentage, processedFiles, totalFiles, successfulFiles, failedFiles, currentFile, currentStage);
+      LOGGER.debug("Progress: {:.1f}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]", percentage, processedFiles, totalFiles, successfulFiles,
+          failedFiles, currentFile, currentStage);
     }
 
     private String formatTime(long milliseconds) {
-      if (milliseconds <= 0) return "Unknown";
+      if (milliseconds <= 0)
+        return "Unknown";
 
       long seconds = milliseconds / 1000;
       long minutes = seconds / 60;
@@ -270,19 +270,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       if (hours > 0) {
         return String.format("%dh %dm", hours, minutes % 60);
-      } else if (minutes > 0) {
+      }
+      else if (minutes > 0) {
         return String.format("%dm %ds", minutes, seconds % 60);
-      } else {
+      }
+      else {
         return String.format("%ds", seconds);
       }
     }
 
     String getFinalReport() {
       long totalTime = System.currentTimeMillis() - startTime;
-      return String.format(
-          "Batch AI Recognition Final Report: %d files processed in %s - Success: %d, Failed: %d",
-          processedFiles, formatTime(totalTime), successfulFiles, failedFiles
-      );
+      return String.format("Batch AI Recognition Final Report: %d files processed in %s - Success: %d, Failed: %d", processedFiles,
+          formatTime(totalTime), successfulFiles, failedFiles);
     }
   }
 
@@ -290,12 +290,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * AI识别性能指标收集器
    */
   private static class AIRecognitionMetrics {
-    private volatile long totalFilesProcessed = 0;
-    private volatile long totalAICallsMade = 0;
+    private volatile long totalFilesProcessed         = 0;
+    private volatile long totalAICallsMade            = 0;
     private volatile long totalSuccessfulRecognitions = 0;
-    private volatile long totalFailedRecognitions = 0;
-    private volatile long totalProcessingTimeMs = 0;
-    private volatile long averageResponseTimeMs = 0;
+    private volatile long totalFailedRecognitions     = 0;
+    private volatile long totalProcessingTimeMs       = 0;
+    private volatile long averageResponseTimeMs       = 0;
 
     void recordBatchProcessing(int filesCount, int aiCalls, int successes, int failures, long processingTimeMs) {
       totalFilesProcessed += filesCount;
@@ -310,13 +310,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
 
     String getMetricsReport() {
-      double successRate = totalFilesProcessed > 0 ?
-          (totalSuccessfulRecognitions * 100.0 / totalFilesProcessed) : 0.0;
+      double successRate = totalFilesProcessed > 0 ? (totalSuccessfulRecognitions * 100.0 / totalFilesProcessed) : 0.0;
 
-      return String.format(
-          "AI Recognition Metrics: Files=%d, AI Calls=%d, Success=%d (%.1f%%), Failed=%d, Avg Response=%dms",
-          totalFilesProcessed, totalAICallsMade, totalSuccessfulRecognitions,
-          successRate, totalFailedRecognitions, averageResponseTimeMs);
+      return String.format("AI Recognition Metrics: Files=%d, AI Calls=%d, Success=%d (%.1f%%), Failed=%d, Avg Response=%dms", totalFilesProcessed,
+          totalAICallsMade, totalSuccessfulRecognitions, successRate, totalFailedRecognitions, averageResponseTimeMs);
     }
 
     void reset() {
@@ -333,10 +330,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    * 轻量级的待AI识别信息
    */
   private static class PendingAIRecognition {
-    final TvShow tvShow;
-    final String relativePath;
+    final TvShow    tvShow;
+    final String    relativePath;
     final MediaFile videoFile;
-    final String uniqueId;
+    final String    uniqueId;
 
     PendingAIRecognition(TvShow tvShow, String relativePath, MediaFile videoFile) {
       this.tvShow = tvShow;
@@ -595,12 +592,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         List<TvShow> showsToCleanup = new ArrayList<>();
 
         // update shows grouped by data source
+        // update shows grouped by data source
         for (String ds : showDatasources) {
-          Path dsAsPath = Paths.get(ds);
+          Path dsAsPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.getWebDavPath(ds);
           // first of all check if the DS is available; we can take the
           // Files.exist here:
           // if the DS exists (and we have access to read it): Files.exist = true
-          if (!Files.exists(dsAsPath)) {
+          // For WebDAV, Files.exists will usually return false on the safe path, but we prevent the crash.
+          if (!Files.exists(dsAsPath) && !org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds)) {
             // error - continue with next datasource
             MessageManager.getInstance()
                 .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
@@ -782,8 +781,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     setTaskName(TmmResourceBundle.getString("update.datasource") + " 'WebDAV: " + source.getName() + remotePath + "'");
     publishState();
 
-    WebDavClient client = WebDavDataSourceHelper.createClient(source);
-    if (client == null) {
+    // Use a temporary client just to list root directories
+    WebDavClient listClient = WebDavDataSourceHelper.createClient(source);
+    if (listClient == null) {
       LOGGER.error("Could not connect to WebDAV source: {}", source.getName());
       MessageManager.getInstance()
           .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
@@ -792,9 +792,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     try {
       // List root directories - each should be a TV show folder
-      List<WebDavFile> rootDirs = client.list(remotePath);
+      List<WebDavFile> rootDirs = listClient.list(remotePath);
       LOGGER.debug("Found '{}' items in WebDAV root", rootDirs.size());
 
+      // Submit parallel tasks for each TV show directory
       for (WebDavFile dir : rootDirs) {
         if (dir.isDirectory() && !dir.getName().startsWith(".") && !dir.getName().startsWith("@")) {
           // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
@@ -813,8 +814,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           if (showPath.endsWith("/")) {
             showPath = showPath.substring(0, showPath.length() - 1);
           }
-          LOGGER.debug("Processing WebDAV TV show: datasource={}, dirPath={}, decodedDirPath={}, showPath={}", ds, dirPath, decodedDirPath, showPath);
-          processWebDavTvShowDirectory(ds, sourceId, source, client, decodedDirPath, showPath);
+
+          // Submit task for parallel processing (each task creates its own WebDavClient)
+          LOGGER.debug("Submitting WebDAV TV show task: datasource={}, showPath={}", ds, showPath);
+          submitTask(new FindWebDavTvShowTask(ds, sourceId, source, decodedDirPath, showPath));
         }
       }
 
@@ -827,18 +830,21 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
     }
     finally {
-      client.disconnect();
+      listClient.disconnect();
     }
   }
 
   /**
    * Process a WebDAV directory as a TV show folder
    */
-  private void processWebDavTvShowDirectory(String datasource, String sourceId, WebDavSource source, WebDavClient client,
-      String dirPath, String showPath) {
+  private void processWebDavTvShowDirectory(String datasource, String sourceId, WebDavSource source, WebDavClient client, String dirPath,
+      String showPath) {
 
     // Check if TV show already exists
-    TvShow existingShow = tvShowList.getTvShowByPath(Paths.get(showPath));
+    TvShow existingShow = tvShowList.getTvShowByPath(org.tinymediamanager.core.webdav.WebDavDataSourceHelper.getWebDavPath(showPath));
+    LOGGER.debug("Looking for existing show at path '{}', found: {}", showPath,
+        existingShow != null ? existingShow.getTitle() + " with " + existingShow.getEpisodes().size() + " episodes" : "null");
+
     if (existingShow != null && existingShow.isLocked()) {
       LOGGER.debug("TV Show '{}' is locked, skipping", existingShow.getTitle());
       return;
@@ -848,6 +854,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (tvShow == null) {
       tvShow = new TvShow();
       tvShow.setNewlyAdded(true);
+      LOGGER.debug("Creating new TV show for path: {}", showPath);
+    }
+    else {
+      LOGGER.debug("Using existing TV show '{}' with {} episodes", tvShow.getTitle(), tvShow.getEpisodes().size());
     }
 
     // Set basic show info
@@ -857,10 +867,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Try to detect title from folder name
     // Note: dirPath is already decoded at this point
-    String folderName = dirPath.substring(dirPath.lastIndexOf('/') + 1);
+    // Remove trailing slash before extracting folder name
+    String normalizedDirPath = dirPath.endsWith("/") ? dirPath.substring(0, dirPath.length() - 1) : dirPath;
+    String folderName = normalizedDirPath.substring(normalizedDirPath.lastIndexOf('/') + 1);
     if (StringUtils.isBlank(tvShow.getTitle())) {
-      String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName,
-          TvShowModuleManager.getInstance().getSettings().getBadWord());
+      String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName, TvShowModuleManager.getInstance().getSettings().getBadWord());
       tvShow.setTitle(titleYear[0]);
       if (!titleYear[1].isEmpty()) {
         try {
@@ -876,13 +887,132 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // List all files in the show directory recursively
       List<WebDavFile> allFiles = listWebDavFilesRecursive(client, dirPath);
 
-      // Find video files (episodes)
+      // Group files by their directory to associate with episodes
+      java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
+      for (WebDavFile file : allFiles) {
+        if (!file.isDirectory()) {
+          // Use the full path of the file to get its directory
+          String filePath = file.getPath();
+          String parentPath;
+          int lastSlash = filePath.lastIndexOf('/');
+          if (lastSlash <= 0) {
+            parentPath = dirPath; // Top level directory
+          }
+          else {
+            parentPath = filePath.substring(0, lastSlash);
+          }
+          filesByDir.computeIfAbsent(parentPath, k -> new ArrayList<>()).add(file);
+        }
+      }
+
+      // Find video files (episodes) and process them
+      List<TvShowEpisode> processedEpisodes = new ArrayList<>();
       for (WebDavFile file : allFiles) {
         if (!file.isDirectory() && file.isVideoFile()) {
+          // Construct the WebDAV path for this video file
+          String videoWebDavPath = "webdav://" + source.getId() + file.getPath();
+
+          // Check if this file is already associated with an existing episode
+          TvShowEpisode existingEpisode = findEpisodeByWebDavPath(tvShow, videoWebDavPath, file.getName());
+          if (existingEpisode != null) {
+            // Episode already exists.
+            // FIX: Check for and remove incorrectly associated subtitles (legacy data)
+            String videoBaseName = FilenameUtils.getBaseName(file.getName());
+            cleanupIncorrectlyAssociatedFiles(existingEpisode, videoBaseName);
+
+            // Also check for and add any missing associated files (subtitles, etc.)
+            String filePath = file.getPath();
+            String parentPath = filePath.substring(0, filePath.lastIndexOf('/'));
+            List<WebDavFile> filesInDir = filesByDir.get(parentPath);
+
+            if (filesInDir != null) {
+              for (WebDavFile associatedFile : filesInDir) {
+                if (!associatedFile.isDirectory() && !associatedFile.isVideoFile()) {
+                  String assocName = associatedFile.getName();
+                  if (assocName.startsWith(videoBaseName)) {
+                    String remainder = assocName.substring(videoBaseName.length());
+                    if (remainder.isEmpty() || remainder.startsWith(".")) {
+                      // Check if this file is already in the episode's media files
+                      boolean alreadyExists = false;
+                      for (MediaFile existingMf : existingEpisode.getMediaFiles()) {
+                        if (existingMf.getFilename().equals(assocName)) {
+                          alreadyExists = true;
+                          break;
+                        }
+                      }
+                      if (!alreadyExists) {
+                        MediaFile mf = createMediaFileFromWebDav(associatedFile, source);
+                        if (mf != null) {
+                          existingEpisode.addToMediaFiles(mf);
+                          LOGGER.debug("Added missing associated file '{}' to existing episode", assocName);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              existingEpisode.saveToDb();
+            }
+
+            LOGGER.trace("Episode already exists for file: {}", file.getName());
+            continue;
+          }
+
           // Create episode from video file
-          TvShowEpisode episode = createEpisodeFromWebDavFile(tvShow, file, source);
+          TvShowEpisode episode = createEpisodeFromWebDavFile(tvShow, file, source, dirPath);
           if (episode != null) {
-            tvShow.addEpisode(episode);
+            processedEpisodes.add(episode);
+
+            // Find and add associated files (same directory)
+            String filePath = file.getPath();
+            String parentPath = filePath.substring(0, filePath.lastIndexOf('/'));
+            List<WebDavFile> filesInDir = filesByDir.get(parentPath);
+
+            if (filesInDir != null) {
+              String videoBaseName = FilenameUtils.getBaseName(file.getName());
+
+              for (WebDavFile associatedFile : filesInDir) {
+                if (!associatedFile.isDirectory() && !associatedFile.isVideoFile()) {
+                  // Strict matching: associated file must start with video base name
+                  // To avoid S01E01 matching S01E010, strictly check for separator or end of string
+                  String assocName = associatedFile.getName();
+                  if (assocName.startsWith(videoBaseName)) {
+                    String remainder = assocName.substring(videoBaseName.length());
+                    // 1. Exact match (unlikely for different extension but possible)
+                    // 2. Starts with . (e.g. .srt, .en.srt)
+                    // 3. We do NOT match if it continues with other characters (e.g. S01E010)
+                    if (remainder.isEmpty() || remainder.startsWith(".")) {
+                      // Create MediaFile for associated files (subtitles, etc.)
+                      MediaFile mf = createMediaFileFromWebDav(associatedFile, source);
+                      if (mf != null) {
+                        episode.addToMediaFiles(mf);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Add new episodes to the show (only those not already existing)
+      for (TvShowEpisode episode : processedEpisodes) {
+        tvShow.addEpisode(episode);
+        // Save new episodes to database
+        episode.saveToDb();
+        LOGGER.debug("Saved new WebDAV episode to database: {} - S{}E{}", tvShow.getTitle(), episode.getSeason(), episode.getEpisode());
+      }
+
+      // Add show-level media files (posters, fanart, etc.)
+      List<WebDavFile> rootFiles = filesByDir.get(dirPath);
+      if (rootFiles != null) {
+        for (WebDavFile rootFile : rootFiles) {
+          if (!rootFile.isDirectory() && !rootFile.isVideoFile()) {
+            MediaFile mf = createMediaFileFromWebDav(rootFile, source);
+            if (mf != null) {
+              tvShow.addToMediaFiles(mf);
+            }
           }
         }
       }
@@ -890,15 +1020,104 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Only add show if it has episodes
       if (!tvShow.getEpisodes().isEmpty()) {
         LOGGER.debug("Adding WebDAV TV show: {} with {} episodes", tvShow.getTitle(), tvShow.getEpisodes().size());
-        if (existingShow == null) {
-          tvShowList.addTvShow(tvShow);
+
+        // Synchronized to prevent race conditions from parallel tasks
+        synchronized (webDavProcessingLock) {
+          // Double-check: verify show still doesn't exist (another thread may have added it)
+          if (existingShow == null) {
+            TvShow doubleCheck = tvShowList.getTvShowByPath(org.tinymediamanager.core.webdav.WebDavDataSourceHelper.getWebDavPath(showPath));
+            if (doubleCheck == null) {
+              tvShowList.addTvShow(tvShow);
+            }
+            else {
+              LOGGER.debug("TV Show already added by another task, skipping: {}", showPath);
+              return;
+            }
+          }
+          tvShow.saveToDb();
         }
-        tvShow.saveToDb();
       }
     }
     catch (Exception e) {
       LOGGER.warn("Could not process WebDAV TV show directory '{}': {}", dirPath, e.getMessage());
     }
+  }
+
+  /**
+   * Cleanup incorrectly associated files (e.g. subtitles from other episodes) from an existing episode
+   */
+  private void cleanupIncorrectlyAssociatedFiles(TvShowEpisode episode, String videoBaseName) {
+    List<MediaFile> mediaFiles = new ArrayList<>(episode.getMediaFiles());
+    boolean changed = false;
+
+    for (MediaFile mf : mediaFiles) {
+      // Only check subtitles (mainly cause incorrect associations)
+      if (mf.getType() == MediaFileType.SUBTITLE) {
+        String name = mf.getFilename();
+        // Check strict matching against video base name
+        if (name.startsWith(videoBaseName)) {
+          String remainder = name.substring(videoBaseName.length());
+          // Valid if exact match or starts with . (e.g. .srt)
+          if (remainder.isEmpty() || remainder.startsWith(".")) {
+            continue; // Valid
+          }
+        }
+
+        // If we get here, it's invalid (e.g. existing S01E01 associated with S01E02.ass)
+        LOGGER.info("Removing incorrectly associated file '{}' from episode '{}'", name, episode.getTitle());
+        episode.removeFromMediaFiles(mf);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      episode.saveToDb();
+    }
+  }
+
+  /**
+   * Create a MediaFile from a WebDavFile
+   */
+  private MediaFile createMediaFileFromWebDav(WebDavFile webDavFile, WebDavSource source) {
+    MediaFile mf = new MediaFile();
+
+    // Construct WebDAV path in format: webdav://source-id/relative-path
+    String filePath = webDavFile.getPath();
+
+    // Get parent directory path
+    String parentPath;
+    int lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash > 0) {
+      parentPath = filePath.substring(0, lastSlash);
+    }
+    else {
+      parentPath = "";
+    }
+
+    // Construct full WebDAV path
+    String webdavPath;
+    if (parentPath.isEmpty()) {
+      // Top level directory
+      webdavPath = "webdav://" + source.getId();
+    }
+    else {
+      // Add the full parent path to ensure correct directory structure
+      webdavPath = "webdav://" + source.getId() + parentPath;
+    }
+
+    mf.setPath(webdavPath);
+    mf.setFilename(webDavFile.getName());
+    mf.setFilesize(webDavFile.getSize());
+
+    // Detect media file type
+    MediaFileType type = MediaFileHelper.parseMediaFileType(Paths.get(webDavFile.getName()), Paths.get(parentPath));
+    mf.setType(type);
+
+    // Set modified date if available
+    if (webDavFile.getModified() != null) {
+      mf.setDateLastModified(webDavFile.getModified());
+    }
+    return mf;
   }
 
   /**
@@ -947,17 +1166,86 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   }
 
   /**
+   * Find an existing episode that contains a media file matching the given WebDAV path and filename
+   */
+  private TvShowEpisode findEpisodeByWebDavPath(TvShow tvShow, String webDavPath, String filename) {
+    if (tvShow == null || tvShow.getEpisodes().isEmpty()) {
+      return null;
+    }
+
+    // For WebDAV, MediaFile stores parent directory path + filename separately
+    // We need to compare by filename within the same parent directory
+
+    // Extract parent directory from the webDavPath
+    String parentDir = webDavPath;
+    int lastSlash = parentDir.lastIndexOf('/');
+    if (lastSlash > 0) {
+      parentDir = parentDir.substring(0, lastSlash);
+    }
+
+    // Decode for comparison
+    String decodedParentDir = WebDavDataSourceHelper.decodeWebDavPath(parentDir);
+
+    for (TvShowEpisode episode : tvShow.getEpisodes()) {
+      for (MediaFile mf : episode.getMediaFiles(MediaFileType.VIDEO)) {
+        // Compare filename first (most efficient)
+        if (!filename.equals(mf.getFilename())) {
+          continue;
+        }
+
+        // Then compare parent directory
+        String mfPath = mf.getPath();
+        String decodedMfPath = WebDavDataSourceHelper.decodeWebDavPath(mfPath);
+
+        // Normalize paths by removing trailing slashes
+        String normalizedMfPath = decodedMfPath.endsWith("/") ? decodedMfPath.substring(0, decodedMfPath.length() - 1) : decodedMfPath;
+        String normalizedParentDir = decodedParentDir.endsWith("/") ? decodedParentDir.substring(0, decodedParentDir.length() - 1) : decodedParentDir;
+
+        if (normalizedMfPath.equals(normalizedParentDir)) {
+          LOGGER.trace("Found existing episode for file '{}' in directory '{}'", filename, normalizedParentDir);
+          return episode;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Create a TvShowEpisode from a WebDAV video file
    */
-  private TvShowEpisode createEpisodeFromWebDavFile(TvShow tvShow, WebDavFile videoFile, WebDavSource source) {
+  private TvShowEpisode createEpisodeFromWebDavFile(TvShow tvShow, WebDavFile videoFile, WebDavSource source, String showRootPath) {
     TvShowEpisode episode = new TvShowEpisode();
     episode.setNewlyAdded(true);
     episode.setTvShow(tvShow);
-    episode.setPath(videoFile.getPath());
+
+    // Construct proper WebDAV path for the episode
+    String filePath = videoFile.getPath();
+    String episodePath = "webdav://" + source.getId() + filePath;
+    episode.setPath(episodePath);
 
     // Create MediaFile for the video
     MediaFile mf = new MediaFile();
-    mf.setPath(videoFile.getPath());
+
+    // Get parent directory path for the MediaFile
+    String parentPath;
+    int lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash > 0) {
+      parentPath = filePath.substring(0, lastSlash);
+    }
+    else {
+      parentPath = "";
+    }
+
+    // Construct full WebDAV path for MediaFile
+    String mfPath;
+    if (parentPath.isEmpty()) {
+      mfPath = "webdav://" + source.getId();
+    }
+    else {
+      mfPath = "webdav://" + source.getId() + parentPath;
+    }
+
+    mf.setPath(mfPath);
     mf.setFilename(videoFile.getName());
     mf.setFilesize(videoFile.getSize());
     mf.setType(MediaFileType.VIDEO);
@@ -967,8 +1255,25 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     episode.addToMediaFiles(mf);
 
     // Try to parse episode info from filename
-    String filename = videoFile.getName();
-    EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(filename, tvShow.getTitle());
+    String showRoot = showRootPath.endsWith("/") ? showRootPath : showRootPath + "/";
+    String relativePath = videoFile.getPath();
+
+    if (relativePath.startsWith(showRoot)) {
+      relativePath = relativePath.substring(showRoot.length());
+    }
+
+    // Decode URL encoded characters (e.g. %20 -> space)
+    try {
+      relativePath = java.net.URLDecoder.decode(relativePath, "UTF-8");
+    }
+    catch (Exception e) {
+      LOGGER.warn("Failed to decode path '{}': {}", relativePath, e.getMessage());
+    }
+
+    // Pass relative path to parser instead of just filename
+    // Use detectEpisodeHybrid to support Chinese formats and other advanced patterns (matching local logic)
+    // AI is disabled (false) for this synchronous check, same as local scraping
+    EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle(), false);
 
     if (!result.episodes.isEmpty()) {
       int seasonNum = result.season != -1 ? result.season : 1;
@@ -984,7 +1289,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Set title from filename if not parsed
     if (StringUtils.isBlank(episode.getTitle())) {
-      String baseName = FilenameUtils.getBaseName(filename);
+      String baseName = FilenameUtils.getBaseName(videoFile.getName());
       episode.setTitle(baseName);
     }
 
@@ -1015,7 +1320,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      if (!Files.exists(tvShow.getPathNIO())) {
+      // For WebDAV paths, we can't use Files.exists(), so we skip the show existence check
+      if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath()) && !Files.exists(tvShow.getPathNIO())) {
         tvShowList.removeTvShow(tvShow);
       }
       else {
@@ -1045,8 +1351,17 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       TvShow tvShow = tvShowList.getTvShows().get(i);
 
       // check only TV shows matching datasource
-      if (!Paths.get(datasource).toAbsolutePath().equals(Paths.get(tvShow.getDataSource()).toAbsolutePath())) {
-        continue;
+      if (WebDavDataSourceHelper.isWebDavPath(datasource)) {
+        // For WebDAV datasources, use string comparison
+        if (!tvShow.getDataSource().equals(datasource)) {
+          continue;
+        }
+      }
+      else {
+        // For local datasources, use path comparison
+        if (!Paths.get(datasource).toAbsolutePath().equals(Paths.get(tvShow.getDataSource()).toAbsolutePath())) {
+          continue;
+        }
       }
 
       // do not process locked TV shows (because filesFound has not been filled for them)
@@ -1054,7 +1369,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      if (!Files.exists(tvShow.getPathNIO())) {
+      // For WebDAV paths, we can't use Files.exists(), so we skip the show existence check
+      if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath()) && !Files.exists(tvShow.getPathNIO())) {
         tvShowList.removeTvShow(tvShow);
       }
       else {
@@ -1065,6 +1381,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
   private void cleanup(TvShow tvShow) {
     boolean dirty = false;
+
+    // Skip cleanup for WebDAV TV shows, as we don't have accurate fileFound information
+    // and can't reliably check if files still exist on the remote server
+    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+      LOGGER.debug("Skipping cleanup for WebDAV TV show: {}", tvShow.getTitle());
+      return;
+    }
+
     if (!tvShow.isNewlyAdded() || tvShow.hasNewlyAddedEpisodes()) {
       // check and delete all not found MediaFiles
       for (MediaFile mf : tvShow.getMediaFiles()) {
@@ -1149,7 +1473,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    */
   private void gatherMediaInformationForUngatheredMediaFiles(TvShow tvShow) {
     boolean tvShowDirty = false;
-    
+
     // get mediainfo for tv show (fanart/poster..)
     for (MediaFile mf : tvShow.getMediaFiles()) {
       // update file size and date information if enabled
@@ -1157,16 +1481,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
         fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
       }
-      
+
       if (fileInfoChanged) {
         tvShowDirty = true;
       }
-      
+
       // check if we should fetch detailed media information
       if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
         continue;
       }
-      
+
       if (StringUtils.isBlank(mf.getContainerFormat())) {
         submitTask(new TvShowMediaFileInformationFetcherTask(mf, tvShow, false));
       }
@@ -1184,7 +1508,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
       }
     }
-    
+
     if (tvShowDirty) {
       tvShow.saveToDb();
       LOGGER.debug("文件信息变化，保存电视剧到数据库: {}", tvShow.getTitle());
@@ -1199,16 +1523,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
         }
-        
+
         if (fileInfoChanged) {
           seasonDirty = true;
         }
-        
+
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
           continue;
         }
-        
+
         if (StringUtils.isBlank(mf.getContainerFormat())) {
           submitTask(new TvShowMediaFileInformationFetcherTask(mf, season, false));
         }
@@ -1226,7 +1550,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           }
         }
       }
-      
+
       if (seasonDirty) {
         season.saveToDb();
         LOGGER.debug("文件信息变化，保存电视剧季到数据库: {} - {}", tvShow.getTitle(), season.getSeason());
@@ -1242,16 +1566,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         if (Settings.getInstance().isUpdateFileSizeOnUpdate()) {
           fileInfoChanged = MediaFileHelper.gatherFileInformation(mf, fileAttributes.get(mf.getFileAsPath()));
         }
-        
+
         if (fileInfoChanged) {
           episodeDirty = true;
         }
-        
+
         // check if we should fetch detailed media information
         if (!Settings.getInstance().isFetchVideoInfoOnUpdate()) {
           continue;
         }
-        
+
         if (StringUtils.isBlank(mf.getContainerFormat())) {
           submitTask(new TvShowMediaFileInformationFetcherTask(mf, episode, false));
         }
@@ -1269,12 +1593,64 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           }
         }
       }
-      
+
       if (episodeDirty) {
         episode.saveToDb();
-        LOGGER.debug("文件信息变化，保存电视剧集到数据库: {} - S{}E{}", 
-                     tvShow.getTitle(), episode.getSeason(), episode.getEpisode());
+        LOGGER.debug("文件信息变化，保存电视剧集到数据库: {} - S{}E{}", tvShow.getTitle(), episode.getSeason(), episode.getEpisode());
       }
+    }
+  }
+
+  /**
+   * The Class FindWebDavTvShowTask - processes a single WebDAV TV show directory in parallel
+   */
+  private class FindWebDavTvShowTask implements Callable<Object> {
+    private final String       datasource;
+    private final String       sourceId;
+    private final WebDavSource source;
+    private final String       dirPath;
+    private final String       showPath;
+    private final long         uniqueId;
+
+    public FindWebDavTvShowTask(String datasource, String sourceId, WebDavSource source, String dirPath, String showPath) {
+      this.datasource = datasource;
+      this.sourceId = sourceId;
+      this.source = source;
+      this.dirPath = dirPath;
+      this.showPath = showPath;
+      this.uniqueId = TmmTaskManager.getInstance().GLOB_THRD_CNT.incrementAndGet();
+    }
+
+    @Override
+    public Object call() throws Exception {
+      String name = Thread.currentThread().getName();
+      if (!name.contains("-G")) {
+        name = name + "-G0";
+      }
+      name = name.replaceAll("\\-G\\d+", "-G" + uniqueId);
+      Thread.currentThread().setName(name);
+
+      if (cancel) {
+        return null;
+      }
+
+      // Create a new WebDavClient for this task (thread safety)
+      WebDavClient client = WebDavDataSourceHelper.createClient(source);
+      if (client == null) {
+        LOGGER.warn("Could not connect to WebDAV source for task: {}", showPath);
+        return null;
+      }
+
+      try {
+        LOGGER.debug("Processing WebDAV TV show in parallel: {}", showPath);
+        publishState(showPath);
+        processWebDavTvShowDirectory(datasource, sourceId, source, client, dirPath, showPath);
+      }
+      finally {
+        client.disconnect();
+      }
+
+      return null;
     }
   }
 
@@ -1577,8 +1953,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
               // ALL episodes detected with -1? try to parse from filename (without AI first)...
               boolean allUnknown = !parser.episodes.isEmpty() && parser.episodes.stream().allMatch(ep -> ep.episode == -1);
               if (allUnknown) {
-                EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser
-                    .detectEpisodeHybrid(showDir.relativize(epNfo.getFileAsPath()).toString(), tvShow.getTitle(), false);
+                EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(showDir.relativize(epNfo.getFileAsPath()).toString(),
+                    tvShow.getTitle(), false);
                 if (parser.episodes.size() == result.episodes.size()) {
                   int i = 0;
                   for (Episode ep : parser.episodes) {
@@ -2444,7 +2820,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.info("Batch AI processing completed in {}ms", processingTime);
       LOGGER.info(aiMetrics.getMetricsReport());
 
-    } finally {
+    }
+    finally {
       synchronized (batchProcessingLock) {
         batchProcessingInProgress = false;
       }
@@ -2471,10 +2848,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
       }
 
-      return currentAIConfig.aiEnabled &&
-             currentAIConfig.apiKey != null && !currentAIConfig.apiKey.trim().isEmpty() &&
-             currentAIConfig.apiUrl != null && !currentAIConfig.apiUrl.trim().isEmpty();
-    } catch (Exception e) {
+      return currentAIConfig.aiEnabled && currentAIConfig.apiKey != null && !currentAIConfig.apiKey.trim().isEmpty() && currentAIConfig.apiUrl != null
+          && !currentAIConfig.apiUrl.trim().isEmpty();
+    }
+    catch (Exception e) {
       LOGGER.error("Failed to check AI configuration: {}", e.getMessage());
       return false;
     }
@@ -2488,7 +2865,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // 清理AI识别相关的缓存条目
       TvShowEpisodeAndSeasonParser.clearAICache();
       LOGGER.info("AI-related caches cleared due to configuration update");
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.warn("Failed to clear AI caches: {}", e.getMessage());
     }
   }
@@ -2521,8 +2899,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       // 调用批量AI识别服务，带重试机制
       BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
-      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
-          callBatchAIWithRetry(batchService, tempEpisodes, 3);
+      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results = callBatchAIWithRetry(batchService, tempEpisodes, 3);
 
       // 处理批量AI识别的结果
       for (int i = 0; i < toProcess.size(); i++) {
@@ -2542,13 +2919,15 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             applyAIResultToEpisode(pending.tvShow, pending.relativePath, aiResult, pending.videoFile);
             progressReporter.fileCompleted(pending.relativePath, true);
             successCount++;
-          } else {
+          }
+          else {
             // AI识别失败，记录失败的文件
             failedRecognitions.add(pending);
             progressReporter.fileCompleted(pending.relativePath, false);
             failureCount++;
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Failed to apply AI result for {}: {}", pending.relativePath, e.getMessage(), e);
           failedRecognitions.add(pending);
           progressReporter.fileCompleted(pending.relativePath, false);
@@ -2556,7 +2935,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         }
       }
 
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Batch AI recognition service failed: {}", e.getMessage(), e);
 
       // 如果批量服务完全失败，所有文件都算失败
@@ -2572,20 +2952,17 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // 发送最终报告消息
     String finalReport = progressReporter.getFinalReport();
-    MessageManager.getInstance().pushMessage(
-        new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), finalReport));
+    MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), finalReport));
 
     // 发送处理结果消息
     if (successCount > 0) {
       String successMsg = String.format("批量AI识别完成: 成功识别 %d 个文件", successCount);
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, "批量AI识别", successMsg));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量AI识别", successMsg));
     }
 
     if (failureCount > 0) {
       String failureMsg = String.format("批量AI识别: %d 个文件识别失败", failureCount);
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.WARN, "批量AI识别", failureMsg));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "批量AI识别", failureMsg));
 
       // 对失败的文件进行回退处理
       handleFailedAIRecognitions(failedRecognitions);
@@ -2636,18 +3013,19 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     // 计算内存使用率
     double memoryUsageRatio = (double) usedMemory / maxMemory;
 
-    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={:.1f}%",
-                usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
-                maxMemory / 1024 / 1024, memoryUsageRatio * 100);
+    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={:.1f}%", usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
+        maxMemory / 1024 / 1024, memoryUsageRatio * 100);
 
     // 根据内存压力调整批量大小
     if (memoryUsageRatio > 0.8) {
       // 高内存压力：小批量处理
       return Math.min(totalFiles, 10);
-    } else if (memoryUsageRatio > 0.6) {
+    }
+    else if (memoryUsageRatio > 0.6) {
       // 中等内存压力：中等批量
       return Math.min(totalFiles, 25);
-    } else {
+    }
+    else {
       // 低内存压力：正常批量处理
       return totalFiles;
     }
@@ -2674,7 +3052,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         System.gc();
         try {
           Thread.sleep(100); // 给GC一些时间
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
       }
@@ -2695,19 +3074,18 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     // 发送处理结果消息
     if (successCount > 0) {
       String successMsg = String.format(TmmResourceBundle.getString("ai.batch.recognition.completed"), successCount);
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), successMsg));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), successMsg));
     }
 
     if (failureCount > 0) {
       String failureMsg = String.format(TmmResourceBundle.getString("ai.batch.recognition.failed"), failureCount);
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.WARN, TmmResourceBundle.getString("ai.batch.recognition"), failureMsg));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, TmmResourceBundle.getString("ai.batch.recognition"), failureMsg));
     }
   }
 
   /**
    * 处理单个批次
+   * 
    * @return [成功数量, 失败数量]
    */
   private int[] processSingleBatch(List<PendingAIRecognition> batch) {
@@ -2720,8 +3098,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
       // 调用批量AI识别服务
       BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
-      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
-          callBatchAIWithRetry(batchService, tempEpisodes, 3);
+      Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results = callBatchAIWithRetry(batchService, tempEpisodes, 3);
 
       // 处理批量AI识别的结果
       for (int i = 0; i < batch.size(); i++) {
@@ -2736,31 +3113,32 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             // AI识别成功，应用结果到实际的剧集处理
             applyAIResultToEpisode(pending.tvShow, pending.relativePath, aiResult, pending.videoFile);
             successCount++;
-          } else {
+          }
+          else {
             // AI识别失败
             failureCount++;
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Failed to apply AI result for {}: {}", pending.relativePath, e.getMessage(), e);
           failureCount++;
         }
       }
 
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Batch processing failed: {}", e.getMessage(), e);
       failureCount = batch.size(); // 整个批次失败
     }
 
-    return new int[]{successCount, failureCount};
+    return new int[] { successCount, failureCount };
   }
 
   /**
    * 带重试机制的批量AI调用
    */
-  private Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> callBatchAIWithRetry(
-      BatchChatGPTEpisodeRecognitionService batchService,
-      List<TvShowEpisode> tempEpisodes,
-      int maxRetries) {
+  private Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> callBatchAIWithRetry(BatchChatGPTEpisodeRecognitionService batchService,
+      List<TvShowEpisode> tempEpisodes, int maxRetries) {
 
     Exception lastException = null;
 
@@ -2768,17 +3146,18 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       try {
         LOGGER.debug("Batch AI recognition attempt {}/{}", attempt, maxRetries);
 
-        Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results =
-            batchService.batchRecognizeEpisodes(tempEpisodes);
+        Map<String, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult> results = batchService.batchRecognizeEpisodes(tempEpisodes);
 
         if (results != null && !results.isEmpty()) {
           LOGGER.info("Batch AI recognition successful on attempt {}", attempt);
           return results;
-        } else {
+        }
+        else {
           LOGGER.warn("Batch AI recognition returned empty results on attempt {}", attempt);
         }
 
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         lastException = e;
 
         // 分析异常类型，决定是否重试
@@ -2796,7 +3175,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           try {
             LOGGER.debug("Retrying after {}ms delay", delayMs);
             Thread.sleep(delayMs);
-          } catch (InterruptedException ie) {
+          }
+          catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Retry delay interrupted");
             break;
@@ -2818,12 +3198,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     String exceptionType = e.getClass().getSimpleName().toLowerCase();
 
     // 网络相关异常，应该重试
-    if (exceptionType.contains("timeout") ||
-        exceptionType.contains("connect") ||
-        exceptionType.contains("socket") ||
-        errorMessage.contains("timeout") ||
-        errorMessage.contains("connection") ||
-        errorMessage.contains("network")) {
+    if (exceptionType.contains("timeout") || exceptionType.contains("connect") || exceptionType.contains("socket") || errorMessage.contains("timeout")
+        || errorMessage.contains("connection") || errorMessage.contains("network")) {
       return true;
     }
 
@@ -2840,8 +3216,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (errorMessage.contains("401") || // 未授权
         errorMessage.contains("403") || // 禁止访问
         errorMessage.contains("400") || // 请求错误
-        errorMessage.contains("invalid") ||
-        errorMessage.contains("unauthorized")) {
+        errorMessage.contains("invalid") || errorMessage.contains("unauthorized")) {
       return false;
     }
 
@@ -2862,10 +3237,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (errorMessage.contains("429") || errorMessage.contains("rate limit")) {
       // 频率限制错误，使用更长的延迟
       return baseDelay * 3;
-    } else if (errorMessage.contains("timeout")) {
+    }
+    else if (errorMessage.contains("timeout")) {
       // 超时错误，使用中等延迟
       return baseDelay * 2;
-    } else {
+    }
+    else {
       // 其他错误，使用标准延迟
       return baseDelay;
     }
@@ -2884,8 +3261,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     for (PendingAIRecognition failed : failedRecognitions) {
       try {
         // 回退到传统解析结果，即使不完整也要创建剧集
-        TvShowEpisodeAndSeasonParser.EpisodeMatchingResult fallbackResult =
-            TvShowEpisodeAndSeasonParser.detectEpisodeFromFilename(failed.relativePath, failed.tvShow.getTitle());
+        TvShowEpisodeAndSeasonParser.EpisodeMatchingResult fallbackResult = TvShowEpisodeAndSeasonParser
+            .detectEpisodeFromFilename(failed.relativePath, failed.tvShow.getTitle());
 
         // 创建剧集，即使没有季数和集数信息
         TvShowEpisode episode = new TvShowEpisode();
@@ -2894,9 +3271,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         episode.addToMediaFiles(failed.videoFile);
 
         // 设置标题
-        String title = !fallbackResult.name.isEmpty() ?
-            TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(fallbackResult.name, failed.tvShow.getTitle()) :
-            TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(failed.videoFile.getFilename()), failed.tvShow.getTitle());
+        String title = !fallbackResult.name.isEmpty() ? TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(fallbackResult.name, failed.tvShow.getTitle())
+            : TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(failed.videoFile.getFilename()), failed.tvShow.getTitle());
         episode.setTitle(title);
 
         // 如果有部分信息，设置季数和集数
@@ -2909,7 +3285,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
         LOGGER.debug("Created fallback episode for: {}", failed.relativePath);
 
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         LOGGER.error("Failed to create fallback episode for {}: {}", failed.relativePath, e.getMessage(), e);
       }
     }
@@ -2918,17 +3295,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   /**
    * 将AI识别结果应用到实际的剧集处理（带事务保护）
    */
-  private void applyAIResultToEpisode(TvShow tvShow, String relativePath,
-                                     TvShowEpisodeAndSeasonParser.EpisodeMatchingResult aiResult,
-                                     MediaFile videoFile) {
+  private void applyAIResultToEpisode(TvShow tvShow, String relativePath, TvShowEpisodeAndSeasonParser.EpisodeMatchingResult aiResult,
+      MediaFile videoFile) {
     try {
       LOGGER.info("Applying AI result for {}: S{}E{}", relativePath, aiResult.season, aiResult.episodes.get(0));
 
       // 检查是否已存在相同的剧集（避免重复添加）
       List<TvShowEpisode> existingEpisodes = tvShow.getEpisode(aiResult.season, aiResult.episodes.get(0));
       if (!existingEpisodes.isEmpty()) {
-        LOGGER.warn("Episode S{}E{} already exists for {}, skipping AI result application",
-                   aiResult.season, aiResult.episodes.get(0), tvShow.getTitle());
+        LOGGER.warn("Episode S{}E{} already exists for {}, skipping AI result application", aiResult.season, aiResult.episodes.get(0),
+            tvShow.getTitle());
         return;
       }
 
@@ -2943,7 +3319,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // 设置标题
       if (!aiResult.name.isEmpty()) {
         episode.setTitle(TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(aiResult.name, tvShow.getTitle()));
-      } else {
+      }
+      else {
         episode.setTitle(TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(videoFile.getFilename()), tvShow.getTitle()));
       }
 
@@ -2958,19 +3335,18 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       // 发送AI识别成功消息
-      String successMsg = String.format(TmmResourceBundle.getString("ai.recognition.success"),
-          FilenameUtils.getBaseName(videoFile.getFilename()), aiResult.season, aiResult.episodes.get(0));
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.recognition"), successMsg));
+      String successMsg = String.format(TmmResourceBundle.getString("ai.recognition.success"), FilenameUtils.getBaseName(videoFile.getFilename()),
+          aiResult.season, aiResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.recognition"), successMsg));
 
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Failed to apply AI result for {}: {}", relativePath, e.getMessage(), e);
 
       // 发送错误消息
-      String errorMsg = String.format(TmmResourceBundle.getString("ai.recognition.apply.failed"),
-          FilenameUtils.getBaseName(videoFile.getFilename()), e.getMessage());
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.ERROR, TmmResourceBundle.getString("ai.recognition"), errorMsg));
+      String errorMsg = String.format(TmmResourceBundle.getString("ai.recognition.apply.failed"), FilenameUtils.getBaseName(videoFile.getFilename()),
+          e.getMessage());
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, TmmResourceBundle.getString("ai.recognition"), errorMsg));
     }
   }
 

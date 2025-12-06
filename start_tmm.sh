@@ -87,7 +87,7 @@ start_with_jar() {
     print_info "使用 JAR 文件启动 tinyMediaManager..."
     cd "$PROJECT_DIR"
 
-    JAR_FILE="$PROJECT_DIR/target/tinyMediaManager-5.2.0-SNAPSHOT.jar"
+    JAR_FILE="$PROJECT_DIR/target/tinyMediaManager-5.2.1-SNAPSHOT.jar"
     if [ ! -f "$JAR_FILE" ]; then
         print_error "JAR 文件不存在: $JAR_FILE"
         print_info "请先运行: $0 -c"

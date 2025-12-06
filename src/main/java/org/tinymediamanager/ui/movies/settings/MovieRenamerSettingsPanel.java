@@ -458,7 +458,16 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
       if (StringUtils.isNotBlank(tfMoviePath.getText())) {
         path = MovieRenamer.createDestinationForFoldername(tfMoviePath.getText(), movie);
         try {
-          path = Paths.get(movie.getDataSource(), path).toString();
+          // For WebDAV paths, use string concatenation instead of Paths.get()
+          String dataSource = movie.getDataSource();
+          if (dataSource != null && dataSource.startsWith("webdav")) {
+            // Use decoded dataSource for display and ensure proper separator
+            String decodedDataSource = movie.getDataSourceDecoded();
+            path = decodedDataSource.endsWith("/") ? decodedDataSource + path : decodedDataSource + "/" + path;
+          }
+          else {
+            path = Paths.get(dataSource, path).toString();
+          }
         }
         catch (Exception e) {
           // catch invalid paths (e.g. illegal characters in the pathname)
@@ -484,7 +493,7 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
         filename = movie.getMediaFiles(MediaFileType.VIDEO).get(0).getFilename();
       }
 
-      lblExampleDatasource.setText(movie.getDataSource());
+      lblExampleDatasource.setText(movie.getDataSourceDecoded());
       lblExampleFoldername.setText(path.replace(movie.getDataSource() + File.separator, ""));
       lblExampleFilename.setText(filename);
     }
@@ -613,8 +622,8 @@ public class MovieRenamerSettingsPanel extends JPanel implements HierarchyListen
     autoBinding_9.bind();
     //
     Property movieSettingsBeanProperty_5 = BeanProperty.create("renamerOnlyVideoFiles");
-    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_5, chckbxRenamerOnlyVideoFiles,
-        jCheckBoxBeanProperty);
+    AutoBinding autoBinding_12 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, movieSettingsBeanProperty_5,
+        chckbxRenamerOnlyVideoFiles, jCheckBoxBeanProperty);
     autoBinding_12.bind();
   }
 }

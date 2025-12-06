@@ -77,9 +77,9 @@ import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionServ
 public class MovieScrapeTask extends TmmThreadPool {
   private static final Logger     LOGGER = LoggerFactory.getLogger(MovieScrapeTask.class);
 
-  private final MovieScrapeParams movieScrapeParams;
-  private final List<Movie>       smartScrapeList;
-  private boolean                 runInBackground;
+  final MovieScrapeParams movieScrapeParams;
+  final List<Movie>       smartScrapeList;
+  boolean                 runInBackground;
 
   public MovieScrapeTask(final MovieScrapeParams movieScrapeParams) {
     super(TmmResourceBundle.getString("movie.scraping"));
@@ -448,11 +448,7 @@ public class MovieScrapeTask extends TmmThreadPool {
       if (parserInfo != null && parserInfo.length >= 2) {
         processedTitle = parserInfo[0];
         if (StringUtils.isNotBlank(parserInfo[1])) {
-          try {
-            processedYear = Integer.parseInt(parserInfo[1]);
-          } catch (NumberFormatException e) {
-            LOGGER.debug("Could not parse year: {}", parserInfo[1]);
-          }
+          processedYear = safeParseYear(parserInfo[1]);
         }
         LOGGER.debug("Processed title '{}' -> '{}' (year: {})", movie.getTitle(), processedTitle, processedYear);
       }
@@ -512,11 +508,7 @@ public class MovieScrapeTask extends TmmThreadPool {
         if (aiParserInfo != null && aiParserInfo.length >= 2) {
           aiProcessedTitle = aiParserInfo[0];
           if (StringUtils.isNotBlank(aiParserInfo[1])) {
-            try {
-              aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
-            } catch (NumberFormatException e) {
-              LOGGER.debug("Could not parse year from AI result: {}", aiParserInfo[1]);
-            }
+            aiProcessedYear = safeParseYear(aiParserInfo[1]);
           }
         }
 
@@ -539,8 +531,8 @@ public class MovieScrapeTask extends TmmThreadPool {
               String retryYearStr = retryParserInfo[1];
               LOGGER.info("Retry parsed - Title: '{}', Year string: '{}'", retryTitle, retryYearStr);
               if (StringUtils.isNotBlank(retryYearStr)) {
-                try {
-                  Integer retryYear = Integer.parseInt(retryYearStr);
+                Integer retryYear = safeParseYear(retryYearStr);
+                if (retryYear != null) {
                   LOGGER.info("Retry parsed year: {}", retryYear);
                   if (isValidMovieYear(retryYear)) {
                     LOGGER.info("AI retry successful! Updated: '{}' -> '{}' (year: {} -> {})",
@@ -550,8 +542,8 @@ public class MovieScrapeTask extends TmmThreadPool {
                   } else {
                     LOGGER.error("Retry year {} is still invalid!", retryYear);
                   }
-                } catch (NumberFormatException e) {
-                  LOGGER.error("Could not parse year from AI retry result: '{}' - {}", retryYearStr, e.getMessage());
+                } else {
+                   LOGGER.error("Could not parse year from AI retry result: '{}'", retryYearStr);
                 }
               }
             } else {
@@ -688,11 +680,7 @@ public class MovieScrapeTask extends TmmThreadPool {
           if (aiParserInfo != null && aiParserInfo.length >= 2) {
             aiProcessedTitle = aiParserInfo[0];
             if (StringUtils.isNotBlank(aiParserInfo[1])) {
-              try {
-                aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
-              } catch (NumberFormatException e) {
-                LOGGER.debug("Could not parse year from individual AI result: {}", aiParserInfo[1]);
-              }
+              aiProcessedYear = safeParseYear(aiParserInfo[1]);
             }
           }
           
@@ -723,6 +711,18 @@ public class MovieScrapeTask extends TmmThreadPool {
         LOGGER.error("Error during individual AI recognition fallback: {}", e.getMessage());
       }
       
+      return null;
+    }
+
+    private Integer safeParseYear(String yearStr) {
+      if (StringUtils.isNotBlank(yearStr)) {
+        try {
+          return Integer.parseInt(yearStr.trim());
+        }
+        catch (NumberFormatException e) {
+          LOGGER.debug("Could not parse year: '{}'", yearStr);
+        }
+      }
       return null;
     }
     

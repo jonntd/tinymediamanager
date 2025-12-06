@@ -1517,7 +1517,9 @@ public class Utils {
    */
   /**
    * 使用系统命令删除目录，优化网络文件系统（如WebDAV）的删除速度
-   * @param dir 要删除的目录路径
+   * 
+   * @param dir
+   *          要删除的目录路径
    * @return 是否删除成功
    */
   private static boolean deleteDirectoryWithSystemCommand(Path dir) {
@@ -1525,23 +1527,24 @@ public class Utils {
       String pathStr = dir.toString();
       ProcessBuilder pb;
       String command;
-      
+
       if (SystemUtils.IS_OS_WINDOWS) {
         // Windows 系统：使用 rmdir 命令，支持带空格的路径
         pb = new ProcessBuilder("cmd.exe", "/c", "rmdir", "/s", "/q", pathStr);
         command = "rmdir /s /q " + pathStr;
-      } else {
+      }
+      else {
         // macOS/Linux 系统：使用 rm 命令，正确转义路径中的空格和特殊字符
         command = "rm -rf \"" + pathStr.replace("\"", "\\\"").replace("$", "\\$") + "\"";
         pb = new ProcessBuilder("bash", "-c", command);
       }
-      
+
       LOGGER.info("Executing system delete command: {}", command);
       long startTime = System.currentTimeMillis();
-      
+
       pb.redirectErrorStream(true);
       Process p = pb.start();
-      
+
       // 读取输出，避免进程阻塞
       try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
         String line;
@@ -1549,19 +1552,21 @@ public class Utils {
           LOGGER.debug("System delete command output: {}", line);
         }
       }
-      
+
       // 等待命令完成，0 表示成功
       int exitCode = p.waitFor();
       long duration = System.currentTimeMillis() - startTime;
-      
+
       if (exitCode == 0) {
         LOGGER.info("System delete command succeeded in {}ms (exit code: {}): {}", duration, exitCode, dir);
         return true;
-      } else {
+      }
+      else {
         LOGGER.warn("System delete command failed in {}ms (exit code: {}): {}", duration, exitCode, dir);
         return false;
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("System delete command failed with exception: {}", e.getMessage());
       LOGGER.debug("Stack trace:", e);
       return false;
@@ -1570,8 +1575,11 @@ public class Utils {
 
   /**
    * 删除目录及其内容，优化网络文件系统（如WebDAV）的删除速度
-   * @param dir 要删除的目录路径
-   * @throws IOException 如果删除失败
+   * 
+   * @param dir
+   *          要删除的目录路径
+   * @throws IOException
+   *           如果删除失败
    */
   public static void deleteDirectoryRecursive(Path dir) throws IOException {
     if (!Files.exists(dir) || !Files.isDirectory(dir)) {
@@ -1581,18 +1589,18 @@ public class Utils {
 
     LOGGER.info("Starting delete operation for directory: {}", dir);
     long startTime = System.currentTimeMillis();
-    
+
     // 先尝试使用系统命令删除，优化网络文件系统（如WebDAV）的删除速度
     boolean systemDeleteSuccess = deleteDirectoryWithSystemCommand(dir);
     long systemDeleteTime = System.currentTimeMillis() - startTime;
-    
+
     if (systemDeleteSuccess) {
       LOGGER.info("Directory deleted successfully with system command in {}ms: {}", systemDeleteTime, dir);
       return;
     }
-    
+
     LOGGER.warn("System command delete failed in {}ms, falling back to recursive delete: {}", systemDeleteTime, dir);
-    
+
     // 系统命令删除失败，回退到标准的递归删除方法
     startTime = System.currentTimeMillis();
     try {
@@ -2367,6 +2375,14 @@ public class Utils {
     // Get Cleanup File Types from the settings
     List<String> regexPatterns = Settings.getInstance().getCleanupFileType();
     LOGGER.info("Start cleanup of unwanted file types/folders: {}", regexPatterns);
+
+    // Skip cleanup for WebDAV paths - Files.walkFileTree doesn't support WebDAV virtual paths
+    // WebDAV cleanup should be handled separately through WebDavClient if needed
+    String entityPath = me.getPath();
+    if (entityPath != null && entityPath.startsWith("webdav:")) {
+      LOGGER.debug("Skipping cleanup for WebDAV path: {}", entityPath);
+      return;
+    }
 
     Set<Path> fileList = new HashSet<>();
     for (Path file : Utils.getUnknownFilesByRegex(me.getPathNIO(), regexPatterns)) {

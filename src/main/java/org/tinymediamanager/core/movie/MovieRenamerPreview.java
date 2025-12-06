@@ -26,6 +26,7 @@ import org.tinymediamanager.core.RenamerPreviewContainer.MediaFileTypeContainer;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavPath;
 
 /**
  * The class {@link MovieRenamerPreview}. To create a preview of the movie renamer (dry run)
@@ -54,12 +55,30 @@ public class MovieRenamerPreview {
     // For WebDAV paths, use string concatenation instead of Path.resolve()
     if (WebDavDataSourceHelper.isWebDavPath(movie.getPath())) {
       String datasource = movie.getDataSource();
-      // Ensure proper path separator
-      if (!datasource.endsWith("/") && !newFolderName.startsWith("/")) {
-        container.newPath = Paths.get(datasource + "/" + newFolderName);
+
+      // Fix for empty folder pattern: if newFolderName is empty, use existing folder name
+      // This matches logic in MovieRenamer.java
+      if (newFolderName.isEmpty()) {
+        try {
+          WebDavPath moviePath = new WebDavPath(movie.getPath());
+          newFolderName = moviePath.getFileName();
+        } catch (Exception e) {
+          // fallback
+        }
       }
-      else {
-        container.newPath = Paths.get(datasource + newFolderName);
+
+      try {
+        WebDavPath datasourcePath = new WebDavPath(datasource);
+        WebDavPath newWebDavPath = datasourcePath.resolve(newFolderName);
+        container.newPath = newWebDavPath.toPath();
+      } catch (Exception e) {
+        // fallback to manual construction if parsing fails
+        if (!datasource.endsWith("/") && !newFolderName.startsWith("/")) {
+          container.newPath = Paths.get(datasource + "/" + newFolderName);
+        }
+        else {
+          container.newPath = Paths.get(datasource + newFolderName);
+        }
       }
     }
     else {
@@ -69,7 +88,13 @@ public class MovieRenamerPreview {
     this.clone.setPath(container.newPath.toString());
 
     // process movie media files
-    processMovie();
+    try {
+      processMovie();
+    } catch (Exception e) {
+       // log the error but don't crash the whole preview
+       org.slf4j.LoggerFactory.getLogger(MovieRenamerPreview.class).error("Error processing movie preview for '{}'", movie.getTitle(), e);
+       container.renamerProblems = true;
+    }
 
     // check for dupes on all new MFs
     Map<String, MediaFileTypeContainer> duplicates = new HashMap<>();
@@ -102,8 +127,8 @@ public class MovieRenamerPreview {
       for (MediaFile typeMf : movie.getMediaFiles(type)) {
         // For WebDAV, use string manipulation instead of Path.relativize()
         if (isWebDav) {
-          String oldPathStr = container.getOldPath().toString();
-          String filePathStr = typeMf.getFileAsPath().toString();
+          String oldPathStr = WebDavDataSourceHelper.normalizeWebDavPath(container.getOldPath().toString());
+          String filePathStr = WebDavDataSourceHelper.normalizeWebDavPath(typeMf.getFileAsPath().toString());
           String relativePath = getRelativePath(oldPathStr, filePathStr);
           c.oldFiles.add(relativePath);
         }
@@ -114,8 +139,8 @@ public class MovieRenamerPreview {
         List<MediaFile> mfs = MovieRenamer.generateFilename(movie, new MediaFile(typeMf), newVideoBasename);
         for (MediaFile mf : mfs) {
           if (isWebDav) {
-            String newPathStr = container.getNewPath().toString();
-            String filePathStr = mf.getFileAsPath().toString();
+            String newPathStr = WebDavDataSourceHelper.normalizeWebDavPath(container.getNewPath().toString());
+            String filePathStr = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
             String relativePath = getRelativePath(newPathStr, filePathStr);
             c.newFiles.add(relativePath);
           }

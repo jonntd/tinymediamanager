@@ -57,6 +57,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavFileOperations;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaEntityFilenameHistory;
 import org.tinymediamanager.core.entities.MediaFile;
@@ -299,16 +300,20 @@ public class TvShowRenamer {
     filenameHistory.setOldPath(oldPathname);
 
     if (!newPathname.isEmpty()) {
-      Path srcDir = Paths.get(oldPathname);
-      Path destDir = Paths.get(newPathname);
-      // move directory if needed
-      if (!srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString())) {
+      Path srcDir = WebDavDataSourceHelper.getWebDavPath(oldPathname);
+      Path destDir = WebDavDataSourceHelper.getWebDavPath(newPathname);
+
+      // Normalize paths for comparison (handles WebDAV path format)
+      String srcNormalized = WebDavDataSourceHelper.normalizeWebDavPath(srcDir.toString());
+      String destNormalized = WebDavDataSourceHelper.normalizeWebDavPath(destDir.toString());
+
+      // move directory if needed (use string comparison for WebDAV paths)
+      boolean pathsEqual = WebDavDataSourceHelper.isWebDavPath(srcNormalized) ? srcNormalized.equals(destNormalized)
+          : srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString());
+
+      if (!pathsEqual) {
         try {
-          // create parent if needed
-          if (!Files.exists(destDir.getParent())) {
-            Files.createDirectory(destDir.getParent());
-          }
-          boolean ok = Utils.moveDirectorySafe(srcDir, destDir);
+          boolean ok = moveDirectory(srcDir, destDir);
           if (ok) {
             show.updateMediaFilePath(srcDir, destDir); // TvShow MFs
             show.setPath(newPathname);
@@ -444,15 +449,18 @@ public class TvShowRenamer {
           }
         }
 
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
-          if (!directoryStream.iterator().hasNext()) {
-            // no iterator = empty
-            LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
-            Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+        // Skip empty directory check for WebDAV paths (Files.newDirectoryStream not supported)
+        if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+          try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
+            if (!directoryStream.iterator().hasNext()) {
+              // no iterator = empty
+              LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
+              Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+            }
           }
-        }
-        catch (IOException e) {
-          LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+          catch (IOException e) {
+            LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+          }
         }
       }
     }
@@ -756,7 +764,9 @@ public class TvShowRenamer {
           String filename = naming.getFilename(tvShowSeason, "nfo");
           if (StringUtils.isNotBlank(filename)) {
             MediaFile newMf = new MediaFile(nfo);
-            newMf.setFile(Paths.get(tvShow.getPath(), filename));
+            // Use getWebDavPath for full path construction to be safe on Windows
+            String fullPath = tvShow.getPath() + (tvShow.getPath().endsWith("/") ? "" : "/") + filename;
+            newMf.setFile(WebDavDataSourceHelper.getWebDavPath(fullPath));
             boolean ok = copyFile(nfo.getFileAsPath(), newMf.getFileAsPath());
             if (ok) {
               filenameHistory.addFilenameHistory(createFilenameHistory(tvShowRoot, nfo.getFileAsPath(), newMf.getFileAsPath()));
@@ -914,15 +924,18 @@ public class TvShowRenamer {
           }
         }
 
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
-          if (!directoryStream.iterator().hasNext()) {
-            // no iterator = empty
-            LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
-            Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+        // Skip empty directory check for WebDAV paths (Files.newDirectoryStream not supported)
+        if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+          try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
+            if (!directoryStream.iterator().hasNext()) {
+              // no iterator = empty
+              LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
+              Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+            }
           }
-        }
-        catch (IOException e) {
-          LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+          catch (IOException e) {
+            LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+          }
         }
       }
     }
@@ -1205,9 +1218,9 @@ public class TvShowRenamer {
     // ## rename all other types (copy 1:1)
     // ######################################################################
     if (!TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
-      List<MediaFile> mfs = new ArrayList<>(episode.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
-          MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
-          MediaFileType.CHARACTERART, MediaFileType.KEYART, MediaFileType.SUBTITLE));
+      List<MediaFile> mfs = new ArrayList<>(episode.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER,
+          MediaFileType.FANART, MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO,
+          MediaFileType.DISC, MediaFileType.CHARACTERART, MediaFileType.KEYART, MediaFileType.SUBTITLE));
       mfs.removeAll(Collections.singleton((MediaFile) null)); // remove all NULL ones!
       for (MediaFile other : mfs) {
         LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
@@ -1282,15 +1295,18 @@ public class TvShowRenamer {
             Utils.deleteFileWithBackup(cl.getFileAsPath(), episode.getTvShow().getDataSource());
           }
 
-          try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
-            if (!directoryStream.iterator().hasNext()) {
-              // no iterator = empty
-              LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
-              Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+          // Skip empty directory check for WebDAV paths (Files.newDirectoryStream not supported)
+          if (!WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
+            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(cl.getFileAsPath().getParent())) {
+              if (!directoryStream.iterator().hasNext()) {
+                // no iterator = empty
+                LOGGER.debug("Deleting empty Directory {}", cl.getFileAsPath().getParent());
+                Files.delete(cl.getFileAsPath().getParent()); // do not use recursive her
+              }
             }
-          }
-          catch (IOException e) {
-            LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+            catch (IOException e) {
+              LOGGER.error("Error in cleanup of '{}' - '{}'", cl.getFileAsPath(), e.getMessage());
+            }
           }
         }
       }
@@ -1313,20 +1329,20 @@ public class TvShowRenamer {
       // update paths/mfs for all relevant episodes
       for (TvShowEpisode e : episodes) {
         e.removeAllMediaFiles();
-        
+
         // 当仅处理视频文件时，将非视频文件添加回needed列表
         List<MediaFile> finalNeeded = new ArrayList<>(needed);
         if (TvShowModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
           finalNeeded.addAll(nonVideoFiles);
         }
-        
+
         e.addToMediaFiles(finalNeeded);
         e.setPath(episode.getPath());
 
         // Update file size information after rename based on TV show settings
-    if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
-      e.updateFileSizeInformation();
-    }
+        if (Settings.getInstance().isTvShowUpdateFileSizeOnRename()) {
+          e.updateFileSizeInformation();
+        }
 
         // Only gather full media information if enabled in settings
         if (Settings.getInstance().isFetchVideoInfoOnUpdate()) {
@@ -1421,14 +1437,17 @@ public class TvShowRenamer {
     Path newEpFolder = resolvePath(seasonFolder, newFoldername);
 
     try {
-      if (!epFolder.toAbsolutePath().toString().equals(newEpFolder.toAbsolutePath().toString())) {
+      // Normalize paths for comparison (handles WebDAV path format)
+      String epFolderNormalized = WebDavDataSourceHelper.normalizeWebDavPath(epFolder.toString());
+      String newEpFolderNormalized = WebDavDataSourceHelper.normalizeWebDavPath(newEpFolder.toString());
+
+      boolean pathsEqual = WebDavDataSourceHelper.isWebDavPath(epFolderNormalized) ? epFolderNormalized.equals(newEpFolderNormalized)
+          : epFolder.toAbsolutePath().toString().equals(newEpFolder.toAbsolutePath().toString());
+
+      if (!pathsEqual) {
         boolean ok = false;
         try {
-          // create parent if needed
-          if (!Files.exists(newEpFolder.getParent())) {
-            Files.createDirectory(newEpFolder.getParent());
-          }
-          ok = Utils.moveDirectorySafe(epFolder, newEpFolder);
+          ok = moveDirectory(epFolder, newEpFolder);
         }
         catch (Exception e) {
           LOGGER.error("Could not rename episode S{} E{} of '{} - '{}'", episode.getSeason(), episode.getEpisode(), episode.getTvShow().getTitle(),
@@ -1441,7 +1460,10 @@ public class TvShowRenamer {
           LOGGER.debug("updating *all* MFs for new path -> {}", newEpFolder);
           for (TvShowEpisode e : eps) {
             e.updateMediaFilePath(epFolder, newEpFolder);
-            e.setPath(newEpFolder.toAbsolutePath().toString());
+            // For WebDAV, use normalized path string
+            String newPathStr = WebDavDataSourceHelper.isWebDavPath(newEpFolderNormalized) ? newEpFolderNormalized
+                : newEpFolder.toAbsolutePath().toString();
+            e.setPath(newPathStr);
 
             fileNameHistory.addFilenameHistory(createFilenameHistory(episode.getTvShow().getPathNIO(), epFolder, newEpFolder));
             e.setRenameHistory(fileNameHistory);
@@ -1479,16 +1501,20 @@ public class TvShowRenamer {
   private static void undoRenameTvShow(TvShow tvShow) {
     // TV show root
     if (StringUtils.isNotBlank(tvShow.getRenameHistory().getOldPath())) {
-      Path srcDir = Paths.get(tvShow.getRenameHistory().getNewPath());
-      Path destDir = Paths.get(tvShow.getRenameHistory().getOldPath());
-      // move directory if needed
-      if (!srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString())) {
+      Path srcDir = WebDavDataSourceHelper.getWebDavPath(tvShow.getRenameHistory().getNewPath());
+      Path destDir = WebDavDataSourceHelper.getWebDavPath(tvShow.getRenameHistory().getOldPath());
+
+      // Normalize paths for comparison (handles WebDAV path format)
+      String srcNormalized = WebDavDataSourceHelper.normalizeWebDavPath(srcDir.toString());
+      String destNormalized = WebDavDataSourceHelper.normalizeWebDavPath(destDir.toString());
+
+      // move directory if needed (use string comparison for WebDAV paths)
+      boolean pathsEqual = WebDavDataSourceHelper.isWebDavPath(srcNormalized) ? srcNormalized.equals(destNormalized)
+          : srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString());
+
+      if (!pathsEqual) {
         try {
-          // create parent if needed
-          if (!Files.exists(destDir.getParent())) {
-            Files.createDirectory(destDir.getParent());
-          }
-          boolean ok = Utils.moveDirectorySafe(srcDir, destDir);
+          boolean ok = moveDirectory(srcDir, destDir);
           if (ok) {
             tvShow.updateMediaFilePath(srcDir, destDir); // TvShow MFs
             tvShow.setPath(tvShow.getRenameHistory().getOldPath());
@@ -1769,11 +1795,7 @@ public class TvShowRenamer {
     try {
       boolean ok = false;
       try {
-        // create parent if needed
-        if (!Files.exists(oldEpFolder.getParent())) {
-          Files.createDirectory(oldEpFolder.getParent());
-        }
-        ok = Utils.moveDirectorySafe(newEpFolder, oldEpFolder);
+        ok = moveDirectory(newEpFolder, oldEpFolder);
       }
       catch (Exception e) {
         LOGGER.error("Could not move episode files ({}) of episode S{} E{} of '{}'", oldEpFolder, episode.getSeason(), episode.getEpisode(),
@@ -1784,9 +1806,12 @@ public class TvShowRenamer {
       if (ok) {
         // iterate over all EPs & MFs and fix new path
         LOGGER.debug("updating *all* MFs for new path -> {}", newEpFolder);
+        // For WebDAV, use normalized path string
+        String oldPathNormalized = WebDavDataSourceHelper.normalizeWebDavPath(oldEpFolder.toString());
+        String oldPathStr = WebDavDataSourceHelper.isWebDavPath(oldPathNormalized) ? oldPathNormalized : oldEpFolder.toAbsolutePath().toString();
         for (TvShowEpisode e : eps) {
           e.updateMediaFilePath(newEpFolder, oldEpFolder);
-          e.setPath(oldEpFolder.toAbsolutePath().toString());
+          e.setPath(oldPathStr);
           e.setRenameHistory(null);
           e.saveToDb();
         }
@@ -2275,7 +2300,23 @@ public class TvShowRenamer {
 
     try {
       if (StringUtils.isNotBlank(template)) {
-        newPathname = Paths.get(tvShow.getDataSource(), createDestination(template, tvShow)).toString();
+        String dataSource = tvShow.getDataSource();
+        String destination = createDestination(template, tvShow);
+
+        // For WebDAV paths, use decoded dataSource and string concatenation
+        // to avoid encoding issues with Paths.get()
+        if (WebDavDataSourceHelper.isWebDavPath(dataSource)) {
+          // Decode the dataSource for consistent path construction
+          String decodedDataSource = WebDavDataSourceHelper.decodeWebDavPath(dataSource);
+          // Ensure proper path separator
+          if (!decodedDataSource.endsWith("/")) {
+            decodedDataSource = decodedDataSource + "/";
+          }
+          newPathname = decodedDataSource + destination;
+        }
+        else {
+          newPathname = Paths.get(dataSource, destination).toString();
+        }
       }
       else {
         newPathname = tvShow.getPathNIO().toString();
@@ -2826,6 +2867,23 @@ public class TvShowRenamer {
    */
   private static boolean moveFile(Path oldFilename, Path newFilename) {
     try {
+      String oldPath = WebDavDataSourceHelper.normalizeWebDavPath(oldFilename.toString());
+      String newPath = WebDavDataSourceHelper.normalizeWebDavPath(newFilename.toString());
+
+      // Handle WebDAV paths specially
+      if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
+        LOGGER.debug("Moving WebDAV file '{}' to '{}'", oldPath, newPath);
+        boolean ok = WebDavFileOperations.moveWebDavFile(oldPath, newPath);
+        if (ok) {
+          return true;
+        }
+        else {
+          LOGGER.error("Could not move WebDAV file '{}' to '{}'", oldPath, newPath);
+          return false;
+        }
+      }
+
+      // Local filesystem handling
       // create parent if needed
       if (!Files.exists(newFilename.getParent())) {
         Files.createDirectory(newFilename.getParent());
@@ -2857,6 +2915,19 @@ public class TvShowRenamer {
    * @return true, when we copied file OR DEST IS EXISTING
    */
   private static boolean copyFile(Path oldFilename, Path newFilename) {
+    String oldPath = WebDavDataSourceHelper.normalizeWebDavPath(oldFilename.toString());
+    String newPath = WebDavDataSourceHelper.normalizeWebDavPath(newFilename.toString());
+
+    // Handle WebDAV paths specially
+    if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
+      if (oldPath.equals(newPath)) {
+        return true; // same file, nothing to do
+      }
+      LOGGER.debug("Copying WebDAV file '{}' to '{}'", oldPath, newPath);
+      return WebDavFileOperations.copyWebDavFile(oldPath, newPath);
+    }
+
+    // Local filesystem handling
     if (!oldFilename.toAbsolutePath().toString().equals(newFilename.toAbsolutePath().toString())) {
       LOGGER.debug("copy file '{}' to '{}'", oldFilename, newFilename);
       if (oldFilename.equals(newFilename)) {
@@ -2902,6 +2973,46 @@ public class TvShowRenamer {
     return "";
   }
 
+  /**
+   * moves a directory.
+   *
+   * @param oldPath
+   *          the old directory path
+   * @param newPath
+   *          the new directory path
+   * @return true, when we moved directory
+   */
+  private static boolean moveDirectory(Path oldPath, Path newPath) {
+    try {
+      String oldPathStr = WebDavDataSourceHelper.normalizeWebDavPath(oldPath.toString());
+      String newPathStr = WebDavDataSourceHelper.normalizeWebDavPath(newPath.toString());
+
+      // Handle WebDAV paths specially
+      if (WebDavDataSourceHelper.isWebDavPath(oldPathStr)) {
+        LOGGER.debug("Moving WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
+        return WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+      }
+
+      // Local filesystem handling
+      // create parent if needed
+      if (!Files.exists(newPath.getParent())) {
+        Files.createDirectory(newPath.getParent());
+      }
+      boolean ok = Utils.moveDirectorySafe(oldPath, newPath);
+      if (ok) {
+        return true;
+      }
+      else {
+        LOGGER.error("Could not move directory '{}' to '{}'", oldPath, newPath);
+        return false;
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Could not move directory '{}' to '{}' - '{}'", oldPath, newPath, e.getMessage());
+      return false;
+    }
+  }
+
   public static String replaceInvalidCharacters(String source) {
     String result = source;
 
@@ -2919,8 +3030,10 @@ public class TvShowRenamer {
   /**
    * Helper method to resolve a filename against a base path, handling both WebDAV and local paths
    *
-   * @param basePath the base path
-   * @param filename the filename to resolve
+   * @param basePath
+   *          the base path
+   * @param filename
+   *          the filename to resolve
    * @return the resolved path
    */
   private static Path resolvePath(Path basePath, String filename) {
@@ -3024,7 +3137,8 @@ public class TvShowRenamer {
   /**
    * Get the destination folder for TV show artwork during rename based on settings
    *
-   * @param tvShow the TV show entity
+   * @param tvShow
+   *          the TV show entity
    * @return the destination folder path
    */
   private static Path getDestinationFolderForTvShowRename(TvShow tvShow) {
@@ -3047,15 +3161,16 @@ public class TvShowRenamer {
       try {
         Files.createDirectories(entityFolder);
         LOGGER.info("Created cache artwork folder for TV show rename '{}': {}", tvShow.getTitle(), entityFolder);
-      } catch (Exception e) {
-        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
-                   entityFolder, e.getMessage());
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'", entityFolder, e.getMessage());
         return tvShow.getPathNIO();
       }
 
       LOGGER.info("Using cache artwork folder for TV show rename '{}': {}", tvShow.getTitle(), entityFolder);
       return entityFolder;
-    } else {
+    }
+    else {
       // Default behavior: save to video folder
       LOGGER.debug("Using default video folder for TV show rename '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
       return tvShow.getPathNIO();

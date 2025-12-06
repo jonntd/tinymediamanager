@@ -83,9 +83,9 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
  * @author Manuel Laggner
  */
 public class TvShowScrapeTask extends TmmThreadPool {
-  private static final Logger      LOGGER = LoggerFactory.getLogger(TvShowScrapeTask.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(TvShowScrapeTask.class);
 
-  private final TvShowScrapeParams tvShowScrapeParams;
+  final TvShowScrapeParams    tvShowScrapeParams;
 
   /**
    * Instantiates a new tv show scrape task.
@@ -96,6 +96,13 @@ public class TvShowScrapeTask extends TmmThreadPool {
   public TvShowScrapeTask(final TvShowScrapeParams tvShowScrapeParams) {
     super(TmmResourceBundle.getString("tvshow.scraping"));
     this.tvShowScrapeParams = tvShowScrapeParams;
+  }
+
+  /**
+   * Helper method to access the inherited protected 'cancel' field Used to avoid synthetic accessor generation for inner classes
+   */
+  boolean isTaskCancelled() {
+    return cancel;
   }
 
   @Override
@@ -123,8 +130,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
           // 发送批量AI识别开始消息到Message history
           String startMsg = String.format("批量电视剧AI识别开始: %d 部电视剧", tvShowScrapeParams.tvShowsToScrape.size());
-          MessageManager.getInstance().pushMessage(
-              new Message(MessageLevel.INFO, "批量电视剧AI识别", startMsg));
+          MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量电视剧AI识别", startMsg));
 
           BatchChatGPTTvShowRecognitionService batchService = new BatchChatGPTTvShowRecognitionService();
           aiRecognitionResults = batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape);
@@ -134,25 +140,25 @@ public class TvShowScrapeTask extends TmmThreadPool {
           // 发送批量AI识别完成消息到Message history
           int successCount = aiRecognitionResults.size();
           int totalCount = tvShowScrapeParams.tvShowsToScrape.size();
-          String completeMsg = String.format("批量电视剧AI识别完成: 成功 %d/%d (%.1f%%)",
-              successCount, totalCount, (successCount * 100.0 / totalCount));
-          MessageManager.getInstance().pushMessage(
-              new Message(MessageLevel.INFO, "批量电视剧AI识别", completeMsg));
+          String completeMsg = String.format("批量电视剧AI识别完成: 成功 %d/%d (%.1f%%)", successCount, totalCount, (successCount * 100.0 / totalCount));
+          MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量电视剧AI识别", completeMsg));
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Batch AI recognition failed, skipping individual fallback to prevent API spam: {}", e.getMessage());
 
           // 发送批量AI识别失败消息到Message history，但不回退到个体识别
           String failMsg = String.format("批量电视剧AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
-          MessageManager.getInstance().pushMessage(
-              new Message(MessageLevel.WARN, "批量电视剧AI识别", failMsg));
+          MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "批量电视剧AI识别", failMsg));
         }
-      } else {
+      }
+      else {
         LOGGER.debug("OpenAI API key not configured, skipping batch AI recognition");
       }
-    } else {
-      LOGGER.debug("Batch AI recognition skipped: doSearch={}, tvShowCount={}",
-                   tvShowScrapeParams.doSearch, tvShowScrapeParams.tvShowsToScrape.size());
+    }
+    else {
+      LOGGER.debug("Batch AI recognition skipped: doSearch={}, tvShowCount={}", tvShowScrapeParams.doSearch,
+          tvShowScrapeParams.tvShowsToScrape.size());
     }
 
     initThreadPool(3, "scrape");
@@ -175,8 +181,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
   }
 
   private class Worker implements Runnable {
-    private final TvShowList tvShowList = TvShowModuleManager.getInstance().getTvShowList();
-    private final TvShow     tvShow;
+    private final TvShowList          tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+    private final TvShow              tvShow;
     private final Map<String, String> aiRecognitionResults;
 
     private Worker(TvShow tvShow, Map<String, String> aiRecognitionResults) {
@@ -200,7 +206,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
           MediaSearchResult aiResult = tryAIRecognition(tvShow, mediaMetadataScraper);
           if (aiResult != null) {
             result1 = aiResult;
-          } else {
+          }
+          else {
             // 如果AI识别失败，使用原始标题搜索
             List<MediaSearchResult> results = tvShowList.searchTvShow(tvShow.getTitle(), tvShow.getYear(), tvShow.getIds(), mediaMetadataScraper);
             if (ListUtils.isNotEmpty(results)) {
@@ -231,7 +238,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
           }
         }
 
-        if (cancel) {
+        if (isTaskCancelled()) {
           return;
         }
 
@@ -266,7 +273,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             LOGGER.debug("=====================================================");
             md = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getMetadata(options);
 
-            if (cancel) {
+            if (isTaskCancelled()) {
               return;
             }
 
@@ -285,7 +292,9 @@ public class TvShowScrapeTask extends TmmThreadPool {
             }
 
             // if there is obviously no episode group set, take the best one from the scraper
-            if (tvShow.getEpisodeGroup() == MediaEpisodeGroup.DEFAULT_AIRED) {
+            // BUT: skip this for WebDAV shows to preserve their season information
+            boolean isWebDav = tvShow.getPath() != null && tvShow.getPath().startsWith("webdav://");
+            if (!isWebDav && tvShow.getEpisodeGroup() == MediaEpisodeGroup.DEFAULT_AIRED) {
               try {
                 episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
 
@@ -300,6 +309,11 @@ public class TvShowScrapeTask extends TmmThreadPool {
               finally {
                 tvShow.setEpisodeGroups(md.getEpisodeGroups());
               }
+            }
+            else if (isWebDav) {
+              LOGGER.debug("Skipping EpisodeGroup switch for WebDAV show '{}' to preserve season information", tvShow.getTitle());
+              // Still set the available episode groups for reference
+              tvShow.setEpisodeGroups(md.getEpisodeGroups());
             }
 
             tvShow.setMetadata(md, tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
@@ -366,7 +380,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
           tvShow.setDummyEpisodes(episodes);
           tvShow.saveToDb();
 
-          if (cancel) {
+          if (isTaskCancelled()) {
             return;
           }
 
@@ -375,7 +389,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             tvShow.setArtwork(getArtwork(tvShow, md), tvShowScrapeParams.tvShowScraperMetadataConfig, tvShowScrapeParams.overwriteExistingItems);
           }
 
-          if (cancel) {
+          if (isTaskCancelled()) {
             return;
           }
 
@@ -393,7 +407,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             }
           }
 
-          if (cancel) {
+          if (isTaskCancelled()) {
             return;
           }
 
@@ -403,7 +417,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
                 .addUnnamedTask(new TvShowThemeDownloadTask(Collections.singletonList(tvShow), tvShowScrapeParams.overwriteExistingItems));
           }
 
-          if (cancel) {
+          if (isTaskCancelled()) {
             return;
           }
 
@@ -416,7 +430,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             options1.setDataFromOtherOptions(options);
 
             for (TvShowEpisode episode : episodesToScrape) {
-              if (cancel) {
+              if (isTaskCancelled()) {
                 break;
               }
 
@@ -427,7 +441,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
             }
           }
 
-          if (cancel) {
+          if (isTaskCancelled()) {
             return;
           }
 
@@ -576,16 +590,17 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
         // 发送单个电视剧识别成功消息到Message history
         String successMsg = String.format("批量AI识别: %s → %s", tvShow.getTitle(), recognizedTitle);
-        MessageManager.getInstance().pushMessage(
-            new Message(MessageLevel.INFO, "批量电视剧AI识别", successMsg));
-      } else {
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量电视剧AI识别", successMsg));
+      }
+      else {
         // 检查是否应该进行单个识别回退
         String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
         if (apiKey != null && !apiKey.trim().isEmpty()) {
           if (aiRecognitionResults != null) {
-            LOGGER.debug("TV show '{}' (ID: {}) not found in batch results, falling back to individual recognition",
-                        tvShow.getTitle(), tvShow.getDbId());
-          } else {
+            LOGGER.debug("TV show '{}' (ID: {}) not found in batch results, falling back to individual recognition", tvShow.getTitle(),
+                tvShow.getDbId());
+          }
+          else {
             LOGGER.debug("Batch recognition was not performed, using individual recognition for TV show '{}'", tvShow.getTitle());
           }
 
@@ -596,13 +611,16 @@ public class TvShowScrapeTask extends TmmThreadPool {
             recognizedTitle = individualService.recognizeTvShowTitle(tvShow);
             if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
               LOGGER.info("Individual AI recognition successful: '{}' for TV show: '{}'", recognizedTitle, tvShow.getTitle());
-            } else {
+            }
+            else {
               LOGGER.warn("Individual AI recognition returned empty result for TV show '{}'", tvShow.getTitle());
             }
-          } catch (Exception individualEx) {
+          }
+          catch (Exception individualEx) {
             LOGGER.warn("Individual AI recognition failed for TV show '{}': {}", tvShow.getTitle(), individualEx.getMessage());
           }
-        } else {
+        }
+        else {
           LOGGER.debug("OpenAI API key not configured, skipping AI recognition for TV show '{}'", tvShow.getTitle());
         }
       }
@@ -626,7 +644,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
           if (org.apache.commons.lang3.StringUtils.isNotBlank(aiParserInfo[1])) {
             try {
               aiProcessedYear = Integer.parseInt(aiParserInfo[1]);
-            } catch (NumberFormatException e) {
+            }
+            catch (NumberFormatException e) {
               LOGGER.debug("Could not parse year from AI result: {}", aiParserInfo[1]);
             }
           }
@@ -642,13 +661,16 @@ public class TvShowScrapeTask extends TmmThreadPool {
             if (aiResult.getScore() >= 0.75) {
               LOGGER.info("AI recognition successful! Found match with score: {}", aiResult.getScore());
               return aiResult;
-            } else {
+            }
+            else {
               LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold (0.75)", aiResult.getScore());
             }
-          } else {
+          }
+          else {
             LOGGER.info("No results found for AI recognized title: '{}'", aiProcessedTitle);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Error during AI search for TV show '{}': {}", aiProcessedTitle, e.getMessage());
         }
       }

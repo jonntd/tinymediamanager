@@ -328,7 +328,7 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
 
     void updateSelectedResult() {
       lblTitle.setText(((TvShow) selectedResult.get()).getTitleSortable());
-      lblDatasource.setText(selectedResult.get().getDataSource());
+      lblDatasource.setText(selectedResult.get().getDataSourceDecoded());
 
       // the empty result does not have any valid Path
       if (selectedResult != emptyResult) {

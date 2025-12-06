@@ -83,6 +83,7 @@ import org.tinymediamanager.scraper.exceptions.ScrapeException;
 import org.tinymediamanager.scraper.interfaces.ITvShowMetadataProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 import com.fasterxml.jackson.databind.ObjectReader;
 
@@ -96,14 +97,14 @@ import ca.odell.glazedlists.ObservableElementList;
  * @author Manuel Laggner
  */
 public final class TvShowList extends AbstractModelObject {
-  private static final Logger                            LOGGER        = LoggerFactory.getLogger(TvShowList.class);
-  private static TvShowList                              instance      = null;
+  private static final Logger                            LOGGER          = LoggerFactory.getLogger(TvShowList.class);
+  private static TvShowList                              instance        = null;
   // Static executor service for queued delete operations
   private static final ExecutorService                   DELETE_EXECUTOR = Executors.newSingleThreadExecutor(runnable -> {
-    Thread t = new Thread(runnable, "TvShowDeleteThread");
-    t.setDaemon(true);
-    return t;
-  });
+                                                                           Thread t = new Thread(runnable, "TvShowDeleteThread");
+                                                                           t.setDaemon(true);
+                                                                           return t;
+                                                                         });
 
   private final List<TvShow>                             tvShows;
 
@@ -124,7 +125,7 @@ public final class TvShowList extends AbstractModelObject {
   private final CopyOnWriteArrayList<String>             hdrFormatInEpisodes;
   private final CopyOnWriteArrayList<String>             audioTitlesInEpisodes;
 
-  private final ReadWriteLock                            readWriteLock = new ReentrantReadWriteLock();
+  private final ReadWriteLock                            readWriteLock   = new ReentrantReadWriteLock();
 
   /**
    * Instantiates a new TvShowList.
@@ -346,7 +347,13 @@ public final class TvShowList extends AbstractModelObject {
       }
 
       tvShow.setDataSource(newDatasource);
-      tvShow.setPath(newTvShowPath.toAbsolutePath().toString());
+      // For WebDAV paths, use normalized string instead of toAbsolutePath()
+      if (WebDavDataSourceHelper.isWebDavPath(newTvShowPath.toString())) {
+        tvShow.setPath(WebDavDataSourceHelper.normalizeWebDavPath(newTvShowPath.toString()));
+      }
+      else {
+        tvShow.setPath(newTvShowPath.toAbsolutePath().toString());
+      }
       tvShow.updateMediaFilePath(oldTvShowPath, newTvShowPath);
 
       for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
@@ -492,7 +499,8 @@ public final class TvShowList extends AbstractModelObject {
         tvShow.deleteFilesSafely();
         long duration = System.currentTimeMillis() - startTime;
         LOGGER.info("Asynchronous delete completed in {}ms for TV show: {}", duration, tvShow.getTitle());
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         LOGGER.error("Asynchronous delete failed for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
       }
     });
@@ -1324,9 +1332,32 @@ public final class TvShowList extends AbstractModelObject {
    */
   public TvShow getTvShowByPath(Path path) {
     // iterate over all tv shows and check whether this path is being owned by one
+    String pathStr = path.toString();
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(pathStr);
+
     for (TvShow tvShow : this.tvShows) {
-      if (tvShow.getPathNIO().compareTo(path.toAbsolutePath()) == 0) {
-        return tvShow;
+      Path showPath = tvShow.getPathNIO();
+      if (showPath == null) {
+        continue;
+      }
+
+      // For WebDAV paths, compare strings directly (both decoded)
+      // For local paths, use toAbsolutePath() for proper comparison
+      if (isWebDav) {
+        // Decode both paths for comparison
+        String decodedPathStr = WebDavDataSourceHelper.decodeWebDavPath(pathStr);
+        String decodedShowPath = WebDavDataSourceHelper.decodeWebDavPath(showPath.toString());
+        // Normalize trailing slashes
+        decodedPathStr = decodedPathStr.endsWith("/") ? decodedPathStr.substring(0, decodedPathStr.length() - 1) : decodedPathStr;
+        decodedShowPath = decodedShowPath.endsWith("/") ? decodedShowPath.substring(0, decodedShowPath.length() - 1) : decodedShowPath;
+        if (decodedShowPath.equals(decodedPathStr)) {
+          return tvShow;
+        }
+      }
+      else {
+        if (showPath.compareTo(path.toAbsolutePath()) == 0) {
+          return tvShow;
+        }
       }
     }
 

@@ -89,6 +89,7 @@ import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetWithDummyRe
 import org.tinymediamanager.core.threading.ThreadUtils;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.core.webdav.WebDavFileOperations;
+import org.tinymediamanager.core.webdav.WebDavPath;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.floreysoft.jmte.Engine;
@@ -108,6 +109,13 @@ public class MovieRenamer {
   private static final Logger              LOGGER                      = LoggerFactory.getLogger(MovieRenamer.class);
   private static final List<String>        KNOWN_IMAGE_FILE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "bmp", "tbn", "gif", "webp");
 
+  /**
+   * Normalize WebDAV path format: ensure "webdav://" instead of "webdav:/" This is needed because Path.toString() may output single slash format
+   * 
+   * @param path
+   *          the path to normalize
+   * @return the normalized path
+   */
   // to not use posix here
   private static final Pattern             TITLE_PATTERN               = Pattern.compile("\\$\\{.*?(title|originalTitle|englishTitle).*?\\}",
       Pattern.CASE_INSENSITIVE);
@@ -245,17 +253,17 @@ public class MovieRenamer {
   }
 
   /**
-   * Get movie path as Path object, handling WebDAV paths correctly
-   * For WebDAV paths, returns a virtual Path that can be used with string operations
+   * Get movie path as Path object, handling WebDAV paths correctly For WebDAV paths, returns a virtual Path that can be used with string operations
    *
-   * @param movie the movie
+   * @param movie
+   *          the movie
    * @return Path object representing the movie path
    */
   private static Path getMoviePath(Movie movie) {
     if (WebDavDataSourceHelper.isWebDavPath(movie.getPath())) {
       // For WebDAV paths, create a virtual Path using the string representation
       // This avoids the toAbsolutePath() issue that adds local filesystem prefix
-      return Paths.get(movie.getPath());
+      return WebDavDataSourceHelper.getWebDavPath(movie.getPath());
     }
     else {
       return movie.getPathNIO();
@@ -325,6 +333,15 @@ public class MovieRenamer {
             String sourceId = parts[0];
             newPathname = "webdav://" + sourceId + "/" + newPathname;
           }
+          if (movie.isDisc()) {
+            // Disc folders are creating by a separate logic
+            // But valid for WebDAV?
+            String separator = movie.getDataSource().endsWith("/") ? "" : "/";
+            newPathname = WebDavDataSourceHelper.getWebDavPath(movie.getDataSource() + separator + newPathname).toString();
+          }
+          else {
+            newPathname = WebDavDataSourceHelper.getWebDavPath(movie.getDataSource()).resolve(newPathname).toString();
+          }
         }
         else {
           newPathname = Paths.get(movie.getDataSource(), newPathname).toString();
@@ -361,7 +378,7 @@ public class MovieRenamer {
       if (isWebDav) {
         // For WebDAV, construct path using string concatenation
         String nfoPath = moviePath.endsWith("/") ? moviePath + nfoFilename : moviePath + "/" + nfoFilename;
-        del = new MediaFile(Paths.get(nfoPath), MediaFileType.NFO);
+        del = new MediaFile(WebDavDataSourceHelper.getWebDavPath(nfoPath), MediaFileType.NFO);
       }
       else {
         del = new MediaFile(movie.getPathNIO().resolve(nfoFilename), MediaFileType.NFO);
@@ -385,7 +402,7 @@ public class MovieRenamer {
         if (isWebDav) {
           // For WebDAV, construct path using string concatenation
           String artworkPath = moviePath.endsWith("/") ? moviePath + artworkFilename : moviePath + "/" + artworkFilename;
-          del = new MediaFile(Paths.get(artworkPath));
+          del = new MediaFile(WebDavDataSourceHelper.getWebDavPath(artworkPath));
         }
         else {
           del = new MediaFile(movie.getPathNIO().resolve(artworkFilename));
@@ -534,9 +551,9 @@ public class MovieRenamer {
     // ## rename all other types (copy 1:1)
     // ######################################################################
     if (!MovieModuleManager.getInstance().getSettings().isRenamerOnlyVideoFiles()) {
-      List<MediaFile> mfs = new ArrayList<>(movie.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER, MediaFileType.FANART,
-          MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO, MediaFileType.DISC,
-          MediaFileType.KEYART, MediaFileType.SUBTITLE));
+      List<MediaFile> mfs = new ArrayList<>(movie.getMediaFilesExceptType(MediaFileType.VIDEO, MediaFileType.NFO, MediaFileType.POSTER,
+          MediaFileType.FANART, MediaFileType.BANNER, MediaFileType.CLEARART, MediaFileType.THUMB, MediaFileType.LOGO, MediaFileType.CLEARLOGO,
+          MediaFileType.DISC, MediaFileType.KEYART, MediaFileType.SUBTITLE));
       mfs.removeAll(Collections.singleton(null)); // remove all NULL ones!
       for (MediaFile other : mfs) {
         LOGGER.trace("Rename 1:1 {} - {}", other.getType(), other.getFileAsPath());
@@ -678,15 +695,13 @@ public class MovieRenamer {
         // cleanup files which are not needed
         if (!needed.contains(cl)) {
           // For WebDAV, use string comparison instead of Path.equals()
-          boolean isDataSourcePath = isWebDav ?
-              cl.getFileAsPath().toString().equals(movie.getDataSource()) :
-              cl.getFileAsPath().equals(Paths.get(movie.getDataSource()));
-          boolean isMoviePath = isWebDav ?
-              cl.getFileAsPath().toString().equals(moviePath) :
-              cl.getFileAsPath().equals(movie.getPathNIO());
-          boolean isOldPath = isWebDav ?
-              cl.getFileAsPath().toString().equals(oldPathname) :
-              cl.getFileAsPath().equals(Paths.get(oldPathname));
+          boolean isDataSourcePath = isWebDav
+              ? WebDavDataSourceHelper.normalizeWebDavPath(cl.getFileAsPath().toString()).equals(movie.getDataSource())
+              : cl.getFileAsPath().equals(Paths.get(movie.getDataSource()));
+          boolean isMoviePath = isWebDav ? WebDavDataSourceHelper.normalizeWebDavPath(cl.getFileAsPath().toString()).equals(moviePath)
+              : cl.getFileAsPath().equals(movie.getPathNIO());
+          boolean isOldPath = isWebDav ? WebDavDataSourceHelper.normalizeWebDavPath(cl.getFileAsPath().toString()).equals(oldPathname)
+              : cl.getFileAsPath().equals(Paths.get(oldPathname));
 
           if (isDataSourcePath || isMoviePath || isOldPath) {
             LOGGER.warn("Wohoo! We tried to remove complete datasource / movie folder. Nooo way...! '{}' / '{}'", cl.getType(), cl.getFileAsPath());
@@ -739,8 +754,8 @@ public class MovieRenamer {
 
     List<MediaFile> needed = new ArrayList<>();
 
-    Path oldMoviePath = Paths.get(movie.getRenameHistory().getOldPath());
-    Path newMoviePath = Paths.get(movie.getRenameHistory().getNewPath());
+    Path oldMoviePath = WebDavDataSourceHelper.getWebDavPath(movie.getRenameHistory().getOldPath());
+    Path newMoviePath = WebDavDataSourceHelper.getWebDavPath(movie.getRenameHistory().getNewPath());
 
     // try the VIDEO file(s) first
     for (MediaFile vid : movie.getMediaFiles(MediaFileType.VIDEO)) {
@@ -814,8 +829,6 @@ public class MovieRenamer {
     needed.clear();
     needed.addAll(newMFs);
 
-    movie.removeAllMediaFiles();
-
     // ######################################################################
     // ## build up image cache
     // ######################################################################
@@ -873,7 +886,7 @@ public class MovieRenamer {
       String relativeFilename;
       if (isWebDav) {
         // For WebDAV, use string manipulation to get relative path
-        String filePathStr = mediaFile.getFileAsPath().toString();
+        String filePathStr = WebDavDataSourceHelper.normalizeWebDavPath(mediaFile.getFileAsPath().toString());
         if (filePathStr.startsWith(moviePathStr)) {
           relativeFilename = filePathStr.substring(moviePathStr.length());
           if (relativeFilename.startsWith("/")) {
@@ -1078,80 +1091,82 @@ public class MovieRenamer {
     else {
       // keep same dir
       if (isWebDav) {
-        // For WebDAV, extract relative path using string manipulation
-        String moviePath = movie.getPath();
-        String datasource = movie.getDataSource();
-        
-        // Normalize both paths for comparison - handle URL encoding differences
-        String normalizedMoviePath = moviePath;
-        String normalizedDatasource = datasource;
-        
-        // Normalize protocol to double slashes
-        normalizedMoviePath = normalizedMoviePath.replaceFirst("webdav:/", "webdav://");
-        normalizedDatasource = normalizedDatasource.replaceFirst("webdav:/", "webdav://");
-        
-        // Ensure both paths end with slash for consistent comparison
-        if (!normalizedMoviePath.endsWith("/")) {
-          normalizedMoviePath = normalizedMoviePath + "/";
-        }
-        if (!normalizedDatasource.endsWith("/")) {
-          normalizedDatasource = normalizedDatasource + "/";
-        }
-        
-        // Try direct comparison first
-        if (moviePath.startsWith(datasource)) {
-          newPathname = moviePath.substring(datasource.length());
-        }
-        // If direct comparison fails, try with normalized paths
-        else if (normalizedMoviePath.startsWith(normalizedDatasource)) {
-          newPathname = normalizedMoviePath.substring(normalizedDatasource.length());
-        }
-        // If still no match, try to decode datasource and compare again
-        else {
-          try {
-            String decodedDatasource = java.net.URLDecoder.decode(datasource, "UTF-8");
-            if (moviePath.startsWith(decodedDatasource)) {
-              newPathname = moviePath.substring(decodedDatasource.length());
-            }
-          }
-          catch (Exception e) {
-            LOGGER.debug("Error decoding datasource path: {}", e.getMessage());
+        // Use WebDavPath for clean path extraction
+        try {
+          LOGGER.debug("Rename Debug - movie.getPath(): {}", movie.getPath());
+          LOGGER.debug("Rename Debug - movie.getDataSource(): {}", movie.getDataSource());
+
+          WebDavPath moviePath = new WebDavPath(movie.getPath());
+          WebDavPath datasourcePath = new WebDavPath(movie.getDataSource());
+
+          LOGGER.debug("Rename Debug - moviePath.remotePath: {}", moviePath.getRemotePath());
+          LOGGER.debug("Rename Debug - datasourcePath.remotePath: {}", datasourcePath.getRemotePath());
+
+          newPathname = moviePath.getRelativePath(datasourcePath);
+
+          LOGGER.debug("Rename Debug - calculated newPathname: {}", newPathname);
+
+          if (newPathname == null) {
+            // If relative path calculation failed, use the folder name
+            newPathname = moviePath.getFileName();
+            LOGGER.debug("Could not calculate relative path, using folder name: {}", newPathname);
           }
         }
-        
-        // Clean up the newPathname
-        if (newPathname != null) {
-          if (newPathname.startsWith("/")) {
-            newPathname = newPathname.substring(1);
-          }
-          // Remove trailing slash if present
-          if (newPathname.endsWith("/")) {
-            newPathname = newPathname.substring(0, newPathname.length() - 1);
-          }
+        catch (Exception e) {
+          LOGGER.warn("Error processing WebDAV paths: {}", e.getMessage());
+          // Fallback to empty pathname
+          newPathname = "";
         }
       }
       else {
-        // Path relativize(Path other)
-        newPathname = Utils.relPath(Paths.get(movie.getDataSource()), movie.getPathNIO());
+        // we are moving; searching for the relativity of the old name
+        newPathname = Utils.relPath(WebDavDataSourceHelper.getWebDavPath(movie.getDataSource()), movie.getPathNIO());
       }
     }
 
     Path newMovieDir;
+    WebDavPath newMovieDirWebDavPath = null; // Save the WebDavPath object for later use
+
     if (isWebDav) {
-      // For WebDAV, construct path using string concatenation
-      String datasource = movie.getDataSource();
-      String newPath = datasource.endsWith("/") ? datasource + newPathname : datasource + "/" + newPathname;
-      newMovieDir = Paths.get(newPath);
+      // Use WebDavPath for clean path construction
+      try {
+        WebDavPath datasourcePath = new WebDavPath(movie.getDataSource());
+        String safeNewPathname = newPathname != null ? newPathname : "";
+
+        LOGGER.debug("Rename Debug - safeNewPathname before check: '{}'", safeNewPathname);
+
+        if (safeNewPathname.isEmpty()) {
+          // If newPathname is empty, use the current movie folder name
+          WebDavPath moviePath = new WebDavPath(movie.getPath());
+          safeNewPathname = moviePath.getFileName();
+          LOGGER.debug("Rename Debug - safeNewPathname was empty, now: '{}'", safeNewPathname);
+        }
+
+        newMovieDirWebDavPath = datasourcePath.resolve(safeNewPathname);
+        newMovieDir = newMovieDirWebDavPath.toPath();
+
+        LOGGER.debug("Rename Debug - newMovieDirWebDavPath: {}", newMovieDirWebDavPath.toString());
+        LOGGER.debug("Rename Debug - newMovieDir: {}", newMovieDir);
+      }
+      catch (Exception e) {
+        LOGGER.warn("Error constructing WebDAV path: {}", e.getMessage());
+        // Fallback to current path
+        newMovieDir = movie.getPathNIO();
+      }
     }
     else {
       newMovieDir = movie.getPathNIO();
       try {
-        newMovieDir = Paths.get(movie.getDataSource(), newPathname);
+        String separator = movie.getDataSource().endsWith("/") ? "" : "/";
+        newMovieDir = WebDavDataSourceHelper.getWebDavPath(movie.getDataSource() + separator + newPathname);
       }
       catch (Exception e) {
         LOGGER.warn("New movie folder name '{}' is not allowed - '{}'", newPathname, e.getMessage());
       }
     }
+
+    // For WebDAV, use the string representation from WebDavPath to avoid Path.toString() format issues
+    final String newMovieDirStr = (isWebDav && newMovieDirWebDavPath != null) ? newMovieDirWebDavPath.toString() : newMovieDir.toString();
 
     String newFilename = newVideoFileName;
     if (StringUtils.isBlank(newFilename)) {
@@ -1172,76 +1187,75 @@ public class MovieRenamer {
 
     // extra clone, just for easy adding the "default" ones ;)
     MediaFile defaultMF = new MediaFile(mf);
-    if (isWebDav) {
-      // For WebDAV, manually replace path with proper URL normalization
-      String oldPath = movie.getPath();
-      String newPath = newMovieDir.toString();
-      String filePath = mf.getFileAsPath().toString();
-      
-      // Normalize all paths for consistent comparison
-      String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
-      String normalizedNewPath = newPath.replaceFirst("webdav:/", "webdav://");
-      String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
-      
-      // Ensure old path ends with slash
-      if (!normalizedOldPath.endsWith("/")) {
-        normalizedOldPath = normalizedOldPath + "/";
+
+    // Check if this specific file is a WebDAV file, not just if the movie is WebDAV
+    // (e.g., poster images might be local cache files even if the movie is on WebDAV)
+    String filePathStr = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
+    boolean isFileWebDav = WebDavDataSourceHelper.isWebDavPath(filePathStr);
+
+    if (isWebDav && isFileWebDav) {
+      // Both movie and file are WebDAV - use WebDavPath for clean path replacement
+      try {
+        WebDavPath oldPath = new WebDavPath(movie.getPath());
+        WebDavPath filePath = new WebDavPath(filePathStr);
+
+        // Use the saved WebDavPath object instead of recreating from newMovieDir.toString()
+        // This avoids path format issues with Paths.get().toString()
+        WebDavPath newMovieDirPath = newMovieDirWebDavPath != null ? newMovieDirWebDavPath : new WebDavPath(movie.getDataSource());
+
+        // Calculate relative path from old movie dir to file
+        String relativePart = filePath.getRelativePath(oldPath);
+
+        if (relativePart != null) {
+          // Resolve relative path against new movie dir
+          WebDavPath newFilePath = newMovieDirPath.resolve(relativePart);
+          defaultMF.setFile(newFilePath.toPath());
+        }
+        else {
+          LOGGER.warn("Could not calculate relative path for WebDAV file: {}", filePathStr);
+        }
       }
-      
-      // Try with normalized paths for comparison
-      if (normalizedFilePath.startsWith(normalizedOldPath)) {
-        String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
-        String newFilePath = normalizedNewPath.endsWith("/") ? normalizedNewPath + relativePart : normalizedNewPath + "/" + relativePart;
-        defaultMF.setFile(Paths.get(newFilePath));
-      }
-      // Fallback to original comparison if normalization fails
-      else if (filePath.startsWith(oldPath)) {
-        String relativePart = filePath.substring(oldPath.length());
-        String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
-        defaultMF.setFile(Paths.get(newFilePath));
+      catch (Exception e) {
+        LOGGER.warn("Error replacing WebDAV file path: {}", e.getMessage());
       }
     }
     else {
+      // File is local (or movie is local) - use standard path replacement
       defaultMF.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
     }
 
     Path relativePathOfMediafile;
-    if (isWebDav) {
-      // For WebDAV, use string manipulation with proper URL normalization to get relative path
-      String moviePath = movie.getPath();
-      String filePath = mf.getFileAsPath().toString();
-      
-      // Normalize both paths for comparison
-      String normalizedMoviePath = moviePath.replaceFirst("webdav:/", "webdav://");
-      String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
-      
-      // Ensure movie path ends with slash for consistent comparison
-      if (!normalizedMoviePath.endsWith("/")) {
-        normalizedMoviePath = normalizedMoviePath + "/";
-      }
-      
-      // Try with normalized paths first
-      if (normalizedFilePath.startsWith(normalizedMoviePath)) {
-        String relativePath = normalizedFilePath.substring(normalizedMoviePath.length());
-        if (relativePath.startsWith("/")) {
-          relativePath = relativePath.substring(1);
+    if (isWebDav && isFileWebDav) {
+      // Both movie and file are WebDAV - use WebDavPath for clean relative path calculation
+      try {
+        WebDavPath moviePath = new WebDavPath(movie.getPath());
+        WebDavPath filePath = new WebDavPath(filePathStr);
+
+        String relativePath = filePath.getRelativePath(moviePath);
+        if (relativePath != null) {
+          relativePathOfMediafile = Paths.get(relativePath);
         }
-        relativePathOfMediafile = Paths.get(relativePath);
-      }
-      // Fallback to original paths
-      else if (filePath.startsWith(moviePath)) {
-        String relativePath = filePath.substring(moviePath.length());
-        if (relativePath.startsWith("/")) {
-          relativePath = relativePath.substring(1);
+        else {
+          relativePathOfMediafile = mf.getFileAsPath();
         }
-        relativePathOfMediafile = Paths.get(relativePath);
       }
-      else {
+      catch (Exception e) {
+        LOGGER.warn("Error calculating relative path for WebDAV file: {}", e.getMessage());
         relativePathOfMediafile = mf.getFileAsPath();
       }
     }
     else {
-      relativePathOfMediafile = movie.getPathNIO().relativize(mf.getFileAsPath());
+      // file is local
+      if (isWebDav) {
+        // movie is WebDAV but file is local (e.g. artwork in cache)
+        // we cannot relativize a local absolute path against a WebDAV path
+        // just use the filename, assuming it will be put into the movie folder
+        relativePathOfMediafile = Paths.get(mf.getFilename());
+      }
+      else {
+        // File is local and Movie is local - use standard relative path calculation
+        relativePathOfMediafile = movie.getPathNIO().relativize(mf.getFileAsPath());
+      }
     }
 
     if (!isFilePatternValid() && !movie.isDisc()) {
@@ -1256,34 +1270,34 @@ public class MovieRenamer {
         if (movie.isDisc() || mf.isDiscFile()) {
           // just replace new path and return file (do not change names!)
           if (isWebDav) {
-              // For WebDAV, manually replace path with proper URL normalization
-              String oldPath = movie.getPath();
-              String newPath = newMovieDir.toString();
-              String filePath = mf.getFileAsPath().toString();
-              
-              // Normalize all paths for consistent comparison
-              String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
-              String normalizedNewPath = newPath.replaceFirst("webdav:/", "webdav://");
-              String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
-              
-              // Ensure old path ends with slash
-              if (!normalizedOldPath.endsWith("/")) {
-                normalizedOldPath = normalizedOldPath + "/";
-              }
-              
-              // Try with normalized paths for comparison
-              if (normalizedFilePath.startsWith(normalizedOldPath)) {
-                String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
-                String newFilePath = normalizedNewPath.endsWith("/") ? normalizedNewPath + relativePart : normalizedNewPath + "/" + relativePart;
-                vid.setFile(Paths.get(newFilePath));
-              }
-              // Fallback to original comparison if normalization fails
-              else if (filePath.startsWith(oldPath)) {
-                String relativePart = filePath.substring(oldPath.length());
-                String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
-                vid.setFile(Paths.get(newFilePath));
-              }
+            // For WebDAV, manually replace path with proper URL normalization
+            String oldPath = movie.getPath();
+            String newPath = newMovieDirStr;
+            String filePath = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
+
+            // Normalize all paths for consistent comparison
+            String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
+            String normalizedNewPath = newPath.replaceFirst("webdav:/", "webdav://");
+            String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
+
+            // Ensure old path ends with slash
+            if (!normalizedOldPath.endsWith("/")) {
+              normalizedOldPath = normalizedOldPath + "/";
             }
+
+            // Try with normalized paths for comparison
+            if (normalizedFilePath.startsWith(normalizedOldPath)) {
+              String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
+              String newFilePath = normalizedNewPath.endsWith("/") ? normalizedNewPath + relativePart : normalizedNewPath + "/" + relativePart;
+              vid.setFile(Paths.get(newFilePath));
+            }
+            // Fallback to original comparison if normalization fails
+            else if (filePath.startsWith(oldPath)) {
+              String relativePart = filePath.substring(oldPath.length());
+              String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
+              vid.setFile(Paths.get(newFilePath));
+            }
+          }
           else {
             vid.replacePathForRenamedFolder(movie.getPathNIO(), newMovieDir);
           }
@@ -1291,34 +1305,34 @@ public class MovieRenamer {
         else {
           newFilename += getStackingString(mf);
           newFilename += "." + mf.getExtension();
-          
+
           // Check if the file is in a subdirectory relative to the movie folder
           String oldPath = movie.getPath();
-          String filePath = mf.getFileAsPath().toString();
-          
+          String filePath = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
+
           // Normalize URLs for comparison - handle single vs double slashes in protocol
           String normalizedOldPath = oldPath.replaceFirst("webdav:/", "webdav://");
           String normalizedFilePath = filePath.replaceFirst("webdav:/", "webdav://");
-          
+
           // Ensure old path ends with slash for correct subdirectory matching
           if (!normalizedOldPath.endsWith("/")) {
             normalizedOldPath = normalizedOldPath + "/";
           }
-          
+
           if (normalizedFilePath.startsWith(normalizedOldPath)) {
             // Extract the subdirectory path from the original file path
             String relativePart = normalizedFilePath.substring(normalizedOldPath.length());
             if (relativePart.startsWith("/")) {
               relativePart = relativePart.substring(1);
             }
-            
+
             // Check if there's a subdirectory (contains path separator)
             int lastSlashIndex = relativePart.lastIndexOf('/');
             if (lastSlashIndex >= 0) {
               // File is in a subdirectory, preserve the subdirectory structure
               String subdirectory = relativePart.substring(0, lastSlashIndex + 1);
               if (isWebDav) {
-                String newPath = newMovieDir.toString();
+                String newPath = newMovieDirStr;
                 String newFilePath = newPath.endsWith("/") ? newPath + subdirectory + newFilename : newPath + "/" + subdirectory + newFilename;
                 vid.setFile(Paths.get(newFilePath));
               }
@@ -1331,7 +1345,7 @@ public class MovieRenamer {
               // File is in the root movie directory, use the standard approach
               if (isWebDav) {
                 // For WebDAV, use string concatenation
-                String newPath = newMovieDir.toString();
+                String newPath = newMovieDirStr;
                 String newFilePath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
                 vid.setFile(Paths.get(newFilePath));
               }
@@ -1344,26 +1358,26 @@ public class MovieRenamer {
             // Fallback: try to extract filename from original path and append to new directory
             // This handles cases where paths might not match exactly but we still want to preserve subdirectories
             String originalFilename = mf.getFilename();
-            String fullFilePath = mf.getFileAsPath().toString();
-            
+            String fullFilePath = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
+
             // Find the position of the original filename in the full path
             int filenameIndex = fullFilePath.lastIndexOf(originalFilename);
             if (filenameIndex > 0) {
               // Extract the path part before the filename (subdirectory structure)
               String subdirectoryPath = fullFilePath.substring(0, filenameIndex);
-              
+
               // Try to find common path part with movie path
               String moviePath = movie.getPath();
-              
+
               // Normalize both paths for comparison
               String normalizedMoviePath = isWebDav ? moviePath.replaceFirst("webdav:/", "webdav://") : moviePath;
               String normalizedSubdirectoryPath = isWebDav ? subdirectoryPath.replaceFirst("webdav:/", "webdav://") : subdirectoryPath;
-              
+
               if (normalizedSubdirectoryPath.startsWith(normalizedMoviePath)) {
                 // Extract just the subdirectory part relative to the movie directory
                 String relativeSubdir = normalizedSubdirectoryPath.substring(normalizedMoviePath.length());
                 if (isWebDav) {
-                  String newPath = newMovieDir.toString();
+                  String newPath = newMovieDirStr;
                   String newFilePath = newPath.endsWith("/") ? newPath + relativeSubdir + newFilename : newPath + "/" + relativeSubdir + newFilename;
                   vid.setFile(Paths.get(newFilePath));
                 }
@@ -1375,7 +1389,7 @@ public class MovieRenamer {
               else {
                 // If all else fails, at least keep the original filename
                 if (isWebDav) {
-                  String newPath = newMovieDir.toString();
+                  String newPath = newMovieDirStr;
                   String newFilePath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
                   vid.setFile(Paths.get(newFilePath));
                 }
@@ -1387,7 +1401,7 @@ public class MovieRenamer {
             else {
               // Fallback if we can't extract subdirectory
               if (isWebDav) {
-                String newPath = newMovieDir.toString();
+                String newPath = newMovieDirStr;
                 String newFilePath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
                 vid.setFile(Paths.get(newFilePath));
               }
@@ -1463,7 +1477,7 @@ public class MovieRenamer {
 
               if (isWebDav) {
                 // For WebDAV, use string concatenation
-                String newPath = newMovieDir.toString();
+                String newPath = newMovieDirStr;
                 String relPath = rel.toString();
                 String outputPath = newPath.endsWith("/") ? newPath + relPath : newPath + "/" + relPath;
                 outputFolder = Paths.get(outputPath);
@@ -1524,7 +1538,7 @@ public class MovieRenamer {
           String extraFilename = newFilename + extraTitle + "." + mf.getExtension();
           if (isWebDav) {
             // For WebDAV, use string concatenation
-            String newPath = newMovieDir.toString();
+            String newPath = newMovieDirStr;
             String extraPath = newPath.endsWith("/") ? newPath + extraFilename : newPath + "/" + extraFilename;
             extra.setFile(Paths.get(extraPath));
           }
@@ -1540,7 +1554,7 @@ public class MovieRenamer {
         newFilename += "-sample." + mf.getExtension();
         if (isWebDav) {
           // For WebDAV, use string concatenation
-          String newPath = newMovieDir.toString();
+          String newPath = newMovieDirStr;
           String samplePath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
           sample.setFile(Paths.get(samplePath));
         }
@@ -1557,8 +1571,8 @@ public class MovieRenamer {
           if (isWebDav) {
             // For WebDAV, manually replace path
             String oldPath = movie.getPath();
-            String newPath = newMovieDir.toString();
-            String filePath = mf.getFileAsPath().toString();
+            String newPath = newMovieDirStr;
+            String filePath = WebDavDataSourceHelper.normalizeWebDavPath(mf.getFileAsPath().toString());
             if (filePath.startsWith(oldPath)) {
               String relativePart = filePath.substring(oldPath.length());
               String newFilePath = newPath.endsWith("/") ? newPath + relativePart : newPath + "/" + relativePart;
@@ -1575,7 +1589,7 @@ public class MovieRenamer {
           newFilename += "-mediainfo." + mf.getExtension();
           if (isWebDav) {
             // For WebDAV, use string concatenation
-            String newPath = newMovieDir.toString();
+            String newPath = newMovieDirStr;
             String miPath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
             mi.setFile(Paths.get(miPath));
           }
@@ -1593,7 +1607,7 @@ public class MovieRenamer {
           // keep 1:1
           if (isWebDav) {
             // For WebDAV, use string concatenation
-            String newPath = newMovieDir.toString();
+            String newPath = newMovieDirStr;
             String filename = doubleExt.getFilename();
             String filePath = newPath.endsWith("/") ? newPath + filename : newPath + "/" + filename;
             doubleExt.setFile(Paths.get(filePath));
@@ -1609,7 +1623,7 @@ public class MovieRenamer {
           newFilename += "." + videoExt + "." + FilenameUtils.getExtension(mf.getFilename());
           if (isWebDav) {
             // For WebDAV, use string concatenation
-            String newPath = newMovieDir.toString();
+            String newPath = newMovieDirStr;
             String filePath = newPath.endsWith("/") ? newPath + newFilename : newPath + "/" + newFilename;
             doubleExt.setFile(Paths.get(filePath));
           }
@@ -1658,7 +1672,7 @@ public class MovieRenamer {
           String subFilename = subtitleFilename + "." + mf.getExtension();
           if (isWebDav) {
             // For WebDAV, use string concatenation
-            String newPath = newMovieDir.toString();
+            String newPath = newMovieDirStr;
             String subPath = newPath.endsWith("/") ? newPath + subFilename : newPath + "/" + subFilename;
             subtitle.setFile(Paths.get(subPath));
           }
@@ -1695,7 +1709,7 @@ public class MovieRenamer {
             MediaFile nfo = new MediaFile(mf);
             if (isWebDav) {
               // For WebDAV, use string concatenation
-              String newPath = newMovieDir.toString();
+              String newPath = newMovieDirStr;
               String nfoPath = newPath.endsWith("/") ? newPath + newNfoName : newPath + "/" + newNfoName;
               nfo.setFile(Paths.get(nfoPath));
             }
@@ -2461,8 +2475,10 @@ public class MovieRenamer {
   /**
    * Get the destination folder for movie artwork during rename based on settings
    *
-   * @param movie the movie entity
-   * @param originalMovieDir the original movie directory (for non-artwork files)
+   * @param movie
+   *          the movie entity
+   * @param originalMovieDir
+   *          the original movie directory (for non-artwork files)
    * @return the destination folder path for artwork
    */
   private static Path getDestinationFolderForMovieArtwork(Movie movie, Path originalMovieDir) {
@@ -2485,15 +2501,16 @@ public class MovieRenamer {
       try {
         Files.createDirectories(entityFolder);
         LOGGER.info("Created cache artwork folder for movie rename '{}': {}", movie.getTitle(), entityFolder);
-      } catch (Exception e) {
-        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
-                   entityFolder, e.getMessage());
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'", entityFolder, e.getMessage());
         return originalMovieDir;
       }
 
       LOGGER.info("Using cache artwork folder for movie rename '{}': {}", movie.getTitle(), entityFolder);
       return entityFolder;
-    } else {
+    }
+    else {
       // Default behavior: save to video folder
       LOGGER.debug("Using default video folder for movie rename '{}': {}", movie.getTitle(), originalMovieDir);
       return originalMovieDir;

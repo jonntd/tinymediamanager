@@ -164,22 +164,31 @@ public class MediaEntityImageFetcherTask implements Runnable {
   /**
    * Get the destination folder for artwork based on entity type and settings
    *
-   * @param entity the media entity
+   * @param entity
+   *          the media entity
    * @return the destination folder path
    */
   private Path getDestinationFolder(MediaEntity entity) {
     boolean saveToCache = false;
+    boolean isWebDav = false;
+
+    // Check if the entity's path is a WebDAV path
+    String entityPath = entity.getPathNIO().toString();
+    if (entityPath.contains("webdav:") || entityPath.contains("/webdav:/")) {
+      isWebDav = true;
+      isWebDav = true;
+    }
 
     // Check settings based on entity type
     if (entity instanceof Movie) {
       saveToCache = MovieModuleManager.getInstance().getSettings().isSaveArtworkToCache();
-      LOGGER.debug("Movie '{}' - saveArtworkToCache setting: {}", entity.getTitle(), saveToCache);
-    } else if (entity instanceof TvShow) {
+    }
+    else if (entity instanceof TvShow) {
       saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
-      LOGGER.debug("TV Show '{}' - saveArtworkToCache setting: {}", entity.getTitle(), saveToCache);
     }
 
-    if (saveToCache) {
+    // For WebDAV sources, always use cache directory
+    if (saveToCache || isWebDav) {
       // Create a structured cache folder: cache/artwork/movies or cache/artwork/tvshows
       String entityType = (entity instanceof Movie) ? "movies" : "tvshows";
       Path cacheArtworkDir = ImageCache.getCacheDir().resolve("artwork").resolve(entityType);
@@ -196,17 +205,27 @@ public class MediaEntityImageFetcherTask implements Runnable {
 
       try {
         Files.createDirectories(entityFolder);
-        LOGGER.info("Created cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
-      } catch (Exception e) {
-        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
-                   entityFolder, e.getMessage());
+        LOGGER.info("Using cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}' - '{}'", entityFolder, e.getMessage());
+        // For WebDAV, we MUST use cache, so return a fallback cache path
+        if (isWebDav) {
+          Path fallbackFolder = ImageCache.getCacheDir().resolve("artwork").resolve(entityType).resolve("_fallback");
+          try {
+            Files.createDirectories(fallbackFolder);
+          }
+          catch (Exception ignored) {
+          }
+          return fallbackFolder;
+        }
         return entity.getPathNIO();
       }
 
-      LOGGER.info("Using cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
       return entityFolder;
-    } else {
-      // Default behavior: save to video folder
+    }
+    else {
+      // Default behavior: save to video folder (only for local files)
       LOGGER.debug("Using default video folder for '{}': {}", entity.getTitle(), entity.getPathNIO());
       return entity.getPathNIO();
     }

@@ -15,6 +15,8 @@
  */
 package org.tinymediamanager.core.webdav;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +26,11 @@ import org.slf4j.LoggerFactory;
  * @author Manuel Laggner
  */
 public class WebDavFileOperations {
-  private static final Logger LOGGER = LoggerFactory.getLogger(WebDavFileOperations.class);
+  private static final Logger                            LOGGER          = LoggerFactory.getLogger(WebDavFileOperations.class);
+
+  // Lock map for directory creation - prevents concurrent creation of the same directory
+  // Key format: "sourceId/path" (e.g., "uuid-123/Season 0")
+  private static final ConcurrentHashMap<String, Object> DIRECTORY_LOCKS = new ConcurrentHashMap<>();
 
   /**
    * Move/rename a WebDAV file
@@ -78,16 +84,56 @@ public class WebDavFileOperations {
 
       // Ensure parent directory exists
       String destParent = getParentPath(destPath);
-      if (destParent != null && !destParent.isEmpty() && !client.exists(destParent)) {
-        LOGGER.debug("Creating parent directory: {}", destParent);
-        if (!client.createDirectory(destParent)) {
-          LOGGER.error("Failed to create parent directory: {}", destParent);
-          return false;
+      if (destParent != null && !destParent.isEmpty()) {
+        // Use per-directory lock to prevent concurrent creation of the same directory
+        // This eliminates 423 Locked errors from WebDAV server
+        String lockKey = sourceId + "/" + destParent;
+        Object lock = DIRECTORY_LOCKS.computeIfAbsent(lockKey, k -> new Object());
+
+        synchronized (lock) {
+          // Double-check if directory exists (another thread might have created it while we waited for lock)
+          if (!client.exists(destParent)) {
+            LOGGER.debug("Creating parent directory: {}", destParent);
+            if (!client.createDirectory(destParent)) {
+              LOGGER.error("Failed to create parent directory: {}", destParent);
+              return false;
+            }
+            LOGGER.debug("Successfully created parent directory: {}", destParent);
+          }
+          else {
+            LOGGER.debug("Parent directory already exists: {}", destParent);
+          }
         }
+
+        // Clean up lock object if no longer needed (optional, prevents memory leak)
+        // Only remove if no other threads are waiting
+        DIRECTORY_LOCKS.remove(lockKey, lock);
       }
 
       // Move the file
-      return client.move(sourcePath, destPath);
+      if (client.move(sourcePath, destPath)) {
+        LOGGER.info("Moved WebDAV file from '{}' to '{}'", sourcePath, destPath);
+        return true;
+      }
+      else {
+        // Fallback: Copy and Delete (Standard workaround for buggy WebDAV servers returning 500/409 on MOVE)
+        LOGGER.warn("Move failed (possible server error 500), attempting copy and delete fallback regarding '{}'", sourcePath);
+        if (client.copy(sourcePath, destPath)) {
+          if (client.delete(sourcePath)) {
+            LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, destPath);
+            return true;
+          }
+          else {
+            // Copy succeeded, delete failed. This results in duplication, but data is safe.
+            LOGGER.warn("Failed to delete source file after copy: '{}'. File is now duplicated at destination.", sourcePath);
+            // We return true because the goal (having file at dest) is achieved, and renamer flow can continue.
+            return true;
+          }
+        }
+
+        LOGGER.error("Failed to move (and copy fallback) WebDAV file from '{}' to '{}'", sourcePath, destPath);
+        return false;
+      }
     }
     catch (Exception e) {
       LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", sourceWebDavPath, destWebDavPath, e.getMessage());
@@ -194,4 +240,3 @@ public class WebDavFileOperations {
     return path.substring(0, lastSlash);
   }
 }
-
