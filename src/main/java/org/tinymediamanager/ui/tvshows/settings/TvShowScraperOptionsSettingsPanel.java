@@ -26,6 +26,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -67,6 +69,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxRatingRogerEbert;
   private JCheckBox                 chckbxRatingTraktTv;
   private JCheckBox                 chckbxRatingLetterboxd;
+  private JSpinner                  spAutomaticRetryCount;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -153,6 +156,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
 
         chckbxCapitalizeWords = new JCheckBox(TmmResourceBundle.getString("Settings.scraper.capitalizeWords"));
         panelOptions.add(chckbxCapitalizeWords, "cell 1 8");
+
       }
     }
     {
@@ -171,6 +175,22 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
       chckbxDoNotOverwrite = new JCheckBox(TmmResourceBundle.getString("message.scrape.donotoverwrite"));
       chckbxDoNotOverwrite.setToolTipText(TmmResourceBundle.getString("message.scrape.donotoverwrite.desc"));
       panelDefaults.add(chckbxDoNotOverwrite, "cell 1 1 2 1");
+    }
+    {
+      JPanel panelAutomaticScrape = new JPanel(new MigLayout("hidemode 1, insets 0", "[20lp!][][300lp][grow]", ""));
+
+      JLabel lblAutomaticScrapeT = new TmmLabel(TmmResourceBundle.getString("Settings.automaticscraper"), H3);
+      CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelAutomaticScrape, lblAutomaticScrapeT, true);
+      collapsiblePanel.addExtraTitleComponent(new DocsButton("/tvshows/settings#automatic-scraper"));
+      add(collapsiblePanel, "cell 0 4,growx,wmin 0");
+      {
+        JLabel lblRetryCount = new JLabel("Automatic scraper retry count");
+        panelAutomaticScrape.add(lblRetryCount, "cell 1 0");
+
+        spAutomaticRetryCount = new JSpinner();
+        spAutomaticRetryCount.setModel(new SpinnerNumberModel(2, 0, 10, 1));
+        panelAutomaticScrape.add(spAutomaticRetryCount, "cell 2 0");
+      }
     }
   }
 
@@ -272,5 +292,11 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_11 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_1,
         chckbxRatingLetterboxd, jCheckBoxBeanProperty_2);
     autoBinding_11.bind();
+    //
+    Property settingsBeanProperty_Retry = BeanProperty.create("automaticScraperRetryCount");
+    Property jSpinnerBeanProperty_Retry = BeanProperty.create("value");
+    AutoBinding autoBinding_Retry = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_Retry, spAutomaticRetryCount,
+        jSpinnerBeanProperty_Retry);
+    autoBinding_Retry.bind();
   }
 }

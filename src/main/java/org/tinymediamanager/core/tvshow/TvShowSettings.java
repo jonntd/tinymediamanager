@@ -202,78 +202,89 @@ public final class TvShowSettings extends AbstractSettings {
   boolean                                        doNotOverwriteExistingData             = false;
   boolean                                        fetchAllRatings                        = false;
   final List<RatingProvider.RatingSource>        fetchRatingSources                     = new ArrayList<>();
+  int                                            automaticScraperRetryCount             = 2;
+
+  public int getAutomaticScraperRetryCount() {
+    return automaticScraperRetryCount;
+  }
+
+  public void setAutomaticScraperRetryCount(int newValue) {
+    int oldValue = this.automaticScraperRetryCount;
+    this.automaticScraperRetryCount = newValue;
+    firePropertyChange("automaticScraperRetryCount", oldValue, newValue);
+  }
 
   // artwork scraper
-  final List<MediaLanguages>                     imageScraperLanguages                  = ObservableCollections.observableList(new ArrayList<>());
+  final List<MediaLanguages>                     imageScraperLanguages               = ObservableCollections.observableList(new ArrayList<>());
 
-  boolean                                        imageScraperOtherResolutions           = true;
-  boolean                                        imageScraperFallback                   = true;
-  boolean                                        imageScraperPreferFanartWoText         = true;
-  MediaArtwork.PosterSizes                       imagePosterSize                        = MediaArtwork.PosterSizes.LARGE;
-  MediaArtwork.FanartSizes                       imageFanartSize                        = MediaArtwork.FanartSizes.LARGE;
-  MediaArtwork.ThumbSizes                        imageThumbSize                         = MediaArtwork.ThumbSizes.MEDIUM;
-  boolean                                        scrapeBestImage                        = true;
-  boolean                                        saveArtworkToCache                     = false;
-  boolean                                        writeActorImages                       = false;
-  boolean                                        imageExtraFanart                       = false;
-  int                                            imageExtraFanartCount                  = 5;
-  boolean                                        imageEpisodeScrapeAllSources           = false;
+  boolean                                        imageScraperOtherResolutions        = true;
+  boolean                                        imageScraperFallback                = true;
+  boolean                                        imageScraperPreferFanartWoText      = true;
+  MediaArtwork.PosterSizes                       imagePosterSize                     = MediaArtwork.PosterSizes.LARGE;
+  MediaArtwork.FanartSizes                       imageFanartSize                     = MediaArtwork.FanartSizes.LARGE;
+  MediaArtwork.ThumbSizes                        imageThumbSize                      = MediaArtwork.ThumbSizes.MEDIUM;
+  boolean                                        scrapeBestImage                     = true;
+  boolean                                        saveArtworkToCache                  = false;
+  boolean                                        writeActorImages                    = false;
+  boolean                                        imageExtraFanart                    = false;
+  int                                            imageExtraFanartCount               = 5;
+  boolean                                        imageEpisodeScrapeAllSources        = false;
 
   // trailer scraper
-  boolean                                        useYtDlp                               = true;
-  boolean                                        useTrailerPreference                   = true;
-  boolean                                        automaticTrailerDownload               = false;
-  TrailerQuality                                 trailerQuality                         = TrailerQuality.HD_720;
+  boolean                                        useYtDlp                            = true;
+  boolean                                        useTrailerPreference                = true;
+  boolean                                        automaticTrailerDownload            = false;
+  TrailerQuality                                 trailerQuality                      = TrailerQuality.HD_720;
 
   // subtitle scraper
-  MediaLanguages                                 subtitleScraperLanguage                = MediaLanguages.en;
-  LanguageStyle                                  subtitleLanguageStyle                  = LanguageStyle.ISO3T;
-  boolean                                        subtitleForceBestMatch                 = false;
+  MediaLanguages                                 subtitleScraperLanguage             = MediaLanguages.en;
+  LanguageStyle                                  subtitleLanguageStyle               = LanguageStyle.ISO3T;
+  boolean                                        subtitleForceBestMatch              = false;
 
   // misc
-  boolean                                        runtimeFromMediaInfo                   = true;
-  boolean                                        buildImageCacheOnImport                = true;
-  boolean                                        syncTrakt                              = false;
-  boolean                                        syncTraktCollection                    = true;
-  boolean                                        syncTraktWatched                       = true;
-  boolean                                        syncTraktRating                        = true;
-  boolean                                        extractArtworkFromVsmeta               = false;
-  boolean                                        useMediainfoMetadata                   = false;
+  boolean                                        runtimeFromMediaInfo                = true;
+  boolean                                        buildImageCacheOnImport             = true;
+  boolean                                        syncTrakt                           = false;
+  boolean                                        syncTraktCollection                 = true;
+  boolean                                        syncTraktWatched                    = true;
+  boolean                                        syncTraktRating                     = true;
+  boolean                                        extractArtworkFromVsmeta            = false;
+  boolean                                        useMediainfoMetadata                = false;
 
   // ui
-  final List<MediaFileType>                      showTvShowArtworkTypes                 = ObservableCollections.observableList(new ArrayList<>());
-  final List<MediaFileType>                      showSeasonArtworkTypes                 = ObservableCollections.observableList(new ArrayList<>());
-  final List<MediaFileType>                      showEpisodeArtworkTypes                = ObservableCollections.observableList(new ArrayList<>());
-  boolean                                        displayMissingEpisodes                 = false;
-  boolean                                        displayMissingSpecials                 = false;
-  boolean                                        displayMissingNotAired                 = false;
-  boolean                                        capitalWordsinTitles                   = false;
-  boolean                                        showTvShowTableTooltips                = true;
-  boolean                                        seasonArtworkFallback                  = false;
-  boolean                                        storeUiFilters                         = false;
-  boolean                                        resetNewFlagOnUds                      = true;
+  final List<MediaFileType>                      showTvShowArtworkTypes              = ObservableCollections.observableList(new ArrayList<>());
+  final List<MediaFileType>                      showSeasonArtworkTypes              = ObservableCollections.observableList(new ArrayList<>());
+  final List<MediaFileType>                      showEpisodeArtworkTypes             = ObservableCollections.observableList(new ArrayList<>());
+  boolean                                        displayMissingEpisodes              = false;
+  boolean                                        displayMissingSpecials              = false;
+  boolean                                        displayMissingNotAired              = false;
+  boolean                                        capitalWordsinTitles                = false;
+  boolean                                        showTvShowTableTooltips             = true;
+  boolean                                        seasonArtworkFallback               = false;
+  boolean                                        storeUiFilters                      = false;
+  boolean                                        resetNewFlagOnUds                   = true;
 
-  final List<UIFilters>                          uiFilters                              = new ArrayList<>();
-  final List<UniversalFilterFields>              universalFilterFields                  = new ArrayList<>();
-  final List<TvShowScraperMetadataConfig>        tvShowCheckMetadata                    = new ArrayList<>();
-  boolean                                        tvShowDisplayAllMissingMetadata        = false;
-  final List<TvShowScraperMetadataConfig>        tvShowCheckArtwork                     = new ArrayList<>();
-  boolean                                        tvShowDisplayAllMissingArtwork         = false;
-  final List<TvShowScraperMetadataConfig>        seasonCheckArtwork                     = new ArrayList<>();
-  boolean                                        seasonDisplayAllMissingArtwork         = false;
-  final List<TvShowEpisodeScraperMetadataConfig> episodeCheckMetadata                   = new ArrayList<>();
-  boolean                                        episodeDisplayAllMissingMetadata       = false;
-  boolean                                        episodeSpecialsCheckMissingMetadata    = false;
-  final List<TvShowEpisodeScraperMetadataConfig> episodeCheckArtwork                    = new ArrayList<>();
-  boolean                                        episodeDisplayAllMissingArtwork        = false;
-  boolean                                        episodeSpecialsCheckMissingArtwork     = false;
+  final List<UIFilters>                          uiFilters                           = new ArrayList<>();
+  final List<UniversalFilterFields>              universalFilterFields               = new ArrayList<>();
+  final List<TvShowScraperMetadataConfig>        tvShowCheckMetadata                 = new ArrayList<>();
+  boolean                                        tvShowDisplayAllMissingMetadata     = false;
+  final List<TvShowScraperMetadataConfig>        tvShowCheckArtwork                  = new ArrayList<>();
+  boolean                                        tvShowDisplayAllMissingArtwork      = false;
+  final List<TvShowScraperMetadataConfig>        seasonCheckArtwork                  = new ArrayList<>();
+  boolean                                        seasonDisplayAllMissingArtwork      = false;
+  final List<TvShowEpisodeScraperMetadataConfig> episodeCheckMetadata                = new ArrayList<>();
+  boolean                                        episodeDisplayAllMissingMetadata    = false;
+  boolean                                        episodeSpecialsCheckMissingMetadata = false;
+  final List<TvShowEpisodeScraperMetadataConfig> episodeCheckArtwork                 = new ArrayList<>();
+  boolean                                        episodeDisplayAllMissingArtwork     = false;
+  boolean                                        episodeSpecialsCheckMissingArtwork  = false;
 
   // Quick Search filter
-  boolean                                        node                                   = true;
-  boolean                                        title                                  = true;
-  boolean                                        originalTitle                          = true;
-  boolean                                        englishTitle                           = true;
-  final List<String>                             ratingSources                          = ObservableCollections.observableList(new ArrayList<>());
+  boolean                                        node                                = true;
+  boolean                                        title                               = true;
+  boolean                                        originalTitle                       = true;
+  boolean                                        englishTitle                        = true;
+  final List<String>                             ratingSources                       = ObservableCollections.observableList(new ArrayList<>());
 
   public TvShowSettings() {
     super();

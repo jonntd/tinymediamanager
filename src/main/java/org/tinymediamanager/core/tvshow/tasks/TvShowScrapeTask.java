@@ -76,6 +76,10 @@ import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
+import java.awt.GraphicsEnvironment;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.swing.SwingUtilities;
+import org.tinymediamanager.ui.tvshows.dialogs.TvShowChooserDialog;
 
 /**
  * The class TvShowScrapeTask. This starts scraping of TV shows
@@ -83,9 +87,10 @@ import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
  * @author Manuel Laggner
  */
 public class TvShowScrapeTask extends TmmThreadPool {
-  private static final Logger LOGGER = LoggerFactory.getLogger(TvShowScrapeTask.class);
+  private static final Logger LOGGER          = LoggerFactory.getLogger(TvShowScrapeTask.class);
 
   final TvShowScrapeParams    tvShowScrapeParams;
+  private final List<TvShow>  smartScrapeList = Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Instantiates a new tv show scrape task.
@@ -168,6 +173,61 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
     waitForCompletionOrCancel();
 
+    if (!smartScrapeList.isEmpty() && !cancel) {
+      int maxRetries = TvShowModuleManager.getInstance().getSettings().getAutomaticScraperRetryCount();
+      LOGGER.info("Checking smart scrape list for retries. List size: {}, Cancelled: {}", smartScrapeList.size(), cancel);
+
+      for (int i = 0; i < maxRetries; i++) {
+        if (smartScrapeList.isEmpty() || cancel) {
+          LOGGER.info("Retry loop aborted. List empty: {}, Cancelled: {}", smartScrapeList.isEmpty(), cancel);
+          break;
+        }
+
+        LOGGER.info("Automatic scrape retry round {}/{} for {} TV shows in smart scrape list", i + 1, maxRetries, smartScrapeList.size());
+
+        // 发送重试通知
+        MessageManager.getInstance()
+            .pushMessage(new Message(MessageLevel.INFO, "自动刮削重试",
+                String.format("正在对 %d 部未识别电视剧进行第 %d/%d 轮自动重试...", smartScrapeList.size(), i + 1, maxRetries)));
+
+        List<TvShow> newSmartScrapeList;
+        synchronized (smartScrapeList) {
+          newSmartScrapeList = new ArrayList<>(smartScrapeList);
+          smartScrapeList.clear();
+        }
+
+        LOGGER.info("Submitting {} TV shows for retry...", newSmartScrapeList.size());
+
+        // Re-initialize thread pool because waitForCompletionOrCancel() shuts it down
+        initThreadPool(3, "scrape-retry-" + (i + 1));
+
+        for (TvShow tvShow : newSmartScrapeList) {
+          submitTask(new Worker(tvShow, aiRecognitionResults));
+        }
+        waitForCompletionOrCancel();
+        LOGGER.info("Retry round {}/{} completed. New smart scrape list size: {}", i + 1, maxRetries, smartScrapeList.size());
+      }
+    }
+
+    if (!smartScrapeList.isEmpty() && !cancel && !GraphicsEnvironment.isHeadless()) {
+      AtomicInteger queueIndex = new AtomicInteger(0);
+      try {
+        SwingUtilities.invokeAndWait(() -> {
+          for (TvShow tvShow : smartScrapeList) {
+            TvShowChooserDialog dialog = new TvShowChooserDialog(tvShow, queueIndex.getAndIncrement(), smartScrapeList.size());
+            dialog.setVisible(true);
+            if (!dialog.isContinueQueue()) {
+              cancel = true;
+              break;
+            }
+          }
+        });
+      }
+      catch (Exception e) {
+        LOGGER.error("Smart scrape dialog failed", e);
+      }
+    }
+
     if (TvShowModuleManager.getInstance().getSettings().getSyncTrakt()) {
       TvShowSyncTraktTvTask task = new TvShowSyncTraktTvTask(tvShowScrapeParams.tvShowsToScrape);
       task.setSyncCollection(TvShowModuleManager.getInstance().getSettings().getSyncTraktCollection());
@@ -218,21 +278,21 @@ public class TvShowScrapeTask extends TmmThreadPool {
                 // if both results have the same score - do not take any result
                 if (result1.getScore() == result2.getScore()) {
                   LOGGER.warn("Two identical results for '{}', can't decide which to take - ignore result", tvShow.getTitle());
-                  MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                  smartScrapeList.add(tvShow);
                   return;
                 }
 
                 // create a threshold of 0.75 - to minimize false positives
                 if (result1.getScore() < 0.75) {
                   LOGGER.warn("Score ({}) is lower than minimum score (0.75) for '{}' - ignore result", result1.getScore(), tvShow.getTitle());
-                  MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+                  smartScrapeList.add(tvShow);
                   return;
                 }
               }
             }
             else {
               LOGGER.info("No result found for {}", tvShow.getTitle());
-              MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, tvShow, "tvshow.scrape.nomatchfound"));
+              smartScrapeList.add(tvShow);
               return;
             }
           }
