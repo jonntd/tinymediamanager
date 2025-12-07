@@ -126,6 +126,7 @@ public final class Settings extends AbstractSettings {
   private boolean                                          enableTrash                  = true;
   private boolean                                          deleteTrashOnExit            = false;
   private boolean                                          showMemory                   = true;
+  private boolean                                          useBuiltInFileBrowser        = false;
 
   private boolean                                          enableHttpServer             = false;
   private int                                              httpServerPort               = 7878;
@@ -145,7 +146,7 @@ public final class Settings extends AbstractSettings {
   private boolean                                          updateFileSizeOnUpdate       = true;
   // whether to update file size during renaming operations
   private boolean                                          updateFileSizeOnRename       = true;
-  
+
   // separate settings for movies and TV shows
   // movie file size update settings
   private boolean                                          movieUpdateFileSizeOnUpdate  = true;
@@ -1160,6 +1161,16 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("showMemory", oldValue, newValue);
   }
 
+  public boolean isUseBuiltInFileBrowser() {
+    return useBuiltInFileBrowser;
+  }
+
+  public void setUseBuiltInFileBrowser(boolean newValue) {
+    boolean oldValue = this.useBuiltInFileBrowser;
+    this.useBuiltInFileBrowser = newValue;
+    firePropertyChange("useBuiltInFileBrowser", oldValue, newValue);
+  }
+
   /**
    * should we ignore SSL problems?
    *
@@ -1300,7 +1311,7 @@ public final class Settings extends AbstractSettings {
     this.updateFileSizeOnUpdate = newValue;
     firePropertyChange("updateFileSizeOnUpdate", oldValue, newValue);
   }
-  
+
   /**
    * should we update file size during renaming operations?
    * 

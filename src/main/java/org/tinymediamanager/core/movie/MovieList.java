@@ -676,14 +676,14 @@ public final class MovieList extends AbstractModelObject {
       // so get all sub movies within path (some levels deeper)
       if (!movie.getPathNIO().equals(Paths.get(movie.getDataSource()))) {
         List<Movie> subMovies = subMoviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-        if (subMovies.size() > 1) {
+        if (subMovies != null && subMovies.size() > 1) {
           // there are some other movies down the path - it MUST be treated as MMD
           movie.setMultiMovieDir(true);
         }
         else {
           // no sub movies, but some in exact same folder? (including myself)
           List<Movie> samePath = moviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-          if (samePath.size() > 1) {
+          if (samePath != null && samePath.size() > 1) {
             movie.setMultiMovieDir(true);
           }
           else {

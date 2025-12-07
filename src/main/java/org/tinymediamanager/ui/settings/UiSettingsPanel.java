@@ -96,6 +96,7 @@ class UiSettingsPanel extends JPanel {
   private JCheckBox                  chckbxAutomaticUpdates;
   private JLabel                     lblUpdateHint;
   private CollapsiblePanel           collapsiblePanelUpdate;
+  private JCheckBox                  chckbxUseBuiltInFileBrowser;
 
   UiSettingsPanel() {
     LocaleComboBox actualLocale = null;
@@ -354,6 +355,13 @@ class UiSettingsPanel extends JPanel {
         chckbxShowMemory = new JCheckBox(TmmResourceBundle.getString("Settings.showmemory"));
         panelMisc.add(chckbxShowMemory, "cell 1 16 2 1");
       }
+      {
+        chckbxUseBuiltInFileBrowser = new JCheckBox(TmmResourceBundle.getString("Settings.usebuiltinfilebrowser"));
+        panelMisc.add(chckbxUseBuiltInFileBrowser, "cell 1 17 2 1");
+
+        JLabel lblBuiltInFileBrowserHint = new JLabel(TmmResourceBundle.getString("Settings.usebuiltinfilebrowser.desc"));
+        panelMisc.add(lblBuiltInFileBrowserHint, "cell 2 18");
+      }
     }
     {
       JPanel panelUpdate = new JPanel();
@@ -476,5 +484,10 @@ class UiSettingsPanel extends JPanel {
     AutoBinding autoBinding_5 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_4, spUpdateInterval,
         jSpinnerBeanProperty_1);
     autoBinding_5.bind();
+    //
+    Property settingsBeanProperty_5 = BeanProperty.create("useBuiltInFileBrowser");
+    AutoBinding autoBinding_6 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_5, chckbxUseBuiltInFileBrowser,
+        jCheckBoxBeanProperty);
+    autoBinding_6.bind();
   }
 }

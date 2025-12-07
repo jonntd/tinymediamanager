@@ -18,8 +18,6 @@ package org.tinymediamanager.ui.movies.panels;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.beans.PropertyChangeListener;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,9 +138,8 @@ public class MovieInformationPanel extends InformationPanel {
 
     lblMoviePath.addActionListener(arg0 -> {
       if (StringUtils.isNotEmpty(lblMoviePath.getLink())) {
-        // get the location from the label
-        Path path = Paths.get(lblMoviePath.getLink());
-        TmmUIHelper.openFolder(path);
+        // Use openFolderByPath which supports both local and WebDAV paths
+        TmmUIHelper.openFolderByPath(lblMoviePath.getLink());
       }
     });
 
