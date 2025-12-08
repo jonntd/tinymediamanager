@@ -133,7 +133,12 @@ public final class TmmModuleManager {
     }
 
     // do cleanup tasks
-    RatingProvider.shutdown();
+    try {
+      RatingProvider.shutdown();
+    }
+    catch (Throwable e) {
+      LOGGER.warn("Could not shutdown RatingProvider: {}", e.getMessage());
+    }
     Utils.clearTempFolder();
   }
 

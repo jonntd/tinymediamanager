@@ -756,7 +756,7 @@ public class ImageChooserDialog extends TmmDialog {
       gbc.gridy = row;
       gbc.anchor = GridBagConstraints.LINE_END;
       gbc.insets = new Insets(0, 5, 0, 5);
-      JLabel label = new JLabel("Extrathumb");
+      JLabel label = new JLabel(TmmResourceBundle.getString("image.extrathumb.label"));
       imagePanel.add(label, gbc);
 
       gbc = new GridBagConstraints();
@@ -777,7 +777,7 @@ public class ImageChooserDialog extends TmmDialog {
       gbc.gridy = row;
       gbc.anchor = GridBagConstraints.LINE_END;
       gbc.insets = new Insets(0, 5, 0, 5);
-      JLabel label = new JLabel("Extrafanart");
+      JLabel label = new JLabel(TmmResourceBundle.getString("image.extrafanart.label"));
       imagePanel.add(label, gbc);
 
       gbc = new GridBagConstraints();

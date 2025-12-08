@@ -109,26 +109,21 @@ class TvShowDatasourceSettingsPanel extends JPanel {
     btnAddWebDavDatasource.addActionListener(arg0 -> {
       List<WebDavSource> webDavSources = Settings.getInstance().getWebDavSources();
       if (webDavSources.isEmpty()) {
-        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.error.nosources"),
-            TmmResourceBundle.getString("webdav.sources"), JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.error.nosources"), TmmResourceBundle.getString("webdav.sources"),
+            JOptionPane.WARNING_MESSAGE);
         return;
       }
 
       // Show WebDAV source selection dialog
       String[] sourceNames = webDavSources.stream().map(WebDavSource::getName).toArray(String[]::new);
-      String selectedName = (String) JOptionPane.showInputDialog(this,
-          TmmResourceBundle.getString("webdav.selectsource"),
-          TmmResourceBundle.getString("webdav.sources"),
-          JOptionPane.QUESTION_MESSAGE, null, sourceNames, sourceNames[0]);
+      String selectedName = (String) JOptionPane.showInputDialog(this, TmmResourceBundle.getString("webdav.selectsource"),
+          TmmResourceBundle.getString("webdav.sources"), JOptionPane.QUESTION_MESSAGE, null, sourceNames, sourceNames[0]);
 
       if (selectedName == null) {
         return;
       }
 
-      WebDavSource selectedSource = webDavSources.stream()
-          .filter(s -> s.getName().equals(selectedName))
-          .findFirst()
-          .orElse(null);
+      WebDavSource selectedSource = webDavSources.stream().filter(s -> s.getName().equals(selectedName)).findFirst().orElse(null);
 
       if (selectedSource == null) {
         return;
@@ -148,11 +143,11 @@ class TvShowDatasourceSettingsPanel extends JPanel {
       popupPanel.setOnCloseHandler(() -> {
         String selectedPath = browserPanel.getSelectedPath();
         if (StringUtils.isNotBlank(selectedPath)) {
-          // Create WebDAV datasource path: webdav://[source-id]/remote/path
+          // Create WebDAV datasource path: webdav://[source-name]/remote/path
           if (!selectedPath.startsWith("/")) {
             selectedPath = "/" + selectedPath;
           }
-          String webDavPath = "webdav://" + selectedSource.getId() + selectedPath;
+          String webDavPath = "webdav://" + selectedSource.getName() + selectedPath;
           settings.addTvShowDataSources(webDavPath);
           panelDatasources.revalidate();
         }

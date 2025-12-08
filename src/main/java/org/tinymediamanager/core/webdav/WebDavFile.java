@@ -33,13 +33,13 @@ import com.github.sardine.DavResource;
 public class WebDavFile {
   private static final Logger LOGGER = LoggerFactory.getLogger(WebDavFile.class);
 
-  private final String  name;
-  private final String  path;
-  private final String  fullUrl;
-  private final boolean directory;
-  private final long    size;
-  private final Date    modified;
-  private final String  contentType;
+  private final String        name;
+  private final String        path;
+  private final String        fullUrl;
+  private final boolean       directory;
+  private final long          size;
+  private final Date          modified;
+  private final String        contentType;
 
   public WebDavFile(DavResource resource, String baseUrl) {
     this.name = resource.getName();
@@ -60,7 +60,7 @@ public class WebDavFile {
       // Relative path - need to construct full URL
       try {
         java.net.URI baseUri = new java.net.URI(baseUrl);
-        String basePath = baseUri.getPath();
+        String basePath = baseUri.getRawPath();
         if (!basePath.endsWith("/")) {
           basePath += "/";
         }
@@ -77,8 +77,7 @@ public class WebDavFile {
           LOGGER.debug("WebDavFile: href does not start with basePath, using href as relativePath");
         }
 
-        computedUrl = baseUri.getScheme() + "://" + baseUri.getHost()
-            + (baseUri.getPort() > 0 ? ":" + baseUri.getPort() : "") + href;
+        computedUrl = baseUri.getScheme() + "://" + baseUri.getHost() + (baseUri.getPort() > 0 ? ":" + baseUri.getPort() : "") + href;
       }
       catch (Exception e) {
         LOGGER.warn("WebDavFile: Failed to parse baseUrl, using href as relativePath: {}", e.getMessage());
@@ -163,4 +162,3 @@ public class WebDavFile {
     return name + (directory ? "/" : "");
   }
 }
-

@@ -119,7 +119,9 @@ public class WebDavDataSourceHelper {
           String remotePath = afterPrefix.substring(firstSlash);
           // Decode the remote path portion only if it contains URL-encoded characters
           if (remotePath.contains("%")) {
-            String decodedPath = java.net.URLDecoder.decode(remotePath, "UTF-8");
+            // Preserve '+' by pre-encoding it before decoding
+            String preservedPlus = remotePath.replace("+", "%2B");
+            String decodedPath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
             result = WEBDAV_PREFIX + sourceId + decodedPath;
             LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
           }
@@ -150,11 +152,11 @@ public class WebDavDataSourceHelper {
   }
 
   /**
-   * Parse a WebDAV path and return the source ID and remote path Format: webdav://[source-id]/remote/path
+   * Parse a WebDAV path and return the source identifier and remote path Format: webdav://[source-id-or-name]/remote/path
    * 
    * @param webDavPath
    *          the WebDAV path
-   * @return String array with [sourceId, remotePath] or null if invalid
+   * @return String array with [sourceIdentifier, remotePath] or null if invalid
    */
   public static String[] parseWebDavPath(String webDavPath) {
     if (!isWebDavPath(webDavPath)) {
@@ -183,19 +185,19 @@ public class WebDavDataSourceHelper {
       pathWithoutPrefix = pathWithoutPrefix.substring(1);
     }
 
-    // Now pathWithoutPrefix should be in format: "source-id/remote/path" or "source-id"
-    // The sourceId should be a UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    // Standard UUID length is 36 characters (32 hex + 4 hyphens)
+    // Now pathWithoutPrefix should be in format: "source-identifier/remote/path" or "source-identifier"
+    // The source identifier can be either a UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    // or a display name (e.g., "aaa", "bbb", "ccc")
 
-    String sourceId;
+    String sourceIdentifier;
     String remotePath;
 
-    // First, try to extract UUID from the beginning (most reliable method)
+    // First, try to extract UUID from the beginning (most reliable method for legacy paths)
     if (pathWithoutPrefix.length() >= 36) {
       String potentialUuid = pathWithoutPrefix.substring(0, 36);
       if (isValidUuidFormat(potentialUuid)) {
         // Valid UUID found at the beginning
-        sourceId = potentialUuid;
+        sourceIdentifier = potentialUuid;
 
         // The rest is the remote path
         if (pathWithoutPrefix.length() > 36) {
@@ -210,27 +212,22 @@ public class WebDavDataSourceHelper {
         }
       }
       else {
-        // UUID format not valid, fall back to slash-based parsing
+        // Not a valid UUID, use slash-based parsing (supports display names)
         int slashIndex = pathWithoutPrefix.indexOf('/');
         if (slashIndex == -1) {
           return new String[] { pathWithoutPrefix, "/" };
         }
-        sourceId = pathWithoutPrefix.substring(0, slashIndex);
+        sourceIdentifier = pathWithoutPrefix.substring(0, slashIndex);
         remotePath = pathWithoutPrefix.substring(slashIndex);
-
-        // Warn if sourceId looks suspicious
-        if (sourceId.contains("%")) {
-          LOGGER.warn("Detected URL-encoded characters in sourceId: '{}'. This might indicate a malformed WebDAV path: '{}'", sourceId, webDavPath);
-        }
       }
     }
     else {
-      // Path too short to contain UUID, fall back to slash-based parsing
+      // Path too short to contain UUID, use slash-based parsing (supports display names)
       int slashIndex = pathWithoutPrefix.indexOf('/');
       if (slashIndex == -1) {
         return new String[] { pathWithoutPrefix, "/" };
       }
-      sourceId = pathWithoutPrefix.substring(0, slashIndex);
+      sourceIdentifier = pathWithoutPrefix.substring(0, slashIndex);
       remotePath = pathWithoutPrefix.substring(slashIndex);
     }
 
@@ -238,7 +235,7 @@ public class WebDavDataSourceHelper {
       remotePath = "/";
     }
 
-    return new String[] { sourceId, remotePath };
+    return new String[] { sourceIdentifier, remotePath };
   }
 
   /**
@@ -274,14 +271,14 @@ public class WebDavDataSourceHelper {
   }
 
   /**
-   * Get the WebDAV source by ID
+   * Get the WebDAV source by ID or name
    * 
-   * @param sourceId
-   *          the source ID
+   * @param sourceIdOrName
+   *          the source ID or display name
    * @return the WebDavSource or null if not found
    */
-  public static WebDavSource getWebDavSource(String sourceId) {
-    return Settings.getInstance().getWebDavSourceById(sourceId);
+  public static WebDavSource getWebDavSource(String sourceIdOrName) {
+    return Settings.getInstance().getWebDavSourceByIdOrName(sourceIdOrName);
   }
 
   /**
@@ -428,7 +425,11 @@ public class WebDavDataSourceHelper {
     }
 
     try {
-      return java.net.URLDecoder.decode(path, "UTF-8");
+      // IMPORTANT: URLDecoder.decode() follows application/x-www-form-urlencoded spec
+      // which converts '+' to space. But in URL paths, '+' is a valid character and
+      // should NOT be converted to space. Preserve '+' by pre-encoding it.
+      String preservedPlus = path.replace("+", "%2B");
+      return java.net.URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (Exception e) {
       LOGGER.debug("Failed to decode URL path '{}': {}", path, e.getMessage());

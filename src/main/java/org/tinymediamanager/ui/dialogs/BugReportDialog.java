@@ -87,7 +87,7 @@ public class BugReportDialog extends TmmDialog {
 
     JComboBox<EntityContainer> cbMovieList = new JComboBox<EntityContainer>();
     Movie dummym = new Movie();
-    dummym.setTitle("- select movie -");
+    dummym.setTitle(TmmResourceBundle.getString("BugReport.selectmovie"));
     dummym.setDbId(null);
     cbMovieList.addItem(new EntityContainer(dummym)); // fix first entry!
     List<Movie> movies = MovieModuleManager.getInstance().getMovieList().getMovies();
@@ -98,7 +98,7 @@ public class BugReportDialog extends TmmDialog {
     panelContent.add(cbMovieList, "cell 2 3,growx");
     JComboBox<EntityContainer> cbTvshowList = new JComboBox<EntityContainer>();
     TvShow dummys = new TvShow();
-    dummys.setTitle("- select tvShow -");
+    dummys.setTitle(TmmResourceBundle.getString("BugReport.selecttvshow"));
     dummys.setDbId(null);
     cbTvshowList.addItem(new EntityContainer(dummys)); // fix first entry!
     List<TvShow> tvShows = TvShowModuleManager.getInstance().getTvShowList().getTvShows();

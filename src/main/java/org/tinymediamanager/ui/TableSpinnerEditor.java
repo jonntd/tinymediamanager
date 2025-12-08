@@ -100,7 +100,7 @@ public class TableSpinnerEditor extends DefaultCellEditor {
       spinner.commitEdit();
     }
     catch (java.text.ParseException e) {
-      JOptionPane.showMessageDialog(null, "Invalid value, discarding.");
+      JOptionPane.showMessageDialog(null, org.tinymediamanager.core.TmmResourceBundle.getString("table.invalidvalue"));
     }
     return super.stopCellEditing();
   }

@@ -236,7 +236,7 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
         TmmFontHelper.changeFont(tpScraperThresholdHint, L2);
         panelAutomaticScrape.add(tpScraperThresholdHint, "cell 1 1 3 1, growx, wmin 0");
 
-        JLabel lblRetryCount = new JLabel("Automatic scraper retry count");
+        JLabel lblRetryCount = new JLabel(TmmResourceBundle.getString("Settings.scraper.retrycount"));
         panelAutomaticScrape.add(lblRetryCount, "cell 1 2");
 
         spAutomaticRetryCount = new JSpinner();

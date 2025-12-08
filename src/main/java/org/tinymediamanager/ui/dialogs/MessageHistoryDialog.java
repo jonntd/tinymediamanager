@@ -63,9 +63,9 @@ public class MessageHistoryDialog extends TmmDialog implements ListEventListener
     panelNorth.setLayout(new MigLayout("", "[grow][]", "[][shrink 0]"));
     getContentPane().add(panelNorth, BorderLayout.NORTH);
 
-    panelNorth.add(new TmmLabel("Message history"), "cell 0 0, grow");
+    panelNorth.add(new TmmLabel(TmmResourceBundle.getString("message.history.title")), "cell 0 0, grow");
 
-    LinkLabel lblClearAll = new LinkLabel("Clear all");
+    LinkLabel lblClearAll = new LinkLabel(TmmResourceBundle.getString("Button.clearall"));
     panelNorth.add(lblClearAll, "cell 1 0");
 
     panelNorth.add(new JSeparator(), "cell 0 1 2 1, grow");

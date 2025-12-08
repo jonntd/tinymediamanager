@@ -272,8 +272,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         btnSearch.addActionListener(searchAction);
         getRootPane().setDefaultButton(btnSearch);
 
-        JButton btnAiFix = new JButton("AI fix");
-        btnAiFix.setToolTipText("Use AI to analyze TV show file and fill search terms");
+        JButton btnAiFix = new JButton(TmmResourceBundle.getString("Button.aifix"));
+        btnAiFix.setToolTipText(TmmResourceBundle.getString("Button.aifix.tvshow.tooltip"));
         btnAiFix.addActionListener(e -> aiFixSearchTerms());
         panelSearchField.add(btnAiFix, "cell 4 0");
       }
@@ -543,7 +543,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       cbEpisodeScraperConfig.setSelectedItems(TvShowModuleManager.getInstance().getSettings().getEpisodeScraperMetadataConfig());
       chckbxDoNotOverwrite.setSelected(TvShowModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
 
-      lblPath.setText(tvShowToScrape.getPathNIO().toString());
+      lblPath.setText(tvShowToScrape.getPathDecoded());
       textFieldSearchString.setText(tvShowToScrape.getTitle());
       // initial search with IDs
       // searchTvShow(textFieldSearchString.getText(), true);
@@ -552,7 +552,8 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       SwingUtilities.invokeLater(() -> {
         try {
           aiFixSearchTerms();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Failed to auto-trigger AI fix: {}", e.getMessage());
           // fallback to manual mode - user can still click AI fix button
         }
@@ -1119,8 +1120,9 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
     String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
     if (apiKey == null || apiKey.trim().isEmpty()) {
       LOGGER.warn("OpenAI API key not configured - AI recognition skipped");
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.WARN, "TvShowChooser", "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.WARN, "TvShowChooser",
+              "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
       return;
     }
 
@@ -1147,28 +1149,28 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             // 发送成功消息到Message history
             String originalTitle = tvShowToScrape.getTitle();
             String successMsg = String.format("电视剧AI识别成功: %s → %s", originalTitle, recognizedTitle);
-            MessageManager.getInstance().pushMessage(
-                new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
 
             // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
             searchTvShow(recognizedTitle, true);
-          } else {
+          }
+          else {
             LOGGER.warn("AI recognition returned empty result, falling back to original title");
 
             // 发送失败消息到Message history
             String originalTitle = tvShowToScrape.getTitle();
             String failMsg = String.format("电视剧AI识别失败: %s - 无法识别标题", originalTitle);
-            MessageManager.getInstance().pushMessage(
-                new Message(MessageLevel.WARN, "电视剧AI识别", failMsg));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "电视剧AI识别", failMsg));
 
             // AI识别失败，使用原始标题进行搜索
             searchTvShow(textFieldSearchString.getText(), true);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Error during AI TV show recognition: {}", e.getMessage());
-          MessageManager.getInstance().pushMessage(
-              new Message(MessageLevel.ERROR, "TvShowChooser", "Error during AI analysis: " + e.getMessage()));
-        } finally {
+          MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "TvShowChooser", "Error during AI analysis: " + e.getMessage()));
+        }
+        finally {
           setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         }
       }

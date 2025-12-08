@@ -215,7 +215,7 @@ public class MovieInformationPanel extends InformationPanel {
     lblShowlink.setText(movie.getShowlinksAsString());
     lblEdition.setText(movie.getEdition().getTitle());
     taTags.setText(movie.getTagsAsString());
-    lblMoviePath.setText(movie.getPath());
+    lblMoviePath.setText(movie.getPathDecoded());
     taNote.setText(movie.getNote());
 
     setArtwork(movie, MediaFileType.POSTER);

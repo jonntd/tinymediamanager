@@ -157,7 +157,7 @@ public class MovieTableFormat extends TmmTableFormat<Movie> {
     /*
      * folder name (hidden per default)
      */
-    Function<Movie, String> pathFunction = movie -> movie.getPath();
+    Function<Movie, String> pathFunction = movie -> movie.getPathDecoded();
     col = new Column(TmmResourceBundle.getString("metatag.path"), "path", pathFunction, String.class);
     col.setColumnComparator(stringComparator);
     col.setColumnResizeable(true);

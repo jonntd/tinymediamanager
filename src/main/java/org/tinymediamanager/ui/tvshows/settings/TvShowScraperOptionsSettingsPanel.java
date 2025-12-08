@@ -184,7 +184,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
       collapsiblePanel.addExtraTitleComponent(new DocsButton("/tvshows/settings#automatic-scraper"));
       add(collapsiblePanel, "cell 0 4,growx,wmin 0");
       {
-        JLabel lblRetryCount = new JLabel("Automatic scraper retry count");
+        JLabel lblRetryCount = new JLabel(TmmResourceBundle.getString("Settings.scraper.retrycount"));
         panelAutomaticScrape.add(lblRetryCount, "cell 1 0");
 
         spAutomaticRetryCount = new JSpinner();

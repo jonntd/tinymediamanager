@@ -915,6 +915,45 @@ public final class Settings extends AbstractSettings {
     return null;
   }
 
+  /**
+   * Get a WebDAV source by its name
+   *
+   * @param name
+   *          the name of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceByName(String name) {
+    if (name == null || name.isEmpty()) {
+      return null;
+    }
+    for (WebDavSource source : webDavSources) {
+      if (name.equals(source.getName())) {
+        return source;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get a WebDAV source by ID or name (tries ID first, then name)
+   *
+   * @param idOrName
+   *          the ID or name of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceByIdOrName(String idOrName) {
+    if (idOrName == null || idOrName.isEmpty()) {
+      return null;
+    }
+    // Try by ID first
+    WebDavSource source = getWebDavSourceById(idOrName);
+    if (source != null) {
+      return source;
+    }
+    // Try by name
+    return getWebDavSourceByName(idOrName);
+  }
+
   @JsonSerialize(using = EncryptedStringSerializer.class)
   @JsonDeserialize(using = EncryptedStringDeserializer.class)
   public String getTraktAccessToken() {

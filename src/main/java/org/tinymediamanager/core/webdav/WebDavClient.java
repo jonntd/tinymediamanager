@@ -138,7 +138,9 @@ public class WebDavClient {
           // Decode the href for comparison (handle URL encoding like %E6%97%A0)
           String decodedHref = normalizedHref;
           try {
-            decodedHref = java.net.URLDecoder.decode(normalizedHref, "UTF-8");
+            // Preserve '+' in URL path (URLDecoder converts '+' to space)
+            String preservedPlus = normalizedHref.replace("+", "%2B");
+            decodedHref = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
           }
           catch (Exception e) {
             LOGGER.warn("Failed to decode href '{}': {}", normalizedHref, e.getMessage());
@@ -155,7 +157,7 @@ public class WebDavClient {
       }
     }
     catch (IOException e) {
-      LOGGER.error("Failed to list WebDAV directory '{}': {}", safeDecode(fullUrl), e.getMessage());
+      LOGGER.error("Failed to list WebDAV directory '{}': {}", fullUrl, e.getMessage());
       throw e;
     }
 
@@ -313,34 +315,24 @@ public class WebDavClient {
     // The path might already be URL encoded from the WebDAV client
     // Just ensure proper URL format without double encoding
     try {
-      // First, decode the entire path to handle any existing encoding
-      String decodedPath = java.net.URLDecoder.decode(path, "UTF-8");
+      // IMPORTANT: URLDecoder.decode() follows application/x-www-form-urlencoded spec
+      // which converts '+' to space. But in URL paths, '+' is a valid character and
+      // should NOT be converted to space. Only %2B represents a plus sign.
+      // So we need to preserve '+' by pre-encoding it before decoding.
+      String pathWithPreservedPlus = path.replace("+", "%2B");
+      String decodedPath = java.net.URLDecoder.decode(pathWithPreservedPlus, "UTF-8");
 
-      // Then split into segments and encode each segment properly
-      String[] segments = decodedPath.split("/");
-      StringBuilder encodedPath = new StringBuilder();
+      // Use URLEncoder to be more aggressive with encoding (e.g. handle parentheses)
+      // but we need to preserve slashes and encoded spaces correctly
+      String encodedPath = java.net.URLEncoder.encode(decodedPath, "UTF-8").replace("+", "%20").replace("%2F", "/");
 
-      for (int i = 0; i < segments.length; i++) {
-        if (i > 0) {
-          encodedPath.append("/");
-        }
-        String segment = segments[i];
-        if (!segment.isEmpty()) {
-          // Encode each segment properly
-          String encodedSegment = java.net.URLEncoder.encode(segment, "UTF-8")
-              .replace("+", "%20") // Replace + with %20 for spaces
-              .replace("%2F", "/"); // Don't encode forward slashes
-          encodedPath.append(encodedSegment);
-        }
-      }
-
-      String finalUrl = baseUrl + encodedPath.toString();
+      String finalUrl = baseUrl + encodedPath;
       // Use safeDecode for logging
       LOGGER.debug("Built URL: {} from path: {}", finalUrl, safeDecode(path));
       return finalUrl;
     }
     catch (Exception e) {
-      LOGGER.warn("Failed to URL encode path '{}': {}", safeDecode(path), e.getMessage());
+      LOGGER.warn("Failed to URL encode path '{}' (checking raw: {}): {}", safeDecode(path), path, e.getMessage());
       // Fallback: use the original path as-is
       String finalUrl = baseUrl + path;
       LOGGER.debug("Fallback URL: {} from path: {}", finalUrl, safeDecode(path));
@@ -356,7 +348,9 @@ public class WebDavClient {
       return "";
     }
     try {
-      return java.net.URLDecoder.decode(path, "UTF-8");
+      // Preserve '+' in URL path (URLDecoder converts '+' to space)
+      String preservedPlus = path.replace("+", "%2B");
+      return java.net.URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (Exception e) {
       return path;

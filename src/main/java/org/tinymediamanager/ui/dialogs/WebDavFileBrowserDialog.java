@@ -980,13 +980,15 @@ public class WebDavFileBrowserDialog extends TmmDialog {
     private void moveFileToDirectory(WebDavFile sourceFile, WebDavFile targetDir) {
         // Validate: cannot move to itself
         if (sourceFile.getPath().equals(targetDir.getPath())) {
-            JOptionPane.showMessageDialog(this, "Cannot move a folder into itself", "Move", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.browser.move.error.self"),
+                    TmmResourceBundle.getString("webdav.browser.move"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         // Validate: cannot move a folder into its own subdirectory
         if (targetDir.getPath().startsWith(sourceFile.getPath() + "/")) {
-            JOptionPane.showMessageDialog(this, "Cannot move a folder into its own subdirectory", "Move", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.browser.move.error.subdir"),
+                    TmmResourceBundle.getString("webdav.browser.move"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -1025,13 +1027,14 @@ public class WebDavFileBrowserDialog extends TmmDialog {
                     }
                     else {
                         JOptionPane.showMessageDialog(WebDavFileBrowserDialog.this, TmmResourceBundle.getString("webdav.browser.error.rename"),
-                                "Move", JOptionPane.ERROR_MESSAGE);
+                                TmmResourceBundle.getString("webdav.browser.move"), JOptionPane.ERROR_MESSAGE);
                     }
                 }
                 catch (Exception e) {
                     LOGGER.error("Failed to move file: {}", e.getMessage());
                     JOptionPane.showMessageDialog(WebDavFileBrowserDialog.this,
-                            TmmResourceBundle.getString("webdav.browser.error.rename") + ": " + e.getMessage(), "Move", JOptionPane.ERROR_MESSAGE);
+                            TmmResourceBundle.getString("webdav.browser.error.rename") + ": " + e.getMessage(),
+                            TmmResourceBundle.getString("webdav.browser.move"), JOptionPane.ERROR_MESSAGE);
                 }
                 finally {
                     setCursor(Cursor.getDefaultCursor());

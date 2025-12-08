@@ -473,7 +473,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
           // Submit task for parallel processing
           LOGGER.debug("Submitting WebDAV movie task: datasource={}, dirPath={}", ds, decodedDirPath);
-          submitTask(new FindWebDavMovieTask(ds, sourceId, source, decodedDirPath));
+          submitTask(new FindWebDavMovieTask(ds, source, decodedDirPath));
         }
       }
 
@@ -582,7 +582,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // Process each video file as a separate movie
     for (WebDavFile videoFile : videoFiles) {
       // Create a unique path for this movie based on the directory, not the filename
-      String sourceId = WebDavDataSourceHelper.parseWebDavPath(datasource)[0];
+      String sourceIdentifier = source.getName();
       String decodedDirPath = dirPath;
       try {
         decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
@@ -593,7 +593,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       // For multi-movie directory, use the directory path as the movie path
       // This is consistent with local file handling
-      String moviePath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+      String moviePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
 
       // Normalize path
       if (moviePath.endsWith("/")) {
@@ -607,8 +607,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       // For multi-movie directories, we need to find the movie by its video file, not by path
       // because all movies in the same directory share the same path
-      String videoFilePath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath) + "/"
-          + videoFilename;
+      String videoFilePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath)
+          + "/" + videoFilename;
 
       // Check if movie already exists by looking for a movie that contains this video file
       List<Movie> candidateMovies = new ArrayList<>(movieList.getMoviesByPath(WebDavDataSourceHelper.getWebDavPath(moviePath)));
@@ -616,7 +616,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // Fallback: also check invalid/encoded path if not found
       if (candidateMovies.isEmpty()) {
         // try the raw dirPath (which might be encoded)
-        String rawMoviePath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
+        String rawMoviePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
         if (rawMoviePath.endsWith("/")) {
           rawMoviePath = rawMoviePath.substring(0, rawMoviePath.length() - 1);
         }
@@ -742,10 +742,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       List<WebDavFile> videoFiles) {
 
     // Build a virtual path for this movie
-    // datasource is like: webdav://[source-id]/remote/path
+    // datasource is like: webdav://[source-name]/remote/path
     // dirPath is the relative path from WebDAV root (not from datasource path)
-    // We need to build: webdav://[source-id]/dirPath
-    String sourceId = WebDavDataSourceHelper.parseWebDavPath(datasource)[0];
+    // We need to build: webdav://[source-name]/dirPath
+    String sourceIdentifier = source.getName();
 
     // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
     String decodedDirPath = dirPath;
@@ -756,7 +756,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
     }
 
-    String moviePath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+    String moviePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
 
     // Normalize path (remove trailing slash)
     if (moviePath.endsWith("/")) {
@@ -771,7 +771,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     // Fallback: check encoded path if not found via decoded path
     if (existingMovie == null) {
-      String rawMoviePath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
+      String rawMoviePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
       if (rawMoviePath.endsWith("/")) {
         rawMoviePath = rawMoviePath.substring(0, rawMoviePath.length() - 1);
       }
@@ -898,7 +898,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   private MediaFile createMediaFileFromWebDav(WebDavFile webDavFile, WebDavSource source) {
     MediaFile mf = new MediaFile();
 
-    // Construct WebDAV path in format: webdav://source-id/relative-path
+    // Construct WebDAV path in format: webdav://source-name/relative-path
     String filePath = webDavFile.getPath();
 
     // Get parent directory path
@@ -915,11 +915,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     String webdavPath;
     if (parentPath.isEmpty()) {
       // Top level directory
-      webdavPath = "webdav://" + source.getId();
+      webdavPath = "webdav://" + source.getName();
     }
     else {
       // Add the full parent path to ensure correct directory structure
-      webdavPath = "webdav://" + source.getId() + parentPath;
+      webdavPath = "webdav://" + source.getName() + parentPath;
     }
 
     mf.setPath(webdavPath);
@@ -1106,14 +1106,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
    */
   private class FindWebDavMovieTask implements Callable<Object> {
     private final String       datasource;
-    private final String       sourceId;
     private final WebDavSource source;
     private final String       dirPath;
     private final long         uniqueId;
 
-    public FindWebDavMovieTask(String datasource, String sourceId, WebDavSource source, String dirPath) {
+    public FindWebDavMovieTask(String datasource, WebDavSource source, String dirPath) {
       this.datasource = datasource;
-      this.sourceId = sourceId;
       this.source = source;
       this.dirPath = dirPath;
       this.uniqueId = TmmTaskManager.getInstance().GLOB_THRD_CNT.incrementAndGet();

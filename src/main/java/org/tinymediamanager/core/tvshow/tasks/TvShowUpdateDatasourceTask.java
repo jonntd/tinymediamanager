@@ -910,7 +910,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       for (WebDavFile file : allFiles) {
         if (!file.isDirectory() && file.isVideoFile()) {
           // Construct the WebDAV path for this video file
-          String videoWebDavPath = "webdav://" + source.getId() + file.getPath();
+          String videoWebDavPath = "webdav://" + source.getName() + file.getPath();
 
           // Check if this file is already associated with an existing episode
           TvShowEpisode existingEpisode = findEpisodeByWebDavPath(tvShow, videoWebDavPath, file.getName());
@@ -1098,11 +1098,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     String webdavPath;
     if (parentPath.isEmpty()) {
       // Top level directory
-      webdavPath = "webdav://" + source.getId();
+      webdavPath = "webdav://" + source.getName();
     }
     else {
       // Add the full parent path to ensure correct directory structure
-      webdavPath = "webdav://" + source.getId() + parentPath;
+      webdavPath = "webdav://" + source.getName() + parentPath;
     }
 
     mf.setPath(webdavPath);
@@ -1220,7 +1220,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Construct proper WebDAV path for the episode
     String filePath = videoFile.getPath();
-    String episodePath = "webdav://" + source.getId() + filePath;
+    String episodePath = "webdav://" + source.getName() + filePath;
     episode.setPath(episodePath);
 
     // Create MediaFile for the video
@@ -1239,10 +1239,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     // Construct full WebDAV path for MediaFile
     String mfPath;
     if (parentPath.isEmpty()) {
-      mfPath = "webdav://" + source.getId();
+      mfPath = "webdav://" + source.getName();
     }
     else {
-      mfPath = "webdav://" + source.getId() + parentPath;
+      mfPath = "webdav://" + source.getName() + parentPath;
     }
 
     mf.setPath(mfPath);

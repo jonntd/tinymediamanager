@@ -68,6 +68,20 @@ show_help() {
     echo ""
 }
 
+# 清理日志
+clean_logs() {
+    print_info "清理日志文件夹..."
+    LOG_DIR="$PROJECT_DIR/logs"
+    
+    if [ -d "$LOG_DIR" ]; then
+        rm -rf "$LOG_DIR"
+        mkdir -p "$LOG_DIR"
+        print_success "日志清理完成"
+    else
+        mkdir -p "$LOG_DIR"
+    fi
+}
+
 # 编译项目
 compile_project() {
     print_info "开始编译 tinyMediaManager..."
@@ -171,6 +185,9 @@ main() {
 
     print_info "tinyMediaManager 启动脚本"
     print_info "项目目录: $PROJECT_DIR"
+
+    # 清理日志
+    clean_logs
 
     if [ "$DEBUG_MODE" = "true" ]; then
         print_warning "DEBUG 日志模式已启用"
