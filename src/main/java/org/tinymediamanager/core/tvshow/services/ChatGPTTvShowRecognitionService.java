@@ -25,41 +25,41 @@ import org.tinymediamanager.core.services.AIPerformanceMonitor;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 
 /**
- * ChatGPT电视剧识别服务
- * 基于路径倒数三层目录名称使用ChatGPT识别电视剧名
+ * ChatGPT电视剧识别服务 基于路径倒数三层目录名称使用ChatGPT识别电视剧名
  */
 public class ChatGPTTvShowRecognitionService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChatGPTTvShowRecognitionService.class);
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final Logger              LOGGER           = LoggerFactory.getLogger(ChatGPTTvShowRecognitionService.class);
+    private static final Duration            TIMEOUT          = Duration.ofSeconds(30);
 
     // 简单的内存缓存，避免重复识别相同电视剧
     private static final Map<String, String> recognitionCache = new ConcurrentHashMap<>();
-    private static final int MAX_CACHE_SIZE = 500; // 最大缓存条目数
+    private static final int                 MAX_CACHE_SIZE   = 500;                                                           // 最大缓存条目数
 
-    private HttpClient httpClient;
-    private final Settings settings;
-    
+    private HttpClient                       httpClient;
+    private final Settings                   settings;
+
     public ChatGPTTvShowRecognitionService() {
         this.settings = Settings.getInstance();
-        
+
         String apiKey = settings.getOpenAiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
             LOGGER.warn("OpenAI API key is not configured in settings");
             return;
         }
-        
+
         try {
-            this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(TIMEOUT)
-                .build();
-        } catch (Exception e) {
+            this.httpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+        }
+        catch (Exception e) {
             LOGGER.error("Failed to initialize HTTP client: {}", e.getMessage());
         }
     }
-    
+
     /**
      * 识别电视剧标题（带重试机制）
-     * @param tvShow 待识别的电视剧
+     * 
+     * @param tvShow
+     *            待识别的电视剧
      * @return 识别出的标题，如果失败返回null
      */
     public String recognizeTvShowTitle(TvShow tvShow) {
@@ -68,8 +68,11 @@ public class ChatGPTTvShowRecognitionService {
 
     /**
      * 带重试机制的电视剧标题识别
-     * @param tvShow 待识别的电视剧
-     * @param maxRetries 最大重试次数
+     * 
+     * @param tvShow
+     *            待识别的电视剧
+     * @param maxRetries
+     *            最大重试次数
      * @return 识别出的标题，如果失败返回null
      */
     private String recognizeTvShowTitleWithRetry(TvShow tvShow, int maxRetries) {
@@ -101,7 +104,8 @@ public class ChatGPTTvShowRecognitionService {
                     AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTTvShowRecognition", responseTime, true);
                     LOGGER.info("AI recognition successful on attempt {} ({}ms)", attempt, responseTime);
                     return result;
-                } else {
+                }
+                else {
                     // 记录失败的性能指标
                     AIPerformanceMonitor.getInstance().recordAPICall("ChatGPTTvShowRecognition", responseTime, false);
                     LOGGER.warn("AI recognition returned empty result on attempt {}/{} ({}ms)", attempt, maxRetries, responseTime);
@@ -114,7 +118,8 @@ public class ChatGPTTvShowRecognitionService {
                     }
                 }
 
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 lastException = e;
                 long responseTime = System.currentTimeMillis() - startTime;
 
@@ -128,7 +133,8 @@ public class ChatGPTTvShowRecognitionService {
                     try {
                         LOGGER.info("Retrying after {}ms delay", delayMs);
                         Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
+                    }
+                    catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         LOGGER.warn("Retry delay interrupted");
                         break;
@@ -173,24 +179,25 @@ public class ChatGPTTvShowRecognitionService {
         LOGGER.info("Full TV show path: {}", tvShowPath);
         LOGGER.info("Extracted directory context: {}", pathContext);
 
-            // 调用ChatGPT API，传递倒数三层目录信息（禁用缓存，每次都实时处理）
-            String recognizedTitle = callChatGPTAPI(pathContext, tvShowPath);
+        // 调用ChatGPT API，传递倒数三层目录信息（禁用缓存，每次都实时处理）
+        String recognizedTitle = callChatGPTAPI(pathContext, tvShowPath);
 
-            LOGGER.info("=== AI Recognition Complete ===");
-            LOGGER.info("Raw AI response: '{}'", recognizedTitle);
+        LOGGER.info("=== AI Recognition Complete ===");
+        LOGGER.info("Raw AI response: '{}'", recognizedTitle);
 
-            if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
-                // 清理和验证识别结果
-                String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
-                LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
+        if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+            // 清理和验证识别结果
+            String cleanedTitle = cleanAndValidateTitle(recognizedTitle);
+            LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
 
-                return cleanedTitle;
-            } else {
-                LOGGER.warn("AI returned empty or null result");
-                return null;
-            }
+            return cleanedTitle;
+        }
+        else {
+            LOGGER.warn("AI returned empty or null result");
+            return null;
+        }
     }
-    
+
     /**
      * 提取电视剧路径
      */
@@ -199,7 +206,7 @@ public class ChatGPTTvShowRecognitionService {
         if (tvShow.getPathNIO() != null) {
             return tvShow.getPathNIO().toString();
         }
-        
+
         // 如果没有目录路径，尝试从媒体文件中获取
         List<MediaFile> mediaFiles = tvShow.getMediaFiles();
         if (!mediaFiles.isEmpty()) {
@@ -208,31 +215,32 @@ public class ChatGPTTvShowRecognitionService {
                 return firstFile.getFileAsPath().toString();
             }
         }
-        
+
         // 最终回退方案
         LOGGER.warn("No valid path found for TV show, using default identifier");
         return "tvshow_" + tvShow.getDbId();
     }
-    
+
     /**
      * 提取路径倒数三层（保持路径结构）
      */
     private String extractLastThreeDirectoryNames(String filePath) {
         try {
             Path path = Paths.get(filePath);
-            
+
             // 获取路径的所有部分
             int nameCount = path.getNameCount();
             if (nameCount <= 3) {
                 // 如果路径层级不超过3层，返回相对路径
                 return "/" + path.toString();
             }
-            
+
             // 取倒数三层：倒数第三层目录/倒数第二层目录/文件名
             Path lastThreeLayers = path.subpath(nameCount - 3, nameCount);
             return "/" + lastThreeLayers.toString();
-            
-        } catch (Exception e) {
+
+        }
+        catch (Exception e) {
             LOGGER.warn("Failed to extract last three layers from path: {}", e.getMessage());
             return filePath; // 回退到原始路径
         }
@@ -258,7 +266,7 @@ public class ChatGPTTvShowRecognitionService {
                 LOGGER.warn("OpenAI API key is not configured");
                 return null;
             }
-            
+
             // 验证API URL格式
             if (apiUrl == null || !apiUrl.startsWith("http")) {
                 LOGGER.error("Invalid OpenAI API URL: {}", apiUrl);
@@ -275,26 +283,23 @@ public class ChatGPTTvShowRecognitionService {
             LOGGER.info("System prompt length: {} characters", systemPrompt.length());
 
             String requestBody = String.format(
-                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 50, \"temperature\": 0.1}",
-                model,
-                escapeJsonString(systemPrompt),
-                escapeJsonString(tvShowPath)
-            );
+                    "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
+                    model, escapeJsonString(systemPrompt), escapeJsonString(tvShowPath));
 
             LOGGER.info("API request body: {}", requestBody);
 
             // 创建HTTP请求
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .POST(BodyPublishers.ofString(requestBody))
-                .timeout(TIMEOUT)
-                .build();
+                    .uri(URI.create(apiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(BodyPublishers.ofString(requestBody))
+                    .timeout(TIMEOUT)
+                    .build();
 
             // 发送HTTP请求（在SwingWorker后台线程中执行，不阻塞UI）
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
-            
+
             if (response.statusCode() == 200) {
                 String responseBody = response.body();
                 LOGGER.info("=== AI API Response ===");
@@ -320,24 +325,32 @@ public class ChatGPTTvShowRecognitionService {
                                 // 处理转义字符
                                 if (c == 'n') {
                                     contentBuilder.append('\n');
-                                } else if (c == 't') {
+                                }
+                                else if (c == 't') {
                                     contentBuilder.append('\t');
-                                } else if (c == 'r') {
+                                }
+                                else if (c == 'r') {
                                     contentBuilder.append('\r');
-                                } else if (c == '"') {
+                                }
+                                else if (c == '"') {
                                     contentBuilder.append('"');
-                                } else if (c == '\\') {
+                                }
+                                else if (c == '\\') {
                                     contentBuilder.append('\\');
-                                } else {
+                                }
+                                else {
                                     contentBuilder.append(c);
                                 }
                                 inEscape = false;
-                            } else if (c == '\\') {
+                            }
+                            else if (c == '\\') {
                                 inEscape = true;
-                            } else if (c == '"') {
+                            }
+                            else if (c == '"') {
                                 // 找到内容结束
                                 break;
-                            } else {
+                            }
+                            else {
                                 contentBuilder.append(c);
                             }
                             pos++;
@@ -363,35 +376,43 @@ public class ChatGPTTvShowRecognitionService {
                     LOGGER.error("Full response body: {}", responseBody);
                     return null;
 
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     LOGGER.error("=== AI Response Parse Error ===");
                     LOGGER.error("Error parsing ChatGPT response: {}", e.getMessage());
                     LOGGER.error("Response body: {}", responseBody);
                     return null;
                 }
-            } else {
+            }
+            else {
                 LOGGER.error("=== AI API Request Failed ===");
                 LOGGER.error("Status code: {}", response.statusCode());
                 LOGGER.error("Response body: {}", response.body());
                 return null;
             }
 
-        } catch (java.net.http.HttpConnectTimeoutException e) {
+        }
+        catch (java.net.http.HttpConnectTimeoutException e) {
             LOGGER.error("ChatGPT API call failed: Connection timed out - please check network connectivity and API URL");
             LOGGER.error("Detailed error: {}", e.getMessage());
-        } catch (java.net.http.HttpTimeoutException e) {
+        }
+        catch (java.net.http.HttpTimeoutException e) {
             LOGGER.error("ChatGPT API call failed: Request timed out - API server may be slow or overloaded");
             LOGGER.error("Detailed error: {}", e.getMessage());
-        } catch (java.net.ConnectException e) {
+        }
+        catch (java.net.ConnectException e) {
             LOGGER.error("ChatGPT API call failed: Could not connect to server - please check API URL and network settings");
             LOGGER.error("Detailed error: {}", e.getMessage());
-        } catch (javax.net.ssl.SSLHandshakeException e) {
+        }
+        catch (javax.net.ssl.SSLHandshakeException e) {
             LOGGER.error("ChatGPT API call failed: SSL handshake failed - please check if the API URL uses valid SSL certificate");
             LOGGER.error("Detailed error: {}", e.getMessage());
-        } catch (javax.net.ssl.SSLException e) {
+        }
+        catch (javax.net.ssl.SSLException e) {
             LOGGER.error("ChatGPT API call failed: SSL error - please check SSL configuration");
             LOGGER.error("Detailed error: {}", e.getMessage());
-        } catch (java.io.IOException e) {
+        }
+        catch (java.io.IOException e) {
             LOGGER.error("ChatGPT API call failed: IO error - {}", e.getMessage());
             // 特别处理"HTTP/1.1 header parser received no bytes"错误
             if (e.getMessage() != null && e.getMessage().contains("header parser received no bytes")) {
@@ -401,13 +422,14 @@ public class ChatGPTTvShowRecognitionService {
                 LOGGER.error("3. Network connectivity issues (firewall, proxy)");
                 LOGGER.error("4. Invalid API key causing server to reject connection");
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             LOGGER.error("ChatGPT API call failed: {}", e.getMessage());
             LOGGER.error("Full stack trace:", e);
         }
         return null;
     }
-    
+
     /**
      * 正确转义JSON字符串
      */
@@ -422,29 +444,37 @@ public class ChatGPTTvShowRecognitionService {
                 case '"':
                     escaped.append("\\\"");
                     break;
+
                 case '\\':
                     escaped.append("\\\\");
                     break;
+
                 case '\b':
                     escaped.append("\\b");
                     break;
+
                 case '\f':
                     escaped.append("\\f");
                     break;
+
                 case '\n':
                     escaped.append("\\n");
                     break;
+
                 case '\r':
                     escaped.append("\\r");
                     break;
+
                 case '\t':
                     escaped.append("\\t");
                     break;
+
                 default:
                     // 处理其他控制字符
                     if (c < 0x20) {
                         escaped.append(String.format("\\u%04x", (int) c));
-                    } else {
+                    }
+                    else {
                         escaped.append(c);
                     }
                     break;
@@ -482,7 +512,8 @@ public class ChatGPTTvShowRecognitionService {
         }
 
         // 尝试匹配 "ID is 数字" 格式
-        java.util.regex.Pattern idIsPattern = java.util.regex.Pattern.compile("(?:TMDB|TVDB)\\s+ID\\s+is\\s+([0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Pattern idIsPattern = java.util.regex.Pattern.compile("(?:TMDB|TVDB)\\s+ID\\s+is\\s+([0-9]+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
         java.util.regex.Matcher idIsMatcher = idIsPattern.matcher(response);
         if (idIsMatcher.find()) {
             // 根据上下文判断是TMDB还是TVDB
@@ -490,7 +521,8 @@ public class ChatGPTTvShowRecognitionService {
                 String tmdbId = "TMDB:" + idIsMatcher.group(1);
                 LOGGER.info("Found TMDB ID from 'ID is' pattern: {}", tmdbId);
                 return tmdbId;
-            } else if (response.toUpperCase().contains("TVDB")) {
+            }
+            else if (response.toUpperCase().contains("TVDB")) {
                 String tvdbId = "TVDB:" + idIsMatcher.group(1);
                 LOGGER.info("Found TVDB ID from 'ID is' pattern: {}", tvdbId);
                 return tvdbId;
@@ -498,7 +530,8 @@ public class ChatGPTTvShowRecognitionService {
         }
 
         // 尝试匹配 "ID for ... is 数字" 格式
-        java.util.regex.Pattern idForPattern = java.util.regex.Pattern.compile("(?:TMDB|TVDB)\\s+ID\\s+for\\s+.*?is\\s+([0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Pattern idForPattern = java.util.regex.Pattern.compile("(?:TMDB|TVDB)\\s+ID\\s+for\\s+.*?is\\s+([0-9]+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
         java.util.regex.Matcher idForMatcher = idForPattern.matcher(response);
         if (idForMatcher.find()) {
             // 根据上下文判断是TMDB还是TVDB
@@ -506,7 +539,8 @@ public class ChatGPTTvShowRecognitionService {
                 String tmdbId = "TMDB:" + idForMatcher.group(1);
                 LOGGER.info("Found TMDB ID from 'ID for ... is' pattern: {}", tmdbId);
                 return tmdbId;
-            } else if (response.toUpperCase().contains("TVDB")) {
+            }
+            else if (response.toUpperCase().contains("TVDB")) {
                 String tvdbId = "TVDB:" + idForMatcher.group(1);
                 LOGGER.info("Found TVDB ID from 'ID for ... is' pattern: {}", tvdbId);
                 return tvdbId;
@@ -514,7 +548,8 @@ public class ChatGPTTvShowRecognitionService {
         }
 
         // 尝试匹配 "TheTVDB ID for ... is 数字" 格式
-        java.util.regex.Pattern theTvdbPattern = java.util.regex.Pattern.compile("TheTVDB\\s+ID\\s+for\\s+.*?is\\s+([0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Pattern theTvdbPattern = java.util.regex.Pattern.compile("TheTVDB\\s+ID\\s+for\\s+.*?is\\s+([0-9]+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
         java.util.regex.Matcher theTvdbMatcher = theTvdbPattern.matcher(response);
         if (theTvdbMatcher.find()) {
             String tvdbId = "TVDB:" + theTvdbMatcher.group(1);
@@ -535,58 +570,58 @@ public class ChatGPTTvShowRecognitionService {
             return customPrompt;
         }
 
-        // 电视剧专用的优化提示词 - 参考电影AI识别体系，更全面专业
-        return "你是一个专业的电视剧信息识别和刮削助手。根据提供的文件路径，严格按照路径内容识别电视剧，然后严格按照指定格式输出结果。\n\n" +
-               "## 核心要求\n\n" +
-               "### 1. 输入处理\n" +
-               "- 接收电视剧文件路径作为输入\n" +
-               "- **必须严格基于路径中的实际内容进行识别**，不得猜测或返回示例内容\n" +
-               "- 从路径中提取电视剧标题，忽略以下无关信息：\n" +
-               "  - 季数、集数(S01E01, 第1季)\n" +
-               "  - 分辨率(720p, 1080p, 2160p, 4K)\n" +
-               "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n" +
-               "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" +
-               "  - 发布组(各种中文字母组, RARBG, YTS等)\n" +
-               "  - 版本信息(Director's Cut, Extended)\n" +
-               "  - 语言标签(中文字幕, 双语)\n" +
-               "  - 其他技术信息\n\n" +
-               "### 2. 识别策略\n" +
-               "- 对提取的标题进行精确匹配搜索\n" +
-               "- 优先查找官方权威来源：TMDB、TVDB、豆瓣、IMDB等\n" +
-               "- 综合分析文件名中的关键元素（如场景描述、角色名、情节关键词）提高识别准确性\n" +
-               "- 验证搜索结果的准确性，确保与官方发行信息一致\n" +
-               "- **如果无法确定准确匹配，必须返回\"未知电视剧\"**\n\n" +
-               "### 3. 输出格式要求 - 请严格遵守！\n" +
-               "**只输出电视剧标题，绝对不要返回任何解释或错误信息：**\n" +
-               "- 使用官方中文名称（如果有），否则使用英文原名\n" +
-               "- 不包含年份、季数、集数、括号或其他额外信息\n" +
-               "- 不包含任何符号或解释文字\n" +
-               "- 保持简洁，只返回核心标题\n" +
-               "- 如果搜索失败，输出：未知电视剧\n" +
-               "- 禁止返回'I am unable to'或任何错误说明\n\n" +
-               "### 4. 示例\n" +
-               "输入：`/TV Shows/Breaking.Bad.S01/` → 输出：`绝命毒师`\n" +
-               "输入：`/电视剧/庆余年.第一季/` → 输出：`庆余年`\n" +
-               "输入：`/Series/Cheer.S01.HD2160p.WebRip/` → 输出：`啦啦队`\n" +
-               "输入：`/Series/Sense8.S02.HD2160p.WebRip/` → 输出：`超感八人组`\n" +
-               "输入：`/path/to/unknown.tvshow/` → 输出：`未知电视剧`";
+        // 电视剧专用的优化提示词 - 完整版，包含联网搜索要求
+        return "你是一个专业的电视剧信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电视剧信息，然后**直接输出结果**。\n\n" + "## 重要提示 - 输出格式\n" + "**你必须直接输出纯文本结果，只输出电视剧标题**\n"
+                + "**禁止返回以下任何格式：**\n" + "- JSON 格式（如 {\"title\": ...} 或 [{...}]）\n" + "- 搜索结果列表或 URL 链接\n" + "- 代码块或 code_output\n"
+                + "- 任何解释、说明或错误信息\n\n" + "## 输入处理\n" + "- 接收电视剧文件路径作为输入\n" + "- **必须严格基于路径中的实际内容进行识别**，不得猜测\n" + "- 从路径中提取电视剧标题，忽略以下无关信息：\n"
+                + "  - 季数、集数(S01E01, 第1季)\n" + "  - 分辨率(720p, 1080p, 2160p, 4K)\n" + "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n"
+                + "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" + "  - 发布组(RARBG, YTS等)\n" + "  - 语言标签(中文字幕, 双语)\n\n" + "## 搜索策略\n"
+                + "- 使用提取的标题关键词进行**联网搜索**\n" + "- 优先查找官方权威来源：**TMDB、TVDB、豆瓣、IMDB**等\n" + "- 综合分析文件名中的关键元素提高识别准确性\n" + "- 验证搜索结果的准确性，确保与官方发行信息一致\n\n"
+                + "## 输出要求\n" + "- 只输出电视剧标题（不含年份、季数、集数）\n" + "- 使用官方中文名称（如果有），否则使用英文原名\n" + "- 不包含任何符号或解释文字\n" + "- 保持简洁，只返回核心标题\n"
+                + "- 如果搜索失败，输出：`未知电视剧`\n\n" + "## 示例\n" + "输入：`/TV Shows/Breaking.Bad.S01/` → 输出：`绝命毒师`\n" + "输入：`/电视剧/庆余年.第一季/` → 输出：`庆余年`\n"
+                + "输入：`/Series/Sense8.S02.HD2160p.WebRip/` → 输出：`超感八人组`\n" + "输入：`/path/to/unknown.tvshow/` → 输出：`未知电视剧`";
     }
-    
+
     /**
-     * 清理和验证识别结果（参考电影AI识别的简化逻辑）
+     * 清理和验证识别结果 - 增强版，添加严格格式验证
      */
     private String cleanAndValidateTitle(String title) {
         if (title == null || title.trim().isEmpty()) {
+            LOGGER.warn("识别结果为空");
             return null;
         }
 
-        // 参考电影AI识别的简化清理逻辑
-        String cleaned = title
-            .replaceAll("^[\\s\\p{Punct}]+", "")  // 移除开头的标点符号
-            .replaceAll("[\\s\\p{Punct}]+$", "")  // 移除结尾的标点符号
-            .trim();
+        // 检查是否是 JSON 格式响应（AI 返回了搜索结果列表而不是标题）
+        String trimmed = title.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("code_output") || trimmed.contains("\"url\":")
+                || trimmed.contains("\"title\":")) {
+            LOGGER.warn("AI 返回了 JSON 格式响应而不是标题: '{}'", trimmed.length() > 100 ? trimmed.substring(0, 100) + "..." : trimmed);
+            return null;
+        }
 
-        // 基本验证：长度合理（与电影保持一致）
+        // 清理逻辑 - 移除标点符号和规范化空格
+        String cleaned = title.replaceAll("^[\\s\\p{Punct}]+", "") // 移除开头的标点符号
+                .replaceAll("[\\s\\p{Punct}]+$", "") // 移除结尾的标点符号
+                .replaceAll("\\s+", " ") // 规范化空格
+                .trim();
+
+        // 检查是否包含错误提示词
+        String lowerCleaned = cleaned.toLowerCase();
+        if (lowerCleaned.contains("error") || lowerCleaned.contains("failed") || lowerCleaned.contains("unable") || lowerCleaned.contains("cannot")
+                || lowerCleaned.contains("i'm") || lowerCleaned.contains("i am") || lowerCleaned.contains("sorry")
+                || lowerCleaned.contains("apologize") || lowerCleaned.contains("not possible") || lowerCleaned.contains("cannot find")) {
+            LOGGER.warn("识别结果包含错误提示词: {}", cleaned);
+            return null;
+        }
+
+        // 检查是否是未知电视剧格式
+        if (lowerCleaned.equals("未知电视剧") || lowerCleaned.equals("unknown tv show") || lowerCleaned.equals("unknown tvshow")
+                || lowerCleaned.equals("unknown show")) {
+            LOGGER.warn("识别结果为未知电视剧");
+            return "未知电视剧";
+        }
+
+        // 基本验证：长度合理
         if (cleaned.length() >= 2 && cleaned.length() <= 100) {
             LOGGER.debug("Cleaned title: '{}' -> '{}'", title, cleaned);
             return cleaned;

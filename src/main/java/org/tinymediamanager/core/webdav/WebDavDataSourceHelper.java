@@ -85,25 +85,42 @@ public class WebDavDataSourceHelper {
       result = WEBDAV_PREFIX + result.substring(8); // 8 = length of "webdav:/"
     }
 
-    // Step 2: Fix malformed paths where UUID is directly followed by URL-encoded content
-    // Example: webdav://uuid%E5%88%AE%E5%89%8A... -> webdav://uuid/%E5%88%AE%E5%89%8A...
+    // Step 2: Fix malformed paths where UUID or SourceID is directly followed by URL-encoded content
     if (result.startsWith(WEBDAV_PREFIX)) {
       String afterPrefix = result.substring(WEBDAV_PREFIX.length());
 
-      // Check if this looks like a UUID followed by URL-encoded content without slash
-      if (afterPrefix.length() >= 36) {
-        String potentialUuid = afterPrefix.substring(0, 36);
-        if (isValidUuidFormat(potentialUuid)) {
-          // Check if the character right after UUID is not a slash but starts with % (URL encoding)
-          if (afterPrefix.length() > 36) {
-            char afterUuid = afterPrefix.charAt(36);
-            if (afterUuid == '%') {
-              // Missing slash after UUID, insert it
-              String remotePath = afterPrefix.substring(36);
-              result = WEBDAV_PREFIX + potentialUuid + "/" + remotePath;
-              LOGGER.debug("Fixed malformed WebDAV path: added missing slash after UUID. Original: '{}', Fixed: '{}'", path, result);
-            }
+      // Check if this looks like a missing slash: we have encoded chars (%) but no slash, or % appears before the slash
+      int percentIndex = afterPrefix.indexOf('%');
+      int slashIndex = afterPrefix.indexOf('/');
+
+      if (percentIndex >= 0 && (slashIndex == -1 || percentIndex < slashIndex)) {
+        // Missing slash detected!
+        String sourceId;
+        String remotePath;
+
+        // Strategy A: Check for UUID (most precise)
+        if (afterPrefix.length() >= 36 && isValidUuidFormat(afterPrefix.substring(0, 36))) {
+          sourceId = afterPrefix.substring(0, 36);
+          remotePath = afterPrefix.substring(36);
+        }
+        else {
+          // Strategy B: Generic - assume SourceID ends before the first '%'
+          // (Source IDs should valid hostnames/identifiers and not contain %)
+          if (percentIndex > 0) {
+            sourceId = afterPrefix.substring(0, percentIndex);
+            remotePath = afterPrefix.substring(percentIndex);
           }
+          else {
+            // Edge case: path starts with %. Empty SourceID?
+            // Keep original behavior (do nothing), wait for validation to fail later
+            sourceId = null;
+            remotePath = null;
+          }
+        }
+
+        if (sourceId != null) {
+          result = WEBDAV_PREFIX + sourceId + "/" + remotePath;
+          LOGGER.debug("Fixed malformed WebDAV path: added missing slash. Original: '{}', Fixed: '{}'", path, result);
         }
       }
     }
@@ -163,12 +180,8 @@ public class WebDavDataSourceHelper {
       return null;
     }
 
-    // Normalize the WebDAV path format first
-    // Convert "webdav:/" to "webdav://" for consistent parsing
-    String normalizedPath = webDavPath;
-    if (normalizedPath.startsWith("webdav:/") && !normalizedPath.startsWith(WEBDAV_PREFIX)) {
-      normalizedPath = normalizedPath.replaceFirst("webdav:/", WEBDAV_PREFIX);
-    }
+    // Normalize the WebDAV path format first (handles prefixes, missing slashes, and decoding)
+    String normalizedPath = normalizeWebDavPath(webDavPath);
 
     // Remove prefix - now we only need to handle "webdav://" format
     String pathWithoutPrefix;

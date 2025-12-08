@@ -44,7 +44,7 @@ import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.threading.TmmThreadPool;
-import org.tinymediamanager.core.services.AIApiRateLimiter;
+
 import org.tinymediamanager.scraper.ArtworkSearchAndScrapeOptions;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
@@ -62,12 +62,13 @@ import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.MetadataUtil;
-import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 import org.tinymediamanager.ui.movies.dialogs.MovieChooserDialog;
 import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService;
+import org.tinymediamanager.core.movie.services.MovieAIRecognitionManager;
 
 /**
  * The Class MovieScrapeTask.
@@ -126,6 +127,9 @@ public class MovieScrapeTask extends TmmThreadPool {
 
     // 使用线程安全的Map存储AI识别结果
     ConcurrentHashMap<String, String> aiRecognitionResults = new ConcurrentHashMap<>();
+
+    // 开始新的AI识别会话，清空缓存和计数器
+    MovieAIRecognitionManager.getInstance().startNewSession();
 
     // 批量AI识别优化：批次处理，识别一部分就刮削一部分
     if (movieScrapeParams.doSearch && !movieScrapeParams.moviesToScrape.isEmpty()) {
@@ -429,7 +433,10 @@ public class MovieScrapeTask extends TmmThreadPool {
 
           if (md != null && (ScraperMetadataConfig.containsAnyMetadata(movieScrapeParams.scraperMetadataConfig)
               || ScraperMetadataConfig.containsAnyCast(movieScrapeParams.scraperMetadataConfig))) {
+            LOGGER.info("Calling setMetadata for movie '{}' with metadata title='{}', year={}, overwrite={}", movie.getTitle(), md.getTitle(),
+                md.getYear(), movieScrapeParams.overwriteExistingItems);
             movie.setMetadata(md, movieScrapeParams.scraperMetadataConfig, movieScrapeParams.overwriteExistingItems);
+            LOGGER.info("After setMetadata: movie title='{}', year={}", movie.getTitle(), movie.getYear());
             movie.setLastScraperId(movieScrapeParams.searchAndScrapeOptions.getMetadataScraper().getId());
             movie.setLastScrapeLanguage(movieScrapeParams.searchAndScrapeOptions.getLanguage().name());
 
@@ -501,7 +508,7 @@ public class MovieScrapeTask extends TmmThreadPool {
     private MediaSearchResult searchForMovie(MediaScraper mediaMetadataProvider) throws ScrapeException {
       // 处理电影标题，提取干净的标题和年份
       String processedTitle = movie.getTitle();
-      Integer processedYear = movie.getYear();
+      Integer processedYear = null;
 
       String[] parserInfo = ParserUtils.detectCleanTitleAndYear(movie.getTitle(), Collections.emptyList());
       if (parserInfo != null && parserInfo.length >= 2) {
@@ -509,56 +516,44 @@ public class MovieScrapeTask extends TmmThreadPool {
         if (StringUtils.isNotBlank(parserInfo[1])) {
           processedYear = safeParseYear(parserInfo[1]);
         }
-        LOGGER.debug("Processed title '{}' -> '{}' (year: {})", movie.getTitle(), processedTitle, processedYear);
       }
 
-      // 使用批量AI识别结果
+      // 备用年份提取：从标题中提取括号内的年份如 (2019) 或末尾的年份
+      if (processedYear == null) {
+        // 尝试匹配括号内的年份：(2019)
+        java.util.regex.Pattern bracketYearPattern = java.util.regex.Pattern.compile("\\((\\d{4})\\)");
+        java.util.regex.Matcher bracketMatcher = bracketYearPattern.matcher(movie.getTitle());
+        if (bracketMatcher.find()) {
+          Integer extractedYear = safeParseYear(bracketMatcher.group(1));
+          if (extractedYear != null && isValidMovieYear(extractedYear)) {
+            processedYear = extractedYear;
+            LOGGER.debug("Extracted year from brackets: {}", processedYear);
+          }
+        }
+      }
+
+      // 如果仍然没有解析出年份，使用电影原始年份作为回退
+      if (processedYear == null) {
+        processedYear = movie.getYear();
+        LOGGER.debug("No year from title parsing, using original movie year: {}", processedYear);
+      }
+
+      LOGGER.debug("Processed title '{}' -> '{}' (year: {})", movie.getTitle(), processedTitle, processedYear);
+
+      // 使用AIRecognitionManager统一获取AI识别结果
       MediaSearchResult aiResult = null;
-      String recognizedTitle = null;
+      String recognizedTitle = MovieAIRecognitionManager.getInstance().getRecognizedTitle(movie, aiRecognitionResults);
 
-      // 首先尝试使用批量识别结果
-      if (aiRecognitionResults != null && aiRecognitionResults.containsKey(movie.getDbId().toString())) {
-        recognizedTitle = aiRecognitionResults.get(movie.getDbId().toString());
-        LOGGER.info("Using batch AI recognition result: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
+      if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+        LOGGER.info("AI recognition result for movie '{}': '{}'", movie.getTitle(), recognizedTitle);
 
-        // 发送单个电影识别成功消息到Message history
-        String successMsg = String.format("批量AI识别: %s → %s", movie.getTitle(), recognizedTitle);
-        MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量电影AI识别", successMsg));
+        // 发送识别成功消息到Message history
+        String successMsg = String.format("AI识别: %s → %s", movie.getTitle(), recognizedTitle);
+        MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "电影AI识别", successMsg));
       }
       else {
-        // 检查是否应该进行单个识别回退
-        String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
-        if (apiKey != null && !apiKey.trim().isEmpty()) {
-          if (aiRecognitionResults != null) {
-            LOGGER.debug("Movie '{}' (ID: {}) not found in batch results, falling back to individual recognition", movie.getTitle(), movie.getDbId());
-          }
-          else {
-            LOGGER.debug("Batch recognition was not performed, using individual recognition for movie '{}'", movie.getTitle());
-          }
-
-          // 检查用户是否启用了个体回退
-          if (org.tinymediamanager.core.Settings.getInstance().isAiIndividualFallbackEnabled()) {
-            LOGGER.debug("Individual AI fallback enabled by user, attempting individual recognition for movie '{}'", movie.getTitle());
-            try {
-              ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
-              recognizedTitle = individualService.recognizeMovieTitle(movie);
-              if (recognizedTitle != null) {
-                LOGGER.info("Individual AI recognition successful: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
-              }
-            }
-            catch (Exception individualEx) {
-              LOGGER.warn("Individual AI recognition failed for movie '{}': {}", movie.getTitle(), individualEx.getMessage());
-            }
-          }
-          else {
-            // 默认禁用单个AI识别回退，避免频繁API调用
-            LOGGER.debug("Individual AI recognition disabled for movie '{}' to prevent frequent API calls", movie.getTitle());
-            LOGGER.debug("Enable 'AI Individual Fallback' in settings if you want automatic individual recognition");
-          }
-        }
-        else {
-          LOGGER.debug("OpenAI API key not configured, skipping AI recognition for movie '{}'", movie.getTitle());
-        }
+        LOGGER.debug("No AI recognition result available for movie '{}' (attempts: {})", movie.getTitle(),
+            MovieAIRecognitionManager.getInstance().getAttemptCount(movie));
       }
 
       // 使用AI识别的标题重新搜索
@@ -567,6 +562,11 @@ public class MovieScrapeTask extends TmmThreadPool {
         String aiProcessedTitle = recognizedTitle;
         Integer aiProcessedYear = null;
 
+        // 详细记录 ParserUtils 解析结果
+        LOGGER.info("ParserUtils.detectCleanTitleAndYear('{}') returned: title='{}', year='{}'", recognizedTitle,
+            aiParserInfo != null && aiParserInfo.length >= 1 ? aiParserInfo[0] : "null",
+            aiParserInfo != null && aiParserInfo.length >= 2 ? aiParserInfo[1] : "null");
+
         if (aiParserInfo != null && aiParserInfo.length >= 2) {
           aiProcessedTitle = aiParserInfo[0];
           if (StringUtils.isNotBlank(aiParserInfo[1])) {
@@ -574,50 +574,27 @@ public class MovieScrapeTask extends TmmThreadPool {
           }
         }
 
-        // 验证年份是否合理，如果不合理则重试AI识别
-        if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
-          LOGGER.error("=== INVALID YEAR DETECTED ===");
-          LOGGER.error("AI returned invalid year: {} for movie '{}'", aiProcessedYear, movie.getTitle());
-          LOGGER.error("Original AI response: '{}'", recognizedTitle);
-          LOGGER.error("Parsed title: '{}', Parsed year: '{}'", aiProcessedTitle, aiProcessedYear);
-          LOGGER.error("Valid year range: 1888-{}", java.time.Year.now().getValue() + 2);
-          LOGGER.error("Attempting retry with year validation...");
+        // 备用年份提取：如果 ParserUtils 没有解析出年份，直接从 AI 结果末尾提取
+        if (aiProcessedYear == null && recognizedTitle.matches(".*\\s+\\d{4}\\s*$")) {
+          java.util.regex.Pattern yearPattern = java.util.regex.Pattern.compile("(\\d{4})\\s*$");
+          java.util.regex.Matcher yearMatcher = yearPattern.matcher(recognizedTitle.trim());
+          if (yearMatcher.find()) {
+            Integer extractedYear = safeParseYear(yearMatcher.group(1));
+            if (extractedYear != null && isValidMovieYear(extractedYear)) {
+              aiProcessedYear = extractedYear;
+              // 从标题中移除年份
+              aiProcessedTitle = recognizedTitle.substring(0, yearMatcher.start()).trim();
+              LOGGER.info("Fallback year extraction: title='{}', year={}", aiProcessedTitle, aiProcessedYear);
+            }
+          }
+        }
 
-          // 重试AI识别，要求明确包含年份信息
-          String retryRecognizedTitle = retryAIRecognitionWithYearValidation(movie);
-          if (retryRecognizedTitle != null && !retryRecognizedTitle.trim().isEmpty()) {
-            LOGGER.info("AI retry response: '{}'", retryRecognizedTitle);
-            String[] retryParserInfo = ParserUtils.detectCleanTitleAndYear(retryRecognizedTitle, Collections.emptyList());
-            if (retryParserInfo != null && retryParserInfo.length >= 2) {
-              String retryTitle = retryParserInfo[0];
-              String retryYearStr = retryParserInfo[1];
-              LOGGER.info("Retry parsed - Title: '{}', Year string: '{}'", retryTitle, retryYearStr);
-              if (StringUtils.isNotBlank(retryYearStr)) {
-                Integer retryYear = safeParseYear(retryYearStr);
-                if (retryYear != null) {
-                  LOGGER.info("Retry parsed year: {}", retryYear);
-                  if (isValidMovieYear(retryYear)) {
-                    LOGGER.info("AI retry successful! Updated: '{}' -> '{}' (year: {} -> {})", aiProcessedTitle, retryTitle, aiProcessedYear,
-                        retryYear);
-                    aiProcessedTitle = retryTitle;
-                    aiProcessedYear = retryYear;
-                  }
-                  else {
-                    LOGGER.error("Retry year {} is still invalid!", retryYear);
-                  }
-                }
-                else {
-                  LOGGER.error("Could not parse year from AI retry result: '{}'", retryYearStr);
-                }
-              }
-            }
-            else {
-              LOGGER.warn("Retry response could not be parsed into title/year");
-            }
-          }
-          else {
-            LOGGER.warn("AI retry returned empty or null response");
-          }
+        // 验证年份是否合理
+        if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
+          LOGGER.warn("AI returned invalid year {} for movie '{}', valid range: 1888-{}", aiProcessedYear, movie.getTitle(),
+              java.time.Year.now().getValue() + 2);
+          // 不再重试AI，直接使用null年份继续搜索
+          aiProcessedYear = null;
         }
 
         // 如果仍然没有合理的年份，使用null而不是错误的年份
@@ -626,12 +603,49 @@ public class MovieScrapeTask extends TmmThreadPool {
           aiProcessedYear = null;
         }
 
-        LOGGER.debug("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
+        LOGGER.info("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
 
-        List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, aiProcessedYear, movie.getIds(), mediaMetadataProvider);
+        // 确保年份不是 null 时正确传递给 searchMovie（int 参数）
+        // 注意：AI 识别搜索时不传入电影原有 ID，以避免因旧 ID 返回错误结果
+        int searchYear = aiProcessedYear != null ? aiProcessedYear : 0;
+        List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, searchYear, null, mediaMetadataProvider);
 
         if (ListUtils.isNotEmpty(aiResults)) {
-          aiResult = aiResults.get(0);
+          // 1. 首先优先从文件路径解析 TMDB ID（比 movie.getTmdbId() 更可靠）
+          int pathTmdbId = 0;
+          String moviePath = movie.getPathNIO() != null ? movie.getPathNIO().toString() : "";
+          pathTmdbId = ParserUtils.detectTmdbId(moviePath);
+          if (pathTmdbId <= 0) {
+            // 如果路径中没有，使用电影对象中已存储的 ID 作为备用
+            pathTmdbId = movie.getTmdbId();
+          }
+          LOGGER.info("Movie '{}' TMDB ID from path: {}, from object: {}", movie.getTitle(), ParserUtils.detectTmdbId(moviePath), movie.getTmdbId());
+          if (pathTmdbId > 0) {
+            for (MediaSearchResult result : aiResults) {
+              if (result.getIdAsInt(MediaMetadata.TMDB) == pathTmdbId) {
+                aiResult = result;
+                LOGGER.info("Found exact TMDB ID match: title='{}', tmdbId={}, score={}", result.getTitle(), pathTmdbId, result.getScore());
+                break;
+              }
+            }
+          }
+
+          // 2. 如果没有 ID 匹配，优先选择年份完全匹配的结果
+          if (aiResult == null && searchYear > 0) {
+            for (MediaSearchResult result : aiResults) {
+              if (result.getYear() == searchYear) {
+                aiResult = result;
+                LOGGER.info("Found exact year match: title='{}', year={}, score={}", result.getTitle(), result.getYear(), result.getScore());
+                break;
+              }
+            }
+          }
+
+          // 3. 如果都没有匹配，使用第一个结果
+          if (aiResult == null) {
+            aiResult = aiResults.get(0);
+          }
+
           final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
 
           if (aiResult.getScore() >= scraperTreshold) {
@@ -715,30 +729,24 @@ public class MovieScrapeTask extends TmmThreadPool {
     }
 
     /**
-     * 回退到单个文件AI识别
+     * 回退到单个文件AI识别 使用AIRecognitionManager统一管理调用次数
      */
     private MediaSearchResult fallbackToIndividualAIRecognition(Movie movie, String processedTitle, Integer processedYear,
         MediaScraper mediaMetadataProvider) {
       try {
-        LOGGER.info("Attempting individual AI recognition fallback for movie: '{}'", movie.getTitle());
+        // 使用MovieAIRecognitionManager检查是否还可以进行AI识别
+        MovieAIRecognitionManager aiManager = MovieAIRecognitionManager.getInstance();
 
-        // 检查用户是否启用了个体回退
-        org.tinymediamanager.core.Settings settings = org.tinymediamanager.core.Settings.getInstance();
-        if (settings == null || !settings.isAiIndividualFallbackEnabled()) {
-          LOGGER.debug("Individual AI fallback disabled by user");
+        if (!aiManager.canAttemptRecognition(movie)) {
+          LOGGER.debug("Max AI recognition attempts reached for movie '{}', skipping fallback", movie.getTitle());
           return null;
         }
 
-        // 检查速率限制
-        AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
-        if (!rateLimiter.waitForPermission("ChatGPTMovieRecognition", 30000)) {
-          LOGGER.warn("API call timed out for individual AI recognition fallback after 30 seconds");
-          return null;
-        }
+        LOGGER.info("Attempting individual AI recognition fallback for movie: '{}' (attempt: {})", movie.getTitle(),
+            aiManager.getAttemptCount(movie) + 1);
 
-        // 使用单个文件AI识别服务
-        ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
-        String recognizedTitle = individualService.recognizeMovieTitle(movie);
+        // 通过AIRecognitionManager获取识别结果（会自动检查用户设置和调用次数）
+        String recognizedTitle = aiManager.getRecognizedTitle(movie, null);
 
         if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
           LOGGER.info("Individual AI recognition successful: '{}' for movie: '{}'", recognizedTitle, movie.getTitle());
@@ -757,7 +765,7 @@ public class MovieScrapeTask extends TmmThreadPool {
 
           // 验证年份
           if (aiProcessedYear != null && !isValidMovieYear(aiProcessedYear)) {
-            LOGGER.warn("Individual AI returned invalid year: {} for movie '{}'", aiProcessedYear, movie.getTitle());
+            LOGGER.warn("Individual AI returned invalid year: {} for movie '{}', using null", aiProcessedYear, movie.getTitle());
             aiProcessedYear = null;
           }
 
@@ -770,6 +778,8 @@ public class MovieScrapeTask extends TmmThreadPool {
 
             if (aiResult.getScore() >= scraperTreshold) {
               LOGGER.info("Individual AI recognition successful! Found match with score: {}", aiResult.getScore());
+              // 标记为已验证
+              aiManager.markAsValidated(movie, recognizedTitle);
               return aiResult;
             }
             else {
@@ -779,6 +789,9 @@ public class MovieScrapeTask extends TmmThreadPool {
           else {
             LOGGER.info("No results found for individual AI recognized title: '{}'", aiProcessedTitle);
           }
+        }
+        else {
+          LOGGER.debug("No new AI recognition result for movie '{}' from fallback", movie.getTitle());
         }
       }
       catch (Exception e) {
@@ -954,36 +967,5 @@ public class MovieScrapeTask extends TmmThreadPool {
     }
 
     return isValid;
-  }
-
-  /**
-   * 重试AI识别，要求明确包含年份信息
-   * 
-   * @param movie
-   *          电影对象
-   * @return 重新识别的标题，如果失败返回null
-   */
-  private String retryAIRecognitionWithYearValidation(Movie movie) {
-    try {
-      LOGGER.info("Retrying AI recognition with year validation for movie: {}", movie.getTitle());
-
-      // 使用单独的AI识别服务进行重试
-      ChatGPTMovieRecognitionService retryService = new ChatGPTMovieRecognitionService();
-      String retryResult = retryService.recognizeMovieTitle(movie);
-
-      if (retryResult != null && !retryResult.trim().isEmpty()) {
-        LOGGER.info("AI retry returned: '{}'", retryResult);
-        return retryResult;
-      }
-      else {
-        LOGGER.warn("AI retry returned empty result");
-      }
-
-    }
-    catch (Exception e) {
-      LOGGER.error("Error during AI recognition retry: {}", e.getMessage());
-    }
-
-    return null;
   }
 }

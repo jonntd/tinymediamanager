@@ -63,7 +63,27 @@ public class WebDavFileOperations {
       String destPath = destParts[1];
 
       // Check if source and destination are on the same WebDAV server
-      if (!sourceId.equals(destId)) {
+      boolean sameServer = sourceId.equals(destId);
+
+      // Relaxed check: valid if both resolve to the same WebDavSource object
+      if (!sameServer) {
+        WebDavSource srcSource = WebDavDataSourceHelper.getWebDavSource(sourceId);
+        WebDavSource destSource = WebDavDataSourceHelper.getWebDavSource(destId);
+
+        // Try decoding IDs if direct lookup fails (handle potential encoding mismatch)
+        if (srcSource == null) {
+          srcSource = WebDavDataSourceHelper.getWebDavSource(WebDavDataSourceHelper.decodeWebDavPath(sourceId));
+        }
+        if (destSource == null) {
+          destSource = WebDavDataSourceHelper.getWebDavSource(WebDavDataSourceHelper.decodeWebDavPath(destId));
+        }
+
+        if (srcSource != null && destSource != null && srcSource.equals(destSource)) {
+          sameServer = true;
+        }
+      }
+
+      if (!sameServer) {
         LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
         return false;
       }
@@ -178,7 +198,27 @@ public class WebDavFileOperations {
       String destPath = destParts[1];
 
       // Check if source and destination are on the same WebDAV server
-      if (!sourceId.equals(destId)) {
+      boolean sameServer = sourceId.equals(destId);
+
+      // Relaxed check: valid if both resolve to the same WebDavSource object
+      if (!sameServer) {
+        WebDavSource srcSource = WebDavDataSourceHelper.getWebDavSource(sourceId);
+        WebDavSource destSource = WebDavDataSourceHelper.getWebDavSource(destId);
+
+        // Try decoding IDs if direct lookup fails
+        if (srcSource == null) {
+          srcSource = WebDavDataSourceHelper.getWebDavSource(WebDavDataSourceHelper.decodeWebDavPath(sourceId));
+        }
+        if (destSource == null) {
+          destSource = WebDavDataSourceHelper.getWebDavSource(WebDavDataSourceHelper.decodeWebDavPath(destId));
+        }
+
+        if (srcSource != null && destSource != null && srcSource.equals(destSource)) {
+          sameServer = true;
+        }
+      }
+
+      if (!sameServer) {
         LOGGER.error("Cannot copy files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
         return false;
       }

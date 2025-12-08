@@ -52,6 +52,7 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
   private int                       year             = 0;
   private String                    originalTitle    = "";
   private String                    originalLanguage = "";
+  private String                    englishTitle     = "";
   private float                     score            = 0;
   private MediaMetadata             metadata         = null;
   private String                    posterUrl        = "";
@@ -467,6 +468,25 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
   }
 
   /**
+   * Get the English title
+   *
+   * @return the English title
+   */
+  public String getEnglishTitle() {
+    return englishTitle;
+  }
+
+  /**
+   * Set the English title
+   *
+   * @param englishTitle
+   *          the English title
+   */
+  public void setEnglishTitle(String englishTitle) {
+    this.englishTitle = StrgUtils.getNonNullString(englishTitle);
+  }
+
+  /**
    * Get the poster url
    *
    * @return the poster url
@@ -483,14 +503,41 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
    */
   public void calculateScore(MediaSearchAndScrapeOptions options) {
 
-    // compare score based on names (translated and original title)
-    float calculatedScore = Math.max(MetadataUtil.calculateScore(options.getSearchQuery(), title),
-        MetadataUtil.calculateScore(options.getSearchQuery(), originalTitle));
+    // compare score based on names (translated, original title, and english title)
+    float calculatedScore = Math.max(
+        Math.max(MetadataUtil.calculateScore(options.getSearchQuery(), title), MetadataUtil.calculateScore(options.getSearchQuery(), originalTitle)),
+        MetadataUtil.calculateScore(options.getSearchQuery(), englishTitle));
 
-    float yearPenalty = MetadataUtil.calculateYearPenalty(options.getSearchYear(), year);
-    if (yearPenalty > 0) {
-      LOGGER.trace("parsed year does not match search result year - downgrading score by {}", yearPenalty);
-      calculatedScore -= yearPenalty;
+    // Year handling: bonus for exact match, penalty for mismatch
+    int searchYear = options.getSearchYear();
+    if (searchYear > 1900 && year > 0) {
+      if (searchYear == year) {
+        // Exact year match - give bonus score
+        // This helps when title doesn't match (e.g., Chinese title vs English search)
+        // Ensure at least 0.3 base score for exact year match
+        if (calculatedScore < 0.3f) {
+          LOGGER.trace("exact year match but low title score - boosting score from {} to 0.3", calculatedScore);
+          calculatedScore = 0.3f;
+        }
+        // Additional small bonus for exact year match
+        calculatedScore += 0.05f;
+      }
+      else {
+        // Year mismatch - apply penalty
+        float yearPenalty = MetadataUtil.calculateYearPenalty(searchYear, year);
+        if (yearPenalty > 0) {
+          LOGGER.trace("parsed year does not match search result year - downgrading score by {}", yearPenalty);
+          calculatedScore -= yearPenalty;
+        }
+      }
+    }
+    else {
+      // No search year or no result year - just apply penalty calculation
+      float yearPenalty = MetadataUtil.calculateYearPenalty(options.getSearchYear(), year);
+      if (yearPenalty > 0) {
+        LOGGER.trace("parsed year does not match search result year - downgrading score by {}", yearPenalty);
+        calculatedScore -= yearPenalty;
+      }
     }
 
     if (StringUtils.isBlank(posterUrl)) {

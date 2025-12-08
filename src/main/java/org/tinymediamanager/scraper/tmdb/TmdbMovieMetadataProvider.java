@@ -776,6 +776,20 @@ public class TmdbMovieMetadataProvider extends TmdbMetadataProvider implements I
     searchResult.setOriginalTitle(movie.original_title);
     searchResult.setOriginalLanguage(movie.original_language);
 
+    // Set English title based on original language
+    // If the movie's original language is English, original_title is the English title
+    if ("en".equals(movie.original_language)) {
+      searchResult.setEnglishTitle(movie.original_title);
+    }
+    // For non-English movies, we don't have the English title in search results
+    // The user's search query might be the English title, so use it as a hint
+    // This helps when searching "Shock Wave" for Chinese movie "拆弹专家"
+    else if (StringUtils.isNotBlank(query.getSearchQuery())) {
+      // Use search query as potential English title hint for scoring
+      // This is a heuristic that helps cross-language matching
+      searchResult.setEnglishTitle(query.getSearchQuery().replaceAll("\\s+\\d{4}$", "").trim());
+    }
+
     if (movie.poster_path != null && !movie.poster_path.isEmpty()) {
       searchResult.setPosterUrl(artworkBaseUrl + "w342" + movie.poster_path);
     }

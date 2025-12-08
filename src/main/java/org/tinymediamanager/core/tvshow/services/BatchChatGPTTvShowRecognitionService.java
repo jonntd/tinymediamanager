@@ -25,25 +25,24 @@ import org.tinymediamanager.core.services.AdaptiveBatchProcessor;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 
 /**
- * 批量ChatGPT电视剧识别服务
- * 支持单次API调用处理多个电视剧，减少API调用次数
+ * 批量ChatGPT电视剧识别服务 支持单次API调用处理多个电视剧，减少API调用次数
  */
 public class BatchChatGPTTvShowRecognitionService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BatchChatGPTTvShowRecognitionService.class);
-    private static final Duration TIMEOUT = Duration.ofSeconds(60);
-    
-    private HttpClient httpClient;
-    private final Settings settings;
+    private static final Logger              LOGGER                 = LoggerFactory.getLogger(BatchChatGPTTvShowRecognitionService.class);
+    private static final Duration            TIMEOUT                = Duration.ofSeconds(60);
+
+    private HttpClient                       httpClient;
+    private final Settings                   settings;
 
     // 缓存已识别的结果，避免重复调用
-    private static final Map<String, String> recognitionCache = new ConcurrentHashMap<>();
+    private static final Map<String, String> recognitionCache       = new ConcurrentHashMap<>();
 
     // 自适应批量处理器
-    private final AdaptiveBatchProcessor adaptiveBatchProcessor = AdaptiveBatchProcessor.getInstance();
+    private final AdaptiveBatchProcessor     adaptiveBatchProcessor = AdaptiveBatchProcessor.getInstance();
 
     // 配置参数
-    private static final int MAX_RETRIES = 3; // 最大重试次数
-    
+    private static final int                 MAX_RETRIES            = 3;                                                                  // 最大重试次数
+
     public BatchChatGPTTvShowRecognitionService() {
         this.settings = Settings.getInstance();
 
@@ -61,50 +60,56 @@ public class BatchChatGPTTvShowRecognitionService {
         if (apiKey == null || apiKey.trim().isEmpty()) {
             LOGGER.warn("OpenAI API key is not configured in settings");
             // 不立即返回，允许后续的单个识别回退
-        } else {
+        }
+        else {
             try {
-                this.httpClient = HttpClient.newBuilder()
-                    .connectTimeout(TIMEOUT)
-                    .build();
+                this.httpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
                 LOGGER.debug("HTTP client initialized successfully");
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 LOGGER.error("Failed to initialize HTTP client: {}", e.getMessage());
             }
         }
     }
-    
+
     /**
      * 批量识别电视剧标题（使用自适应批量大小）
-     * @param tvShows 待识别的电视剧列表
+     * 
+     * @param tvShows
+     *            待识别的电视剧列表
      * @return 电视剧ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows) {
-        // 使用自适应批量大小
-        int adaptiveBatchSize = adaptiveBatchProcessor.getCurrentBatchSize();
-        LOGGER.info("Using adaptive batch size: {} for {} TV shows", adaptiveBatchSize, tvShows.size());
-        return batchRecognizeTvShowTitles(tvShows, adaptiveBatchSize, MAX_RETRIES);
+        // 使用用户设置的批量大小，不再使用自适应动态调整
+        int batchSize = settings.getAiBatchSize();
+        LOGGER.info("Using configured batch size: {} for {} TV shows", batchSize, tvShows.size());
+        return batchRecognizeTvShowTitles(tvShows, batchSize, MAX_RETRIES);
     }
-    
+
     /**
      * 批量识别电视剧标题（支持分组处理和重试机制）
-     * @param tvShows 待识别的电视剧列表
-     * @param batchSize 每批处理的数量
-     * @param maxRetries 最大重试次数
+     * 
+     * @param tvShows
+     *            待识别的电视剧列表
+     * @param batchSize
+     *            每批处理的数量
+     * @param maxRetries
+     *            最大重试次数
      * @return 电视剧ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows, int batchSize, int maxRetries) {
         Map<String, String> results = new HashMap<>();
-        
+
         if (tvShows == null || tvShows.isEmpty()) {
             LOGGER.debug("No TV shows to process");
             return results;
         }
-        
+
         if (httpClient == null) {
             LOGGER.warn("HTTP client not initialized, falling back to individual recognition");
             return fallbackToIndividualRecognition(tvShows);
         }
-        
+
         // 过滤有效的电视剧，禁用缓存，每次都实时处理
         List<TvShow> validTvShows = new ArrayList<>();
         for (TvShow tvShow : tvShows) {
@@ -112,97 +117,91 @@ public class BatchChatGPTTvShowRecognitionService {
                 LOGGER.warn("Skipping invalid TV show: {}", tvShow);
                 continue;
             }
-            
+
             validTvShows.add(tvShow);
             LOGGER.debug("Processing TV show: {} (ID: {})", tvShow.getTitle(), tvShow.getDbId());
         }
-        
+
         if (validTvShows.isEmpty()) {
             LOGGER.debug("No valid TV shows to process");
             return results;
         }
-        
-        LOGGER.info("Starting batch recognition for {} valid TV shows (batch size: {}, max retries: {})", 
-                   validTvShows.size(), batchSize, maxRetries);
-        
+
+        LOGGER.info("Starting batch recognition for {} valid TV shows (batch size: {}, max retries: {})", validTvShows.size(), batchSize, maxRetries);
+
         // 分批处理
         for (int i = 0; i < validTvShows.size(); i += batchSize) {
             int endIndex = Math.min(i + batchSize, validTvShows.size());
             List<TvShow> batch = validTvShows.subList(i, endIndex);
-            
-            LOGGER.debug("Processing batch {}/{}: {} TV shows", 
-                        (i / batchSize) + 1, 
-                        (validTvShows.size() + batchSize - 1) / batchSize, 
-                        batch.size());
-            
+
+            LOGGER.debug("Processing batch {}/{}: {} TV shows", (i / batchSize) + 1, (validTvShows.size() + batchSize - 1) / batchSize, batch.size());
+
             Map<String, String> batchResults = processBatch(batch, maxRetries);
             results.putAll(batchResults);
         }
-        
+
         return results;
     }
-    
+
     /**
      * 处理单个批次
      */
     private Map<String, String> processBatch(List<TvShow> batch, int maxRetries) {
         Map<String, String> results = new HashMap<>();
-        
+
         boolean success = false;
         for (int attempt = 1; attempt <= maxRetries && !success; attempt++) {
             try {
                 LOGGER.debug("Batch processing attempt {}/{} for {} TV shows", attempt, maxRetries, batch.size());
-                
+
                 String batchPrompt = buildBatchPrompt(batch);
                 String apiResponse = callBatchAPI(batchPrompt);
-                
+
                 if (apiResponse != null) {
                     Map<String, String> parsedResults = parseBatchResponse(apiResponse, batch);
                     if (!parsedResults.isEmpty()) {
                         results.putAll(parsedResults);
-                        
+
                         // 禁用缓存，不保存识别结果
-                        
+
                         success = true;
                         LOGGER.debug("Batch processing successful on attempt {}", attempt);
-                    } else {
+                    }
+                    else {
                         LOGGER.warn("Batch processing attempt {} failed: no valid results parsed", attempt);
                     }
-                } else {
+                }
+                else {
                     LOGGER.warn("Batch processing attempt {} failed: API call returned null", attempt);
                 }
-                
-            } catch (Exception e) {
+
+            }
+            catch (Exception e) {
                 LOGGER.error("Batch processing attempt {} failed: {}", attempt, e.getMessage());
                 if (attempt == maxRetries) {
                     LOGGER.error("All batch processing attempts failed", e);
                 }
             }
         }
-        
+
         if (!success) {
-            LOGGER.error("Batch processing failed after {} retries for {} TV shows", 
-                        maxRetries, batch.size());
-            
-            // 回退到逐个识别
-            LOGGER.info("Falling back to individual recognition for failed batch");
-            for (TvShow tvShow : batch) {
-                try {
-                    ChatGPTTvShowRecognitionService individualService = new ChatGPTTvShowRecognitionService();
-                    String title = individualService.recognizeTvShowTitle(tvShow);
-                    if (title != null) {
-                        results.put(tvShow.getDbId().toString(), title);
-                        // 禁用缓存，不保存识别结果
-                    }
-                } catch (Exception ex) {
-                    LOGGER.error("Individual recognition failed for TV show {}: {}", tvShow.getTitle(), ex.getMessage());
-                }
+            LOGGER.error("Batch processing failed after {} retries for {} TV shows", maxRetries, batch.size());
+
+            // 根据用户设置决定是否回退到逐个识别
+            if (Settings.getInstance().isAiIndividualFallbackEnabled()) {
+                LOGGER.info("Batch processing failed, falling back to individual recognition as configured by user");
+                Map<String, String> fallbackResults = fallbackToIndividualRecognition(batch);
+                results.putAll(fallbackResults);
+            }
+            else {
+                LOGGER.warn("Batch processing failed completely for {} TV shows, individual fallback disabled by user", batch.size());
+                LOGGER.warn("Enable 'AI Individual Fallback' in settings if you want automatic individual recognition");
             }
         }
-        
+
         return results;
     }
-    
+
     /**
      * 构建批量处理的提示词
      */
@@ -220,7 +219,7 @@ public class BatchChatGPTTvShowRecognitionService {
         prompt.append("示例：\"123: 庆余年\"、\"456: 权力的游戏\"\n");
         return prompt.toString();
     }
-    
+
     /**
      * 调用批量API（带重试机制）
      */
@@ -248,29 +247,26 @@ public class BatchChatGPTTvShowRecognitionService {
                     LOGGER.warn("API call timed out for batch TV show recognition after 30 seconds, attempt {}/{}", attempt, maxRetries);
                     throw new RuntimeException("API rate limit exceeded");
                 }
-            String apiKey = settings.getOpenAiApiKey();
-            String apiUrl = settings.getOpenAiApiUrl();
-            String model = settings.getOpenAiModel();
-            
-            String systemPrompt = getTvShowBatchRecognitionPrompt();
-            
-            String requestBody = String.format(
-                "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 2000, \"temperature\": 0.3}",
-                model,
-                escapeJsonString(systemPrompt),
-                escapeJsonString(prompt)
-            );
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .POST(BodyPublishers.ofString(requestBody))
-                .timeout(TIMEOUT)
-                .build();
-            
-            HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
-            
+                String apiKey = settings.getOpenAiApiKey();
+                String apiUrl = settings.getOpenAiApiUrl();
+                String model = settings.getOpenAiModel();
+
+                String systemPrompt = getTvShowBatchRecognitionPrompt();
+
+                String requestBody = String.format(
+                        "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
+                        model, escapeJsonString(systemPrompt), escapeJsonString(prompt));
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(apiUrl))
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", "Bearer " + apiKey)
+                        .POST(BodyPublishers.ofString(requestBody))
+                        .timeout(TIMEOUT)
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
+
                 if (response.statusCode() == 200) {
                     String responseBody = response.body();
                     LOGGER.info("=== Batch AI API Response (Attempt {}) ===", attempt);
@@ -283,10 +279,7 @@ public class BatchChatGPTTvShowRecognitionService {
                         contentStart += "\"content\":\"".length();
                         int contentEnd = responseBody.indexOf('"', contentStart);
                         if (contentEnd != -1) {
-                            String content = responseBody.substring(contentStart, contentEnd)
-                                .replace("\\\"", "\"")
-                                .replace("\\n", "\n")
-                                .trim();
+                            String content = responseBody.substring(contentStart, contentEnd).replace("\\\"", "\"").replace("\\n", "\n").trim();
 
                             if (content != null && !content.isEmpty()) {
                                 success = true;
@@ -299,7 +292,8 @@ public class BatchChatGPTTvShowRecognitionService {
                                 LOGGER.info("Raw extracted content: '{}'", content);
                                 LOGGER.info("Content length: {} characters", content.length());
                                 return content;
-                            } else {
+                            }
+                            else {
                                 long responseTime = System.currentTimeMillis() - startTime;
 
                                 // 记录失败的自适应批量处理统计
@@ -311,7 +305,8 @@ public class BatchChatGPTTvShowRecognitionService {
                     }
                     LOGGER.warn("=== Batch AI Response Parse Failed (Attempt {}) ===", attempt);
                     LOGGER.warn("Could not find content in response: {}", responseBody);
-                } else {
+                }
+                else {
                     LOGGER.warn("=== Batch AI API Request Failed (Attempt {}/{}) ===", attempt, maxRetries);
                     LOGGER.warn("Status code: {}", response.statusCode());
                     LOGGER.warn("Response body: {}", response.body());
@@ -324,7 +319,8 @@ public class BatchChatGPTTvShowRecognitionService {
                     Thread.sleep(delayMs);
                 }
 
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 lastException = e;
                 long responseTime = System.currentTimeMillis() - startTime;
 
@@ -339,7 +335,8 @@ public class BatchChatGPTTvShowRecognitionService {
                     try {
                         LOGGER.info("Retrying batch TV show API after {}ms delay", delayMs);
                         Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
+                    }
+                    catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         LOGGER.warn("Batch TV show API retry delay interrupted");
                         break;
@@ -352,38 +349,39 @@ public class BatchChatGPTTvShowRecognitionService {
         LOGGER.error("Batch TV show API failed after {} attempts", maxRetries, lastException);
         return null;
     }
-    
+
     /**
      * 解析批量响应
      */
     private Map<String, String> parseBatchResponse(String response, List<TvShow> tvShows) {
         Map<String, String> results = new HashMap<>();
-        
+
         if (StringUtils.isBlank(response)) {
             return results;
         }
-        
+
         String[] lines = response.split("\n");
         for (String line : lines) {
             line = line.trim();
-            if (line.isEmpty()) continue;
-            
+            if (line.isEmpty())
+                continue;
+
             // 解析格式: "ID: 标题 年份"
             int colonIndex = line.indexOf(":");
             if (colonIndex > 0) {
                 String id = line.substring(0, colonIndex).trim();
                 String title = line.substring(colonIndex + 1).trim();
-                
+
                 if (!id.isEmpty() && !title.isEmpty()) {
                     results.put(id, title);
                     LOGGER.debug("Parsed batch result: {} -> {}", id, title);
                 }
             }
         }
-        
+
         return results;
     }
-    
+
     /**
      * 正确转义JSON字符串
      */
@@ -398,29 +396,37 @@ public class BatchChatGPTTvShowRecognitionService {
                 case '"':
                     escaped.append("\\\"");
                     break;
+
                 case '\\':
                     escaped.append("\\\\");
                     break;
+
                 case '\b':
                     escaped.append("\\b");
                     break;
+
                 case '\f':
                     escaped.append("\\f");
                     break;
+
                 case '\n':
                     escaped.append("\\n");
                     break;
+
                 case '\r':
                     escaped.append("\\r");
                     break;
+
                 case '\t':
                     escaped.append("\\t");
                     break;
+
                 default:
                     // 处理其他控制字符
                     if (c < 0x20) {
                         escaped.append(String.format("\\u%04x", (int) c));
-                    } else {
+                    }
+                    else {
                         escaped.append(c);
                     }
                     break;
@@ -433,29 +439,15 @@ public class BatchChatGPTTvShowRecognitionService {
      * 获取电视剧批量识别的优化提示词
      */
     private String getTvShowBatchRecognitionPrompt() {
-        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径列表，严格按照路径内容识别电视剧，然后严格按照指定格式输出结果。\n\n" +
-               "## 核心要求\n\n" +
-               "### 1. 输入处理\n" +
-               "- 接收电视剧文件路径列表，每行格式：\"ID: 路径\"\n" +
-               "- **必须严格基于每个路径中的实际内容进行识别**，不得猜测或返回示例内容\n" +
-               "- 从每个路径中提取电视剧标题\n" +
-               "- 忽略技术信息和无关内容\n\n" +
-               "### 2. 搜索策略\n" +
-               "- 对每个电视剧进行独立搜索\n" +
-               "- 查找官方来源：TMDB、TVDB、豆瓣等\n" +
-               "- 验证搜索结果的准确性\n" +
-               "- **如果无法确定准确匹配，必须返回\"未知电视剧\"**\n\n" +
-               "### 3. 输出格式要求\n" +
-               "**严格按照以下格式输出，每行一个结果：**\n" +
-               "```\nID: 标题\n```\n" +
-               "- 使用官方中文名称（如果有），否则使用英文原名\n" +
-               "- 输出行数必须与输入行数完全一致\n" +
-               "- 保持ID顺序不变\n\n" +
-               "### 4. 示例\n" +
-               "输入：\n```\n123: /TV Shows/Breaking.Bad.S01/\n456: /电视剧/庆余年.第一季/\n789: /Series/Cheer.S01.HD2160p.WebRip/\n999: /path/to/unknown.tvshow/\n```\n" +
-               "输出：\n```\n123: 绝命毒师\n456: 庆余年\n789: 啦啦队\n999: 未知电视剧\n```";
+        return "你是一个专业的电视剧信息识别助手。根据提供的文件路径列表，严格按照路径内容识别电视剧，然后严格按照指定格式输出结果。\n\n" + "## 核心要求\n\n" + "### 1. 输入处理\n" + "- 接收电视剧文件路径列表，每行格式：\"ID: 路径\"\n"
+                + "- **必须严格基于每个路径中的实际内容进行识别**，不得猜测或返回示例内容\n" + "- 从每个路径中提取电视剧标题\n" + "- 忽略技术信息和无关内容\n\n" + "### 2. 搜索策略\n" + "- 对每个电视剧进行独立搜索\n"
+                + "- 查找官方来源：TMDB、TVDB、豆瓣等\n" + "- 验证搜索结果的准确性\n" + "- **如果无法确定准确匹配，必须返回\"未知电视剧\"**\n\n" + "### 3. 输出格式要求\n"
+                + "**严格按照以下格式输出，每行一个结果：**\n" + "```\nID: 标题\n```\n" + "- 使用官方中文名称（如果有），否则使用英文原名\n" + "- 输出行数必须与输入行数完全一致\n" + "- 保持ID顺序不变\n\n"
+                + "### 4. 示例\n"
+                + "输入：\n```\n123: /TV Shows/Breaking.Bad.S01/\n456: /电视剧/庆余年.第一季/\n789: /Series/Cheer.S01.HD2160p.WebRip/\n999: /path/to/unknown.tvshow/\n```\n"
+                + "输出：\n```\n123: 绝命毒师\n456: 庆余年\n789: 啦啦队\n999: 未知电视剧\n```";
     }
-    
+
     /**
      * 提取电视剧路径
      */
@@ -463,7 +455,7 @@ public class BatchChatGPTTvShowRecognitionService {
         if (tvShow.getPathNIO() != null) {
             return tvShow.getPathNIO().toString();
         }
-        
+
         List<MediaFile> mediaFiles = tvShow.getMediaFiles();
         if (!mediaFiles.isEmpty()) {
             MediaFile firstFile = mediaFiles.get(0);
@@ -471,10 +463,10 @@ public class BatchChatGPTTvShowRecognitionService {
                 return firstFile.getFileAsPath().toString();
             }
         }
-        
+
         return "tvshow_" + tvShow.getDbId();
     }
-    
+
     /**
      * 提取路径倒数三层
      */
@@ -487,12 +479,13 @@ public class BatchChatGPTTvShowRecognitionService {
             }
             Path lastThreeLayers = path.subpath(nameCount - 3, nameCount);
             return "/" + lastThreeLayers.toString();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             LOGGER.warn("Failed to extract last three layers from path: {}", e.getMessage());
             return filePath;
         }
     }
-    
+
     /**
      * 生成缓存键
      */
@@ -501,37 +494,41 @@ public class BatchChatGPTTvShowRecognitionService {
         String pathContext = extractLastThreeDirectoryNames(path);
         return pathContext;
     }
-    
+
     /**
-     * 回退到单个识别模式
+     * 回退到单个识别模式（使用TvShowAIRecognitionManager统一管理）
      */
     private Map<String, String> fallbackToIndividualRecognition(List<TvShow> tvShows) {
         Map<String, String> results = new HashMap<>();
-        ChatGPTTvShowRecognitionService individualService = new ChatGPTTvShowRecognitionService();
-        
+        TvShowAIRecognitionManager aiManager = TvShowAIRecognitionManager.getInstance();
+
         LOGGER.info("Falling back to individual TV show recognition for {} TV shows", tvShows.size());
-        
+
         for (TvShow tvShow : tvShows) {
             try {
-                String title = individualService.recognizeTvShowTitle(tvShow);
-                if (title != null) {
-                    results.put(tvShow.getDbId().toString(), title);
+                // 使用TvShowAIRecognitionManager获取识别结果（会自动检查调用次数限制）
+                String recognizedTitle = aiManager.getRecognizedTitle(tvShow, null);
+                if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
+                    results.put(tvShow.getDbId().toString(), recognizedTitle);
+                    LOGGER.debug("Individual recognition result for TV show '{}' (ID: {}): '{}'", tvShow.getTitle(), tvShow.getDbId(),
+                            recognizedTitle);
                 }
-            } catch (Exception e) {
-                LOGGER.error("Individual recognition failed for TV show {}: {}", tvShow.getTitle(), e.getMessage());
+            }
+            catch (Exception e) {
+                LOGGER.warn("Failed individual recognition for TV show {}: {}", tvShow.getTitle(), e.getMessage());
             }
         }
-        
+
         return results;
     }
-    
+
     /**
      * 获取缓存大小（用于调试）
      */
     public static int getCacheSize() {
         return recognitionCache.size();
     }
-    
+
     /**
      * 清除缓存（用于调试）
      */

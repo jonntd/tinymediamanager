@@ -110,6 +110,7 @@ import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.thirdparty.trakttv.TvShowSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
@@ -1022,7 +1023,46 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
     public Void doInBackground() {
       startProgressBar(TmmResourceBundle.getString("chooser.searchingfor") + " " + searchTerm);
       try {
-        searchResult = tvShowList.searchTvShow(searchTerm, show.getYear(), withIds ? show.getIds() : null, mediaScraper, language);
+        // 从 searchTerm 中提取年份（格式如 "大人物 2019"）
+        String actualSearchTerm = searchTerm;
+        int searchYear = show.getYear();
+
+        // 尝试从搜索词末尾提取年份
+        java.util.regex.Pattern yearPattern = java.util.regex.Pattern.compile("\\s+(\\d{4})\\s*$");
+        java.util.regex.Matcher yearMatcher = yearPattern.matcher(searchTerm.trim());
+        if (yearMatcher.find()) {
+          try {
+            int extractedYear = Integer.parseInt(yearMatcher.group(1));
+            int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+            if (extractedYear > 1888 && extractedYear <= currentYear + 2) {
+              searchYear = extractedYear;
+              actualSearchTerm = searchTerm.substring(0, yearMatcher.start()).trim();
+              LOGGER.info("Extracted year from search term: title='{}', year={}", actualSearchTerm, searchYear);
+            }
+          }
+          catch (NumberFormatException e) {
+            LOGGER.debug("Could not parse year from search term: {}", yearMatcher.group(1));
+          }
+        }
+
+        // 构建搜索用的 IDs
+        Map<String, Object> searchIds = new java.util.HashMap<>();
+
+        // 1. 始终优先尝试从电视剧路径中解析 TMDB ID（这是最可信的来源）
+        String showPath = show.getPathNIO() != null ? show.getPathNIO().toString() : "";
+        int pathTmdbId = ParserUtils.detectTmdbId(showPath);
+
+        if (withIds && pathTmdbId > 0) {
+          LOGGER.info("Detected TMDB ID from path: {}", pathTmdbId);
+          searchIds.put(MediaMetadata.TMDB, pathTmdbId);
+        }
+        else if (withIds) {
+          // 2. 只有在没有路径 ID 且调用方请求使用 ID 时，才使用 show 对象中的 ID
+          // 这样在 AI 修正（传入 withIds=false）时，就不会混入旧的错误 ID
+          searchIds.putAll(show.getIds());
+        }
+
+        searchResult = tvShowList.searchTvShow(actualSearchTerm, searchYear, searchIds, mediaScraper, language);
       }
       catch (Exception e) {
         error = e;
@@ -1152,7 +1192,9 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "电视剧AI识别", successMsg));
 
             // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
-            searchTvShow(recognizedTitle, true);
+            // 这里传入 false，表示不要使用电视剧对象中原有的 ID（可能是错误的）
+            // 但下方的 searchTvShow 逻辑中，如果路径里能解析出 ID，仍然会优先使用路径 ID
+            searchTvShow(recognizedTitle, false);
           }
           else {
             LOGGER.warn("AI recognition returned empty result, falling back to original title");
@@ -1163,7 +1205,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
             MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "电视剧AI识别", failMsg));
 
             // AI识别失败，使用原始标题进行搜索
-            searchTvShow(textFieldSearchString.getText(), true);
+            searchTvShow(textFieldSearchString.getText(), false);
           }
         }
         catch (Exception e) {

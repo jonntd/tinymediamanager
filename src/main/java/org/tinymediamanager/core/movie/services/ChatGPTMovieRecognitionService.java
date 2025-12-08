@@ -8,6 +8,9 @@ import org.tinymediamanager.core.services.AIApiRateLimiter;
 import org.tinymediamanager.core.utils.FixStatistics;
 import org.tinymediamanager.scraper.util.ParserUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -27,11 +30,12 @@ import java.util.regex.Pattern;
  * ChatGPT电影识别服务 基于路径倒数三层目录名称使用ChatGPT识别电影名
  */
 public class ChatGPTMovieRecognitionService {
-    private static final Logger   LOGGER  = LoggerFactory.getLogger(ChatGPTMovieRecognitionService.class);
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final Logger       LOGGER        = LoggerFactory.getLogger(ChatGPTMovieRecognitionService.class);
+    private static final Duration     TIMEOUT       = Duration.ofSeconds(30);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private HttpClient            httpClient;
-    private final Settings        settings;
+    private HttpClient                httpClient;
+    private final Settings            settings;
 
     public ChatGPTMovieRecognitionService() {
         this.settings = Settings.getInstance();
@@ -127,8 +131,17 @@ public class ChatGPTMovieRecognitionService {
                     cleanedTitle = cleanAndValidateTitle(recognizedTitle);
                     LOGGER.info("Cleaned and validated title: '{}'", cleanedTitle);
 
+                    // 如果格式验证失败（cleanedTitle 为 null），需要重试
+                    if (cleanedTitle == null) {
+                        LOGGER.warn("AI response format invalid, will retry. Raw response: '{}'",
+                                recognizedTitle.length() > 200 ? recognizedTitle.substring(0, 200) + "..." : recognizedTitle);
+                        retryCount++;
+                        FixStatistics.recordAIRecognitionRetry();
+                        continue; // 继续下一次重试
+                    }
+
                     // 验证是否包含年份
-                    if (cleanedTitle != null && !containsValidYear(cleanedTitle)) {
+                    if (!containsValidYear(cleanedTitle)) {
                         LOGGER.warn("AI response does not contain valid year: '{}'", cleanedTitle);
                         LOGGER.warn("Attempting to retry with explicit year requirement...");
 
@@ -148,29 +161,17 @@ public class ChatGPTMovieRecognitionService {
                             return cleanedTitle;
                         }
                     }
-                    else if (cleanedTitle != null && containsValidYear(cleanedTitle)) {
-                        // 第一次就包含年份，记录成功
+                    else {
+                        // 包含年份，记录成功并返回
                         FixStatistics.recordAIRecognitionWithYear();
                         return cleanedTitle;
                     }
-
-                    // 如果清理后的标题不为空，也可以返回
-                    if (cleanedTitle != null) {
-                        return cleanedTitle;
-                    }
                 }
 
-                // 如果是最后一次重试或者获得了空结果，继续循环
-                if (recognizedTitle == null || recognizedTitle.trim().isEmpty()) {
-                    LOGGER.warn("AI returned empty or null result, attempt {}/{}", retryCount + 1, maxRetries);
-                    retryCount++;
-                    // 记录空结果重试统计
-                    FixStatistics.recordAIRecognitionRetry();
-                }
-                else {
-                    // 其他情况，退出循环
-                    break;
-                }
+                // 如果响应为空，继续重试
+                LOGGER.warn("AI returned empty or null result, attempt {}/{}", retryCount + 1, maxRetries);
+                retryCount++;
+                FixStatistics.recordAIRecognitionRetry();
             }
 
         }
@@ -279,18 +280,19 @@ public class ChatGPTMovieRecognitionService {
             // 构建请求JSON - 使用电影专用提示词（保留主人的联网搜索功能）
             String systemPrompt = settings.getOpenAiExtractionPrompt();
             if (systemPrompt == null || systemPrompt.trim().isEmpty()) {
-                // 电影专用的优化提示词 - 改进版
-                systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电影信息，然后严格按照指定格式输出结果。\n\n" + "## 核心要求\n\n" + "### 1. 输入处理\n"
-                        + "- 接收电影文件路径作为输入\n" + "- 专注于识别电影标题，忽略所有格式标签如：\n" + "  - 分辨率标签(720p, 1080p, 2160p, 4K)\n"
-                        + "  - 视频编码(H.264, H.265, x264, x265, HEVC)\n" + "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\n" + "  - 发布组(RARBG, YTS, 各种中文字母组)\n"
-                        + "  - 版本信息(Director's Cut, Extended)\n" + "- 过滤掉文件扩展名和无关技术信息\n\n" + "### 2. 搜索策略\n" + "- 使用提取的标题关键词进行精确匹配搜索\n"
-                        + "- 优先查找知名权威来源：TMDB、IMDB、豆瓣电影等\n" + "- 确保识别结果与官方发行名称完全一致\n\n" + "### 3. 输出格式要求 - 请严格遵守！\n"
-                        + "**严格按照以下格式输出，绝对不要返回任何解释或错误信息：**\n" + "```\n标题 年份\n```\n" + "- 标题优先使用英文原名作为主要标识符\n" + "- 仅在英文名称不可用时才考虑中文名称\n"
-                        + "- 标题和年份之间用一个空格分隔\n" + "- **年份必须包含**：使用4位数字格式，范围1888-" + (java.time.Year.now().getValue() + 2) + "\n"
-                        + "- 如果无法确定年份，必须通过搜索找到准确的发行年份\n" + "- 年份不能为空，不能省略，这是强制要求\n" + "- 不包含任何其他符号、括号或额外信息\n" + "- 如果搜索失败，输出：未知电影 1900\n\n"
-                        + "### 4. 示例\n" + "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`Interstellar 2014`\n"
-                        + "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`Zootopia 2016`\n"
-                        + "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`";
+                // 电影专用的优化提示词 - 完整版，包含联网搜索要求
+                systemPrompt = "你是一个专业的电影信息识别和刮削助手。根据提供的文件路径，联网搜索并找到最准确的官方电影信息，然后**直接输出结果**。\\n\\n" + "## 重要提示 - 输出格式\\n"
+                        + "**你必须直接输出纯文本结果，格式为：`标题 年份`**\\n" + "**禁止返回以下任何格式：**\\n" + "- JSON 格式（如 {\"title\": ...} 或 [{...}]）\\n"
+                        + "- 搜索结果列表或 URL 链接\\n" + "- 代码块或 code_output\\n" + "- 任何解释、说明或错误信息\\n\\n" + "## 输入处理\\n" + "- 接收电影文件路径作为输入\\n"
+                        + "- 专注于识别电影标题，忽略所有格式标签如：\\n" + "  - 分辨率标签(720p, 1080p, 2160p, 4K)\\n" + "  - 视频编码(H.264, H.265, x264, x265, HEVC)\\n"
+                        + "  - 音频格式(DTS-HD, TrueHD, Atmos, AAC)\\n" + "  - 发布组(RARBG, YTS, 各种中文字母组)\\n" + "  - 版本信息(Director's Cut, Extended)\\n"
+                        + "- 过滤掉文件扩展名和无关技术信息\\n\\n" + "## 搜索策略\\n" + "- 使用提取的标题关键词进行**联网搜索**\\n" + "- 优先查找知名权威来源：**TMDB、IMDB、豆瓣电影**等\\n"
+                        + "- 确保识别结果与官方发行名称完全一致\\n" + "- 如果无法确定年份，必须通过搜索找到准确的发行年份\\n\\n" + "## 输出要求\\n" + "- 格式：`标题 年份`（标题和年份用一个空格分隔）\\n"
+                        + "- 标题优先使用英文原名作为主要标识符\\n" + "- 仅在英文名称不可用时才考虑中文名称\\n" + "- 年份必须是4位数字(1888-" + (java.time.Year.now().getValue() + 2)
+                        + ")，不能省略\\n" + "- 不包含任何其他符号、括号或额外信息\\n" + "- 如果搜索失败，输出：`未知电影 1900`\\n\\n" + "## 示例\\n"
+                        + "输入：`/Movies/Interstellar.2014.1080p.BluRay.x264.DTS-HD.MA.5.1-RARBG/` → 输出：`Interstellar 2014`\\n"
+                        + "输入：`/电影/疯狂动物城.2016.国粤英三语.BluRay.1080p.x265.10bit/` → 输出：`Zootopia 2016`\\n"
+                        + "输入：`/电影/堕落天使.1995.mkv` → 输出：`Fallen Angels 1995`\\n" + "输入：`/path/to/unknown.movie/` → 输出：`未知电影 1900`";
             }
 
             LOGGER.info("=== Movie AI Recognition Debug ===");
@@ -300,7 +302,7 @@ public class ChatGPTMovieRecognitionService {
             LOGGER.info("System prompt length: {} characters", systemPrompt.length());
 
             String requestBody = String.format(
-                    "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.3}",
+                    "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
                     model, systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"), moviePath.replace("\"", "\\\"").replace("\n", "\\n"));
 
             LOGGER.info("API request body: {}", requestBody);
@@ -323,16 +325,20 @@ public class ChatGPTMovieRecognitionService {
                 LOGGER.info("Response status: {}", response.statusCode());
                 LOGGER.info("Response body: {}", responseBody);
 
-                // 改进的JSON响应解析，支持多种API格式
+                // 使用Jackson库进行JSON响应解析
                 try {
-                    // 首先尝试OpenAI格式: {"choices": [{"message": {"content": "电影名称"}}]}
-                    int contentStart = responseBody.indexOf("\"content\":\"");
-                    if (contentStart != -1) {
-                        contentStart += "\"content\":\"".length();
-                        int contentEnd = responseBody.indexOf('"', contentStart);
-                        if (contentEnd != -1) {
-                            String content = responseBody.substring(contentStart, contentEnd).replace("\\\"", "\"").replace("\\n", "\n").trim();
-                            LOGGER.debug("Extracted content: {}", content);
+                    JsonNode rootNode = OBJECT_MAPPER.readTree(responseBody);
+
+                    // 优先尝试OpenAI格式: {"choices": [{"message": {"content": "电影名称"}}]}
+                    JsonNode choicesNode = rootNode.path("choices");
+                    if (choicesNode.isArray() && choicesNode.size() > 0) {
+                        JsonNode firstChoice = choicesNode.get(0);
+                        JsonNode messageNode = firstChoice.path("message");
+                        JsonNode contentNode = messageNode.path("content");
+
+                        if (!contentNode.isMissingNode()) {
+                            String content = contentNode.asText();
+                            LOGGER.debug("Extracted content from OpenAI format: {}", content);
 
                             // 将结果存入缓存
                             rateLimiter.addToCache(cacheKey, content);
@@ -341,11 +347,21 @@ public class ChatGPTMovieRecognitionService {
                         }
                     }
 
-                    // 尝试Gemini格式或其他格式
+                    // 尝试直接提取content字段（其他API格式）
+                    JsonNode directContentNode = rootNode.path("content");
+                    if (!directContentNode.isMissingNode()) {
+                        String content = directContentNode.asText();
+                        LOGGER.debug("Extracted content from direct field: {}", content);
+
+                        // 将结果存入缓存
+                        rateLimiter.addToCache(cacheKey, content);
+
+                        return content;
+                    }
+
                     // 如果包含"choices"字段但content解析失败，记录警告
-                    int choicesStart = responseBody.indexOf("\"choices\":");
-                    if (choicesStart != -1) {
-                        LOGGER.warn("Failed to parse content field, but choices found. Response: {}", responseBody);
+                    if (!rootNode.path("choices").isMissingNode()) {
+                        LOGGER.warn("Failed to parse content field from choices, but choices found. Response: {}", responseBody);
                     }
                     else {
                         // 尝试其他可能的响应格式
@@ -360,6 +376,8 @@ public class ChatGPTMovieRecognitionService {
                 }
                 catch (Exception e) {
                     LOGGER.warn("Error parsing API response: {}", e.getMessage());
+                    // 解析失败时返回原始响应作为后备
+                    return responseBody;
                 }
             }
             else {
@@ -412,6 +430,14 @@ public class ChatGPTMovieRecognitionService {
     String cleanAndValidateTitle(String recognizedTitle) {
         if (recognizedTitle == null || recognizedTitle.trim().isEmpty()) {
             LOGGER.warn("识别结果为空");
+            return null;
+        }
+
+        // 检查是否是 JSON 格式响应（AI 返回了搜索结果列表而不是标题）
+        String trimmed = recognizedTitle.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("code_output") || trimmed.contains("\"url\":")
+                || trimmed.contains("\"title\":")) {
+            LOGGER.warn("AI 返回了 JSON 格式响应而不是标题: '{}'", trimmed.length() > 100 ? trimmed.substring(0, 100) + "..." : trimmed);
             return null;
         }
 
@@ -539,7 +565,7 @@ public class ChatGPTMovieRecognitionService {
                 String model = settings.getOpenAiModel();
 
                 String requestBody = String.format(
-                        "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.1}",
+                        "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
                         model, systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"), pathContext.replace("\"", "\\\"").replace("\n", "\\n"));
 
                 HttpRequest request = HttpRequest.newBuilder()

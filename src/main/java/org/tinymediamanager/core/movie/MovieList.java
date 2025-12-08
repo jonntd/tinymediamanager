@@ -832,7 +832,8 @@ public final class MovieList extends AbstractModelObject {
       }
     }
 
-    LOGGER.info("Search '{}' for movie title '{}'", provider.getProviderInfo().getId(), searchTerm);
+    LOGGER.info("Search '{}' for movie title '{}' (year: {})", provider.getProviderInfo().getId(), options.getSearchQuery(),
+        options.getSearchYear() > 0 ? options.getSearchYear() : "not specified");
 
     LOGGER.debug("=====================================================");
     LOGGER.debug("Searching with scraper: {}", provider.getProviderInfo().getId());
@@ -883,9 +884,36 @@ public final class MovieList extends AbstractModelObject {
       }
     }
 
-    LOGGER.info("Found '{}' results for movie title '{}'", sr.size(), searchTerm);
+    LOGGER.info("Found '{}' results for movie title '{}' (year: {})", sr.size(), options.getSearchQuery(),
+        options.getSearchYear() > 0 ? options.getSearchYear() : "not specified");
 
-    return new ArrayList<>(sr);
+    // 给与电影已有 TMDB ID 匹配的结果额外加分，确保它排在最前面
+    List<MediaSearchResult> results = new ArrayList<>(sr);
+    if (ids != null && !ids.isEmpty()) {
+      int existingTmdbId = MediaIdUtil.getIdAsInt(ids, MediaMetadata.TMDB);
+      String existingImdbId = MediaIdUtil.getIdAsString(ids, MediaMetadata.IMDB);
+      LOGGER.info("ID match check - existingTmdbId: {}, existingImdbId: {}, ids: {}", existingTmdbId, existingImdbId, ids);
+
+      for (MediaSearchResult result : results) {
+        boolean idMatched = false;
+        if (existingTmdbId > 0 && result.getIdAsInt(MediaMetadata.TMDB) == existingTmdbId) {
+          idMatched = true;
+        }
+        else if (MediaIdUtil.isValidImdbId(existingImdbId) && existingImdbId.equals(result.getIMDBId())) {
+          idMatched = true;
+        }
+
+        if (idMatched) {
+          LOGGER.info("Boosting score for ID-matched result: title='{}', oldScore={}", result.getTitle(), result.getScore());
+          result.setScore(result.getScore() + 1.0f); // 加 1 分确保排在最前
+        }
+      }
+
+      // 重新排序
+      results.sort((a, b) -> Float.compare(b.getScore(), a.getScore()));
+    }
+
+    return results;
   }
 
   public List<MediaScraper> getAvailableMediaScrapers() {

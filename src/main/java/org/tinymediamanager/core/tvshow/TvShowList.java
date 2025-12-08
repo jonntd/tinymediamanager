@@ -1044,7 +1044,8 @@ public final class TvShowList extends AbstractModelObject {
       options.setSearchYear(year);
     }
 
-    LOGGER.info("Search '{}' for TV show title '{}'", provider.getProviderInfo().getId(), searchTerm);
+    LOGGER.info("Search '{}' for TV show title '{}' (year: {})", provider.getProviderInfo().getId(), options.getSearchQuery(),
+        year > 0 ? year : "not specified");
 
     LOGGER.debug("=====================================================");
     LOGGER.debug("Searching with scraper: {}", provider.getProviderInfo().getId());
@@ -1064,7 +1065,35 @@ public final class TvShowList extends AbstractModelObject {
       results.addAll(provider.search(o));
     }
 
-    return new ArrayList<>(results);
+    LOGGER.info("Found '{}' results for TV show title '{}' (year: {})", results.size(), options.getSearchQuery(), year > 0 ? year : "not specified");
+
+    // 给与电视剧已有 TMDB ID 匹配的结果额外加分，确保它排在最前面
+    List<MediaSearchResult> resultsList = new ArrayList<>(results);
+    if (ids != null && !ids.isEmpty()) {
+      int existingTmdbId = MediaIdUtil.getIdAsInt(ids, MediaMetadata.TMDB);
+      String existingImdbId = MediaIdUtil.getIdAsString(ids, MediaMetadata.IMDB);
+      LOGGER.info("ID match check - existingTmdbId: {}, existingImdbId: {}, ids: {}", existingTmdbId, existingImdbId, ids);
+
+      for (MediaSearchResult result : resultsList) {
+        boolean idMatched = false;
+        if (existingTmdbId > 0 && result.getIdAsInt(MediaMetadata.TMDB) == existingTmdbId) {
+          idMatched = true;
+        }
+        else if (MediaIdUtil.isValidImdbId(existingImdbId) && existingImdbId.equals(result.getIMDBId())) {
+          idMatched = true;
+        }
+
+        if (idMatched) {
+          LOGGER.info("Boosting score for ID-matched result: title='{}', oldScore={}", result.getTitle(), result.getScore());
+          result.setScore(result.getScore() + 1.0f); // 加 1 分确保排在最前
+        }
+      }
+
+      // 重新按分数排序
+      resultsList.sort((r1, r2) -> Float.compare(r2.getScore(), r1.getScore()));
+    }
+
+    return resultsList;
   }
 
   private void updateTvShowLists(Collection<TvShow> tvShows) {

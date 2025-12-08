@@ -465,7 +465,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           String dirPath = dir.getPath();
           String decodedDirPath = dirPath;
           try {
-            decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+            // Preserve '+' in URL path (URLDecoder converts '+' to space)
+            decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
           }
           catch (Exception e) {
             LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -526,7 +527,15 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           // Skip common system/hidden folders
           String name = file.getName().toUpperCase(Locale.ROOT);
           if (!SKIP_FOLDERS.contains(name) && !file.getName().startsWith(".") && !file.getName().startsWith("@")) {
-            allFiles.addAll(listWebDavFilesRecursive(client, file.getPath(), visitedPaths));
+            String nextPath = file.getPath();
+            try {
+              // Preserve '+' in URL path (URLDecoder converts '+' to space)
+              nextPath = java.net.URLDecoder.decode(file.getPath().replace("+", "%2B"), "UTF-8");
+            }
+            catch (Exception e) {
+              LOGGER.warn("Failed to decode path '{}': {}", file.getPath(), e.getMessage());
+            }
+            allFiles.addAll(listWebDavFilesRecursive(client, nextPath, visitedPaths));
           }
         }
       }
@@ -585,7 +594,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       String sourceIdentifier = source.getName();
       String decodedDirPath = dirPath;
       try {
-        decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+        // Preserve '+' in URL path (URLDecoder converts '+' to space)
+        decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
       }
       catch (Exception e) {
         LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -750,7 +760,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
     String decodedDirPath = dirPath;
     try {
-      decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+      // Preserve '+' in URL path (URLDecoder converts '+' to space)
+      decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
     }
     catch (Exception e) {
       LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -883,8 +894,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     // Try decoding
     try {
-      String d1 = java.net.URLDecoder.decode(p1, "UTF-8");
-      String d2 = java.net.URLDecoder.decode(p2, "UTF-8");
+      // Preserve '+' in URL path (URLDecoder converts '+' to space)
+      String d1 = java.net.URLDecoder.decode(p1.replace("+", "%2B"), "UTF-8");
+      String d2 = java.net.URLDecoder.decode(p2.replace("+", "%2B"), "UTF-8");
       return d1.equals(d2);
     }
     catch (Exception e) {

@@ -6,6 +6,9 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.services.AIApiRateLimiter;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -26,6 +29,7 @@ import java.util.regex.Pattern;
 public class BatchChatGPTMovieRecognitionService {
     private static final Logger              LOGGER           = LoggerFactory.getLogger(BatchChatGPTMovieRecognitionService.class);
     private static final Duration            TIMEOUT          = Duration.ofSeconds(60);
+    private static final ObjectMapper        OBJECT_MAPPER    = new ObjectMapper();
 
     private HttpClient                       httpClient;
     private final Settings                   settings;
@@ -70,7 +74,10 @@ public class BatchChatGPTMovieRecognitionService {
      * @return 电影ID到识别标题的映射
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
-        return batchRecognizeMovieTitles(movies, 5, 6);
+        // 使用用户设置的批量大小，不再使用硬编码值
+        int batchSize = settings.getAiBatchSize();
+        LOGGER.info("Using configured batch size: {} for {} movies", batchSize, movies.size());
+        return batchRecognizeMovieTitles(movies, batchSize, 6);
     }
 
     /**
@@ -136,7 +143,7 @@ public class BatchChatGPTMovieRecognitionService {
 
         LOGGER.info("Starting batch recognition for {} valid movies (batch size: {}, max retries: {})", validMovies.size(), batchSize, maxRetries);
 
-        // 过滤掉已经缓存的结果
+        // 禁用缓存 - 每次都强制重新调用 API 进行识别
         List<Movie> needRecognition = new ArrayList<>();
         for (Movie movie : validMovies) {
             String cacheKey = generateCacheKey(movie);
@@ -145,36 +152,27 @@ public class BatchChatGPTMovieRecognitionService {
                 continue;
             }
 
-            if (recognitionCache.containsKey(cacheKey)) {
-                results.put(movie.getDbId().toString(), recognitionCache.get(cacheKey));
-                LOGGER.debug("Using cached result for movie: {} (Key: {})", movie.getTitle(), cacheKey);
-                continue;
-            }
-            else {
-                needRecognition.add(movie);
-                LOGGER.debug("Adding to processing queue: {} (Key: {})", movie.getTitle(), cacheKey);
-            }
+            // 不再使用缓存，总是重新识别
+            needRecognition.add(movie);
+            LOGGER.debug("Adding to processing queue (cache disabled): {} (Key: {})", movie.getTitle(), cacheKey);
         }
 
         if (needRecognition.isEmpty()) {
-            LOGGER.debug("All movies already cached, skipping API call");
+            LOGGER.debug("No valid movies to process");
             return results;
         }
 
-        // 智能批次处理
-        AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
+        // 分批处理
         int processedCount = 0;
         int batchNumber = 0;
 
         while (processedCount < needRecognition.size()) {
-            // 每次处理前重新计算最佳批次大小
-            int optimalBatchSize = rateLimiter.calculateOptimalBatchSize(batchSize);
             batchNumber++;
 
-            int endIndex = Math.min(processedCount + optimalBatchSize, needRecognition.size());
+            int endIndex = Math.min(processedCount + batchSize, needRecognition.size());
             List<Movie> currentBatch = needRecognition.subList(processedCount, endIndex);
 
-            LOGGER.info("Processing batch {}/? ({} movies, optimal batch size: {})", batchNumber, currentBatch.size(), optimalBatchSize);
+            LOGGER.info("Processing batch {}/? ({} movies, batch size: {})", batchNumber, currentBatch.size(), batchSize);
 
             Map<String, String> batchResults = processBatchWithRetry(currentBatch, maxRetries);
             results.putAll(batchResults);
@@ -267,11 +265,11 @@ public class BatchChatGPTMovieRecognitionService {
 
                             results.put(movieId, recognizedTitle);
 
-                            // 缓存结果
-                            String cacheKey = generateCacheKey(getMovieById(batch, movieId));
-                            if (cacheKey != null) {
-                                recognitionCache.put(cacheKey, recognizedTitle);
-                            }
+                            // 缓存已禁用
+                            // String cacheKey = generateCacheKey(getMovieById(batch, movieId));
+                            // if (cacheKey != null) {
+                            // recognitionCache.put(cacheKey, recognizedTitle);
+                            // }
                         }
                         success = true;
                     }
@@ -315,13 +313,22 @@ public class BatchChatGPTMovieRecognitionService {
         if (!success) {
             LOGGER.error("Batch processing failed after {} retries for {} movies", maxRetries, batch.size());
 
-            // 批量失败时，不再回退到逐个识别，避免频繁API调用
-            LOGGER.warn("Batch processing failed completely for {} movies, skipping individual fallback to prevent API spam", batch.size());
-            LOGGER.warn("Consider checking API connectivity or reducing batch size");
+            // 根据用户设置决定是否回退到逐个识别
+            if (Settings.getInstance().isAiIndividualFallbackEnabled()) {
+                LOGGER.info("Batch processing failed, falling back to individual recognition as configured by user");
+                Map<String, String> fallbackResults = fallbackToIndividualRecognition(batch);
+                results.putAll(fallbackResults);
+            }
+            else {
+                LOGGER.warn("Batch processing failed completely for {} movies, individual fallback disabled by user", batch.size());
+                LOGGER.warn("Enable 'AI Individual Fallback' in settings if you want automatic individual recognition");
+            }
 
             // 记录失败的电影信息用于调试
             for (Movie movie : batch) {
-                LOGGER.debug("Failed to recognize movie: {} ({})", movie.getTitle(), movie.getPath());
+                if (!results.containsKey(movie.getDbId().toString())) {
+                    LOGGER.debug("Failed to recognize movie: {} ({})", movie.getTitle(), movie.getPath());
+                }
             }
         }
 
@@ -391,7 +398,7 @@ public class BatchChatGPTMovieRecognitionService {
                 }
 
                 String requestBody = String.format(
-                        "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 2000, \"temperature\": 0.3}",
+                        "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
                         model, systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"), batchRequest.replace("\"", "\\\"").replace("\n", "\\n"));
 
                 LOGGER.debug("Batch API request body: {} characters", requestBody.length());
@@ -536,45 +543,46 @@ public class BatchChatGPTMovieRecognitionService {
     }
 
     /**
-     * 从API响应中提取内容
+     * 从API响应中提取内容 - 使用Jackson正确解析JSON
      */
     private String extractContentFromResponse(String response) {
         try {
-            // 方法1：尝试JSON解析
-            if (response.contains("\"content\":\"")) {
-                int contentStart = response.indexOf("\"content\":\"");
-                if (contentStart != -1) {
-                    contentStart += "\"content\":\"".length();
-                    int contentEnd = response.indexOf('"', contentStart);
-                    if (contentEnd != -1) {
-                        return response.substring(contentStart, contentEnd).replace("\\\"", "\"").replace("\\n", "\n").trim();
+            LOGGER.debug("Parsing response with Jackson: {}", response.substring(0, Math.min(response.length(), 200)));
+
+            // 使用Jackson解析JSON
+            JsonNode rootNode = OBJECT_MAPPER.readTree(response);
+
+            // 尝试获取choices[0].message.content
+            JsonNode choicesNode = rootNode.get("choices");
+            if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
+                JsonNode firstChoice = choicesNode.get(0);
+                JsonNode messageNode = firstChoice.get("message");
+                if (messageNode != null) {
+                    JsonNode contentNode = messageNode.get("content");
+                    if (contentNode != null && !contentNode.isNull()) {
+                        String content = contentNode.asText().trim();
+                        LOGGER.debug("Successfully extracted content: {}", content);
+                        return content;
                     }
                 }
             }
 
-            // 方法2：尝试直接提取内容（兼容格式）
-            if (response.contains("content")) {
-                // 简单的内容提取
-                String[] parts = response.split("content");
-                if (parts.length > 1) {
-                    String contentPart = parts[1];
-                    int quoteStart = contentPart.indexOf('"');
-                    if (quoteStart != -1) {
-                        int quoteEnd = contentPart.indexOf('"', quoteStart + 1);
-                        if (quoteEnd != -1) {
-                            return contentPart.substring(quoteStart + 1, quoteEnd).replace("\\\"", "\"").replace("\\n", "\n").trim();
-                        }
-                    }
-                }
+            // 兼容格式：直接查找content字段
+            JsonNode contentNode = rootNode.get("content");
+            if (contentNode != null && !contentNode.isNull()) {
+                String content = contentNode.asText().trim();
+                LOGGER.debug("Found content in direct field: {}", content);
+                return content;
             }
 
-            // 方法3：直接返回响应内容
+            LOGGER.warn("No content found in response, returning original response");
             return response.trim();
 
         }
         catch (Exception e) {
-            LOGGER.error("Failed to extract content from response: {}", e.getMessage());
-            return response;
+            LOGGER.error("Failed to parse JSON response: {}. Error: {}", response.substring(0, Math.min(response.length(), 100)), e.getMessage());
+            // 回退到原始响应
+            return response.trim();
         }
     }
 
@@ -684,17 +692,18 @@ public class BatchChatGPTMovieRecognitionService {
     }
 
     /**
-     * 回退到单个识别模式
+     * 回退到单个识别模式（使用MovieAIRecognitionManager统一管理）
      */
     private Map<String, String> fallbackToIndividualRecognition(List<Movie> movies) {
         Map<String, String> results = new HashMap<>();
-        ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
+        MovieAIRecognitionManager aiManager = MovieAIRecognitionManager.getInstance();
 
         LOGGER.info("Falling back to individual movie recognition for {} movies", movies.size());
 
         for (Movie movie : movies) {
             try {
-                String recognizedTitle = individualService.recognizeMovieTitle(movie);
+                // 使用MovieAIRecognitionManager获取识别结果（会自动检查调用次数限制）
+                String recognizedTitle = aiManager.getRecognizedTitle(movie, null);
                 if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
                     String cacheKey = generateCacheKey(movie);
                     String movieId = movie.getDbId().toString();
