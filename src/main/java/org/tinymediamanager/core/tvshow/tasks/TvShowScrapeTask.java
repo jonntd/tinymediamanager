@@ -793,14 +793,33 @@ public class TvShowScrapeTask extends TmmThreadPool {
             }
           }
 
-          // 2. 如果没有 ID 匹配，优先选择年份完全匹配的结果
+          // 2. 如果没有 ID 匹配，在年份匹配的结果中选择标题相似度最高的
           if (aiResult == null && aiProcessedYear > 0) {
+            MediaSearchResult bestYearMatch = null;
+            float bestSimilarity = 0.0f;
+
             for (MediaSearchResult result : aiResults) {
               if (result.getYear() == aiProcessedYear) {
-                aiResult = result;
-                LOGGER.info("Found exact year match: title='{}', year={}, score={}", result.getTitle(), result.getYear(), result.getScore());
-                break;
+                // 计算标题相似度
+                float similarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getTitle());
+                LOGGER.debug("Year match candidate: title='{}', year={}, similarity={}", result.getTitle(), result.getYear(), similarity);
+
+                if (similarity > bestSimilarity) {
+                  bestSimilarity = similarity;
+                  bestYearMatch = result;
+                }
               }
+            }
+
+            // 只有当标题相似度超过阈值时才认为是有效匹配
+            if (bestYearMatch != null && bestSimilarity >= 0.5f) {
+              aiResult = bestYearMatch;
+              LOGGER.info("Found best year+title match: title='{}', year={}, similarity={}, score={}", aiResult.getTitle(), aiResult.getYear(),
+                  bestSimilarity, aiResult.getScore());
+            }
+            else if (bestYearMatch != null) {
+              LOGGER.warn("Year match found but title similarity too low ({}): expected='{}', got='{}'", bestSimilarity, aiProcessedTitle,
+                  bestYearMatch.getTitle());
             }
           }
 
