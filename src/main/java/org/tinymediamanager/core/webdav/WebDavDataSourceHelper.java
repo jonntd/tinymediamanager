@@ -120,7 +120,7 @@ public class WebDavDataSourceHelper {
 
         if (sourceId != null) {
           result = WEBDAV_PREFIX + sourceId + "/" + remotePath;
-          LOGGER.debug("Fixed malformed WebDAV path: added missing slash. Original: '{}', Fixed: '{}'", path, result);
+          // LOGGER.debug("Fixed malformed WebDAV path: added missing slash. Original: '{}', Fixed: '{}'", path, result);
         }
       }
     }
@@ -140,7 +140,7 @@ public class WebDavDataSourceHelper {
             String preservedPlus = remotePath.replace("+", "%2B");
             String decodedPath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
             result = WEBDAV_PREFIX + sourceId + decodedPath;
-            LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
+            // LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
           }
         }
       }

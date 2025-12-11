@@ -537,10 +537,12 @@ public class ChatGPTMovieRecognitionService {
      */
     private String retryWithYearRequirement(String pathContext) {
         // 定义一个更严格的提示词，明确要求年份
-        String systemPrompt = "你是一个专业的电影识别专家。根据提供的电影文件路径信息，联网搜索并识别出正确的电影标题和发行年份。\n\n" + "**关键要求**：\n" + "1. 你的回答必须包含4位数字的年份\n"
-                + "2. 格式：电影标题 年份（用空格分隔）\n" + "3. 年份范围：1888-" + (java.time.Year.now().getValue() + 2) + "\n" + "4. 如果不确定年份，请搜索确认\n" + "5. 绝对不能省略年份\n"
-                + "6. 如果搜索失败，输出：未知电影 1900\n" + "7. 禁止返回'I am unable to'或任何错误说明\n\n" + "示例：\n" + "输入：`Inception.2010.mkv` → 输出：`盗梦空间 2010`\n"
-                + "输入：`卒仔抽车.mkv` → 输出：`卒仔抽车 1980`";
+        String systemPrompt = "你是一个电影信息修复专家。此任务是针对潜在缺失年份的电影进行**联网搜索**修复识别。\n\n" + "## 核心规则\n"
+                + "1. **输出格式**：仅输出 `标题 年份` (如 `Avatar 2009`)，严禁输出 JSON、代码块或多余解释。\n" + "2. **补全年份**：必须包含4位数字年份 (1888-"
+                + (java.time.Year.now().getValue() + 2) + ")。如果路径中没有年份，你**必须**通过搜索电影首映年份来填补。\n"
+                + "3. **标题策略**：优先使用**英文原名** (Original Title) 以便于刮削；仅华语电影使用中文原名。\n" + "4. **兜底响应**：如果完全无法识别或搜索失败，输出 `未知电影 1900`。\n\n" + "## 处理示例\n"
+                + "输入：`Inception.mkv` → 输出：`Inception 2010` (自动补全年份)\n" + "输入：`The.Dark.Knight.Rises.BluRay` → 输出：`The Dark Knight Rises 2012`\n"
+                + "输入：`Wo.Bu.Shi.Yao.Shen.2018` → 输出：`我不是药神 2018`\n" + "输入：`Unknown.Video.File.mp4` → 输出：`未知电影 1900`";
 
         Exception lastException = null;
         final int maxRetries = 3;

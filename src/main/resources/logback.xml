@@ -113,6 +113,11 @@
 
     <!-- default settings -->
     <logger name="org.tinymediamanager" level="TRACE"/>
+    
+    <!-- reduce logging from third party libraries -->
+    <logger name="org.apache.http" level="INFO"/>
+    <logger name="org.apache.http.wire" level="INFO"/> 
+    <logger name="com.fasterxml.jackson" level="INFO"/>
 
     <!-- appender activation -->
     <root>
