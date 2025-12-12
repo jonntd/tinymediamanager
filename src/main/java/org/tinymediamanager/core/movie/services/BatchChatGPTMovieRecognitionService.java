@@ -131,9 +131,9 @@ public class BatchChatGPTMovieRecognitionService {
                 validMovies.add(movie);
                 LOGGER.debug("Processing movie: {} (ID: {})", movie.getTitle(), movie.getDbId());
             }
-            else {
-                LOGGER.warn("Null movie object found in list");
-            }
+            // else {
+            // LOGGER.warn("Null movie object found in list");
+            // }
         }
 
         if (validMovies.isEmpty()) {
@@ -141,7 +141,7 @@ public class BatchChatGPTMovieRecognitionService {
             return results;
         }
 
-        LOGGER.info("Starting batch recognition for {} valid movies (batch size: {}, max retries: {})", validMovies.size(), batchSize, maxRetries);
+        // LOGGER.info("Starting batch recognition for {} valid movies (batch size: {}, max retries: {})", validMovies.size(), batchSize, maxRetries);
 
         // 禁用缓存 - 每次都强制重新调用 API 进行识别
         List<Movie> needRecognition = new ArrayList<>();
@@ -154,7 +154,7 @@ public class BatchChatGPTMovieRecognitionService {
 
             // 不再使用缓存，总是重新识别
             needRecognition.add(movie);
-            LOGGER.debug("Adding to processing queue (cache disabled): {} (Key: {})", movie.getTitle(), cacheKey);
+            // LOGGER.debug("Adding to processing queue (cache disabled): {} (Key: {})", movie.getTitle(), cacheKey);
         }
 
         if (needRecognition.isEmpty()) {
@@ -172,7 +172,7 @@ public class BatchChatGPTMovieRecognitionService {
             int endIndex = Math.min(processedCount + batchSize, needRecognition.size());
             List<Movie> currentBatch = needRecognition.subList(processedCount, endIndex);
 
-            LOGGER.info("Processing batch {}/? ({} movies, batch size: {})", batchNumber, currentBatch.size(), batchSize);
+            LOGGER.info("Processing batch {} ({} movies)", batchNumber, currentBatch.size());
 
             Map<String, String> batchResults = processBatchWithRetry(currentBatch, maxRetries);
             results.putAll(batchResults);
@@ -401,8 +401,8 @@ public class BatchChatGPTMovieRecognitionService {
                         "{\"model\": \"%s\", \"messages\": [{\"role\": \"system\", \"content\": \"%s\"}, {\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 5000, \"temperature\": 0}",
                         model, systemPrompt.replace("\"", "\\\"").replace("\n", "\\n"), batchRequest.replace("\"", "\\\"").replace("\n", "\\n"));
 
-                LOGGER.debug("Batch API request body: {} characters", requestBody.length());
-                LOGGER.info("Batch API request body content:\n{}", requestBody);
+                // LOGGER.debug("Batch API request body: {} characters", requestBody.length());
+                // LOGGER.info("Batch API request body content:\n{}", requestBody);
 
                 // 创建HTTP请求
                 HttpRequest request = HttpRequest.newBuilder()
@@ -418,8 +418,8 @@ public class BatchChatGPTMovieRecognitionService {
 
                 if (response.statusCode() == 200) {
                     String responseBody = response.body();
-                    LOGGER.debug("Batch movie API response (Attempt {}): {} characters", attempt, responseBody.length());
-                    LOGGER.info("Batch movie API response content:\n{}", responseBody);
+                    // LOGGER.debug("Batch movie API response (Attempt {}): {} characters", attempt, responseBody.length());
+                    // LOGGER.info("Batch movie API response content:\n{}", responseBody);
 
                     if (responseBody != null && !responseBody.trim().isEmpty()) {
                         LOGGER.info("Batch movie API successful on attempt {}", attempt);
@@ -486,18 +486,18 @@ public class BatchChatGPTMovieRecognitionService {
             String[] lines = content.split("\n");
             List<String> validResults = new ArrayList<>();
 
-            LOGGER.info("AI response content to parse:\n{}", content);
-            LOGGER.info("Split into {} lines:", lines.length);
-            for (int i = 0; i < lines.length; i++) {
-                LOGGER.info("  Line {}: '{}'", i + 1, lines[i]);
-            }
+            // LOGGER.info("AI response content to parse:\n{}", content);
+            // LOGGER.info("Split into {} lines:", lines.length);
+            // for (int i = 0; i < lines.length; i++) {
+            // LOGGER.info(" Line {}: '{}'", i + 1, lines[i]);
+            // }
 
             // 过滤空行和无效结果
             for (String line : lines) {
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty() && !trimmed.equalsIgnoreCase("null")) {
                     validResults.add(trimmed);
-                    LOGGER.info("Added valid result: '{}'", trimmed);
+                    // LOGGER.info("Added valid result: '{}'", trimmed);
                 }
                 else {
                     LOGGER.debug("Skipped invalid line: '{}'", line);
@@ -513,13 +513,13 @@ public class BatchChatGPTMovieRecognitionService {
 
             // 匹配结果到电影
             int minSize = Math.min(validResults.size(), movies.size());
-            LOGGER.info("Matching {} results to {} movies:", validResults.size(), movies.size());
+            LOGGER.info("Parsed {} valid results. Matching to {} movies...", validResults.size(), movies.size());
             for (int i = 0; i < minSize; i++) {
                 Movie movie = movies.get(i);
                 String recognizedTitle = validResults.get(i).trim();
                 if (!recognizedTitle.isEmpty()) {
                     results.put(movie.getDbId().toString(), recognizedTitle);
-                    LOGGER.info("  Movie '{}' (ID: {}) -> AI recognized: '{}'", movie.getTitle(), movie.getDbId(), recognizedTitle);
+                    LOGGER.info("  Movie '{}' -> AI: '{}'", movie.getTitle(), recognizedTitle);
                 }
                 else {
                     LOGGER.warn("  Movie '{}' (ID: {}) -> Empty AI result", movie.getTitle(), movie.getDbId());

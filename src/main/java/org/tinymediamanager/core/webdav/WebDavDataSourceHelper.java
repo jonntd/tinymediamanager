@@ -25,6 +25,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
+import org.tinymediamanager.core.services.RetryUtils;
 
 /**
  * Helper class for WebDAV data source operations
@@ -295,7 +296,7 @@ public class WebDavDataSourceHelper {
   }
 
   /**
-   * Create a WebDAV client for the given source
+   * Create a WebDAV client for the given source with retry mechanism
    * 
    * @param source
    *          the WebDAV source
@@ -306,26 +307,59 @@ public class WebDavDataSourceHelper {
       return null;
     }
 
+    final int maxRetries = 3;
     WebDavClient client = null;
-    try {
-      client = new WebDavClient(source);
-      if (client.testConnection()) {
-        return client;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        client = new WebDavClient(source);
+        if (client.testConnection()) {
+          if (attempt > 1) {
+            LOGGER.info("WebDAV connection successful on attempt {} for source '{}'", attempt, source.getName());
+          }
+          return client;
+        }
+        else {
+          // Connection test failed - testConnection() has already logged detailed error
+          client.disconnect();
+          client = null;
+
+          // Retry for all errors, including 401
+          // Some WebDAV servers may return 401 on first connection but succeed on retry
+          // (e.g., certain authentication handshake mechanisms)
+          if (attempt < maxRetries) {
+            LOGGER.info("Retrying WebDAV connection for source '{}' (attempt {}/{})", source.getName(), attempt + 1, maxRetries);
+            RetryUtils.waitBeforeRetry(attempt, "WebDAV connection retry");
+          }
+          else {
+            LOGGER.error("WebDAV connection failed after {} attempts for source '{}'", maxRetries, source.getName());
+            return null;
+          }
+        }
       }
-      else {
-        // Connection test failed, disconnect to prevent resource leak
-        client.disconnect();
-        return null;
+      catch (Exception e) {
+        LOGGER.warn("Exception creating WebDAV client for source '{}' on attempt {}: {}", source.getName(), attempt, e.getMessage());
+
+        // Disconnect on error to prevent resource leak
+        if (client != null) {
+          client.disconnect();
+          client = null;
+        }
+
+        // Retry with exponential backoff for generic exceptions
+        if (attempt < maxRetries) {
+          LOGGER.info("Retrying WebDAV connection after exception (attempt {}/{})", attempt + 1, maxRetries);
+          RetryUtils.waitBeforeRetry(attempt, "WebDAV exception retry");
+        }
+        else {
+          LOGGER.error("WebDAV connection failed after {} attempts for source '{}': {}", maxRetries, source.getName(), e.getMessage());
+          return null;
+        }
       }
     }
-    catch (Exception e) {
-      LOGGER.error("Failed to create WebDAV client for source '{}': {}", source.getName(), e.getMessage());
-      // Disconnect on error to prevent resource leak
-      if (client != null) {
-        client.disconnect();
-      }
-      return null;
-    }
+
+    // Should not reach here, but just in case
+    return null;
   }
 
   /**

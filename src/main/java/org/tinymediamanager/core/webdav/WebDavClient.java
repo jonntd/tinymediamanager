@@ -71,6 +71,32 @@ public class WebDavClient {
       sardine.list(source.getUrl());
       return true;
     }
+    catch (com.github.sardine.impl.SardineException e) {
+      // Extract HTTP status code for better error handling
+      int statusCode = e.getStatusCode();
+      String reasonPhrase = e.getResponsePhrase();
+
+      if (statusCode == 401) {
+        LOGGER.warn("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
+        LOGGER.warn("Authentication issue for WebDAV source '{}'. This may be temporary - will retry if configured.", source.getName());
+        LOGGER.info("If retries fail, please check your username and password in settings.");
+      }
+      else if (statusCode == 403) {
+        LOGGER.error("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
+        LOGGER.error("Access denied for WebDAV source '{}'. Please check your permissions.", source.getName());
+      }
+      else if (statusCode == 404) {
+        LOGGER.error("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
+        LOGGER.error("WebDAV URL not found: '{}'. Please check the URL in settings.", source.getUrl());
+      }
+      else if (statusCode >= 500) {
+        LOGGER.warn("WebDAV connection test failed: status code: {}, reason phrase: {} (server error, may be temporary)", statusCode, reasonPhrase);
+      }
+      else {
+        LOGGER.error("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
+      }
+      return false;
+    }
     catch (Exception e) {
       LOGGER.error("WebDAV connection test failed: {}", e.getMessage());
       return false;
