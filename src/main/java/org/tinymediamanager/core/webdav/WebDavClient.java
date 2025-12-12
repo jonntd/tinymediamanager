@@ -179,9 +179,9 @@ public class WebDavClient {
             LOGGER.warn("Failed to decode href '{}': {}", normalizedHref, e.getMessage());
           }
 
-          LOGGER.debug("Comparing href='{}' (decoded='{}') with urlPath='{}'", normalizedHref, decodedHref, urlPath);
+          LOGGER.trace("Comparing href='{}' (decoded='{}') with urlPath='{}'", normalizedHref, decodedHref, urlPath);
           if (decodedHref.equals(urlPath) || normalizedHref.equals(urlPath)) {
-            LOGGER.debug("Skipping parent directory: {}", href);
+            LOGGER.trace("Skipping parent directory: {}", href);
             continue;
           }
         }
@@ -412,14 +412,14 @@ public class WebDavClient {
 
       String finalUrl = baseUrl + encodedPath;
       // Use safeDecode for logging
-      LOGGER.debug("Built URL: {} from path: {}", finalUrl, safeDecode(path));
+      LOGGER.trace("Built URL: {} from path: {}", finalUrl, safeDecode(path));
       return finalUrl;
     }
     catch (Exception e) {
       LOGGER.warn("Failed to URL encode path '{}' (checking raw: {}): {}", safeDecode(path), path, e.getMessage());
       // Fallback: use the original path as-is
       String finalUrl = baseUrl + path;
-      LOGGER.debug("Fallback URL: {} from path: {}", finalUrl, safeDecode(path));
+      LOGGER.trace("Fallback URL: {} from path: {}", finalUrl, safeDecode(path));
       return finalUrl;
     }
   }

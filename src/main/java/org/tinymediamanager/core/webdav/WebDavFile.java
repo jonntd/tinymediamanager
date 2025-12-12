@@ -65,16 +65,16 @@ public class WebDavFile {
           basePath += "/";
         }
 
-        LOGGER.debug("WebDavFile: baseUrl={}, href={}, basePath={}", baseUrl, href, basePath);
+        LOGGER.trace("WebDavFile: baseUrl={}, href={}, basePath={}", baseUrl, href, basePath);
 
         // Calculate relative path by removing base path from href
         if (href.startsWith(basePath)) {
           relativePath = href.substring(basePath.length());
-          LOGGER.debug("WebDavFile: Calculated relativePath={}", relativePath);
+          LOGGER.trace("WebDavFile: Calculated relativePath={}", relativePath);
         }
         else {
           relativePath = href;
-          LOGGER.debug("WebDavFile: href does not start with basePath, using href as relativePath");
+          LOGGER.trace("WebDavFile: href does not start with basePath, using href as relativePath");
         }
 
         computedUrl = baseUri.getScheme() + "://" + baseUri.getHost() + (baseUri.getPort() > 0 ? ":" + baseUri.getPort() : "") + href;

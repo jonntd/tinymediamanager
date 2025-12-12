@@ -841,7 +841,9 @@ public class TvShowEpisodeAndSeasonParser {
   }
 
   /**
-   * 从文件路径中提取季号 支持格式如: "熊出没之探险日记(2).52集" 中的 "(2)" 表示第2季
+   * 从文件路径中提取季号
+   * 
+   * 优先级: 1. 标准 Season 格式 (Season 3, Season3, S03) 2. 中文季格式 (第三季) 3. 文件名中的括号数字 (限制在文件名部分，避免误匹配路径分类编号)
    * 
    * @param result
    *          当前解析结果
@@ -850,17 +852,65 @@ public class TvShowEpisodeAndSeasonParser {
    * @return 更新后的解析结果
    */
   private static EpisodeMatchingResult parseSeasonFromPath(EpisodeMatchingResult result, String path) {
-    // 匹配路径中的 "(数字)" 或 "（数字）" 格式，通常表示季号
-    // 例如: 熊出没之探险日记(2).52集 -> 季号 2
-    Pattern pathSeasonPattern = Pattern.compile("[（(](\\d{1,2})[)）]", Pattern.CASE_INSENSITIVE);
-    Matcher m = pathSeasonPattern.matcher(path);
-
-    while (m.find()) {
+    // 1. 优先检测标准 Season 格式 (Season 3, Season3, S03E01 中的 S03)
+    Pattern standardSeasonPattern = Pattern.compile("(?:Season\\s*|S)(\\d{1,2})(?:\\D|$)", Pattern.CASE_INSENSITIVE);
+    Matcher m = standardSeasonPattern.matcher(path);
+    if (m.find()) {
       try {
         int season = Integer.parseInt(m.group(1));
-        if (season > 0 && season <= 50) { // 合理的季号范围
+        if (season > 0 && season <= 50) {
           result.season = season;
-          LOGGER.debug("Parsed season {} from path brackets: {}", season, path);
+          LOGGER.debug("Parsed season {} from standard Season format: {}", season, path);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 2. 检测中文季格式 (第三季, 第3季)
+    Pattern chineseSeasonPattern = Pattern.compile("第([一二三四五六七八九十\\d]{1,2})季", Pattern.CASE_INSENSITIVE);
+    m = chineseSeasonPattern.matcher(path);
+    if (m.find()) {
+      try {
+        int season = chineseNumberToInt(m.group(1));
+        if (season > 0 && season <= 50) {
+          result.season = season;
+          LOGGER.debug("Parsed season {} from Chinese season format: {}", season, path);
+          return result;
+        }
+      }
+      catch (Exception e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 3. 从文件名部分（不含路径）中提取括号数字作为季号
+    // 仅限于文件名部分，避免误匹配路径中的分类编号如 "欧美剧(1)"
+    String filename = path.contains("/") ? path.substring(path.lastIndexOf("/") + 1) : path;
+    filename = filename.contains("\\") ? filename.substring(filename.lastIndexOf("\\") + 1) : filename;
+
+    // 排除常见的非季号括号内容: 年份(2018), 分辨率(1080P), 编码(x264)等
+    Pattern filenameSeasonPattern = Pattern.compile("[（(](\\d{1,2})[)）]", Pattern.CASE_INSENSITIVE);
+    m = filenameSeasonPattern.matcher(filename);
+    while (m.find()) {
+      try {
+        int num = Integer.parseInt(m.group(1));
+        // 只接受 1-20 的数字作为可能的季号，且排除常见的非季号数字
+        // 排除: 年份后两位(18,19,20,21,22,23,24,25), 分辨率(1080的前两位10)
+        if (num > 0 && num <= 20 && num != 10) {
+          // 进一步检查：括号内数字不应该紧跟在4位数字后（排除年份）
+          int matchStart = m.start();
+          if (matchStart >= 4) {
+            String beforeMatch = filename.substring(matchStart - 4, matchStart);
+            if (beforeMatch.matches("\\d{4}")) {
+              // 这是年份后的括号，跳过
+              continue;
+            }
+          }
+          result.season = num;
+          LOGGER.debug("Parsed season {} from filename brackets: {}", num, filename);
           return result;
         }
       }
