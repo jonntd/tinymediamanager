@@ -167,6 +167,9 @@ public class TvShowInformationPanel extends InformationPanel {
     PropertyChangeListener propertyChangeListener = propertyChangeEvent -> {
       String property = propertyChangeEvent.getPropertyName();
       Object source = propertyChangeEvent.getSource();
+
+      LOGGER.debug("PropertyChange received: property={}, source={}", property, source.getClass().getSimpleName());
+
       // react on selection/change of a TV show
       if (source.getClass() != TvShowSelectionModel.class) {
         return;
@@ -175,23 +178,30 @@ public class TvShowInformationPanel extends InformationPanel {
       TvShowSelectionModel model = (TvShowSelectionModel) source;
       TvShow tvShow = model.getSelectedTvShow();
 
+      LOGGER.debug("TvShow selected: {}, property={}", tvShow != null ? tvShow.getTitle() : "null", property);
+
       if ("selectedTvShow".equals(property) || POSTER.equals(property)) {
+        LOGGER.debug("Setting POSTER artwork for: {}", tvShow != null ? tvShow.getTitle() : "null");
         setArtwork(tvShow, MediaFileType.POSTER);
       }
 
       if ("selectedTvShow".equals(property) || FANART.equals(property)) {
+        LOGGER.debug("Setting FANART artwork for: {}", tvShow != null ? tvShow.getTitle() : "null");
         setArtwork(tvShow, MediaFileType.FANART);
       }
 
       if ("selectedTvShow".equals(property) || BANNER.equals(property)) {
+        LOGGER.debug("Setting BANNER artwork for: {}", tvShow != null ? tvShow.getTitle() : "null");
         setArtwork(tvShow, MediaFileType.BANNER);
       }
 
       if ("selectedTvShow".equals(property) || THUMB.equals(property)) {
+        LOGGER.debug("Setting THUMB artwork for: {}", tvShow != null ? tvShow.getTitle() : "null");
         setArtwork(tvShow, MediaFileType.THUMB);
       }
 
       if ("selectedTvShow".equals(property) || CLEARLOGO.equals(property)) {
+        LOGGER.debug("Setting CLEARLOGO artwork for: {}", tvShow != null ? tvShow.getTitle() : "null");
         setArtwork(tvShow, MediaFileType.CLEARLOGO);
       }
 

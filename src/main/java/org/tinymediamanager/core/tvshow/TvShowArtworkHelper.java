@@ -86,6 +86,7 @@ public class TvShowArtworkHelper {
    *          the artwork type to be downloaded
    */
   public static void downloadArtwork(TvShow show, MediaFileType type) {
+
     // extra handling for extrafanart & extrathumbs
     if (type == MediaFileType.EXTRAFANART) {
       downloadExtraArtwork(show, type);
@@ -93,8 +94,10 @@ public class TvShowArtworkHelper {
     }
 
     String url = show.getArtworkUrl(type);
+
     try {
       if (StringUtils.isBlank(url)) {
+        LOGGER.warn("No artwork URL found for type {} in show {}", type, show.getTitle());
         return;
       }
 
@@ -134,6 +137,7 @@ public class TvShowArtworkHelper {
           break;
 
         default:
+          LOGGER.warn("Unsupported artwork type: {}", type);
           return;
       }
 
@@ -148,10 +152,24 @@ public class TvShowArtworkHelper {
         filenames.add(filename);
       }
 
+      // If saveArtworkToCache is enabled and no filenames configured, use default filename
+      boolean saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+      if (filenames.isEmpty() && saveToCache) {
+        String defaultFilename = type.name().toLowerCase() + Utils.getArtworkExtensionFromUrl(url);
+        filenames.add(defaultFilename);
+        LOGGER.info("Using default filename for cache: {} (saveArtworkToCache=true)", defaultFilename);
+      }
+
+      LOGGER.debug("Filenames for download: {} (count: {})", filenames, filenames.size());
+
       if (!filenames.isEmpty()) {
         // get images in thread
+        LOGGER.info("Creating MediaEntityImageFetcherTask for show={}, url={}, type={}, filenames={}", show.getTitle(), url, type, filenames);
         MediaEntityImageFetcherTask task = new MediaEntityImageFetcherTask(show, url, MediaFileType.getMediaArtworkType(type), filenames);
         TmmTaskManager.getInstance().addImageDownloadTask(task);
+      }
+      else {
+        LOGGER.warn("No filenames generated for type {} in show {}, skipping download", type, show.getTitle());
       }
     }
     finally {
@@ -283,27 +301,52 @@ public class TvShowArtworkHelper {
 
   private static void setBestPoster(TvShow tvShow, List<MediaArtwork> artwork, boolean overwrite) {
     boolean posterFound = false;
+    String posterUrl = null;
 
     // use existing data if available
     if (!overwrite && StringUtils.isNotBlank(tvShow.getArtworkUrl(MediaFileType.POSTER))) {
       posterFound = true;
+      posterUrl = tvShow.getArtworkUrl(MediaFileType.POSTER);
     }
     else {
       // sort artwork due to our preferences
       int preferredSizeOrder = TvShowModuleManager.getInstance().getSettings().getImagePosterSize().getOrder();
+
       List<MediaArtwork.ImageSizeAndUrl> sortedPosters = sortArtworkUrls(artwork, MediaArtworkType.POSTER, preferredSizeOrder);
 
       // assign and download the poster
       if (!sortedPosters.isEmpty()) {
         MediaArtwork.ImageSizeAndUrl foundPoster = sortedPosters.get(0);
-        tvShow.setArtworkUrl(foundPoster.getUrl(), MediaFileType.POSTER);
+        posterUrl = foundPoster.getUrl();
+        tvShow.setArtworkUrl(posterUrl, MediaFileType.POSTER);
         posterFound = true;
+        LOGGER.info("Found poster URL for {}: {}", tvShow.getTitle(), posterUrl);
+      }
+      else {
+        // Fallback: directly get first poster from artwork list
+        for (MediaArtwork art : artwork) {
+          if (art.getType() == MediaArtworkType.POSTER && StringUtils.isNotBlank(art.getOriginalUrl())) {
+            posterUrl = art.getOriginalUrl();
+            tvShow.setArtworkUrl(posterUrl, MediaFileType.POSTER);
+            posterFound = true;
+            LOGGER.info("Using fallback poster URL for {}: {}", tvShow.getTitle(), posterUrl);
+            break;
+          }
+        }
+        if (!posterFound) {
+          LOGGER.warn("No poster found in artwork list for: {}", tvShow.getTitle());
+        }
       }
     }
 
-    // and download
-    if (posterFound && !TvShowModuleManager.getInstance().getSettings().getPosterFilenames().isEmpty()) {
-      downloadArtwork(tvShow, MediaFileType.POSTER);
+    // and download - always download if poster found and either saveToCache is enabled OR posterFilenames is configured
+    if (posterFound && posterUrl != null) {
+      boolean saveToCache = TvShowModuleManager.getInstance().getSettings().isSaveArtworkToCache();
+      int posterFilenamesCount = TvShowModuleManager.getInstance().getSettings().getPosterFilenames().size();
+
+      if (saveToCache || posterFilenamesCount > 0) {
+        downloadArtwork(tvShow, MediaFileType.POSTER);
+      }
     }
   }
 
@@ -834,13 +877,22 @@ public class TvShowArtworkHelper {
    *          should we overwrite existing artwork
    */
   public static void setArtwork(TvShow tvShow, List<MediaArtwork> artwork, List<TvShowScraperMetadataConfig> config, boolean overwrite) {
+    LOGGER.info("TvShowArtworkHelper.setArtwork called: tvShow={}, artworkCount={}, config={}, overwrite={}", tvShow.getTitle(),
+        artwork != null ? artwork.size() : 0, config, overwrite);
+
     if (!ScraperMetadataConfig.containsAnyArtwork(config)) {
+      LOGGER.warn("Config does not contain any artwork config, skipping");
       return;
     }
 
     // poster
     if (config.contains(TvShowScraperMetadataConfig.POSTER) && (overwrite || StringUtils.isBlank(tvShow.getArtworkFilename(MediaFileType.POSTER)))) {
+      LOGGER.debug("Setting best poster for: {}", tvShow.getTitle());
       setBestPoster(tvShow, artwork, overwrite);
+    }
+    else {
+      LOGGER.debug("Skipping poster: configContains={}, overwrite={}, existingArtwork={}", config.contains(TvShowScraperMetadataConfig.POSTER),
+          overwrite, tvShow.getArtworkFilename(MediaFileType.POSTER));
     }
 
     // fanart
@@ -1104,7 +1156,8 @@ public class TvShowArtworkHelper {
   /**
    * Get the destination folder for TV show artwork based on settings
    *
-   * @param tvShow the TV show entity
+   * @param tvShow
+   *          the TV show entity
    * @return the destination folder path
    */
   private static Path getDestinationFolderForTvShow(TvShow tvShow) {
@@ -1127,15 +1180,16 @@ public class TvShowArtworkHelper {
       try {
         Files.createDirectories(entityFolder);
         LOGGER.info("Created cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
-      } catch (Exception e) {
-        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'",
-                   entityFolder, e.getMessage());
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'", entityFolder, e.getMessage());
         return tvShow.getPathNIO();
       }
 
       LOGGER.info("Using cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
       return entityFolder;
-    } else {
+    }
+    else {
       // Default behavior: save to video folder
       LOGGER.debug("Using default video folder for TV show '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
       return tvShow.getPathNIO();

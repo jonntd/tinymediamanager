@@ -30,7 +30,9 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.JSpinner;
 import javax.swing.JTextArea;
+import javax.swing.SpinnerNumberModel;
 
 import org.jdesktop.beansbinding.AutoBinding;
 import org.jdesktop.beansbinding.AutoBinding.UpdateStrategy;
@@ -59,9 +61,10 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 class MovieScraperOptionsSettingsPanel extends JPanel {
-  private final MovieSettings       settings         = MovieModuleManager.getInstance().getSettings();
+  private final MovieSettings       settings = MovieModuleManager.getInstance().getSettings();
 
   private JSlider                   sliderThreshold;
+  private JSpinner                  spAutomaticRetryCount;
   private JComboBox<MediaLanguages> cbScraperLanguage;
   private JComboBox<CountryCode>    cbCertificationCountry;
   private JComboBox<CountryItem>    cbReleaseCountry;
@@ -232,6 +235,13 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
         JTextArea tpScraperThresholdHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.scraperTreshold.hint"));
         TmmFontHelper.changeFont(tpScraperThresholdHint, L2);
         panelAutomaticScrape.add(tpScraperThresholdHint, "cell 1 1 3 1, growx, wmin 0");
+
+        JLabel lblRetryCount = new JLabel(TmmResourceBundle.getString("Settings.scraper.retrycount"));
+        panelAutomaticScrape.add(lblRetryCount, "cell 1 2");
+
+        spAutomaticRetryCount = new JSpinner();
+        spAutomaticRetryCount.setModel(new SpinnerNumberModel(2, 0, 10, 1));
+        panelAutomaticScrape.add(spAutomaticRetryCount, "cell 2 2");
       }
     }
   }
@@ -361,5 +371,11 @@ class MovieScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_15 = Bindings.createAutoBinding(UpdateStrategy.READ, chckbxFetchAllRatings, jCheckBoxBeanProperty_2,
         chckbxRatingLetterboxd, jCheckBoxBeanProperty_1);
     autoBinding_15.bind();
+    //
+    Property settingsBeanProperty_Retry = BeanProperty.create("automaticScraperRetryCount");
+    Property jSpinnerBeanProperty = BeanProperty.create("value");
+    AutoBinding autoBinding_Retry = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_Retry, spAutomaticRetryCount,
+        jSpinnerBeanProperty);
+    autoBinding_Retry.bind();
   }
 }

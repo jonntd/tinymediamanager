@@ -45,7 +45,7 @@ public class NamedFilesizeRenderer implements NamedRenderer {
     String unit = s;
 
     if (unit == null) {
-      unit = "G";
+      unit = "GB";
     }
 
     // part 2 is the unit (default = G)
@@ -82,7 +82,7 @@ public class NamedFilesizeRenderer implements NamedRenderer {
 
       default:
         value = value / (1000 * 1000 * 1000f);
-        unit = "G";
+        unit = "GB";
         break;
     }
 

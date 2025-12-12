@@ -64,7 +64,6 @@ import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
 import org.tinymediamanager.core.services.AIApiRateLimiter;
 
-
 import org.tinymediamanager.ui.TmmFontHelper;
 import org.tinymediamanager.ui.components.button.DocsButton;
 import org.tinymediamanager.ui.components.label.TmmLabel;
@@ -106,19 +105,19 @@ class SystemSettingsPanel extends JPanel {
   private JTextField           tfOpenAiApiKey;
   private JTextField           tfOpenAiApiUrl;
   private JTextField           tfOpenAiModel;
-  private JTextArea           taOpenAiExtractionPrompt;
-  private JButton             btnTestOpenAiPrompt;
+  private JTextArea            taOpenAiExtractionPrompt;
+  private JButton              btnTestOpenAiPrompt;
   private JTextField           tfOpenAiTestPath;
 
   // AI Rate Limiting settings
-  private JCheckBox           chkAiRateLimitEnabled;
-  private JSpinner            spAiMaxCallsPerMinute;
-  private JSpinner            spAiMaxCallsPerHour;
-  private JSpinner            spAiMinIntervalSeconds;
-  private JCheckBox           chkAiIndividualFallbackEnabled;
-  private JSpinner            spAiBatchSize;
-  private JLabel              lblAiStatistics;
-  private JButton             btnResetAiStatistics;
+  private JCheckBox            chkAiRateLimitEnabled;
+  private JSpinner             spAiMaxCallsPerMinute;
+  private JSpinner             spAiMaxCallsPerHour;
+  private JSpinner             spAiMinIntervalSeconds;
+  private JCheckBox            chkAiIndividualFallbackEnabled;
+  private JSpinner             spAiBatchSize;
+  private JLabel               lblAiStatistics;
+  private JButton              btnResetAiStatistics;
 
   /**
    * Instantiates a new general settings panel.
@@ -274,7 +273,7 @@ class SystemSettingsPanel extends JPanel {
       panelOpenAI.setLayout(new MigLayout("hidemode 1, insets 0", "[20lp!][][grow]", "[][][][][][grow]"));
 
       JLabel lblOpenAiT = new TmmLabel(TmmResourceBundle.getString("Settings.openai"), H3);
-       CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOpenAI, lblOpenAiT, true);
+      CollapsiblePanel collapsiblePanel = new CollapsiblePanel(panelOpenAI, lblOpenAiT, true);
 
       JLabel lblOpenAiApiKey = new JLabel(TmmResourceBundle.getString("Settings.openai.apikey"));
       panelOpenAI.add(lblOpenAiApiKey, "cell 1 0,alignx trailing");
@@ -303,11 +302,12 @@ class SystemSettingsPanel extends JPanel {
       taOpenAiExtractionPrompt = new JTextArea();
       taOpenAiExtractionPrompt.setLineWrap(true);
       taOpenAiExtractionPrompt.setWrapStyleWord(true);
+      taOpenAiExtractionPrompt.setEditable(false);
       TmmFontHelper.changeFont(taOpenAiExtractionPrompt, TmmFontHelper.L2);
       panelOpenAI.add(taOpenAiExtractionPrompt, "cell 2 3,grow");
 
       // Add test file path input for OpenAI testing
-      JLabel lblOpenAiTestPath = new JLabel(TmmResourceBundle.getString("Settings.openai.testpath"));
+      JLabel lblOpenAiTestPath = new JLabel(TmmResourceBundle.getString("Settings.ai.testpath"));
       panelOpenAI.add(lblOpenAiTestPath, "cell 1 4,alignx trailing");
 
       tfOpenAiTestPath = new JTextField();
@@ -316,48 +316,48 @@ class SystemSettingsPanel extends JPanel {
       panelOpenAI.add(tfOpenAiTestPath, "cell 2 4,growx");
 
       // Add test button for OpenAI prompt testing (now includes batch testing)
-      btnTestOpenAiPrompt = new JButton("Test OpenAI Recognition");
+      btnTestOpenAiPrompt = new JButton(TmmResourceBundle.getString("Settings.ai.test"));
       btnTestOpenAiPrompt.addActionListener(e -> testOpenAiPrompt());
       panelOpenAI.add(btnTestOpenAiPrompt, "cell 2 5,alignx right");
 
       // AI Rate Limiting Controls
-      JLabel lblAiRateLimit = new JLabel("AI Rate Limiting");
+      JLabel lblAiRateLimit = new JLabel(TmmResourceBundle.getString("Settings.ai.ratelimit"));
       lblAiRateLimit.setFont(lblAiRateLimit.getFont().deriveFont(Font.BOLD));
       panelOpenAI.add(lblAiRateLimit, "cell 1 6,spanx 2");
 
-      chkAiRateLimitEnabled = new JCheckBox("Enable AI Rate Limiting");
+      chkAiRateLimitEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.ai.ratelimit.enable"));
       panelOpenAI.add(chkAiRateLimitEnabled, "cell 1 7,spanx 2");
 
-      JLabel lblMaxCallsPerMinute = new JLabel("Max calls per minute:");
+      JLabel lblMaxCallsPerMinute = new JLabel(TmmResourceBundle.getString("Settings.ai.ratelimit.maxperminute") + ":");
       panelOpenAI.add(lblMaxCallsPerMinute, "cell 1 8,alignx trailing");
       spAiMaxCallsPerMinute = new JSpinner(new SpinnerNumberModel(50, 1, 200, 1));
       panelOpenAI.add(spAiMaxCallsPerMinute, "cell 2 8");
 
-      JLabel lblMaxCallsPerHour = new JLabel("Max calls per hour:");
+      JLabel lblMaxCallsPerHour = new JLabel(TmmResourceBundle.getString("Settings.ai.ratelimit.maxperhour") + ":");
       panelOpenAI.add(lblMaxCallsPerHour, "cell 1 9,alignx trailing");
       spAiMaxCallsPerHour = new JSpinner(new SpinnerNumberModel(1000, 10, 5000, 10));
       panelOpenAI.add(spAiMaxCallsPerHour, "cell 2 9");
 
-      JLabel lblMinInterval = new JLabel("Min interval (seconds):");
+      JLabel lblMinInterval = new JLabel(TmmResourceBundle.getString("Settings.ai.ratelimit.mininterval") + ":");
       panelOpenAI.add(lblMinInterval, "cell 1 10,alignx trailing");
       spAiMinIntervalSeconds = new JSpinner(new SpinnerNumberModel(1, 0, 60, 1));
       panelOpenAI.add(spAiMinIntervalSeconds, "cell 2 10");
 
-      JLabel lblAiBatchSize = new JLabel("AI Batch Size:");
+      JLabel lblAiBatchSize = new JLabel(TmmResourceBundle.getString("Settings.ai.batchsize") + ":");
       panelOpenAI.add(lblAiBatchSize, "cell 1 11,alignx trailing");
       spAiBatchSize = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
       panelOpenAI.add(spAiBatchSize, "cell 2 11");
 
-      chkAiIndividualFallbackEnabled = new JCheckBox("Enable individual AI fallback");
+      chkAiIndividualFallbackEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.ai.individualfallback"));
       panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 12,spanx 2");
 
       // AI Statistics Display
-      JLabel lblAiStatsTitle = new JLabel("AI API Statistics:");
+      JLabel lblAiStatsTitle = new JLabel(TmmResourceBundle.getString("Settings.ai.statistics") + ":");
       panelOpenAI.add(lblAiStatsTitle, "cell 1 13,alignx trailing");
-      lblAiStatistics = new JLabel("Loading...");
+      lblAiStatistics = new JLabel(TmmResourceBundle.getString("Settings.loading"));
       panelOpenAI.add(lblAiStatistics, "cell 2 13");
 
-      btnResetAiStatistics = new JButton("Reset Statistics");
+      btnResetAiStatistics = new JButton(TmmResourceBundle.getString("Settings.ai.statistics.reset"));
       btnResetAiStatistics.addActionListener(e -> resetAiStatistics());
       panelOpenAI.add(btnResetAiStatistics, "cell 2 14,alignx right");
 
@@ -600,8 +600,8 @@ class SystemSettingsPanel extends JPanel {
 
     Property settingsBeanProperty_21 = BeanProperty.create("aiIndividualFallbackEnabled");
     Property jCheckBoxBeanProperty_2 = BeanProperty.create("selected");
-    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_21, chkAiIndividualFallbackEnabled,
-        jCheckBoxBeanProperty_2);
+    AutoBinding autoBinding_22 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_21,
+        chkAiIndividualFallbackEnabled, jCheckBoxBeanProperty_2);
     autoBinding_22.bind();
 
     // AI Batch Size
@@ -634,7 +634,7 @@ class SystemSettingsPanel extends JPanel {
   private void testOpenAiPrompt() {
     // 禁用测试按钮，防止重复点击
     btnTestOpenAiPrompt.setEnabled(false);
-    btnTestOpenAiPrompt.setText("Testing...");
+    btnTestOpenAiPrompt.setText(TmmResourceBundle.getString("Settings.ai.testing"));
 
     // 使用SwingWorker在后台线程中执行测试，避免阻塞UI
     javax.swing.SwingWorker<String, Void> testWorker = new javax.swing.SwingWorker<String, Void>() {
@@ -672,19 +672,20 @@ class SystemSettingsPanel extends JPanel {
           java.util.List<Movie> testMovies = new java.util.ArrayList<>();
           testMovies.add(testMovie);
 
-          org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
-              new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+          org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService = new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
           java.util.Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(testMovies);
 
           if (batchResults.isEmpty()) {
             resultText.append("Batch Recognition: No results returned");
-          } else {
+          }
+          else {
             resultText.append("Batch Recognition: ");
             for (java.util.Map.Entry<String, String> entry : batchResults.entrySet()) {
               resultText.append(entry.getValue());
             }
           }
-        } catch (Exception batchError) {
+        }
+        catch (Exception batchError) {
           resultText.append("Batch Recognition: Error - ").append(batchError.getMessage());
         }
 
@@ -699,26 +700,25 @@ class SystemSettingsPanel extends JPanel {
           // Show the result in a message dialog
           if (resultText.contains("Failed") && resultText.contains("No results")) {
             javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
-                "Both individual and batch recognition failed.\n" +
-                "Please check your API key and configuration.\n\n" + resultText,
-                "OpenAI Test Results",
-                javax.swing.JOptionPane.WARNING_MESSAGE);
-          } else {
+                TmmResourceBundle.getString("Settings.ai.testresults.bothfailed") + "\n\n" + resultText,
+                TmmResourceBundle.getString("Settings.ai.testresults"), javax.swing.JOptionPane.WARNING_MESSAGE);
+          }
+          else {
             javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
-                "OpenAI Test Results:\n\n" + resultText,
-                "OpenAI Test Results",
+                TmmResourceBundle.getString("Settings.ai.testresults") + ":\n\n" + resultText, TmmResourceBundle.getString("Settings.ai.testresults"),
                 javax.swing.JOptionPane.INFORMATION_MESSAGE);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           org.slf4j.LoggerFactory.getLogger(SystemSettingsPanel.class).error("Error testing OpenAI prompt", e);
           javax.swing.JOptionPane.showMessageDialog(SystemSettingsPanel.this,
-              "Error testing OpenAI:\n" + e.getMessage(),
-              "OpenAI Test Error",
-              javax.swing.JOptionPane.ERROR_MESSAGE);
-        } finally {
+              TmmResourceBundle.getString("Settings.ai.testerror.prefix") + "\n" + e.getMessage(),
+              TmmResourceBundle.getString("Settings.ai.testerror"), javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        finally {
           // 恢复测试按钮状态
           btnTestOpenAiPrompt.setEnabled(true);
-          btnTestOpenAiPrompt.setText("Test OpenAI Recognition");
+          btnTestOpenAiPrompt.setText(TmmResourceBundle.getString("Settings.ai.test"));
         }
       }
     };
@@ -753,36 +753,29 @@ class SystemSettingsPanel extends JPanel {
       testMovies.add(testMovie);
 
       // Create BatchChatGPTMovieRecognitionService instance
-      org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService =
-          new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+      org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService = new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
 
       // Test the batch recognition
       java.util.Map<String, String> results = batchService.batchRecognizeMovieTitles(testMovies);
 
       // Show the result in a message dialog
       if (results.isEmpty()) {
-        JOptionPane.showMessageDialog(this,
-            "Batch recognition test completed but no results returned.\n" +
-            "Please check your API key and configuration.",
-            "Batch OpenAI Test",
-            JOptionPane.WARNING_MESSAGE);
-      } else {
-        StringBuilder resultText = new StringBuilder("Batch recognition test results:\n");
+        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.batchtest.noresults"),
+            TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.WARNING_MESSAGE);
+      }
+      else {
+        StringBuilder resultText = new StringBuilder(TmmResourceBundle.getString("Settings.ai.batchtest.results") + "\n");
         for (java.util.Map.Entry<String, String> entry : results.entrySet()) {
-          resultText.append("Movie ID: ").append(entry.getKey())
-                   .append(" -> Title: ").append(entry.getValue()).append("\n");
+          resultText.append("Movie ID: ").append(entry.getKey()).append(" -> Title: ").append(entry.getValue()).append("\n");
         }
-        JOptionPane.showMessageDialog(this,
-            resultText.toString(),
-            "Batch OpenAI Test",
+        JOptionPane.showMessageDialog(this, resultText.toString(), TmmResourceBundle.getString("Settings.ai.batchtest"),
             JOptionPane.INFORMATION_MESSAGE);
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Error testing batch OpenAI recognition", e);
-      JOptionPane.showMessageDialog(this,
-          "Error testing batch OpenAI recognition:\n" + e.getMessage(),
-          "Batch OpenAI Test",
-          JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.batchtest.error") + "\n" + e.getMessage(),
+          TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.ERROR_MESSAGE);
     }
   }
 
@@ -794,8 +787,9 @@ class SystemSettingsPanel extends JPanel {
       AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
       String statistics = rateLimiter.getStatistics();
       lblAiStatistics.setText(statistics);
-    } catch (Exception e) {
-      lblAiStatistics.setText("Statistics unavailable");
+    }
+    catch (Exception e) {
+      lblAiStatistics.setText(TmmResourceBundle.getString("Settings.ai.statistics.unavailable"));
       LOGGER.warn("Failed to get AI statistics: {}", e.getMessage());
     }
   }
@@ -828,10 +822,13 @@ class SystemSettingsPanel extends JPanel {
       AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
       rateLimiter.reset();
       updateAiStatistics();
-      JOptionPane.showMessageDialog(this, "AI API statistics have been reset.", "Statistics Reset", JOptionPane.INFORMATION_MESSAGE);
-    } catch (Exception e) {
+      JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.statistics.resetdone"),
+          TmmResourceBundle.getString("Settings.ai.statistics.resettitle"), JOptionPane.INFORMATION_MESSAGE);
+    }
+    catch (Exception e) {
       LOGGER.error("Failed to reset AI statistics: {}", e.getMessage());
-      JOptionPane.showMessageDialog(this, "Failed to reset statistics: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.statistics.reseterror") + " " + e.getMessage(),
+          TmmResourceBundle.getString("Settings.error"), JOptionPane.ERROR_MESSAGE);
     }
   }
 }

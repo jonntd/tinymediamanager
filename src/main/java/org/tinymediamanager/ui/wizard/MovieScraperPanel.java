@@ -219,7 +219,7 @@ class MovieScraperPanel extends JPanel {
     chckbxScraperFallback = new JCheckBox(TmmResourceBundle.getString("Settings.scraperfallback"));
     panelMovieScrapers.add(chckbxScraperFallback, "cell 0 4 2 1");
     {
-      JLabel lblNfoFormat = new JLabel("NFO format");
+      JLabel lblNfoFormat = new JLabel(TmmResourceBundle.getString("Settings.nfoformat"));
       panelMovieScrapers.add(lblNfoFormat, "flowx,cell 0 6 2 1");
     }
     {

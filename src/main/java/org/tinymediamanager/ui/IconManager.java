@@ -188,6 +188,7 @@ public class IconManager {
   public static final ImageIcon              COPY_INV                     = createButtonIcon("clone.svg");
   public static final ImageIcon              DELETE_INV                   = createButtonIcon("trash-alt.svg");
   public static final ImageIcon              EXCHANGE                     = createButtonIcon("exchange.svg");
+  public static final ImageIcon              CLOUD                        = createButtonIcon("link.svg");
   public static final ImageIcon              FILE_ADD_INV                 = createButtonIcon("file-plus.svg");
   public static final ImageIcon              FILE_EXPORT_INV              = createButtonIcon("file-export.svg");
   public static final ImageIcon              FILE_IMPORT_INV              = createButtonIcon("file-import.svg");

@@ -518,7 +518,7 @@ public class TvShowRenamerSettingsPanel extends JPanel implements HierarchyListe
 
         String newFilenameAndPath = episodeMf.getFile().toString().replace(episode.getTvShow().getPath() + File.separator, "");
 
-        lblExampleDatasource.setText(tvShow.getDataSource());
+        lblExampleDatasource.setText(tvShow.getDataSourceDecoded());
         lblExampleFoldername.setText(tvShowDir.replace(tvShow.getDataSource() + File.separator, ""));
         lblExampleFilename.setText(newFilenameAndPath);
 

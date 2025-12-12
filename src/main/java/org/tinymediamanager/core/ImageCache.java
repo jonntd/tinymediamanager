@@ -49,6 +49,7 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.scraper.http.Url;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.scraper.util.UrlUtil;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.madgag.gif.fmsware.GifDecoder;
@@ -489,7 +490,10 @@ public class ImageCache {
     }
 
     Path path = mediaFile.getFileAsPath();
-    Path cachedFile = getCacheDir().resolve(ImageCache.getMD5WithSubfolder(path.toAbsolutePath().toString()) + "." + Utils.getExtension(path));
+    // For WebDAV paths, use the path string directly without toAbsolutePath()
+    String pathString = WebDavDataSourceHelper.isWebDavPath(path.toString()) ? WebDavDataSourceHelper.normalizeWebDavPath(path.toString())
+        : path.toAbsolutePath().toString();
+    Path cachedFile = getCacheDir().resolve(ImageCache.getMD5WithSubfolder(pathString) + "." + Utils.getExtension(path));
     if (Files.exists(cachedFile)) {
       Utils.deleteFileSafely(cachedFile);
     }
@@ -564,38 +568,58 @@ public class ImageCache {
       return null;
     }
 
-    Path path = mediaFile.getFileAsPath().toAbsolutePath();
+    // For WebDAV paths, use the path string directly without toAbsolutePath()
+    Path path = mediaFile.getFileAsPath();
+    LOGGER.debug("getCachedFile: original path={}, type={}", path, mediaFile.getType());
 
-    Path cachedFile = ImageCache.getCacheDir().resolve(getMD5WithSubfolder(path.toString()) + "." + Utils.getExtension(path));
+    String pathString = WebDavDataSourceHelper.isWebDavPath(path.toString()) ? WebDavDataSourceHelper.normalizeWebDavPath(path.toString())
+        : path.toAbsolutePath().toString();
+    LOGGER.debug("getCachedFile: pathString={}", pathString);
+
+    Path cachedFile = ImageCache.getCacheDir().resolve(getMD5WithSubfolder(pathString) + "." + Utils.getExtension(path));
+    LOGGER.debug("getCachedFile: MD5 cached file path={}, exists={}", cachedFile, Files.exists(cachedFile));
+
     if (Files.exists(cachedFile)) {
+      LOGGER.debug("getCachedFile: returning MD5 cached file");
       return cachedFile;
     }
 
-    // is the path already inside the cache dir? serve direct
-    if (path.startsWith(CACHE_DIR.toAbsolutePath())) {
+    // is the path already inside the cache dir? serve direct (skip for WebDAV paths)
+    boolean isInCacheDir = !WebDavDataSourceHelper.isWebDavPath(path.toString()) && path.startsWith(CACHE_DIR.toAbsolutePath());
+    LOGGER.debug("getCachedFile: path in cache dir check: isWebDAV={}, path={}, cacheDir={}, isInCacheDir={}",
+        WebDavDataSourceHelper.isWebDavPath(path.toString()), path.toAbsolutePath(), CACHE_DIR.toAbsolutePath(), isInCacheDir);
+
+    if (isInCacheDir) {
+      LOGGER.info("getCachedFile: path is already in cache dir, returning directly: {}", path);
       return path;
     }
 
     // is the image cache activated?
     if (!Settings.getInstance().isImageCache()) {
+      LOGGER.debug("getCachedFile: image cache is disabled");
       // need to return null, else the caller couldn't distinguish between cached/original file
       return null;
     }
 
+    LOGGER.debug("getCachedFile: attempting to cache image");
     try {
-      return cacheImage(mediaFile);
+      Path result = cacheImage(mediaFile);
+      LOGGER.debug("getCachedFile: cacheImage returned: {}", result);
+      return result;
     }
     catch (EmptyFileException e) {
       LOGGER.debug("failed to cache file (file is empty): {}", path);
     }
     catch (FileNotFoundException ignored) {
       // no need to log anything here
+      LOGGER.debug("failed to cache file (file not found): {}", path);
     }
     catch (Exception e) {
       LOGGER.debug("problem caching file: {}", e.getMessage());
     }
 
     // need to return null, else the caller couldn't distinguish between cached/original file
+    LOGGER.debug("getCachedFile: returning null");
     return null;
   }
 

@@ -491,6 +491,11 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    *          the {@link List} of all named {@link MediaEpisodeGroup}s
    */
   public void setEpisodeGroups(Collection<MediaEpisodeGroup> newValues) {
+    // Protect against data loss: if new values are empty, preserve existing data
+    if (newValues == null || newValues.isEmpty()) {
+      return;
+    }
+
     episodeGroups.clear();
 
     // sort by episode groups (same order as in MediaEpisodeGroup.EpisodeGroup)

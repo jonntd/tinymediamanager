@@ -48,6 +48,7 @@ public class TmmSettingsDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.externaltools"), new ExternalToolsSettingsPanel()));
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.externaldevices"), new ExternalDevicesSettingsPanel()));
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.externalservices"), new ExternalServicesSettingsPanel()));
+    generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("webdav.sources"), new WebDavSettingsPanel()));
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.system"), new SystemSettingsPanel()));
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.ard"), new ArdSettingsPanel()));
     generalSettingsNode.addChild(new TmmSettingsNode(TmmResourceBundle.getString("Settings.misc"), new MiscSettingsPanel()));

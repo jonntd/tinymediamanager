@@ -365,7 +365,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         detailsPanel.add(btnRemoveEpisodeNumber, "cell 0 3,alignx right");
 
         JButton btnAiRecognition = new SquareIconButton(new AiEpisodeRecognitionAction());
-        btnAiRecognition.setToolTipText("AI识别季数集数");
+        btnAiRecognition.setToolTipText(TmmResourceBundle.getString("Button.ai.episoderecognition"));
         detailsPanel.add(btnAiRecognition, "cell 0 3,alignx right");
       }
       {
@@ -1181,22 +1181,19 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
     @Override
     public void actionPerformed(ActionEvent e) {
       // 获取剧集文件名
-      String filename = episodeToEdit.getMainFile() != null ?
-          episodeToEdit.getMainFile().getFilename() :
-          episodeToEdit.getTitle();
+      String filename = episodeToEdit.getMainFile() != null ? episodeToEdit.getMainFile().getFilename() : episodeToEdit.getTitle();
 
       // 获取电视剧标题
       String tvShowTitle = episodeToEdit.getTvShow().getTitle();
 
       if (filename == null || filename.trim().isEmpty()) {
-        JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
-            "无法获取剧集文件名", "AI识别失败", JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this, TmmResourceBundle.getString("ai.recognition.nofilename"),
+            TmmResourceBundle.getString("ai.recognition.failed"), JOptionPane.WARNING_MESSAGE);
         return;
       }
 
       // 在后台线程中执行AI识别
-      SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void> worker =
-          new SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void>() {
+      SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void> worker = new SwingWorker<TvShowEpisodeAndSeasonParser.EpisodeMatchingResult, Void>() {
 
         @Override
         protected TvShowEpisodeAndSeasonParser.EpisodeMatchingResult doInBackground() throws Exception {
@@ -1214,28 +1211,27 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
               int episode = result.episodes.get(0); // 取第一个集数
 
               // 创建新的剧集编号
-              MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(
-                  MediaEpisodeGroup.DEFAULT_AIRED, season, episode);
+              MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, season, episode);
 
               // 清除现有的剧集编号并添加新的
               episodeNumbers.clear();
               episodeNumbers.add(newEpisodeNumber);
 
               // 发送成功消息到Message history
-              String successMessage = String.format("AI识别成功: %s → S%02dE%02d",
-                  filename, season, episode);
-              MessageManager.getInstance().pushMessage(
-                  new Message(MessageLevel.INFO, "剧集AI识别", successMessage));
+              String successMessage = String.format("AI识别成功: %s → S%02dE%02d", filename, season, episode);
+              MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "剧集AI识别", successMessage));
 
-            } else {
+            }
+            else {
               // 发送失败消息到Message history
               String failMessage = String.format("AI识别失败: %s - 无法识别季数和集数", filename);
-              MessageManager.getInstance().pushMessage(
-                  new Message(MessageLevel.WARN, "剧集AI识别", failMessage));
+              MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "剧集AI识别", failMessage));
             }
-          } catch (Exception ex) {
+          }
+          catch (Exception ex) {
             JOptionPane.showMessageDialog(TvShowEpisodeEditorDialog.this,
-                "AI识别过程中发生错误: " + ex.getMessage(), "AI识别错误", JOptionPane.ERROR_MESSAGE);
+                TmmResourceBundle.getString("ai.recognition.error") + ": " + ex.getMessage(),
+                TmmResourceBundle.getString("ai.recognition.error.title"), JOptionPane.ERROR_MESSAGE);
           }
         }
       };

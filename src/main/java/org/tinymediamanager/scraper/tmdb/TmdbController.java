@@ -57,18 +57,17 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * Helper class for easy usage of the TMDB v3 API using retrofit.
  */
 class TmdbController {
-  public static final String     API_HOST           = "api.themoviedb.org";
-  public static final String     ALTERNATE_API_HOST = "api.tmdb.org";
-  public static final String     API_VERSION        = "3";
-  public static final String     PARAM_API_KEY      = "api_key";
-  private static final String    TMDB_DATE_PATTERN  = "yyyy-MM-dd";
+  public static final String  API_HOST           = "api.themoviedb.org";
+  public static final String  ALTERNATE_API_HOST = "api.tmdb.org";
+  public static final String  API_VERSION        = "3";
+  public static final String  PARAM_API_KEY      = "api_key";
+  private static final String TMDB_DATE_PATTERN  = "yyyy-MM-dd";
 
-  private final String           apiUrl;
-  private final SimpleDateFormat dateFormat;
-  private final String           apiKey;
-  private final boolean          alternateServer;
+  private final String        apiUrl;
+  private final String        apiKey;
+  private final boolean       alternateServer;
 
-  private Retrofit               retrofit;
+  private Retrofit            retrofit;
 
   TmdbController(String apiKey, boolean alternateServer) {
     this.apiKey = apiKey;
@@ -80,8 +79,6 @@ class TmdbController {
     else {
       apiUrl = "https://" + API_HOST + "/" + API_VERSION + "/";
     }
-
-    this.dateFormat = new SimpleDateFormat(TMDB_DATE_PATTERN);
   }
 
   public String apiKey() {
@@ -116,7 +113,24 @@ class TmdbController {
     GsonBuilder builder = new GsonBuilder();
 
     // class types
-    builder.registerTypeAdapter(Integer.class, (JsonDeserializer<Integer>) (json, typeOfT, context) -> json.getAsInt());
+    builder.registerTypeAdapter(Integer.class, (JsonDeserializer<Integer>) (json, typeOfT, context) -> {
+      // Handle empty strings or non-numeric values gracefully
+      // TMDB API sometimes returns "" instead of null for integer fields
+      if (json.isJsonNull()) {
+        return null;
+      }
+      try {
+        String value = json.getAsString();
+        if (value == null || value.trim().isEmpty()) {
+          return null;
+        }
+        return Integer.parseInt(value.trim());
+      }
+      catch (NumberFormatException e) {
+        // Return null instead of throwing exception for invalid integer values
+        return null;
+      }
+    });
 
     builder.registerTypeAdapter(MediaType.class, (JsonDeserializer<MediaType>) (json, typeOfT, context) -> MediaType.get(json.getAsString()));
 
@@ -190,7 +204,11 @@ class TmdbController {
 
     builder.registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
       try {
-        return dateFormat.parse(json.getAsString());
+        // Create a new SimpleDateFormat instance for each parse to ensure thread safety
+        // SimpleDateFormat is not thread-safe, and sharing an instance across threads
+        // can cause ArrayIndexOutOfBoundsException during concurrent parsing
+        SimpleDateFormat sdf = new SimpleDateFormat(TMDB_DATE_PATTERN);
+        return sdf.parse(json.getAsString());
       }
       catch (ParseException e) {
         // return null instead of failing (like default parser would)

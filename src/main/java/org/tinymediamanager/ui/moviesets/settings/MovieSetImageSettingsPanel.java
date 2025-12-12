@@ -457,10 +457,10 @@ class MovieSetImageSettingsPanel extends JPanel {
         JLabel lblMovieFolderT = new TmmLabel(TmmResourceBundle.getString("Settings.movieset.moviefolder"));
         panelMovieSet.add(lblMovieFolderT, "cell 4 10");
 
-        JLabel lblKodiStyleT = new TmmLabel("Kodi/Artwork Beef style");
+        JLabel lblKodiStyleT = new TmmLabel(TmmResourceBundle.getString("Settings.movieset.style.kodi"));
         panelMovieSet.add(lblKodiStyleT, "cell 6 10");
 
-        JLabel lblMovieSetAutomatorT = new TmmLabel("Movie Set Artwork Automator style");
+        JLabel lblMovieSetAutomatorT = new TmmLabel(TmmResourceBundle.getString("Settings.movieset.style.automator"));
         panelMovieSet.add(lblMovieSetAutomatorT, "cell 8 10");
 
         JLabel lblMovieFolder2T = new JLabel(TmmResourceBundle.getString("Settings.moviefolder"));

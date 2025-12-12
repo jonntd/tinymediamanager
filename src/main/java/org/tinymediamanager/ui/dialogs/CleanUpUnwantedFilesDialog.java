@@ -25,6 +25,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.nio.charset.StandardCharsets;
+import java.net.URLDecoder;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -44,6 +48,9 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavFile;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.TableColumnResizer;
 import org.tinymediamanager.ui.components.table.TmmTable;
@@ -120,9 +127,8 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
       /*
        * filename
        */
-      Column col = new Column(TmmResourceBundle.getString("metatag.filename"), "filename", fileContainer -> fileContainer.file.toString(),
-          String.class);
-      col.setCellTooltip(fileContainer -> fileContainer.file.toString());
+      Column col = new Column(TmmResourceBundle.getString("metatag.filename"), "filename", FileContainer::getFileName, String.class);
+      col.setCellTooltip(FileContainer::getFileName);
       addColumn(col);
 
       /*
@@ -145,6 +151,13 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
     Path        file;
     long        filesize;
 
+    // WebDAV specific fields
+    boolean     isWebDav    = false;
+    String      webDavPath;
+    String      webDavSourceId;
+    String      webDavRemotePath;
+    boolean     isDirectory = false;
+
     String getFilesizeInKilobytes() {
       if (filesize > 0) {
         DecimalFormat df = new DecimalFormat("#0.00");
@@ -154,10 +167,22 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
     }
 
     String getExtension() {
+      if (isWebDav) {
+        return FilenameUtils.getExtension(webDavRemotePath);
+      }
       return FilenameUtils.getExtension(file.getFileName().toString());
     }
 
     String getFileName() {
+      if (isWebDav) {
+        try {
+          return URLDecoder.decode(webDavPath, StandardCharsets.UTF_8);
+        }
+        catch (Exception e) {
+          LOGGER.warn("Could not decode path '{}'", webDavPath);
+          return webDavPath;
+        }
+      }
       return file.toString();
     }
   }
@@ -182,33 +207,125 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
       selectedEntities.sort(Comparator.comparing(MediaEntity::getTitle));
 
       HashSet<Path> fileList = new HashSet<>();
+      HashSet<String> webDavFileList = new HashSet<>();
 
       for (MediaEntity entity : selectedEntities) {
-        for (Path file : Utils.getUnknownFilesByRegex(entity.getPathNIO(), regexPatterns)) {
-          if (fileList.contains(file)) {
-            continue;
-          }
+        String entityPath = entity.getPath();
+        LOGGER.info("Processing entity: title='{}', path='{}'", entity.getTitle(), entityPath);
+        boolean isWebDav = entityPath != null && WebDavDataSourceHelper.isWebDavPath(entityPath);
+        LOGGER.info("isWebDav check result: {}", isWebDav);
 
-          FileContainer fileContainer = new FileContainer();
-          fileContainer.entity = entity;
-          fileContainer.file = file;
-
-          if (!Files.isDirectory(file)) {
-            try {
-              BasicFileAttributes attrs = Files.readAttributes(fileContainer.file, BasicFileAttributes.class);
-              fileContainer.filesize = attrs.size();
+        // Check if this is a WebDAV path
+        if (isWebDav) {
+          LOGGER.info("Processing WebDAV path: {}", entityPath);
+          processWebDavEntity(entity, entityPath, regexPatterns, webDavFileList);
+        }
+        else {
+          // Local file system - use standard file walker
+          for (Path file : Utils.getUnknownFilesByRegex(entity.getPathNIO(), regexPatterns)) {
+            if (fileList.contains(file)) {
+              continue;
             }
-            catch (Exception ignored) {
-              // ignored
-            }
-          }
 
-          results.add(fileContainer);
-          fileList.add(file);
+            FileContainer fileContainer = new FileContainer();
+            fileContainer.entity = entity;
+            fileContainer.file = file;
+            fileContainer.isWebDav = false;
+
+            if (!Files.isDirectory(file)) {
+              try {
+                BasicFileAttributes attrs = Files.readAttributes(fileContainer.file, BasicFileAttributes.class);
+                fileContainer.filesize = attrs.size();
+              }
+              catch (Exception ignored) {
+                // ignored
+              }
+            }
+
+            results.add(fileContainer);
+            fileList.add(file);
+          }
         }
       }
 
       return null;
+    }
+
+    private void processWebDavEntity(MediaEntity entity, String entityPath, List<String> regexPatterns, HashSet<String> webDavFileList) {
+      LOGGER.info("processWebDavEntity called for path: {}", entityPath);
+      try {
+        // Parse the WebDAV path to get source ID and remote path
+        String[] parsed = WebDavDataSourceHelper.parseWebDavPath(entityPath);
+        if (parsed == null) {
+          LOGGER.warn("Could not parse WebDAV path: {}", entityPath);
+          return;
+        }
+
+        String sourceId = parsed[0];
+        String remotePath = parsed[1];
+        LOGGER.info("Parsed WebDAV path: sourceId={}, remotePath={}", sourceId, remotePath);
+
+        // Get WebDAV source
+        var source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+        if (source == null) {
+          LOGGER.warn("WebDAV source not found: {}", sourceId);
+          return;
+        }
+        LOGGER.info("Found WebDAV source: {}", source.getName());
+
+        // Create WebDAV client and list files
+        WebDavClient client = new WebDavClient(source);
+        try {
+          client.connect();
+          LOGGER.info("Connected to WebDAV source, listing files at: {}", remotePath);
+          List<WebDavFile> files = client.list(remotePath);
+          LOGGER.info("Found {} files in WebDAV directory", files.size());
+
+          int matchCount = 0;
+          for (WebDavFile webDavFile : files) {
+            String fileName = webDavFile.getName();
+
+            // Check if file matches any regex pattern
+            for (String regex : regexPatterns) {
+              try {
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(fileName);
+                if (matcher.find()) {
+                  String fullPath = webDavFile.getPath();
+                  if (webDavFileList.contains(fullPath)) {
+                    continue;
+                  }
+
+                  LOGGER.info("File '{}' matched pattern '{}', adding to results", fileName, regex);
+                  FileContainer fileContainer = new FileContainer();
+                  fileContainer.entity = entity;
+                  fileContainer.webDavPath = "webdav://" + sourceId + fullPath;
+                  fileContainer.webDavSourceId = sourceId;
+                  fileContainer.webDavRemotePath = fullPath;
+                  fileContainer.filesize = webDavFile.getSize();
+                  fileContainer.isWebDav = true;
+                  fileContainer.isDirectory = webDavFile.isDirectory();
+
+                  results.add(fileContainer);
+                  webDavFileList.add(fullPath);
+                  matchCount++;
+                  break; // File matched, no need to check other patterns
+                }
+              }
+              catch (Exception e) {
+                LOGGER.warn("Invalid regex pattern '{}': {}", regex, e.getMessage());
+              }
+            }
+          }
+          LOGGER.info("Total matched files for path '{}': {}", remotePath, matchCount);
+        }
+        finally {
+          client.disconnect();
+        }
+      }
+      catch (Exception e) {
+        LOGGER.error("Error processing WebDAV path '{}': {}", entityPath, e.getMessage(), e);
+      }
     }
 
     @Override
@@ -248,29 +365,79 @@ public class CleanUpUnwantedFilesDialog extends TmmDialog {
       FileContainer selectedFile = results.get(row);
       try {
         fileList.add(selectedFile);
-        if (Files.isDirectory(selectedFile.file)) {
-          LOGGER.debug("Deleting folder - {}", selectedFile.file);
-          Utils.deleteDirectoryRecursive(selectedFile.file);
+
+        if (selectedFile.isWebDav) {
+          // Handle WebDAV file deletion
+          deleteWebDavFile(selectedFile);
         }
         else {
-          MediaFile mf = new MediaFile(selectedFile.file);
-          if (mf.getType() == MediaFileType.VIDEO) {
-            // prevent users from doing something stupid
-            continue;
+          // Handle local file deletion
+          if (Files.isDirectory(selectedFile.file)) {
+            LOGGER.debug("Deleting folder - {}", selectedFile.file);
+            Utils.deleteDirectoryRecursive(selectedFile.file);
           }
-          LOGGER.debug("Deleting file - {}", selectedFile.file);
-          Utils.deleteFileWithBackup(selectedFile.file, selectedFile.entity.getDataSource());
-          if (selectedFile.entity.getMediaFiles().contains(mf)) {
-            selectedFile.entity.removeFromMediaFiles(mf);
-            selectedFile.entity.saveToDb();
+          else {
+            MediaFile mf = new MediaFile(selectedFile.file);
+            if (mf.getType() == MediaFileType.VIDEO) {
+              // prevent users from doing something stupid
+              continue;
+            }
+            LOGGER.debug("Deleting file - {}", selectedFile.file);
+            Utils.deleteFileWithBackup(selectedFile.file, selectedFile.entity.getDataSource());
+            if (selectedFile.entity.getMediaFiles().contains(mf)) {
+              selectedFile.entity.removeFromMediaFiles(mf);
+              selectedFile.entity.saveToDb();
+            }
           }
         }
       }
       catch (Exception e) {
-        LOGGER.error("Could not delete '{}' - '{}'", selectedFile.file, e.getMessage());
+        LOGGER.error("Could not delete '{}' - '{}'", selectedFile.getFileName(), e.getMessage());
       }
     }
 
     results.removeAll(fileList);
+  }
+
+  private void deleteWebDavFile(FileContainer fileContainer) {
+    try {
+      String[] parsed = WebDavDataSourceHelper.parseWebDavPath(fileContainer.webDavPath);
+      if (parsed == null) {
+        LOGGER.warn("Could not parse WebDAV path for deletion: {}", fileContainer.webDavPath);
+        return;
+      }
+
+      String sourceId = parsed[0];
+      String remotePath = parsed[1];
+
+      var source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+      if (source == null) {
+        LOGGER.warn("WebDAV source not found for deletion: {}", sourceId);
+        return;
+      }
+
+      WebDavClient client = new WebDavClient(source);
+      try {
+        client.connect();
+
+        if (fileContainer.isDirectory) {
+          LOGGER.debug("Deleting WebDAV folder - {}", fileContainer.webDavPath);
+        }
+        else {
+          LOGGER.debug("Deleting WebDAV file - {}", fileContainer.webDavPath);
+        }
+
+        boolean success = client.delete(remotePath);
+        if (!success) {
+          LOGGER.warn("Failed to delete WebDAV file: {}", fileContainer.webDavPath);
+        }
+      }
+      finally {
+        client.disconnect();
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Error deleting WebDAV file '{}': {}", fileContainer.webDavPath, e.getMessage());
+    }
   }
 }

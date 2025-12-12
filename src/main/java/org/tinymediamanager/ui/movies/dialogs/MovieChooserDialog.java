@@ -97,6 +97,7 @@ import org.tinymediamanager.scraper.entities.MediaLanguages;
 import org.tinymediamanager.scraper.entities.MediaType;
 import org.tinymediamanager.scraper.rating.RatingProvider;
 import org.tinymediamanager.scraper.util.ListUtils;
+import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
 import org.tinymediamanager.thirdparty.trakttv.MovieSyncTraktTvTask;
 import org.tinymediamanager.ui.IconManager;
@@ -268,8 +269,8 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
         btnSearch.setIcon(IconManager.SEARCH_INV);
         btnSearch.addActionListener(searchAction);
 
-        JButton btnAiFix = new JButton("AI fix");
-        btnAiFix.setToolTipText("Use AI to analyze movie file and fill search terms");
+        JButton btnAiFix = new JButton(TmmResourceBundle.getString("Button.aifix"));
+        btnAiFix.setToolTipText(TmmResourceBundle.getString("Button.aifix.tooltip"));
         btnAiFix.addActionListener(e -> aiFixSearchTerms());
         panelSearchField.add(btnAiFix, "cell 4 0");
       }
@@ -494,15 +495,20 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       chckbxDoNotOverwrite.setSelected(MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
 
       textFieldSearchString.setText(movieToScrape.getTitle());
-      lblPath.setText(movieToScrape.getPathNIO().resolve(movieToScrape.getMainFile().getFilename()).toString());
+      String displayPath = movieToScrape.getPathDecoded();
+      if (movieToScrape.getMainFile() != null) {
+        displayPath = displayPath + "/" + movieToScrape.getMainFile().getFilename();
+      }
+      lblPath.setText(displayPath);
       // initial search with IDs
       // searchMovie(textFieldSearchString.getText(), true);
-      
+
       // automatically trigger AI fix on startup
       SwingUtilities.invokeLater(() -> {
         try {
           aiFixSearchTerms();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Failed to auto-trigger AI fix: {}", e.getMessage());
           // fallback to manual mode - user can still click AI fix button
         }
@@ -798,7 +804,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     if (activeSearchTask != null && !activeSearchTask.isDone()) {
       activeSearchTask.cancel();
     }
-    activeSearchTask = new SearchTask(searchTerm, movieToScrape, withIds);
+    activeSearchTask = new SearchTask(searchTerm, movieToScrape, withIds, mediaScraper, (MediaLanguages) cbLanguage.getSelectedItem());
     SwingUtilities.invokeLater(activeSearchTask::execute);
   }
 
@@ -840,8 +846,9 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
     if (apiKey == null || apiKey.trim().isEmpty()) {
       LOGGER.warn("OpenAI API key not configured - AI recognition skipped");
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.WARN, "MovieChooser", "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.WARN, "MovieChooser",
+              "OpenAI API key not configured. Please configure it in Settings > System Settings > OpenAI"));
       return;
     }
 
@@ -868,27 +875,28 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
             // 发送成功消息到Message history
             String originalTitle = movieToScrape.getTitle();
             String successMsg = String.format("电影AI识别成功: %s → %s", originalTitle, recognizedTitle);
-            MessageManager.getInstance().pushMessage(
-                new Message(MessageLevel.INFO, "电影AI识别", successMsg));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "电影AI识别", successMsg));
 
             // 优先使用ID进行搜索，如果没有ID则使用AI识别的标题
-            searchMovie(recognizedTitle, true);
-          } else {
+            // 这里传入 false，表示不要使用电影对象中原有的 ID（可能是错误的）
+            // 但下方的 searchMovie 逻辑中，如果路径里能解析出 ID，仍然会优先使用路径 ID
+            searchMovie(recognizedTitle, false);
+          }
+          else {
             LOGGER.warn("AI recognition returned empty result, falling back to original title");
 
             // 发送失败消息到Message history
             String originalTitle = movieToScrape.getTitle();
             String failMsg = String.format("电影AI识别失败: %s - 无法识别标题", originalTitle);
-            MessageManager.getInstance().pushMessage(
-                new Message(MessageLevel.WARN, "电影AI识别", failMsg));
+            MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "电影AI识别", failMsg));
 
             // AI识别失败，使用原始标题进行搜索
-            searchMovie(textFieldSearchString.getText(), true);
+            searchMovie(textFieldSearchString.getText(), false);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.error("Error during AI movie recognition: {}", e.getMessage());
-          MessageManager.getInstance().pushMessage(
-              new Message(MessageLevel.ERROR, "MovieChooser", "Error during AI analysis: " + e.getMessage()));
+          MessageManager.getInstance().pushMessage(new Message(MessageLevel.ERROR, "MovieChooser", "Error during AI analysis: " + e.getMessage()));
         }
       }
     };
@@ -912,23 +920,64 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     private final Movie             movie;
     private final boolean           withIds;
     private final MediaLanguages    language;
+    private final MediaScraper      mediaScraper;
 
     private List<MediaSearchResult> searchResult;
     private Throwable               error  = null;
     boolean                         cancel = false;
 
-    private SearchTask(String searchTerm, Movie movie, boolean withIds) {
+    private SearchTask(String searchTerm, Movie movie, boolean withIds, MediaScraper mediaScraper, MediaLanguages language) {
       this.searchTerm = searchTerm;
       this.movie = movie;
       this.withIds = withIds;
-      this.language = (MediaLanguages) cbLanguage.getSelectedItem();
+      this.language = language;
+      this.mediaScraper = mediaScraper;
     }
 
     @Override
     public Void doInBackground() {
       startProgressBar(TmmResourceBundle.getString("chooser.searchingfor") + " " + searchTerm);
       try {
-        searchResult = movieList.searchMovie(searchTerm, movie.getYear(), withIds ? movie.getIds() : null, mediaScraper, language);
+        // 从 searchTerm 中提取年份（格式如 "大人物 2019"）
+        String actualSearchTerm = searchTerm;
+        int searchYear = movie.getYear();
+
+        // 尝试从搜索词末尾提取年份
+        java.util.regex.Pattern yearPattern = java.util.regex.Pattern.compile("\\s+(\\d{4})\\s*$");
+        java.util.regex.Matcher yearMatcher = yearPattern.matcher(searchTerm.trim());
+        if (yearMatcher.find()) {
+          try {
+            int extractedYear = Integer.parseInt(yearMatcher.group(1));
+            int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+            if (extractedYear > 1888 && extractedYear <= currentYear + 2) {
+              searchYear = extractedYear;
+              actualSearchTerm = searchTerm.substring(0, yearMatcher.start()).trim();
+              LOGGER.info("Extracted year from search term: title='{}', year={}", actualSearchTerm, searchYear);
+            }
+          }
+          catch (NumberFormatException e) {
+            LOGGER.debug("Could not parse year from search term: {}", yearMatcher.group(1));
+          }
+        }
+
+        // 构建搜索用的 IDs
+        Map<String, Object> searchIds = new java.util.HashMap<>();
+
+        // 1. 始终优先尝试从电影路径中解析 TMDB ID（这是最可信的来源）
+        String moviePath = movie.getPathNIO() != null ? movie.getPathNIO().toString() : "";
+        int pathTmdbId = ParserUtils.detectTmdbId(moviePath);
+
+        if (withIds && pathTmdbId > 0) {
+          LOGGER.info("Detected TMDB ID from path: {}", pathTmdbId);
+          searchIds.put(MediaMetadata.TMDB, pathTmdbId);
+        }
+        else if (withIds) {
+          // 2. 只有在没有路径 ID 且调用方请求使用 ID 时，才使用 movie 对象中的 ID
+          // 这样在 AI 修正（传入 withIds=false）时，就不会混入旧的错误 ID
+          searchIds.putAll(movie.getIds());
+        }
+
+        searchResult = movieList.searchMovie(actualSearchTerm, searchYear, searchIds, mediaScraper, language);
       }
       catch (Exception e) {
         error = e;

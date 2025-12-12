@@ -45,6 +45,9 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.images.TmmSvgIcon;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.kitfox.svg.app.beans.SVGIcon;
 
 /**
@@ -53,6 +56,7 @@ import com.kitfox.svg.app.beans.SVGIcon;
  * @author Manuel Laggner
  */
 public abstract class InformationPanel extends JPanel {
+  private static final Logger                         LOGGER            = LoggerFactory.getLogger(InformationPanel.class);
 
   protected final Map<MediaFileType, List<Component>> artworkComponents = new EnumMap<>(MediaFileType.class);
 
@@ -106,21 +110,30 @@ public abstract class InformationPanel extends JPanel {
   }
 
   protected void setArtwork(MediaEntity mediaEntity, MediaFileType type) {
-    setArtwork(ListUtils.getFirst(mediaEntity.getMediaFiles(type)), type);
+    List<MediaFile> mediaFiles = mediaEntity.getMediaFiles(type);
+    MediaFile firstFile = ListUtils.getFirst(mediaFiles);
+    LOGGER.debug("setArtwork(MediaEntity): entity={}, type={}, mediaFiles.size={}, firstFile={}", mediaEntity.getClass().getSimpleName(), type,
+        mediaFiles.size(), firstFile != null ? firstFile.getFile() : "null");
+    setArtwork(firstFile, type);
   }
 
   protected void setArtwork(MediaFile mediaFile, MediaFileType type) {
+    LOGGER.debug("setArtwork(MediaFile): mediaFile={}, type={}", mediaFile != null ? mediaFile.getFile() : "null", type);
+
     List<Component> components = artworkComponents.get(type);
     if (ListUtils.isEmpty(components)) {
+      LOGGER.debug("No artwork components found for type: {}", type);
       return;
     }
 
     boolean visible = getShowArtworkFromSettings().contains(type);
+    LOGGER.debug("Artwork visible setting for type {}: {}", type, visible);
 
     for (Component component : components) {
       component.setVisible(visible);
 
       if (component instanceof ImageLabel imageLabel) {
+        LOGGER.debug("Calling imageLabel.setImageMediaFile for type: {}", type);
         imageLabel.setImageMediaFile(mediaFile);
       }
       else if (component instanceof JLabel sizeLabel) {

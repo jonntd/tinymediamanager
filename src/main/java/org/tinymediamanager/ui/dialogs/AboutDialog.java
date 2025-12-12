@@ -134,23 +134,23 @@ public class AboutDialog extends TmmDialog {
       contentPanel.add(lblThanksTo, "cell 0 10,alignx right");
     }
     {
-      JLabel lblMyronForHelping = new JLabel("Myron for helping me with coding, scrapers, localization, setup, everything...");
+      JLabel lblMyronForHelping = new JLabel(TmmResourceBundle.getString("tmm.credits.myron"));
       contentPanel.add(lblMyronForHelping, "cell 2 10");
     }
     {
-      JLabel lblJoostzilla = new JLabel("Joostzilla for the UI design");
+      JLabel lblJoostzilla = new JLabel(TmmResourceBundle.getString("tmm.credits.joostzilla"));
       contentPanel.add(lblJoostzilla, "cell 2 11");
     }
     {
-      JLabel lblTranslators = new JLabel("All our translators");
+      JLabel lblTranslators = new JLabel(TmmResourceBundle.getString("tmm.credits.translators"));
       contentPanel.add(lblTranslators, "cell 2 12");
     }
     {
-      JLabel lblLibs = new JLabel("The creators of all libs we've used");
+      JLabel lblLibs = new JLabel(TmmResourceBundle.getString("tmm.credits.libs"));
       contentPanel.add(lblLibs, "cell 2 13");
     }
     {
-      JLabel lblTester = new JLabel("Everyone who tested and provided feedback");
+      JLabel lblTester = new JLabel(TmmResourceBundle.getString("tmm.credits.testers"));
       contentPanel.add(lblTester, "cell 2 14");
     }
     {

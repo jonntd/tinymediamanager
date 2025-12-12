@@ -610,12 +610,10 @@ public class TvShowTableFormat extends TmmTreeTableFormat<TmmTreeNode> {
   private String getFolderPath(TmmTreeNode node) {
     Object userObject = node.getUserObject();
     if (userObject instanceof TvShow tvShow) {
-      return tvShow.getPathNIO().toAbsolutePath().toString();
+      return tvShow.getPathDecoded();
     }
     else if (userObject instanceof TvShowEpisode episode) {
-      if (episode.getPathNIO() != null) {
-        return episode.getPathNIO().toAbsolutePath().toString();
-      }
+      return episode.getPathDecoded();
     }
     return null;
   }

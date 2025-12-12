@@ -133,7 +133,7 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
         chckbxAutomaticallyScrapeImages = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape"));
         panelOptions.add(chckbxAutomaticallyScrapeImages, "cell 1 0 2 1");
 
-        chckbxSaveArtworkToCache = new JCheckBox("Save artwork to cache folder");
+        chckbxSaveArtworkToCache = new JCheckBox(TmmResourceBundle.getString("Settings.saveartworktocache"));
         panelOptions.add(chckbxSaveArtworkToCache, "cell 1 1 2 1");
 
         JLabel lblImageTmdbPosterSize = new JLabel(TmmResourceBundle.getString("image.poster.size"));
@@ -247,8 +247,8 @@ class TvShowImageOptionsSettingsPanel extends JPanel {
     autoBinding_6.bind();
     //
     Property tvShowSettingsBeanProperty_6 = BeanProperty.create("saveArtworkToCache");
-    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6, chckbxSaveArtworkToCache,
-        jCheckBoxBeanProperty);
+    AutoBinding autoBinding_8 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, tvShowSettingsBeanProperty_6,
+        chckbxSaveArtworkToCache, jCheckBoxBeanProperty);
     autoBinding_8.bind();
     //
     Property tvShowSettingsBeanProperty_5 = BeanProperty.create("imageEpisodeScrapeAllSources");

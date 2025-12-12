@@ -59,6 +59,9 @@ import org.tinymediamanager.ui.thirdparty.ShadowRenderer;
 import com.formdev.flatlaf.ui.FlatUIUtils;
 import com.madgag.gif.fmsware.GifDecoder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * The Class ImageLabel.
  * 
@@ -72,6 +75,8 @@ public class ImageLabel extends JComponent {
     BOTTOM_RIGHT,
     CENTER
   }
+
+  private static final Logger       LOGGER                 = LoggerFactory.getLogger(ImageLabel.class);
 
   private static final Color        EMPTY_BACKGROUND_COLOR = new Color(141, 165, 179);
 
@@ -203,6 +208,28 @@ public class ImageLabel extends JComponent {
 
       this.imageMediaFile = mediaFile;
       if (mediaFile != null) {
+        // Try to use cached file first if cache is enabled and we prefer cache
+        if (preferCache && Settings.getInstance().isImageCache()) {
+          Path cachedFile = ImageCache.getCachedFile(mediaFile);
+          if (cachedFile != null && Files.exists(cachedFile)) {
+            setImagePath(cachedFile.toString());
+            return; // Important: return here to avoid setting original path
+          }
+          else {
+            if (cachedFile == null) {
+              LOGGER.debug("No cached file found for: {}", mediaFile.getFileAsPath());
+            }
+            else {
+              LOGGER.debug("Cached file does not exist: {}", cachedFile);
+            }
+          }
+        }
+        else {
+          LOGGER.debug("Cache disabled or preferCache=false: preferCache={}, cacheEnabled={}", preferCache, Settings.getInstance().isImageCache());
+        }
+
+        // Fallback to original file path (only reached if cache not found/used)
+        LOGGER.debug("Using original file path: {}", mediaFile.getFile().toString());
         setImagePath(mediaFile.getFile().toString());
       }
     }

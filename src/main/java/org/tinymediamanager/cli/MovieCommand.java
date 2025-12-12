@@ -100,11 +100,20 @@ class MovieCommand implements Runnable {
   @CommandLine.ArgGroup
   MediaInfo                   mediaInfo;
 
+  @CommandLine.Option(names = {
+      "--scrapePath" }, paramLabel = "<path>", description = "Scan and scrape a specific folder path (local or webdav://...)")
+  String                      scrapePath;
+
   @Override
   public void run() {
     // update data sources
     if (datasource != null) {
       updateDataSources();
+    }
+
+    // scan and scrape specific path
+    if (scrapePath != null && !scrapePath.isEmpty()) {
+      updateAndScrapePath();
     }
 
     List<Movie> moviesToScrape = new ArrayList<>();
@@ -167,6 +176,64 @@ class MovieCommand implements Runnable {
     }
     LOGGER.info("Found {} new movies", MovieModuleManager.getInstance().getMovieList().getNewMovies().size());
 
+  }
+
+  private void updateAndScrapePath() {
+    LOGGER.info("Scanning and scraping specific path: {}", scrapePath);
+
+    // Run update on the specific path
+    Runnable updateTask = new MovieUpdateDatasourceTask(scrapePath);
+    updateTask.run(); // blocking
+
+    LOGGER.info("Found {} new movies in path", MovieModuleManager.getInstance().getMovieList().getNewMovies().size());
+
+    // Get movies that were found in this path
+    List<Movie> moviesToScrape = new ArrayList<>();
+    for (Movie movie : MovieModuleManager.getInstance().getMovieList().getNewMovies()) {
+      // Check if the movie is in the specified path
+      String moviePath = movie.getPathNIO().toString();
+      if (moviePath.startsWith(scrapePath) || scrapePath.startsWith(moviePath)
+          || (movie.getDataSource() != null && movie.getDataSource().equals(scrapePath))) {
+        moviesToScrape.add(movie);
+      }
+    }
+
+    // Also add any unscraped movies from this path
+    for (Movie movie : MovieModuleManager.getInstance().getMovieList().getUnscrapedMovies()) {
+      String moviePath = movie.getPathNIO().toString();
+      if ((moviePath.startsWith(scrapePath) || scrapePath.startsWith(moviePath)
+          || (movie.getDataSource() != null && movie.getDataSource().equals(scrapePath))) && !moviesToScrape.contains(movie)) {
+        moviesToScrape.add(movie);
+      }
+    }
+
+    if (!moviesToScrape.isEmpty()) {
+      LOGGER.info("Scraping {} movies from path...", moviesToScrape.size());
+
+      MovieSearchAndScrapeOptions options = new MovieSearchAndScrapeOptions();
+      List<MovieScraperMetadataConfig> config = MovieModuleManager.getInstance().getSettings().getScraperMetadataConfig();
+
+      MovieScrapeTask.MovieScrapeParams movieScrapeParams = new MovieScrapeTask.MovieScrapeParams(moviesToScrape, options, config);
+      movieScrapeParams.setOverwriteExistingItems(!MovieModuleManager.getInstance().getSettings().isDoNotOverwriteExistingData());
+      MovieScrapeTask task = new MovieScrapeTask(movieScrapeParams);
+      task.setRunInBackground(true); // to avoid smart scrape dialog
+      task.run(); // blocking
+
+      // wait for other tmm threads (artwork download et all)
+      while (TmmTaskManager.getInstance().isPoolRunning()) {
+        try {
+          Thread.sleep(2000);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+
+      LOGGER.info("Finished scraping {} movies from path", moviesToScrape.size());
+    }
+    else {
+      LOGGER.info("No movies found to scrape in path: {}", scrapePath);
+    }
   }
 
   private void scrapeMovies(List<Movie> moviesToScrape) {

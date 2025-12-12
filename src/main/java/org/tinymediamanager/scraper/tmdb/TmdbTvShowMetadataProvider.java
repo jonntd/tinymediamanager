@@ -1588,7 +1588,18 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
     result.setId(Integer.toString(tvShow.id));
     result.setTitle(tvShow.name);
     result.setOriginalTitle(tvShow.original_name);
+    result.setOriginalLanguage(tvShow.original_language);
     result.setOverview(tvShow.overview);
+
+    // Set English title based on original language
+    // If the show's original language is English, original_name is the English title
+    if ("en".equals(tvShow.original_language)) {
+      result.setEnglishTitle(tvShow.original_name);
+    }
+    // For non-English shows, use search query as potential English title hint for scoring
+    else if (StringUtils.isNotBlank(query.getSearchQuery())) {
+      result.setEnglishTitle(query.getSearchQuery().replaceAll("\\s+\\d{4}$", "").trim());
+    }
 
     if (tvShow.poster_path != null && !tvShow.poster_path.isEmpty()) {
       result.setPosterUrl(artworkBaseUrl + "w342" + tvShow.poster_path);

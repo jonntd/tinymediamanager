@@ -72,6 +72,7 @@ import org.tinymediamanager.core.MediaFileHelper;
 import org.tinymediamanager.core.MediaFileType;
 import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaRating;
@@ -289,8 +290,11 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     setActors(other.actors);
     setCrew(other.crew);
 
-    episodeNumbers.clear();
-    episodeNumbers.addAll(other.episodeNumbers);
+    // Only replace episodeNumbers if the source has data, otherwise preserve existing
+    if (!other.episodeNumbers.isEmpty()) {
+      episodeNumbers.clear();
+      episodeNumbers.addAll(other.episodeNumbers);
+    }
   }
 
   @Override
@@ -328,7 +332,15 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     }
 
     LOGGER.trace("EP replace: ({}, {}) -> {} results in {}", oldPath, newPath, getPath(), newPathToSet);
-    setPath(newPathToSet.toAbsolutePath().toString());
+
+    // For WebDAV paths, use normalized string instead of toAbsolutePath()
+    String newPathString = newPathToSet.toString();
+    if (WebDavDataSourceHelper.isWebDavPath(newPathString)) {
+      setPath(WebDavDataSourceHelper.normalizeWebDavPath(newPathString));
+    }
+    else {
+      setPath(newPathToSet.toAbsolutePath().toString());
+    }
   }
 
   /**
@@ -504,8 +516,28 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
    */
   @JsonSetter
   public void setEpisodeNumbers(List<MediaEpisodeNumber> newValues) {
+    // Smart merge: preserve existing episode numbers if new values are empty
+    if (newValues == null || newValues.isEmpty()) {
+      LOGGER.debug("setEpisodeNumbers called with empty values, keeping existing data for episode: {}", getTitle());
+      return;
+    }
+
+    // Create a map to merge episode numbers by episode group
+    Map<MediaEpisodeGroup, MediaEpisodeNumber> merged = new HashMap<>();
+
+    // First, add existing episode numbers
+    for (MediaEpisodeNumber existing : episodeNumbers) {
+      merged.put(existing.episodeGroup(), existing);
+    }
+
+    // Then, add/overwrite with new values (new values take precedence)
+    for (MediaEpisodeNumber newValue : newValues) {
+      merged.put(newValue.episodeGroup(), newValue);
+    }
+
+    // Update the list with merged values
     episodeNumbers.clear();
-    episodeNumbers.addAll(newValues);
+    episodeNumbers.addAll(merged.values());
   }
 
   public List<MediaEpisodeNumber> getEpisodeNumbers() {
@@ -513,34 +545,48 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
   }
 
   public void setEpisodeNumbers(Map<MediaEpisodeGroup, MediaEpisodeNumber> newValues) {
+    // Smart merge: if new values are empty, preserve existing data
+    if (newValues == null || newValues.isEmpty()) {
+      LOGGER.debug("setEpisodeNumbers(Map) called with empty values, keeping existing data for episode: {}", getTitle());
+      return;
+    }
+
+    // Create a merged map: start with existing episode numbers
+    Map<MediaEpisodeGroup, MediaEpisodeNumber> merged = new HashMap<>();
+    for (MediaEpisodeNumber existing : episodeNumbers) {
+      merged.put(existing.episodeGroup(), existing);
+    }
+
+    // Add/overwrite with new values
+    merged.putAll(newValues);
+
+    // Now apply the merged values
     episodeNumbers.clear();
     mainEpisodeNumber = null;
 
-    if (newValues != null) {
-      MediaEpisodeGroup tvShowEpisodeGroup = tvShow != null ? tvShow.getEpisodeGroup() : null;
+    MediaEpisodeGroup tvShowEpisodeGroup = tvShow != null ? tvShow.getEpisodeGroup() : null;
 
-      // sort by episode groups (same order as in MediaEpisodeGroup.EpisodeGroup)
-      for (MediaEpisodeGroup.EpisodeGroupType eg : MediaEpisodeGroup.EpisodeGroupType.values()) {
-        List<MediaEpisodeNumber> episodeNumbersForType = new ArrayList<>();
+    // sort by episode groups (same order as in MediaEpisodeGroup.EpisodeGroup)
+    for (MediaEpisodeGroup.EpisodeGroupType eg : MediaEpisodeGroup.EpisodeGroupType.values()) {
+      List<MediaEpisodeNumber> episodeNumbersForType = new ArrayList<>();
 
-        // special logic: the chosen episode group must be the first one in the list
-        if (tvShowEpisodeGroup != null && tvShowEpisodeGroup.getEpisodeGroupType() == eg) {
-          MediaEpisodeNumber episodeNumber = newValues.get(tvShowEpisodeGroup);
-          if (episodeNumber != null) {
-            episodeNumbersForType.add(episodeNumber);
-          }
+      // special logic: the chosen episode group must be the first one in the list
+      if (tvShowEpisodeGroup != null && tvShowEpisodeGroup.getEpisodeGroupType() == eg) {
+        MediaEpisodeNumber episodeNumber = merged.get(tvShowEpisodeGroup);
+        if (episodeNumber != null) {
+          episodeNumbersForType.add(episodeNumber);
         }
-
-        // add all (remaining) episode numbers for this type
-        newValues.forEach((group, episodeNumber) -> {
-          if (group.getEpisodeGroupType() == eg && !episodeNumbersForType.contains(episodeNumber)) {
-            episodeNumbersForType.add(episodeNumber);
-          }
-        });
-
-        // and set them in the right order to the episode
-        episodeNumbersForType.forEach(this::setEpisode);
       }
+
+      // add all (remaining) episode numbers for this type
+      merged.forEach((group, episodeNumber) -> {
+        if (group.getEpisodeGroupType() == eg && !episodeNumbersForType.contains(episodeNumber)) {
+          episodeNumbersForType.add(episodeNumber);
+        }
+      });
+
+      // and set them in the right order to the episode
+      episodeNumbersForType.forEach(this::setEpisode);
     }
   }
 
@@ -648,6 +694,16 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     if (episodeNumber != null) {
       return episodeNumber.episode();
     }
+
+    // Fallback: if no episode number found for the requested episode group,
+    // try to get from AIRED order (preserves original file-based S/E numbers when scraping fails)
+    if (mediaEpisodeGroup.getEpisodeGroupType() != AIRED) {
+      int airedEpisode = getAiredEpisode();
+      if (airedEpisode != -1) {
+        return airedEpisode;
+      }
+    }
+
     return -1;
   }
 
@@ -789,6 +845,16 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
     if (episodeNumber != null) {
       return episodeNumber.season();
     }
+
+    // Fallback: if no episode number found for the requested episode group,
+    // try to get from AIRED order (preserves original file-based S/E numbers when scraping fails)
+    if (mediaEpisodeGroup.getEpisodeGroupType() != AIRED) {
+      int airedSeason = getAiredSeason();
+      if (airedSeason != -1) {
+        return airedSeason;
+      }
+    }
+
     return -1;
   }
 

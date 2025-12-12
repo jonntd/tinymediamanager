@@ -38,6 +38,7 @@ import org.tinymediamanager.core.http.TmmHttpServer;
 import org.tinymediamanager.scraper.http.ProxySettings;
 import org.tinymediamanager.scraper.http.TmmHttpClient;
 import org.tinymediamanager.scraper.util.MetadataUtil;
+import org.tinymediamanager.core.webdav.WebDavSource;
 import org.tinymediamanager.scraper.util.StrgUtils;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -62,6 +63,7 @@ public final class Settings extends AbstractSettings {
   private static final String                              CLEANUP_FILE_TYPE            = "cleanupFileType";
   private static final String                              WOL_DEVICES                  = "wolDevices";
   private static final String                              CUSTOM_ASPECT_RATIOS         = "customAspectRatios";
+  private static final String                              WEBDAV_SOURCES               = "webDavSources";
 
   /**
    * statics
@@ -77,6 +79,7 @@ public final class Settings extends AbstractSettings {
   private final List<String>                               cleanupFileTypes             = ObservableCollections.observableList(new ArrayList<>());
   private final List<WolDevice>                            wolDevices                   = ObservableCollections.observableList(new ArrayList<>());
   private final List<String>                               customAspectRatios           = ObservableCollections.observableList(new ArrayList<>());
+  private final List<WebDavSource>                         webDavSources                = ObservableCollections.observableList(new ArrayList<>());
 
   private String                                           version                      = "";
 
@@ -123,6 +126,7 @@ public final class Settings extends AbstractSettings {
   private boolean                                          enableTrash                  = true;
   private boolean                                          deleteTrashOnExit            = false;
   private boolean                                          showMemory                   = true;
+  private boolean                                          useBuiltInFileBrowser        = false;
 
   private boolean                                          enableHttpServer             = false;
   private int                                              httpServerPort               = 7878;
@@ -142,7 +146,7 @@ public final class Settings extends AbstractSettings {
   private boolean                                          updateFileSizeOnUpdate       = true;
   // whether to update file size during renaming operations
   private boolean                                          updateFileSizeOnRename       = true;
-  
+
   // separate settings for movies and TV shows
   // movie file size update settings
   private boolean                                          movieUpdateFileSizeOnUpdate  = true;
@@ -874,6 +878,82 @@ public final class Settings extends AbstractSettings {
     firePropertyChange(WOL_DEVICES, null, wolDevices);
   }
 
+  // WebDAV Sources management
+  public void addWebDavSource(WebDavSource newSource) {
+    webDavSources.add(newSource);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  public void removeWebDavSource(WebDavSource source) {
+    webDavSources.remove(source);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  public List<WebDavSource> getWebDavSources() {
+    return webDavSources;
+  }
+
+  public void setWebDavSources(List<WebDavSource> newValues) {
+    webDavSources.clear();
+    webDavSources.addAll(newValues);
+    firePropertyChange(WEBDAV_SOURCES, null, webDavSources);
+  }
+
+  /**
+   * Get a WebDAV source by its ID
+   *
+   * @param id
+   *          the ID of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceById(String id) {
+    for (WebDavSource source : webDavSources) {
+      if (source.getId().equals(id)) {
+        return source;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get a WebDAV source by its name
+   *
+   * @param name
+   *          the name of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceByName(String name) {
+    if (name == null || name.isEmpty()) {
+      return null;
+    }
+    for (WebDavSource source : webDavSources) {
+      if (name.equals(source.getName())) {
+        return source;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get a WebDAV source by ID or name (tries ID first, then name)
+   *
+   * @param idOrName
+   *          the ID or name of the WebDAV source
+   * @return the WebDAV source or null if not found
+   */
+  public WebDavSource getWebDavSourceByIdOrName(String idOrName) {
+    if (idOrName == null || idOrName.isEmpty()) {
+      return null;
+    }
+    // Try by ID first
+    WebDavSource source = getWebDavSourceById(idOrName);
+    if (source != null) {
+      return source;
+    }
+    // Try by name
+    return getWebDavSourceByName(idOrName);
+  }
+
   @JsonSerialize(using = EncryptedStringSerializer.class)
   @JsonDeserialize(using = EncryptedStringDeserializer.class)
   public String getTraktAccessToken() {
@@ -1120,6 +1200,16 @@ public final class Settings extends AbstractSettings {
     firePropertyChange("showMemory", oldValue, newValue);
   }
 
+  public boolean isUseBuiltInFileBrowser() {
+    return useBuiltInFileBrowser;
+  }
+
+  public void setUseBuiltInFileBrowser(boolean newValue) {
+    boolean oldValue = this.useBuiltInFileBrowser;
+    this.useBuiltInFileBrowser = newValue;
+    firePropertyChange("useBuiltInFileBrowser", oldValue, newValue);
+  }
+
   /**
    * should we ignore SSL problems?
    *
@@ -1260,7 +1350,7 @@ public final class Settings extends AbstractSettings {
     this.updateFileSizeOnUpdate = newValue;
     firePropertyChange("updateFileSizeOnUpdate", oldValue, newValue);
   }
-  
+
   /**
    * should we update file size during renaming operations?
    * 

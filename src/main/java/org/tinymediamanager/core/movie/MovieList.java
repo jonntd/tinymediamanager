@@ -214,7 +214,7 @@ public final class MovieList extends AbstractModelObject {
 
   /**
    * Removes the datasource.
-   * 
+   *
    * @param datasource
    *          the path
    */
@@ -223,15 +223,35 @@ public final class MovieList extends AbstractModelObject {
       return;
     }
 
+    LOGGER.info("Removing datasource: {}", datasource);
     List<Movie> moviesToRemove = new ArrayList<>();
-    Path path = Paths.get(datasource);
+    // For WebDAV paths, use string comparison instead of Path comparison
+    // because Paths.get() doesn't handle webdav:// URLs correctly
+    boolean isWebDav = datasource.startsWith("webdav://");
+    LOGGER.debug("Is WebDAV datasource: {}", isWebDav);
+
     for (int i = movieList.size() - 1; i >= 0; i--) {
       Movie movie = movieList.get(i);
-      if (path.equals(Paths.get(movie.getDataSource()))) {
+      boolean matches;
+
+      if (isWebDav) {
+        // For WebDAV, compare strings directly
+        matches = datasource.equals(movie.getDataSource());
+        LOGGER.debug("Comparing WebDAV: '{}' == '{}' ? {}", datasource, movie.getDataSource(), matches);
+      }
+      else {
+        // For local paths, use Path comparison
+        Path path = Paths.get(datasource);
+        matches = path.equals(Paths.get(movie.getDataSource()));
+      }
+
+      if (matches) {
+        LOGGER.debug("Adding movie to remove list: {}", movie.getTitle());
         moviesToRemove.add(movie);
       }
     }
 
+    LOGGER.info("Found {} movies to remove", moviesToRemove.size());
     removeMovies(moviesToRemove);
   }
 
@@ -656,14 +676,14 @@ public final class MovieList extends AbstractModelObject {
       // so get all sub movies within path (some levels deeper)
       if (!movie.getPathNIO().equals(Paths.get(movie.getDataSource()))) {
         List<Movie> subMovies = subMoviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-        if (subMovies.size() > 1) {
+        if (subMovies != null && subMovies.size() > 1) {
           // there are some other movies down the path - it MUST be treated as MMD
           movie.setMultiMovieDir(true);
         }
         else {
           // no sub movies, but some in exact same folder? (including myself)
           List<Movie> samePath = moviePathMap.get(movie.getPathNIO().toAbsolutePath().toString());
-          if (samePath.size() > 1) {
+          if (samePath != null && samePath.size() > 1) {
             movie.setMultiMovieDir(true);
           }
           else {
@@ -812,7 +832,8 @@ public final class MovieList extends AbstractModelObject {
       }
     }
 
-    LOGGER.info("Search '{}' for movie title '{}'", provider.getProviderInfo().getId(), searchTerm);
+    LOGGER.info("Search '{}' for movie title '{}' (year: {})", provider.getProviderInfo().getId(), options.getSearchQuery(),
+        options.getSearchYear() > 0 ? options.getSearchYear() : "not specified");
 
     LOGGER.debug("=====================================================");
     LOGGER.debug("Searching with scraper: {}", provider.getProviderInfo().getId());
@@ -863,9 +884,36 @@ public final class MovieList extends AbstractModelObject {
       }
     }
 
-    LOGGER.info("Found '{}' results for movie title '{}'", sr.size(), searchTerm);
+    LOGGER.info("Found '{}' results for movie title '{}' (year: {})", sr.size(), options.getSearchQuery(),
+        options.getSearchYear() > 0 ? options.getSearchYear() : "not specified");
 
-    return new ArrayList<>(sr);
+    // 给与电影已有 TMDB ID 匹配的结果额外加分，确保它排在最前面
+    List<MediaSearchResult> results = new ArrayList<>(sr);
+    if (ids != null && !ids.isEmpty()) {
+      int existingTmdbId = MediaIdUtil.getIdAsInt(ids, MediaMetadata.TMDB);
+      String existingImdbId = MediaIdUtil.getIdAsString(ids, MediaMetadata.IMDB);
+      LOGGER.info("ID match check - existingTmdbId: {}, existingImdbId: {}, ids: {}", existingTmdbId, existingImdbId, ids);
+
+      for (MediaSearchResult result : results) {
+        boolean idMatched = false;
+        if (existingTmdbId > 0 && result.getIdAsInt(MediaMetadata.TMDB) == existingTmdbId) {
+          idMatched = true;
+        }
+        else if (MediaIdUtil.isValidImdbId(existingImdbId) && existingImdbId.equals(result.getIMDBId())) {
+          idMatched = true;
+        }
+
+        if (idMatched) {
+          LOGGER.info("Boosting score for ID-matched result: title='{}', oldScore={}", result.getTitle(), result.getScore());
+          result.setScore(result.getScore() + 1.0f); // 加 1 分确保排在最前
+        }
+      }
+
+      // 重新排序
+      results.sort((a, b) -> Float.compare(b.getScore(), a.getScore()));
+    }
+
+    return results;
   }
 
   public List<MediaScraper> getAvailableMediaScrapers() {

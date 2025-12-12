@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package org.tinymediamanager.core.entities;
+
 import org.tinymediamanager.core.utils.FixStatistics;
 import static org.tinymediamanager.core.Constants.BANNER;
 import static org.tinymediamanager.core.Constants.CHARACTERART;
@@ -90,6 +91,7 @@ import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -312,6 +314,18 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   }
 
   /**
+   * Gets the decoded data source for display purposes (URL-decoded for WebDAV paths).
+   *
+   * @return the decoded data source
+   */
+  public String getDataSourceDecoded() {
+    if (WebDavDataSourceHelper.isWebDavPath(dataSource)) {
+      return WebDavDataSourceHelper.decodeWebDavPath(dataSource);
+    }
+    return dataSource;
+  }
+
+  /**
    * get all ID for this object. These are the IDs from the various scraper
    * 
    * @return a map of all IDs
@@ -371,6 +385,10 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
   public Path getPathNIO() {
     if (StringUtils.isBlank(path)) {
       return null;
+    }
+    // For WebDAV paths, don't call toAbsolutePath() as it will convert to local filesystem path
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      return WebDavDataSourceHelper.getWebDavPath(path);
     }
     return Paths.get(path).toAbsolutePath();
   }
@@ -521,6 +539,18 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     String oldValue = path;
     path = newValue;
     firePropertyChange(PATH, oldValue, newValue);
+  }
+
+  /**
+   * Gets the decoded path for display purposes (URL-decoded for WebDAV paths).
+   *
+   * @return the decoded path
+   */
+  public String getPathDecoded() {
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      return WebDavDataSourceHelper.decodeWebDavPath(path);
+    }
+    return path;
   }
 
   public void setOriginalFilename(String newValue) {
@@ -1501,15 +1531,16 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     firePropertyChange(TAGS, null, tags);
     firePropertyChange(TAGS_AS_STRING, null, tags);
   }
- /**
-   * Update file size information for all media files (without full media information gathering)
-   * Only updates when file size has actually changed to avoid unnecessary database operations
+
+  /**
+   * Update file size information for all media files (without full media information gathering) Only updates when file size has actually changed to
+   * avoid unnecessary database operations
    */
   public void updateFileSizeInformation() {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug("updateFileSizeInformation() called for entity: {}", this.getTitle());
     }
-    
+
     List<MediaFile> mfs = new ArrayList<>();
 
     try {
@@ -1528,21 +1559,21 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
     for (MediaFile mediaFile : mfs) {
       try {
         Path filePath = mediaFile.getFileAsPath();
-        
+
         if (Files.exists(filePath)) {
           long actualSize = Files.size(filePath);
-          
+
           // 只有当文件大小确实发生变化时才更新
           if (actualSize != mediaFile.getFilesize()) {
             if (LOGGER.isDebugEnabled()) {
-              LOGGER.debug("Updating file size for '{}': {} -> {}",
-                         mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
+              LOGGER.debug("Updating file size for '{}': {} -> {}", mediaFile.getFilename(), mediaFile.getFilesize(), actualSize);
             }
             mediaFile.setFilesize(actualSize);
             FixStatistics.recordFileSizeUpdate(actualSize);
             hasChanges = true;
           }
-        } else {
+        }
+        else {
           // 文件不存在时，如果之前有大小记录，重置为0
           if (mediaFile.getFilesize() > 0) {
             LOGGER.warn("File does not exist, resetting size to 0: {}", filePath);
@@ -1566,6 +1597,7 @@ public abstract class MediaEntity extends AbstractModelObject implements IPrinta
       LOGGER.debug("updateFileSizeInformation() completed, changes detected: {}", hasChanges);
     }
   }
+
   /**
    * Removes the from tags.
    *

@@ -68,6 +68,20 @@ show_help() {
     echo ""
 }
 
+# 清理日志
+clean_logs() {
+    print_info "清理日志文件夹..."
+    LOG_DIR="$PROJECT_DIR/logs"
+    
+    if [ -d "$LOG_DIR" ]; then
+        rm -rf "$LOG_DIR"
+        mkdir -p "$LOG_DIR"
+        print_success "日志清理完成"
+    else
+        mkdir -p "$LOG_DIR"
+    fi
+}
+
 # 编译项目
 compile_project() {
     print_info "开始编译 tinyMediaManager..."
@@ -87,7 +101,7 @@ start_with_jar() {
     print_info "使用 JAR 文件启动 tinyMediaManager..."
     cd "$PROJECT_DIR"
 
-    JAR_FILE="$PROJECT_DIR/target/tinyMediaManager-5.2.0-SNAPSHOT.jar"
+    JAR_FILE="$PROJECT_DIR/target/tinyMediaManager-5.2.1-SNAPSHOT.jar"
     if [ ! -f "$JAR_FILE" ]; then
         print_error "JAR 文件不存在: $JAR_FILE"
         print_info "请先运行: $0 -c"
@@ -171,6 +185,9 @@ main() {
 
     print_info "tinyMediaManager 启动脚本"
     print_info "项目目录: $PROJECT_DIR"
+
+    # 清理日志
+    clean_logs
 
     if [ "$DEBUG_MODE" = "true" ]; then
         print_warning "DEBUG 日志模式已启用"

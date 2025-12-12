@@ -131,7 +131,7 @@ class MovieImageOptionsSettingsPanel extends JPanel {
         chckbxAutomaticallyScrapeImages = new JCheckBox(TmmResourceBundle.getString("Settings.default.autoscrape"));
         panelOptions.add(chckbxAutomaticallyScrapeImages, "cell 1 0 2 1");
 
-        chckbxSaveArtworkToCache = new JCheckBox("Save artwork to cache folder");
+        chckbxSaveArtworkToCache = new JCheckBox(TmmResourceBundle.getString("Settings.saveartworktocache"));
         panelOptions.add(chckbxSaveArtworkToCache, "cell 1 1 2 1");
 
         JLabel lblImageTmdbPosterSize = new JLabel(TmmResourceBundle.getString("image.poster.size"));

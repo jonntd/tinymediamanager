@@ -66,6 +66,8 @@ import org.tinymediamanager.ui.components.label.ImageLabel;
 import org.tinymediamanager.ui.components.label.LinkLabel;
 import org.tinymediamanager.ui.dialogs.ImagePreviewDialog;
 import org.tinymediamanager.ui.dialogs.UpdateDialog;
+import org.tinymediamanager.ui.dialogs.WebDavFileBrowserDialog;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.ui.plaf.dark.TmmDarkLaf;
 import org.tinymediamanager.ui.plaf.light.TmmLightLaf;
 import org.tinymediamanager.updater.UpdateCheck;
@@ -457,13 +459,37 @@ public class TmmUIHelper {
    */
   public static void openFolder(Path path) {
     try {
+      // Check if it's a WebDAV path
+      String pathString = path.toString();
+      if (WebDavDataSourceHelper.isWebDavPath(pathString)) {
+        openFolderByPath(pathString);
+        return;
+      }
+
+      // Check if user prefers built-in file browser (useful for Docker/headless environments)
+      if (Settings.getInstance().isUseBuiltInFileBrowser()) {
+        LOGGER.info("Using built-in file browser for local path: {}", path);
+        openFolderByPath(pathString);
+        return;
+      }
+
+      // If path points to a file, get its parent directory
+      Path folderPath = path;
+      if (Files.exists(path) && !Files.isDirectory(path)) {
+        folderPath = path.getParent();
+        if (folderPath == null) {
+          LOGGER.warn("Could not determine parent folder for: {}", path);
+          return;
+        }
+      }
+
       // check whether this location exists
-      if (Files.exists(path) && Files.isDirectory(path)) {
-        TmmUIHelper.openFile(path);
+      if (Files.exists(folderPath) && Files.isDirectory(folderPath)) {
+        TmmUIHelper.openFile(folderPath);
       }
       else {
-        LOGGER.debug("could not open folder '{}' -> does not exist?", path);
-        BasicFileAttributes fileAttributes = Files.readAttributes(path, BasicFileAttributes.class);
+        LOGGER.debug("could not open folder '{}' -> does not exist?", folderPath);
+        BasicFileAttributes fileAttributes = Files.readAttributes(folderPath, BasicFileAttributes.class);
         LOGGER.debug("isDir {}", fileAttributes.isDirectory());
         LOGGER.debug("isRegularFile {}", fileAttributes.isRegularFile());
         LOGGER.debug("isOther {}", fileAttributes.isOther());
@@ -475,6 +501,91 @@ public class TmmUIHelper {
       LOGGER.error("Could not open file manager - '{}'", ex.getMessage());
       MessageManager.getInstance()
           .pushMessage(new Message(Message.MessageLevel.ERROR, path, "message.erroropenfolder", new String[] { ":", ex.getLocalizedMessage() }));
+    }
+  }
+
+  /**
+   * Opens a folder by path string, with support for WebDAV paths. For WebDAV paths, opens the built-in WebDAV file browser dialog. For local paths,
+   * opens the system file manager.
+   * 
+   * @param pathString
+   *          the path string (can be local or WebDAV path like "webdav://...")
+   */
+  public static void openFolderByPath(String pathString) {
+    if (StringUtils.isBlank(pathString)) {
+      return;
+    }
+
+    try {
+      // Check if it's a WebDAV path
+      if (WebDavDataSourceHelper.isWebDavPath(pathString)) {
+        LOGGER.info("=== Opening WebDAV browser ===");
+        LOGGER.info("Original path: {}", pathString);
+
+        // For WebDAV paths, extract parent directory if path points to a file
+        String folderPath = pathString;
+
+        // Check if path ends with a known media file extension
+        String lowerPath = pathString.toLowerCase();
+        boolean isFile = false;
+
+        // Common video file extensions
+        String[] videoExtensions = { ".mkv", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".m4v", ".mpg", ".mpeg", ".m2ts", ".ts", ".iso" };
+        for (String ext : videoExtensions) {
+          if (lowerPath.endsWith(ext)) {
+            isFile = true;
+            break;
+          }
+        }
+
+        // Common image/document extensions that might be in media folders
+        if (!isFile) {
+          String[] otherExtensions = { ".jpg", ".jpeg", ".png", ".nfo", ".srt", ".sub", ".idx", ".txt" };
+          for (String ext : otherExtensions) {
+            if (lowerPath.endsWith(ext)) {
+              isFile = true;
+              break;
+            }
+          }
+        }
+
+        if (isFile) {
+          int lastSlash = pathString.lastIndexOf('/');
+          if (lastSlash > 0) {
+            folderPath = pathString.substring(0, lastSlash);
+            LOGGER.info("Detected file path, using parent directory: {}", folderPath);
+          }
+        }
+        else {
+          LOGGER.info("Path is a directory, using as-is: {}", folderPath);
+        }
+
+        LOGGER.info("Final path to open: {}", folderPath);
+
+        final String finalPath = folderPath;
+        SwingUtilities.invokeLater(() -> {
+          try {
+            WebDavFileBrowserDialog.openWebDavBrowser(finalPath);
+          }
+          catch (Exception e) {
+            LOGGER.error("Could not open WebDAV browser - '{}'", e.getMessage());
+            MessageManager.getInstance()
+                .pushMessage(
+                    new Message(Message.MessageLevel.ERROR, finalPath, "message.erroropenfolder", new String[] { ":", e.getLocalizedMessage() }));
+          }
+        });
+      }
+      else {
+        // Local path - use system file manager
+        Path path = Paths.get(pathString);
+        openFolder(path);
+      }
+    }
+    catch (Exception ex) {
+      LOGGER.error("Could not open folder - '{}'", ex.getMessage());
+      MessageManager.getInstance()
+          .pushMessage(
+              new Message(Message.MessageLevel.ERROR, pathString, "message.erroropenfolder", new String[] { ":", ex.getLocalizedMessage() }));
     }
   }
 

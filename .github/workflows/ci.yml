@@ -2,11 +2,11 @@ name: Multi-Platform CI/CD Pipeline
 
 on:
   push:
-    branches: [ devel, main ]
+    branches: [ webdav-path-fix, devel, main ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ devel, main ]
+    branches: [ webdav-path-fix, devel, main ]
   workflow_dispatch:
     inputs:
       build_type:
