@@ -131,6 +131,13 @@ public class WebDavClient {
    *           if listing fails
    */
   public List<WebDavFile> list(String path) throws IOException {
+    return listWithRetry(path, true);
+  }
+
+  /**
+   * Internal list method with retry support for connection pool shutdown
+   */
+  private List<WebDavFile> listWithRetry(String path, boolean allowRetry) throws IOException {
     ensureConnected();
     String fullUrl = buildUrl(path);
     List<WebDavFile> files = new ArrayList<>();
@@ -180,6 +187,24 @@ public class WebDavClient {
         }
 
         files.add(new WebDavFile(resource, source.getUrl()));
+      }
+    }
+    catch (IllegalStateException e) {
+      // Handle "Connection pool shut down" error by reconnecting and retrying once
+      if (allowRetry && e.getMessage() != null && e.getMessage().contains("Connection pool shut down")) {
+        LOGGER.warn("WebDAV connection pool was shut down, attempting to reconnect...");
+        try {
+          reconnect();
+          return listWithRetry(path, false); // Retry once without further retries
+        }
+        catch (IOException reconnectError) {
+          LOGGER.error("Failed to reconnect to WebDAV server: {}", reconnectError.getMessage());
+          throw new IOException("WebDAV connection pool shut down and reconnection failed", e);
+        }
+      }
+      else {
+        LOGGER.error("Failed to list WebDAV directory '{}': {}", fullUrl, e.getMessage());
+        throw new IOException("Failed to list WebDAV directory: " + e.getMessage(), e);
       }
     }
     catch (IOException e) {
@@ -314,15 +339,48 @@ public class WebDavClient {
     }
   }
 
-  private void ensureConnected() {
+  /**
+   * Check if the client is currently connected
+   * 
+   * @return true if connected and ready to use
+   */
+  public boolean isConnected() {
+    return sardine != null;
+  }
+
+  /**
+   * Ensure the client is connected, reconnecting if necessary. This method is thread-safe and handles connection pool shutdown gracefully.
+   */
+  private synchronized void ensureConnected() {
     if (sardine == null) {
       try {
+        LOGGER.debug("WebDAV client not connected, establishing connection...");
         connect();
+        LOGGER.debug("WebDAV connection established successfully");
       }
       catch (IOException e) {
         throw new RuntimeException("Failed to connect to WebDAV server", e);
       }
     }
+    else {
+      // Test if the connection is still valid by checking if the underlying client is usable
+      // Sardine doesn't expose a direct "isConnected" method, so we rely on try-catch in operations
+      // But we can at least ensure the sardine instance is not null
+      LOGGER.trace("WebDAV client already connected");
+    }
+  }
+
+  /**
+   * Reconnect to the WebDAV server. Useful if the connection was reset or the pool was shut down.
+   * 
+   * @throws IOException
+   *           if reconnection fails
+   */
+  public synchronized void reconnect() throws IOException {
+    LOGGER.info("Reconnecting to WebDAV server...");
+    disconnect();
+    connect();
+    LOGGER.info("WebDAV reconnection successful");
   }
 
   private String buildUrl(String path) {
