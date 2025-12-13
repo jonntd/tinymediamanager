@@ -90,7 +90,7 @@ import org.tinymediamanager.core.tvshow.TvShowList;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
-import org.tinymediamanager.core.tvshow.services.ChatGPTTvShowRecognitionService;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTTvShowRecognitionService;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Message.MessageLevel;
@@ -180,7 +180,7 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
   private final JLabel                                                                 lblError;
   private final JProgressBar                                                           progressBar;
   private final JButton                                                                okButton;
-  private final JLabel                                                                 lblPath;
+  private final JTextField                                                             lblPath;
   private final JLabel                                                                 lblOriginalTitle;
   private final JComboBox<MediaEpisodeGroup>                                           cbEpisodeGroup;
   private final JLabel                                                                 lblEpisodeGroup;
@@ -220,7 +220,10 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       final JPanel panelPath = new JPanel();
       panelPath.setLayout(new MigLayout("", "[grow][]", "[]"));
       {
-        lblPath = new JLabel("");
+        lblPath = new JTextField("");
+        lblPath.setEditable(false);
+        lblPath.setBorder(null);
+        lblPath.setOpaque(false);
         TmmFontHelper.changeFont(lblPath, 1.16667, Font.BOLD);
         panelPath.add(lblPath, "cell 0 0, growx, wmin 0");
       }
@@ -1167,18 +1170,20 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
     }
 
     LOGGER.info("Starting AI recognition for TV show: {}", tvShowToScrape.getTitle());
+    startProgressBar("正在进行 AI 识别...");
 
     // 在后台线程中执行AI识别，避免阻塞UI线程
     SwingWorker<String, Void> aiWorker = new SwingWorker<String, Void>() {
       @Override
       protected String doInBackground() throws Exception {
-        // Use ChatGPTTvShowRecognitionService to analyze the TV show
-        ChatGPTTvShowRecognitionService recognitionService = new ChatGPTTvShowRecognitionService();
+        // Use BatchChatGPTTvShowRecognitionService to analyze the TV show (unified service)
+        BatchChatGPTTvShowRecognitionService recognitionService = new BatchChatGPTTvShowRecognitionService();
         return recognitionService.recognizeTvShowTitle(tvShowToScrape);
       }
 
       @Override
       protected void done() {
+        stopProgressBar();
         try {
           String recognizedTitle = get();
 

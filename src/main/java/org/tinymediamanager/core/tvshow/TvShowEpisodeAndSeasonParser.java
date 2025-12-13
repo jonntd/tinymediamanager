@@ -39,7 +39,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
-import org.tinymediamanager.core.tvshow.services.ChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTEpisodeRecognitionService;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
@@ -51,29 +51,30 @@ import org.tinymediamanager.core.MessageManager;
  */
 public class TvShowEpisodeAndSeasonParser {
 
-  private static final Logger  LOGGER              = LoggerFactory.getLogger(TvShowEpisodeAndSeasonParser.class);
+  private static final Logger                                              LOGGER         = LoggerFactory
+      .getLogger(TvShowEpisodeAndSeasonParser.class);
 
   // 智能解析结果缓存，支持LRU和TTL
-  private static final ConcurrentHashMap<String, SmartCachedEpisodeResult> PARSING_CACHE = new ConcurrentHashMap<>();
-  private static final int MAX_CACHE_SIZE = 10000; // 最大缓存条目数
-  private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24小时TTL
+  private static final ConcurrentHashMap<String, SmartCachedEpisodeResult> PARSING_CACHE  = new ConcurrentHashMap<>();
+  private static final int                                                 MAX_CACHE_SIZE = 10000;                                        // 最大缓存条目数
+  private static final long                                                CACHE_TTL_MS   = 24 * 60 * 60 * 1000L;                         // 24小时TTL
 
   // 缓存性能统计
-  private static final java.util.concurrent.atomic.AtomicLong cacheEvictions = new java.util.concurrent.atomic.AtomicLong(0);
-  private static final java.util.concurrent.atomic.AtomicLong hotDataHits = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong              cacheEvictions = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong              hotDataHits    = new java.util.concurrent.atomic.AtomicLong(0);
 
   // 缓存统计 - 使用原子操作保证线程安全
-  private static final java.util.concurrent.atomic.AtomicLong cacheHits = new java.util.concurrent.atomic.AtomicLong(0);
-  private static final java.util.concurrent.atomic.AtomicLong cacheMisses = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong              cacheHits      = new java.util.concurrent.atomic.AtomicLong(0);
+  private static final java.util.concurrent.atomic.AtomicLong              cacheMisses    = new java.util.concurrent.atomic.AtomicLong(0);
 
   /**
    * 智能缓存条目（支持LRU和TTL）
    */
   private static class SmartCachedEpisodeResult {
     final EpisodeMatchingResult result;
-    final long timestamp;
-    volatile long lastAccessTime;
-    volatile int accessCount;
+    final long                  timestamp;
+    volatile long               lastAccessTime;
+    volatile int                accessCount;
 
     SmartCachedEpisodeResult(EpisodeMatchingResult result) {
       this.result = result;
@@ -129,11 +130,14 @@ public class TvShowEpisodeAndSeasonParser {
 
       return prefix + "_" + hexString.toString();
 
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // 降级到简单的Base64编码
       LOGGER.warn("Failed to generate SHA-256 cache key, falling back to Base64: {}", e.getMessage());
       String safeFilename = java.util.Base64.getEncoder().encodeToString(filename.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-      String safeShowname = showname != null ? java.util.Base64.getEncoder().encodeToString(showname.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : "null";
+      String safeShowname = showname != null
+          ? java.util.Base64.getEncoder().encodeToString(showname.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+          : "null";
       return prefix + ":" + safeFilename + ":" + safeShowname;
     }
   }
@@ -183,8 +187,7 @@ public class TvShowEpisodeAndSeasonParser {
     long misses = cacheMisses.get();
     long total = hits + misses;
     double hitRate = total > 0 ? (hits * 100.0 / total) : 0.0;
-    return String.format("Cache: %d entries, Hits: %d, Misses: %d, Hit rate: %.1f%%",
-                        PARSING_CACHE.size(), hits, misses, hitRate);
+    return String.format("Cache: %d entries, Hits: %d, Misses: %d, Hit rate: %.1f%%", PARSING_CACHE.size(), hits, misses, hitRate);
   }
 
   /**
@@ -208,8 +211,6 @@ public class TvShowEpisodeAndSeasonParser {
   public static long getCacheMisses() {
     return cacheMisses.get();
   }
-
-
 
   /**
    * 获取热点数据命中数
@@ -263,11 +264,11 @@ public class TvShowEpisodeAndSeasonParser {
     int targetSize = (int) (MAX_CACHE_SIZE * 0.8); // 清理到80%容量
     int toRemove = PARSING_CACHE.size() - targetSize;
 
-    if (toRemove <= 0) return;
+    if (toRemove <= 0)
+      return;
 
     // 收集所有缓存条目并按LRU排序
-    java.util.List<java.util.Map.Entry<String, SmartCachedEpisodeResult>> entries =
-        new java.util.ArrayList<>(PARSING_CACHE.entrySet());
+    java.util.List<java.util.Map.Entry<String, SmartCachedEpisodeResult>> entries = new java.util.ArrayList<>(PARSING_CACHE.entrySet());
 
     // 按最后访问时间排序（最久未访问的在前面）
     entries.sort((e1, e2) -> {
@@ -275,8 +276,10 @@ public class TvShowEpisodeAndSeasonParser {
       SmartCachedEpisodeResult r2 = e2.getValue();
 
       // 保护热点数据：热点数据排在后面，不会被清理
-      if (r1.isHotData() && !r2.isHotData()) return 1;
-      if (!r1.isHotData() && r2.isHotData()) return -1;
+      if (r1.isHotData() && !r2.isHotData())
+        return 1;
+      if (!r1.isHotData() && r2.isHotData())
+        return -1;
 
       // 按最后访问时间排序
       return Long.compare(r1.lastAccessTime, r2.lastAccessTime);
@@ -285,7 +288,8 @@ public class TvShowEpisodeAndSeasonParser {
     // 移除最久未访问的条目（保护热点数据）
     int removed = 0;
     for (java.util.Map.Entry<String, SmartCachedEpisodeResult> entry : entries) {
-      if (removed >= toRemove) break;
+      if (removed >= toRemove)
+        break;
 
       // 不移除热点数据
       if (!entry.getValue().isHotData()) {
@@ -307,11 +311,11 @@ public class TvShowEpisodeAndSeasonParser {
 
     static {
       // 基于经验的文件类型AI成功率权重
-      FILE_TYPE_WEIGHTS.put("mkv", 0.9);   // 高成功率
+      FILE_TYPE_WEIGHTS.put("mkv", 0.9); // 高成功率
       FILE_TYPE_WEIGHTS.put("mp4", 0.85);
       FILE_TYPE_WEIGHTS.put("avi", 0.8);
       FILE_TYPE_WEIGHTS.put("wmv", 0.7);
-      FILE_TYPE_WEIGHTS.put("flv", 0.6);   // 低成功率
+      FILE_TYPE_WEIGHTS.put("flv", 0.6); // 低成功率
     }
 
     /**
@@ -374,9 +378,11 @@ public class TvShowEpisodeAndSeasonParser {
     private static double calculateFailureScore(EpisodeMatchingResult result) {
       if (result.season > 0 && !result.episodes.isEmpty()) {
         return 0.2; // 传统解析成功，AI价值较低
-      } else if (result.season > 0 || !result.episodes.isEmpty()) {
+      }
+      else if (result.season > 0 || !result.episodes.isEmpty()) {
         return 0.6; // 部分成功，AI可能有帮助
-      } else {
+      }
+      else {
         return 1.0; // 完全失败，AI价值最高
       }
     }
@@ -386,7 +392,8 @@ public class TvShowEpisodeAndSeasonParser {
       int specialChars = filename.replaceAll("[a-zA-Z0-9\\s]", "").length();
       int totalLength = filename.length();
 
-      if (totalLength == 0) return 0.5;
+      if (totalLength == 0)
+        return 0.5;
 
       double complexity = (double) specialChars / totalLength;
       return Math.min(1.0, complexity * 2); // 特殊字符比例越高，复杂度越高
@@ -402,15 +409,15 @@ public class TvShowEpisodeAndSeasonParser {
 
       if (normalizedFilename.contains(normalizedTitle)) {
         return 0.3; // 包含剧集名，传统解析可能足够
-      } else {
+      }
+      else {
         return 0.8; // 不包含剧集名，AI可能更有帮助
       }
     }
   }
 
   /**
-   * 检查并清理缓存，防止内存溢出
-   * 使用智能清理策略，只清理部分缓存而非全部
+   * 检查并清理缓存，防止内存溢出 使用智能清理策略，只清理部分缓存而非全部
    */
   private static void checkAndCleanCache() {
     if (PARSING_CACHE.size() > MAX_CACHE_SIZE) {
@@ -418,8 +425,7 @@ public class TvShowEpisodeAndSeasonParser {
       int targetSize = (int) (MAX_CACHE_SIZE * 0.75);
       int toRemove = PARSING_CACHE.size() - targetSize;
 
-      LOGGER.warn("Parsing cache size exceeded limit ({}), removing {} oldest entries",
-                  MAX_CACHE_SIZE, toRemove);
+      LOGGER.warn("Parsing cache size exceeded limit ({}), removing {} oldest entries", MAX_CACHE_SIZE, toRemove);
 
       // 简单的清理策略：移除一些条目（在实际应用中可以实现LRU）
       java.util.Iterator<String> iterator = PARSING_CACHE.keySet().iterator();
@@ -457,57 +463,59 @@ public class TvShowEpisodeAndSeasonParser {
   }
 
   // must start with a delimiter!
-  public static final Pattern  SEASON_ONLY        = Pattern.compile("[\\s_.-]s[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  public static final Pattern  EPISODE_ONLY       = Pattern.compile("[\\s_.-]ep?[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern EPISODE_PATTERN    = Pattern.compile("[epx_-]+(\\d{1,4})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern EPISODE_PATTERN_2  = Pattern.compile("(?:episode|ep)[\\. _-]*(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  public static final Pattern  SEASON_ONLY                    = Pattern.compile("[\\s_.-]s[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  public static final Pattern  EPISODE_ONLY                   = Pattern.compile("[\\s_.-]ep?[\\s_.-]?(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern EPISODE_PATTERN                = Pattern.compile("[epx_-]+(\\d{1,4})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern EPISODE_PATTERN_2              = Pattern.compile("(?:episode|ep)[\\. _-]*(\\d{1,4})", Pattern.CASE_INSENSITIVE);
 
-  // 中文剧集解析模式
-  private static final Pattern CHINESE_EPISODE_PATTERN = Pattern.compile("第(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CHINESE_SEASON_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CHINESE_SEASON_EPISODE_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季第(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
+  // 中文剧集解析模式 - 支持"集"、"话"、"回"、"期"等格式
+  private static final Pattern CHINESE_EPISODE_PATTERN        = Pattern.compile("第(\\d{1,4})[集话回期]", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_SEASON_PATTERN         = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_SEASON_EPISODE_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])季第(\\d{1,4})[集话回期]",
+      Pattern.CASE_INSENSITIVE);
 
-  // 扩展的中文解析模式
-  private static final Pattern CHINESE_EPISODE_EXTENDED = Pattern.compile("(\\d{1,4})集", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CHINESE_PART_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])部分?", Pattern.CASE_INSENSITIVE);
-  private static final Pattern CHINESE_CHAPTER_PATTERN = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])章", Pattern.CASE_INSENSITIVE);
+  // 扩展的中文解析模式 - 支持"集"、"话"、"回"、"期"等格式
+  private static final Pattern CHINESE_EPISODE_EXTENDED       = Pattern.compile("(\\d{1,4})[集话回期]", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_PART_PATTERN           = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])部分?", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHINESE_CHAPTER_PATTERN        = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])章", Pattern.CASE_INSENSITIVE);
 
   // 特殊格式模式
-  private static final Pattern ROMAN_NUMERAL_PATTERN = Pattern.compile("([IVX]+)", Pattern.CASE_INSENSITIVE);
-  private static final Pattern DOCUMENTARY_PATTERN = Pattern.compile("(\\d{1,2})(?:of|/)(\\d{1,2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern ROMAN_NUMERAL_PATTERN          = Pattern.compile("([IVX]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern DOCUMENTARY_PATTERN            = Pattern.compile("(\\d{1,2})(?:of|/)(\\d{1,2})", Pattern.CASE_INSENSITIVE);
   // (1/6) with normal or unicode slash!
-  private static final Pattern EPISODE_PATTERN_NR = Pattern.compile("(\\d{1,2})[⧸/](\\d{1,2})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern ROMAN_PATTERN      = Pattern.compile("(part|pt)[\\._\\s]+([MDCLXVI]+)", Pattern.CASE_INSENSITIVE);
-  private static final Pattern SEASON_MULTI_EP    = Pattern.compile("s(\\d{1,4})[ _]?((?:([epx.-]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
-  private static final Pattern SEASON_MULTI_EP_2  = Pattern.compile("(\\d{1,4})(?=x)((?:([epx]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
-  private static final Pattern NUMBERS_2_PATTERN  = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
-  private static final Pattern NUMBERS_3_PATTERN  = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern EPISODE_PATTERN_NR             = Pattern.compile("(\\d{1,2})[⧸/](\\d{1,2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern ROMAN_PATTERN                  = Pattern.compile("(part|pt)[\\._\\s]+([MDCLXVI]+)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern SEASON_MULTI_EP                = Pattern.compile("s(\\d{1,4})[ _]?((?:([epx.-]+\\d{1,4})+))",
+      Pattern.CASE_INSENSITIVE);
+  private static final Pattern SEASON_MULTI_EP_2              = Pattern.compile("(\\d{1,4})(?=x)((?:([epx]+\\d{1,4})+))", Pattern.CASE_INSENSITIVE);
+  private static final Pattern NUMBERS_2_PATTERN              = Pattern.compile("([0-9]{2})", Pattern.CASE_INSENSITIVE);
+  private static final Pattern NUMBERS_3_PATTERN              = Pattern.compile("([0-9])([0-9]{2})", Pattern.CASE_INSENSITIVE);
 
   // https://kodi.wiki/view/Anime - PREP should run before any default Kodi regex
-  private static final Pattern ANIME_PREPEND1     = Pattern.compile(
+  private static final Pattern ANIME_PREPEND1                 = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND2     = Pattern.compile(
+  private static final Pattern ANIME_PREPEND2                 = Pattern.compile(
       "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\/](?:[^\\/]+[\\/])*[^\\/]+(?:\\b|_)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND3     = Pattern.compile(
+  private static final Pattern ANIME_PREPEND3                 = Pattern.compile(
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND4     = Pattern.compile(
+  private static final Pattern ANIME_PREPEND4                 = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:-(\\d{1,3}))?(?:[_ ]?v\\d+)?)+(?=\\b|_)[^])}]*?(?:[\\[({][^])}]+[\\])}][ _.-]*)*?(?:[\\[({][\\da-f]{8}[\\])}])",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_PREPEND4_2   = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
+  private static final Pattern ANIME_PREPEND4_2               = Pattern.compile("((\\d{1,3})(?:-(\\d{1,3})){1,10})");
 
-  private static final Pattern ANIME_APPEND1      = Pattern.compile(
+  private static final Pattern ANIME_APPEND1                  = Pattern.compile(
       "(Special|SP|OVA|OAV|Picture Drama)(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND2      = Pattern.compile(
+  private static final Pattern ANIME_APPEND2                  = Pattern.compile(
       "(?:S(?:eason)?\\s*(?=\\d))?(Specials|\\d{1,3})[\\\\/](?:[^\\\\/]+[\\\\/])*[^\\\\/]+(?:\\b|_)[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?(?:\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*?$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND3      = Pattern.compile(
+  private static final Pattern ANIME_APPEND3                  = Pattern.compile(
       "[-._ ]+S(?:eason ?)?(\\d{1,3})(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern ANIME_APPEND4      = Pattern.compile(
+  private static final Pattern ANIME_APPEND4                  = Pattern.compile(
       "((?=\\b|_))(?:[ _.-]*(?:ep?[ .]?)?(\\d{1,4})(?:[_ ]?v\\d+)?)+(?=\\b|_)[^\\])}]*?(?:[\\[({][^\\])}]+[\\])}][ _.-]*)*?[^\\]\\[)(}{\\\\/]*$",
       Pattern.CASE_INSENSITIVE);
 
@@ -595,17 +603,38 @@ public class TvShowEpisodeAndSeasonParser {
     }
 
     switch (chineseNumber) {
-      case "一": return 1;
-      case "二": return 2;
-      case "三": return 3;
-      case "四": return 4;
-      case "五": return 5;
-      case "六": return 6;
-      case "七": return 7;
-      case "八": return 8;
-      case "九": return 9;
-      case "十": return 10;
-      default: return -1;
+      case "一":
+        return 1;
+
+      case "二":
+        return 2;
+
+      case "三":
+        return 3;
+
+      case "四":
+        return 4;
+
+      case "五":
+        return 5;
+
+      case "六":
+        return 6;
+
+      case "七":
+        return 7;
+
+      case "八":
+        return 8;
+
+      case "九":
+        return 9;
+
+      case "十":
+        return 10;
+
+      default:
+        return -1;
     }
   }
 
@@ -619,27 +648,68 @@ public class TvShowEpisodeAndSeasonParser {
 
     roman = roman.toUpperCase();
     switch (roman) {
-      case "I": return 1;
-      case "II": return 2;
-      case "III": return 3;
-      case "IV": return 4;
-      case "V": return 5;
-      case "VI": return 6;
-      case "VII": return 7;
-      case "VIII": return 8;
-      case "IX": return 9;
-      case "X": return 10;
-      case "XI": return 11;
-      case "XII": return 12;
-      case "XIII": return 13;
-      case "XIV": return 14;
-      case "XV": return 15;
-      case "XVI": return 16;
-      case "XVII": return 17;
-      case "XVIII": return 18;
-      case "XIX": return 19;
-      case "XX": return 20;
-      default: return -1;
+      case "I":
+        return 1;
+
+      case "II":
+        return 2;
+
+      case "III":
+        return 3;
+
+      case "IV":
+        return 4;
+
+      case "V":
+        return 5;
+
+      case "VI":
+        return 6;
+
+      case "VII":
+        return 7;
+
+      case "VIII":
+        return 8;
+
+      case "IX":
+        return 9;
+
+      case "X":
+        return 10;
+
+      case "XI":
+        return 11;
+
+      case "XII":
+        return 12;
+
+      case "XIII":
+        return 13;
+
+      case "XIV":
+        return 14;
+
+      case "XV":
+        return 15;
+
+      case "XVI":
+        return 16;
+
+      case "XVII":
+        return 17;
+
+      case "XVIII":
+        return 18;
+
+      case "XIX":
+        return 19;
+
+      case "XX":
+        return 20;
+
+      default:
+        return -1;
     }
   }
 
@@ -661,7 +731,8 @@ public class TvShowEpisodeAndSeasonParser {
           LOGGER.debug("Parsed Chinese season-episode format: Season {}, Episode {}", season, episode);
           return result;
         }
-      } catch (NumberFormatException e) {
+      }
+      catch (NumberFormatException e) {
         // 忽略解析错误
       }
     }
@@ -675,7 +746,8 @@ public class TvShowEpisodeAndSeasonParser {
           result.episodes.add(episode);
           LOGGER.debug("Parsed Chinese episode format: Episode {}", episode);
         }
-      } catch (NumberFormatException e) {
+      }
+      catch (NumberFormatException e) {
         // 忽略解析错误
       }
     }
@@ -690,7 +762,8 @@ public class TvShowEpisodeAndSeasonParser {
             result.episodes.add(episode);
             LOGGER.debug("Parsed Chinese extended episode format: Episode {}", episode);
           }
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e) {
           // 忽略解析错误
         }
       }
@@ -706,7 +779,8 @@ public class TvShowEpisodeAndSeasonParser {
             result.episodes.add(part);
             LOGGER.debug("Parsed Chinese part format: Part {}", part);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           // 忽略解析错误
         }
       }
@@ -722,7 +796,8 @@ public class TvShowEpisodeAndSeasonParser {
             result.episodes.add(chapter);
             LOGGER.debug("Parsed Chinese chapter format: Chapter {}", chapter);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           // 忽略解析错误
         }
       }
@@ -738,7 +813,8 @@ public class TvShowEpisodeAndSeasonParser {
             result.episodes.add(romanNum);
             LOGGER.debug("Parsed Roman numeral format: Episode {}", romanNum);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           // 忽略解析错误
         }
       }
@@ -754,9 +830,144 @@ public class TvShowEpisodeAndSeasonParser {
             result.season = season;
             LOGGER.debug("Parsed Chinese season format: Season {}", season);
           }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           // 忽略解析错误
         }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 从文件路径中提取季号
+   * 
+   * 优先级: 1. 标准 Season 格式 (Season 3, Season3, S03) 2. 中文季格式 (第三季) 3. 文件名中的括号数字 (限制在文件名部分，避免误匹配路径分类编号)
+   * 
+   * @param result
+   *          当前解析结果
+   * @param path
+   *          完整的文件路径
+   * @return 更新后的解析结果
+   */
+  private static EpisodeMatchingResult parseSeasonFromPath(EpisodeMatchingResult result, String path) {
+    // 1. 优先检测标准 Season 格式 (Season 3, Season3, S03E01 中的 S03)
+    Pattern standardSeasonPattern = Pattern.compile("(?:Season\\s*|S)(\\d{1,2})(?:\\D|$)", Pattern.CASE_INSENSITIVE);
+    Matcher m = standardSeasonPattern.matcher(path);
+    if (m.find()) {
+      try {
+        int season = Integer.parseInt(m.group(1));
+        if (season > 0 && season <= 50) {
+          result.season = season;
+          LOGGER.debug("Parsed season {} from standard Season format: {}", season, path);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 2. 检测中文季格式 (第三季, 第3季)
+    Pattern chineseSeasonPattern = Pattern.compile("第([一二三四五六七八九十\\d]{1,2})季", Pattern.CASE_INSENSITIVE);
+    m = chineseSeasonPattern.matcher(path);
+    if (m.find()) {
+      try {
+        int season = chineseNumberToInt(m.group(1));
+        if (season > 0 && season <= 50) {
+          result.season = season;
+          LOGGER.debug("Parsed season {} from Chinese season format: {}", season, path);
+          return result;
+        }
+      }
+      catch (Exception e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 3. 从文件名部分（不含路径）中提取括号数字作为季号
+    // 仅限于文件名部分，避免误匹配路径中的分类编号如 "欧美剧(1)"
+    String filename = path.contains("/") ? path.substring(path.lastIndexOf("/") + 1) : path;
+    filename = filename.contains("\\") ? filename.substring(filename.lastIndexOf("\\") + 1) : filename;
+
+    // 排除常见的非季号括号内容: 年份(2018), 分辨率(1080P), 编码(x264)等
+    Pattern filenameSeasonPattern = Pattern.compile("[（(](\\d{1,2})[)）]", Pattern.CASE_INSENSITIVE);
+    m = filenameSeasonPattern.matcher(filename);
+    while (m.find()) {
+      try {
+        int num = Integer.parseInt(m.group(1));
+        // 只接受 1-20 的数字作为可能的季号，且排除常见的非季号数字
+        // 排除: 年份后两位(18,19,20,21,22,23,24,25), 分辨率(1080的前两位10)
+        if (num > 0 && num <= 20 && num != 10) {
+          // 进一步检查：括号内数字不应该紧跟在4位数字后（排除年份）
+          int matchStart = m.start();
+          if (matchStart >= 4) {
+            String beforeMatch = filename.substring(matchStart - 4, matchStart);
+            if (beforeMatch.matches("\\d{4}")) {
+              // 这是年份后的括号，跳过
+              continue;
+            }
+          }
+          result.season = num;
+          LOGGER.debug("Parsed season {} from filename brackets: {}", num, filename);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 从标题中提取隐含的季号 支持格式如: "熊出没之探险日记2" 中的 "2" 表示第2季
+   * 
+   * @param result
+   *          当前解析结果
+   * @param title
+   *          文件名/标题
+   * @return 更新后的解析结果
+   */
+  private static EpisodeMatchingResult parseSeasonFromTitle(EpisodeMatchingResult result, String title) {
+    // 匹配标题末尾的数字，可能是季号
+    // 例如: 熊出没之探险日记2 第51话 -> 检查 "探险日记2" 中的 2
+    // 注意: 必须在"第X话"之前，且数字不能太大（避免匹配到集数）
+
+    // 先移除集数信息，避免干扰
+    String cleanTitle = title.replaceAll("第\\d{1,4}[集话回期]", "");
+
+    // 匹配中文标题后紧跟的小数字 (1-9)，通常表示续作季号
+    // 例如: 熊出没之探险日记2 -> 2
+    Pattern titleSeasonPattern = Pattern.compile("[\\u4e00-\\u9fa5]([1-9])(?:\\s|$|\\p{Punct})", Pattern.CASE_INSENSITIVE);
+    Matcher m = titleSeasonPattern.matcher(cleanTitle);
+
+    if (m.find()) {
+      try {
+        int season = Integer.parseInt(m.group(1));
+        if (season > 0 && season <= 9) { // 只匹配 1-9 的季号
+          result.season = season;
+          LOGGER.debug("Parsed season {} from title suffix: {}", season, title);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 尝试匹配罗马数字季号 (如: 探险日记II)
+    Pattern romanSeasonPattern = Pattern.compile("[\\u4e00-\\u9fa5](I{1,3}|IV|V|VI{0,3})(?:\\s|$|\\p{Punct})", Pattern.CASE_INSENSITIVE);
+    m = romanSeasonPattern.matcher(cleanTitle);
+
+    if (m.find()) {
+      int season = romanToInt(m.group(1));
+      if (season > 0 && season <= 9) {
+        result.season = season;
+        LOGGER.debug("Parsed season {} from Roman numeral in title: {}", season, title);
+        return result;
       }
     }
 
@@ -775,11 +986,8 @@ public class TvShowEpisodeAndSeasonParser {
 
     // 如果文件名包含明显的非剧集关键词，跳过AI
     String lowerFilename = filename.toLowerCase();
-    String[] nonEpisodeKeywords = {
-      "trailer", "预告", "花絮", "幕后", "making", "behind",
-      "interview", "访谈", "documentary", "纪录片", "special", "特辑",
-      "opening", "ending", "op", "ed", "主题曲", "片头", "片尾"
-    };
+    String[] nonEpisodeKeywords = { "trailer", "预告", "花絮", "幕后", "making", "behind", "interview", "访谈", "documentary", "纪录片", "special", "特辑",
+        "opening", "ending", "op", "ed", "主题曲", "片头", "片尾" };
 
     for (String keyword : nonEpisodeKeywords) {
       if (lowerFilename.contains(keyword)) {
@@ -814,8 +1022,10 @@ public class TvShowEpisodeAndSeasonParser {
   /**
    * 使用AI辅助识别剧集文件名（当传统解析失败时的补充方案）
    *
-   * @param filename 剧集文件名
-   * @param tvShowTitle 电视剧标题
+   * @param filename
+   *          剧集文件名
+   * @param tvShowTitle
+   *          电视剧标题
    * @return EpisodeMatchingResult AI识别结果
    */
   public static EpisodeMatchingResult detectEpisodeWithAI(String filename, String tvShowTitle) {
@@ -829,7 +1039,8 @@ public class TvShowEpisodeAndSeasonParser {
         long hits = cacheHits.incrementAndGet();
         LOGGER.debug("Using cached AI recognition result for: {} (Cache hits: {})", filename, hits);
         return cachedAiEntry.result;
-      } else {
+      }
+      else {
         // 缓存已过期，移除
         PARSING_CACHE.remove(aiCacheKey);
         LOGGER.debug("AI cache entry expired for: {}", filename);
@@ -847,7 +1058,18 @@ public class TvShowEpisodeAndSeasonParser {
     }
 
     LOGGER.info("Attempting AI-assisted episode recognition for: {}", filename);
-    EpisodeMatchingResult aiResult = ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
+    // 使用统一的 BatchChatGPTEpisodeRecognitionService
+    BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
+    // 创建临时 Episode 对象用于 AI 识别
+    org.tinymediamanager.core.tvshow.entities.TvShowEpisode tempEpisode = new org.tinymediamanager.core.tvshow.entities.TvShowEpisode();
+    tempEpisode.setTitle(filename);
+    // 设置电视剧标题（如果有的话）
+    if (tvShowTitle != null && !tvShowTitle.isEmpty()) {
+      org.tinymediamanager.core.tvshow.entities.TvShow tempShow = new org.tinymediamanager.core.tvshow.entities.TvShow();
+      tempShow.setTitle(tvShowTitle);
+      tempEpisode.setTvShow(tempShow);
+    }
+    EpisodeMatchingResult aiResult = batchService.recognizeEpisode(tempEpisode);
 
     // 缓存AI识别结果（无论成功还是失败）
     smartCacheStore(aiCacheKey, aiResult);
@@ -858,8 +1080,10 @@ public class TvShowEpisodeAndSeasonParser {
   /**
    * 混合识别方法：先尝试传统解析（包括中文），失败时使用AI辅助
    *
-   * @param filename 剧集文件名
-   * @param tvShowTitle 电视剧标题
+   * @param filename
+   *          剧集文件名
+   * @param tvShowTitle
+   *          电视剧标题
    * @return EpisodeMatchingResult 识别结果
    */
   public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle) {
@@ -868,9 +1092,13 @@ public class TvShowEpisodeAndSeasonParser {
 
   /**
    * 混合剧集解析方法（传统解析 + AI识别）
-   * @param filename 文件名
-   * @param tvShowTitle 电视剧标题
-   * @param enableAI 是否启用AI识别（false时只做传统解析）
+   * 
+   * @param filename
+   *          文件名
+   * @param tvShowTitle
+   *          电视剧标题
+   * @param enableAI
+   *          是否启用AI识别（false时只做传统解析）
    * @return 解析结果
    */
   public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle, boolean enableAI) {
@@ -884,7 +1112,8 @@ public class TvShowEpisodeAndSeasonParser {
         long hits = cacheHits.incrementAndGet();
         LOGGER.debug("Using cached hybrid parsing result for: {} (Cache hits: {})", filename, hits);
         return cachedEntry.result;
-      } else {
+      }
+      else {
         // 缓存已过期，移除
         PARSING_CACHE.remove(cacheKey);
         LOGGER.debug("Hybrid cache entry expired for: {}", filename);
@@ -918,10 +1147,8 @@ public class TvShowEpisodeAndSeasonParser {
       }
 
       // 发送中文解析成功消息
-      String successMsg = String.format("中文格式解析: %s → S%02dE%02d",
-          filename, chineseResult.season, chineseResult.episodes.get(0));
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, "中文格式解析", successMsg));
+      String successMsg = String.format("中文格式解析: %s → S%02dE%02d", filename, chineseResult.season, chineseResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "中文格式解析", successMsg));
 
       return chineseResult;
     }
@@ -951,10 +1178,8 @@ public class TvShowEpisodeAndSeasonParser {
       LOGGER.info("AI recognition successful for: {}", filename);
 
       // 发送AI识别成功消息到Message history
-      String successMsg = String.format("自动AI识别: %s → S%02dE%02d",
-          filename, aiResult.season, aiResult.episodes.get(0));
-      MessageManager.getInstance().pushMessage(
-          new Message(MessageLevel.INFO, "自动AI识别", successMsg));
+      String successMsg = String.format("自动AI识别: %s → S%02dE%02d", filename, aiResult.season, aiResult.episodes.get(0));
+      MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "自动AI识别", successMsg));
 
       // 缓存成功的AI识别结果
       smartCacheStore(cacheKey, aiResult);
@@ -992,14 +1217,15 @@ public class TvShowEpisodeAndSeasonParser {
         // 检查是否为热点数据
         if (cachedEntry.isHotData()) {
           hotDataHits.incrementAndGet();
-          LOGGER.debug("Using hot cached result for: {} (Cache hits: {}, Hot hits: {})",
-                      name, hits, hotDataHits.get());
-        } else {
+          LOGGER.debug("Using hot cached result for: {} (Cache hits: {}, Hot hits: {})", name, hits, hotDataHits.get());
+        }
+        else {
           LOGGER.debug("Using cached result for: {} (Cache hits: {})", name, hits);
         }
 
         return cachedEntry.result;
-      } else {
+      }
+      else {
         // 缓存已过期，移除
         PARSING_CACHE.remove(cacheKey);
         LOGGER.debug("Smart cache entry expired for: {}", name);
@@ -1007,9 +1233,32 @@ public class TvShowEpisodeAndSeasonParser {
     }
     cacheMisses.incrementAndGet();
 
-    // parse ANIME exclusively in front, unmodified
     EpisodeMatchingResult result = new EpisodeMatchingResult();
     String nameNoExt = name.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
+
+    // 【优先解析中文格式】- 确保中文格式（如"第51话"）被优先识别，避免被 Anime 模式误匹配
+    result = parseChineseEpisodeFormat(result, nameNoExt);
+    if (!result.episodes.isEmpty()) {
+      LOGGER.debug("Chinese format parsed successfully for: {}", name);
+      // 尝试从路径中提取季号 (如: 熊出没之探险日记(2) 中的 2)
+      if (result.season == -1) {
+        result = parseSeasonFromPath(result, name);
+      }
+      // 如果还是没有季号，尝试从标题中提取隐含的季号 (如: 熊出没之探险日记2 中的 2)
+      if (result.season == -1) {
+        result = parseSeasonFromTitle(result, nameNoExt);
+      }
+      // 如果仍然没有季号，默认为第1季
+      if (result.season == -1) {
+        result.season = 1;
+        LOGGER.trace("No season found, defaulting to season 1");
+      }
+      result.name = nameNoExt;
+      smartCacheStore(generateCacheKey("filename", name, ""), result);
+      return result;
+    }
+
+    // parse ANIME exclusively in front, unmodified
     result = parseAnimeExclusive(result, nameNoExt);
     if (!result.episodes.isEmpty()) {
       // ALWAYS parse date if we have none (but do not use year as season in this case)

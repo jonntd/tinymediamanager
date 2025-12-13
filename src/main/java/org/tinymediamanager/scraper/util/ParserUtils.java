@@ -81,7 +81,7 @@ public class ParserUtils {
   public static String[] detectCleanTitleAndYear(String filename, List<String> badWords) {
     String[] ret = { "", "" };
     // use trace to not remove logging completely (function called way to often on multi movie dir parsing)
-    LOGGER.trace("Parse filename for title: \"{}\"", filename);
+    // LOGGER.trace("Parse filename for title: \"{}\"", filename);
 
     if (filename == null || filename.isEmpty()) {
       LOGGER.debug("Filename empty?!");
@@ -97,8 +97,8 @@ public class ParserUtils {
       fname = fname.replaceFirst("(?i)(" + DELIMITER + ")" + cw, "$1");
     }
 
-    LOGGER.trace("--------------------");
-    LOGGER.trace("IN: {} ", fname);
+    // LOGGER.trace("--------------------");
+    // LOGGER.trace("IN: {} ", fname);
 
     // try the badwords on the whole term (to apply regular expressions which apply on the whole term)
     String savedFname = fname;
@@ -117,19 +117,19 @@ public class ParserUtils {
     Pattern p = Pattern.compile("\\[(.*?)\\]");
     Matcher m = p.matcher(fname);
     while (m.find()) {
-      LOGGER.trace("OPT: {}", m.group(1));
+      // LOGGER.trace("OPT: {}", m.group(1));
       String[] o = StringUtils.split(m.group(1), DELIMITER);
       opt.addAll(Arrays.asList(o));
       fname = fname.replace(m.group(), ""); // remove complete group from name
     }
-    LOGGER.trace("ARR: {}", opt);
+    // LOGGER.trace("ARR: {}", opt);
 
     // detect OTR recordings - at least with that special pattern
     p = Pattern.compile(".*?(_\\d{2}\\.\\d{2}\\.\\d{2}[_ ]+\\d{2}\\-\\d{2}\\_).*"); // like _12.11.17_20-15_
     m = p.matcher(fname);
     if (m.matches() && m.start(1) > 10) {
       // start at some later point, not that if pattern is first
-      LOGGER.trace("OTR: {}", m.group(1));
+      // LOGGER.trace("OTR: {}", m.group(1));
       fname = fname.substring(0, m.start(1));
     }
 
@@ -182,7 +182,7 @@ public class ParserUtils {
         int parsedYear = Integer.parseInt(s[i]);
         if (parsedYear > 1800 && parsedYear < currentYear + 5) {
           // well, limit the year a bit...
-          LOGGER.trace("removed token '{}'- seems to be year", s[i]);
+          // LOGGER.trace("removed token '{}'- seems to be year", s[i]);
           year = s[i];
           s[i] = "";
           // remember the year position
@@ -198,7 +198,7 @@ public class ParserUtils {
           int parsedYear = Integer.parseInt(o);
           if (parsedYear > 1800 && parsedYear < currentYear + 5) {
             year = String.valueOf(parsedYear);
-            LOGGER.trace("found possible year: {}", o);
+            // LOGGER.trace("found possible year: {}", o);
           }
         }
       }
@@ -275,7 +275,7 @@ public class ParserUtils {
       ret[0] = ret[0].replaceFirst("(?i) aka .*", "");
     }
     ret[1] = year.strip();
-    LOGGER.trace("Movie title should be: \"{}\", from {}", ret[0], ret[1]);
+    // LOGGER.trace("Movie title should be: \"{}\", from {}", ret[0], ret[1]);
 
     return ret;
   }

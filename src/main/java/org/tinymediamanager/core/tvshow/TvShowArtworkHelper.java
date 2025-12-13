@@ -157,14 +157,14 @@ public class TvShowArtworkHelper {
       if (filenames.isEmpty() && saveToCache) {
         String defaultFilename = type.name().toLowerCase() + Utils.getArtworkExtensionFromUrl(url);
         filenames.add(defaultFilename);
-        LOGGER.info("Using default filename for cache: {} (saveArtworkToCache=true)", defaultFilename);
+        LOGGER.debug("Using default filename for cache: {} (saveArtworkToCache=true)", defaultFilename);
       }
 
       LOGGER.debug("Filenames for download: {} (count: {})", filenames, filenames.size());
 
       if (!filenames.isEmpty()) {
         // get images in thread
-        LOGGER.info("Creating MediaEntityImageFetcherTask for show={}, url={}, type={}, filenames={}", show.getTitle(), url, type, filenames);
+        LOGGER.debug("Creating MediaEntityImageFetcherTask for show={}, url={}, type={}, filenames={}", show.getTitle(), url, type, filenames);
         MediaEntityImageFetcherTask task = new MediaEntityImageFetcherTask(show, url, MediaFileType.getMediaArtworkType(type), filenames);
         TmmTaskManager.getInstance().addImageDownloadTask(task);
       }
@@ -320,7 +320,7 @@ public class TvShowArtworkHelper {
         posterUrl = foundPoster.getUrl();
         tvShow.setArtworkUrl(posterUrl, MediaFileType.POSTER);
         posterFound = true;
-        LOGGER.info("Found poster URL for {}: {}", tvShow.getTitle(), posterUrl);
+        LOGGER.debug("Found poster URL for {}: {}", tvShow.getTitle(), posterUrl);
       }
       else {
         // Fallback: directly get first poster from artwork list
@@ -877,7 +877,7 @@ public class TvShowArtworkHelper {
    *          should we overwrite existing artwork
    */
   public static void setArtwork(TvShow tvShow, List<MediaArtwork> artwork, List<TvShowScraperMetadataConfig> config, boolean overwrite) {
-    LOGGER.info("TvShowArtworkHelper.setArtwork called: tvShow={}, artworkCount={}, config={}, overwrite={}", tvShow.getTitle(),
+    LOGGER.debug("TvShowArtworkHelper.setArtwork called: tvShow={}, artworkCount={}, config={}, overwrite={}", tvShow.getTitle(),
         artwork != null ? artwork.size() : 0, config, overwrite);
 
     if (!ScraperMetadataConfig.containsAnyArtwork(config)) {
@@ -1179,14 +1179,14 @@ public class TvShowArtworkHelper {
 
       try {
         Files.createDirectories(entityFolder);
-        LOGGER.info("Created cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
+        LOGGER.debug("Created cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
       }
       catch (Exception e) {
         LOGGER.warn("Could not create cache artwork folder '{}', falling back to video folder - '{}'", entityFolder, e.getMessage());
         return tvShow.getPathNIO();
       }
 
-      LOGGER.info("Using cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
+      LOGGER.debug("Using cache artwork folder for TV show '{}': {}", tvShow.getTitle(), entityFolder);
       return entityFolder;
     }
     else {

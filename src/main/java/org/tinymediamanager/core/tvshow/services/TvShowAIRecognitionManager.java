@@ -30,8 +30,8 @@ public class TvShowAIRecognitionManager {
     // 每部电视剧的AI调用计数
     private final Map<String, AtomicInteger>           attemptCounters          = new ConcurrentHashMap<>();
 
-    // 复用的单个识别服务实例
-    private ChatGPTTvShowRecognitionService            individualService;
+    // 复用的AI识别服务实例（单个识别也使用批量模式）
+    private BatchChatGPTTvShowRecognitionService       aiRecognitionService;
 
     /**
      * 缓存条目
@@ -147,8 +147,8 @@ public class TvShowAIRecognitionManager {
             LOGGER.info("Attempting individual AI recognition for TV show '{}' (current attempts: {}/{})", tvShow.getTitle(), counter.get(),
                     MAX_AI_ATTEMPTS_PER_SHOW);
 
-            // 使用复用的服务实例
-            ChatGPTTvShowRecognitionService service = getIndividualService();
+            // 使用复用的服务实例（统一到批量服务）
+            BatchChatGPTTvShowRecognitionService service = getAIRecognitionService();
             String recognizedTitle = service.recognizeTvShowTitle(tvShow);
 
             if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
@@ -232,24 +232,17 @@ public class TvShowAIRecognitionManager {
      * 生成缓存键
      */
     private String generateCacheKey(TvShow tvShow) {
-        // 使用电视剧路径作为缓存键
-        String path = tvShow.getPath();
-        if (path != null && !path.trim().isEmpty()) {
-            return path;
-        }
-
-        // 回退到使用数据库ID
-        return "tvshow_" + tvShow.getDbId();
+        return org.tinymediamanager.core.tvshow.services.utils.TvShowPathUtils.generateCacheKey(tvShow);
     }
 
     /**
-     * 获取复用的单个识别服务实例
+     * 获取复用的AI识别服务实例 使用 BatchChatGPTTvShowRecognitionService，单个识别也走批量模式（批量大小为1）
      */
-    private synchronized ChatGPTTvShowRecognitionService getIndividualService() {
-        if (individualService == null) {
-            individualService = new ChatGPTTvShowRecognitionService();
+    private synchronized BatchChatGPTTvShowRecognitionService getAIRecognitionService() {
+        if (aiRecognitionService == null) {
+            aiRecognitionService = new BatchChatGPTTvShowRecognitionService();
         }
-        return individualService;
+        return aiRecognitionService;
     }
 
     /**
@@ -269,7 +262,7 @@ public class TvShowAIRecognitionManager {
     public synchronized void reset() {
         sessionCache.clear();
         attemptCounters.clear();
-        individualService = null;
+        aiRecognitionService = null;
         LOGGER.info("TvShowAIRecognitionManager reset");
     }
 }

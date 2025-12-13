@@ -59,11 +59,12 @@ public class MetadataUtil {
       return 0;
     }
 
-    float score1 = Similarity.compareStrings(searchTitle, matchTitle);
-    float score2 = Similarity.compareStrings(searchTitle, removeNonSearchCharacters(matchTitle));
+    // 使用智能CJK相似度方法，自动优化中文匹配
+    float score1 = Similarity.compareStringsSmartCJK(searchTitle, matchTitle);
+    float score2 = Similarity.compareStringsSmartCJK(searchTitle, removeNonSearchCharacters(matchTitle));
     float score3 = 0;
     if (searchTitle != null && searchTitle.matches(".* \\d{4}$")) { // ends with space+year
-      score3 = Similarity.compareStrings(searchTitle.replaceFirst(" \\d{4}$", ""), matchTitle);
+      score3 = Similarity.compareStringsSmartCJK(searchTitle.replaceFirst(" \\d{4}$", ""), matchTitle);
     }
 
     return Math.max(score1, Math.max(score3, score2));
@@ -142,8 +143,8 @@ public class MetadataUtil {
 
   /**
    * parse a String for its integer value<br />
-   * this method can parse normal integer values (e.g. 2001) as well as the style with digit separators (e.g. 2.001 or 2,001 or 2 001)
-   * and scientific notation (e.g. 2019E, 1.5E3)
+   * this method can parse normal integer values (e.g. 2001) as well as the style with digit separators (e.g. 2.001 or 2,001 or 2 001) and scientific
+   * notation (e.g. 2019E, 1.5E3)
    *
    * @param intAsString
    *          the String to be parsed
@@ -165,23 +166,23 @@ public class MetadataUtil {
         // Check if this is a decimal number that starts with a dot (like ".11")
         // In this case, we should not remove the dot
         String cleanedString = intAsString.trim();
-        
+
         // If string starts with dot and followed by digits (like ".11"), try with leading zero
         if (cleanedString.matches("\\.\\d+")) {
           cleanedString = "0" + cleanedString;
         }
-        
+
         // Remove only commas and spaces/whitespaces, but preserve dots for decimal handling
         // Also handle multiple separators like "1,234.56" -> "1234.56"
         cleanedString = cleanedString.replaceAll("(?<=\\d)[,\\s]+", "");
         cleanedString = cleanedString.replaceAll("(?<=\\.)[,\\s]+", "");
         cleanedString = cleanedString.replaceAll("[,\\s]+(?=\\d)", "");
-        
+
         // If after all cleaning we still have only separators, fail
         if (StringUtils.isBlank(cleanedString) || cleanedString.matches("^[,\\.\\s]+$")) {
           throw new NumberFormatException("empty String");
         }
-        
+
         // Check if we still have a decimal point - if so, use double parsing
         if (cleanedString.contains(".")) {
           double doubleValue = Double.parseDouble(cleanedString);
@@ -191,7 +192,7 @@ public class MetadataUtil {
           }
           return (int) doubleValue;
         }
-        
+
         return Integer.parseInt(cleanedString);
       }
       catch (NumberFormatException e2) {
@@ -208,7 +209,7 @@ public class MetadataUtil {
           if (StringUtils.isBlank(cleanedString)) {
             throw new NumberFormatException("empty String");
           }
-          
+
           // use Double.parseDouble to handle scientific notation and decimals, then convert to int
           double doubleValue = Double.parseDouble(cleanedString);
           // check if the value is within integer range

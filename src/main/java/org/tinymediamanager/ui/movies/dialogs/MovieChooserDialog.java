@@ -85,7 +85,7 @@ import org.tinymediamanager.core.movie.MovieList;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieScraperMetadataConfig;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService;
 import org.tinymediamanager.core.movie.tasks.MovieRenameTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.threading.TmmTaskHandle;
@@ -168,7 +168,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
   private final JProgressBar                                                   progressBar;
   private final JLabel                                                         lblTagline;
   private final JButton                                                        okButton;
-  private final JLabel                                                         lblPath;
+  private final JTextField                                                     lblPath;
   private final JComboBox                                                      cbLanguage;
   private final JLabel                                                         lblOriginalTitle;
   private final TmmTable                                                       tableCastMembers;
@@ -209,7 +209,10 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
       final JPanel panelPath = new JPanel();
       panelPath.setLayout(new MigLayout("", "[200lp:300lp,grow][]", "[]"));
       {
-        lblPath = new JLabel("");
+        lblPath = new JTextField("");
+        lblPath.setEditable(false);
+        lblPath.setBorder(null);
+        lblPath.setOpaque(false);
         TmmFontHelper.changeFont(lblPath, 1.16667, Font.BOLD);
         panelPath.add(lblPath, "cell 0 0, growx, wmin 0");
       }
@@ -853,18 +856,20 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     }
 
     LOGGER.info("Starting AI recognition for movie: {}", movieToScrape.getTitle());
+    startProgressBar("正在进行 AI 识别...");
 
     // 在后台线程中执行AI识别，避免阻塞UI线程
     SwingWorker<String, Void> aiWorker = new SwingWorker<String, Void>() {
       @Override
       protected String doInBackground() throws Exception {
-        // Use ChatGPTMovieRecognitionService to analyze the movie
-        ChatGPTMovieRecognitionService recognitionService = new ChatGPTMovieRecognitionService();
+        // Use BatchChatGPTMovieRecognitionService to analyze the movie (unified batch mode)
+        BatchChatGPTMovieRecognitionService recognitionService = new BatchChatGPTMovieRecognitionService();
         return recognitionService.recognizeMovieTitle(movieToScrape);
       }
 
       @Override
       protected void done() {
+        stopProgressBar();
         try {
           String recognizedTitle = get();
 
@@ -923,8 +928,9 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
     private final MediaScraper      mediaScraper;
 
     private List<MediaSearchResult> searchResult;
-    private Throwable               error  = null;
-    boolean                         cancel = false;
+    private Throwable               error      = null;
+    boolean                         cancel     = false;
+    private int                     pathTmdbId = 0;
 
     private SearchTask(String searchTerm, Movie movie, boolean withIds, MediaScraper mediaScraper, MediaLanguages language) {
       this.searchTerm = searchTerm;
@@ -965,7 +971,7 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
 
         // 1. 始终优先尝试从电影路径中解析 TMDB ID（这是最可信的来源）
         String moviePath = movie.getPathNIO() != null ? movie.getPathNIO().toString() : "";
-        int pathTmdbId = ParserUtils.detectTmdbId(moviePath);
+        pathTmdbId = ParserUtils.detectTmdbId(moviePath);
 
         if (withIds && pathTmdbId > 0) {
           LOGGER.info("Detected TMDB ID from path: {}", pathTmdbId);
@@ -1006,6 +1012,22 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
           searchResultEventList.add(MovieChooserModel.emptyResult);
         }
         else {
+          if (pathTmdbId > 0) {
+            for (MediaSearchResult result : searchResult) {
+              try {
+                int resultId = result.getIdAsInt(MediaMetadata.TMDB);
+                if (resultId > 0 && resultId == pathTmdbId) {
+                  LOGGER.info("Boosting score for result '{}' due to matching Path TMDB ID: {}, oldScore={}", result.getTitle(), pathTmdbId,
+                      result.getScore());
+                  result.setScore(result.getScore() + 1.0f); // 统一使用累加方式，与MovieList保持一致
+                }
+              }
+              catch (Exception e) {
+                LOGGER.debug("Could not verify result ID for scoring boost: {}", e.getMessage());
+              }
+            }
+          }
+
           MediaScraper mpFromResult = null;
           for (MediaSearchResult result : searchResult) {
             if (mpFromResult == null) {

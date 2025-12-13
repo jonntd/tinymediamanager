@@ -256,8 +256,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), progressMsg));
 
       // 详细日志
-      LOGGER.debug("Progress: {:.1f}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]", percentage, processedFiles, totalFiles, successfulFiles,
-          failedFiles, currentFile, currentStage);
+      LOGGER.debug("Progress: {}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]", String.format("%.1f", percentage), processedFiles, totalFiles,
+          successfulFiles, failedFiles, currentFile, currentStage);
     }
 
     private String formatTime(long milliseconds) {
@@ -890,6 +890,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Group files by their directory to associate with episodes
       java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
       for (WebDavFile file : allFiles) {
+        // 检查取消标志
+        if (cancel) {
+          return;
+        }
         if (!file.isDirectory()) {
           // Use the full path of the file to get its directory
           String filePath = file.getPath();
@@ -908,6 +912,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Find video files (episodes) and process them
       List<TvShowEpisode> processedEpisodes = new ArrayList<>();
       for (WebDavFile file : allFiles) {
+        // 检查取消标志
+        if (cancel) {
+          return;
+        }
         if (!file.isDirectory() && file.isVideoFile()) {
           // Construct the WebDAV path for this video file
           String videoWebDavPath = "webdav://" + source.getName() + file.getPath();
@@ -1133,6 +1141,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private List<WebDavFile> listWebDavFilesRecursive(WebDavClient client, String path, java.util.Set<String> visitedPaths) {
     List<WebDavFile> allFiles = new ArrayList<>();
 
+    // 检查取消标志
+    if (cancel) {
+      return allFiles;
+    }
+
     // Normalize path for comparison (remove trailing slash)
     String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
 
@@ -1150,6 +1163,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.debug("Listed {} items in WebDAV directory: {}", files.size(), path);
 
       for (WebDavFile file : files) {
+        // 检查取消标志
+        if (cancel) {
+          break;
+        }
         allFiles.add(file);
         if (file.isDirectory()) {
           String name = file.getName().toUpperCase(Locale.ROOT);
@@ -3013,8 +3030,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     // 计算内存使用率
     double memoryUsageRatio = (double) usedMemory / maxMemory;
 
-    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={:.1f}%", usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
-        maxMemory / 1024 / 1024, memoryUsageRatio * 100);
+    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={}%", usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
+        maxMemory / 1024 / 1024, String.format("%.1f", memoryUsageRatio * 100));
 
     // 根据内存压力调整批量大小
     if (memoryUsageRatio > 0.8) {

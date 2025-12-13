@@ -205,7 +205,7 @@ public class MediaEntityImageFetcherTask implements Runnable {
 
       try {
         Files.createDirectories(entityFolder);
-        LOGGER.info("Using cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
+        LOGGER.debug("Using cache artwork folder for '{}': {}", entity.getTitle(), entityFolder);
       }
       catch (Exception e) {
         LOGGER.warn("Could not create cache artwork folder '{}' - '{}'", entityFolder, e.getMessage());

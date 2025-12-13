@@ -132,7 +132,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
     // 开始新的AI识别会话，清空缓存和计数器
     TvShowAIRecognitionManager.getInstance().startNewSession();
 
-    // 批量AI识别优化：批次处理，识别一部分就刮削一部分（流式分批模式）
+    // ========== 多轮批量AI识别优化 ==========
+    // 策略：批量识别 → 收集未识别 → 批量重试（最多N轮）→ 仍失败才单次识别
     if (tvShowScrapeParams.doSearch && !tvShowScrapeParams.tvShowsToScrape.isEmpty()) {
       // 检查是否配置了 OpenAI API Key
       String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -148,36 +149,80 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
           BatchChatGPTTvShowRecognitionService batchService = new BatchChatGPTTvShowRecognitionService();
 
-          // 手动拆分批次，从设置中获取批次大小
-          int batchSize = org.tinymediamanager.core.Settings.getInstance().getAiBatchSize();
+          // 从设置中获取批次大小（用于日志统计）
           int totalTvShows = tvShowScrapeParams.tvShowsToScrape.size();
-          int totalBatches = (int) Math.ceil((double) totalTvShows / batchSize);
 
-          LOGGER.info("Processing {} TV shows in {} batches of {} shows each", totalTvShows, totalBatches, batchSize);
+          // ========== 第一轮批量识别 ==========
+          LOGGER.info("=== 第1轮批量AI识别开始 ({} 部电视剧) ===", totalTvShows);
+          Map<String, String> batchResults = batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape);
+          aiRecognitionResults.putAll(batchResults);
+          LOGGER.info("第1轮批量AI识别完成: 成功识别 {} 部", batchResults.size());
 
-          // 循环处理每个批次（流式分批：识别一批 -> 提交刮削 -> 识别下一批）
-          for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            int startIndex = batchIndex * batchSize;
-            int endIndex = Math.min(startIndex + batchSize, totalTvShows);
-            List<TvShow> currentBatch = tvShowScrapeParams.tvShowsToScrape.subList(startIndex, endIndex);
+          // 收集未识别的电视剧
+          List<TvShow> unrecognizedTvShows = collectUnrecognizedTvShows(tvShowScrapeParams.tvShowsToScrape, aiRecognitionResults);
+          LOGGER.info("第1轮未识别: {} 部", unrecognizedTvShows.size());
 
-            LOGGER.info("Processing batch {}/{} ({} TV shows)", batchIndex + 1, totalBatches, currentBatch.size());
+          // 先提交已识别的电视剧刮削任务
+          List<TvShow> recognizedTvShows = new ArrayList<>();
+          for (TvShow tvShow : tvShowScrapeParams.tvShowsToScrape) {
+            if (aiRecognitionResults.containsKey(tvShow.getDbId().toString())) {
+              recognizedTvShows.add(tvShow);
+              submitTask(new Worker(tvShow, aiRecognitionResults));
+            }
+          }
+          LOGGER.info("已提交 {} 部已识别电视剧的刮削任务", recognizedTvShows.size());
 
-            // 处理当前批次的AI识别
-            Map<String, String> batchResults = batchService.batchRecognizeTvShowTitles(currentBatch);
+          // ========== 多轮批量重试（最多3轮）==========
+          int maxBatchRetries = 3;
+          for (int retry = 1; retry <= maxBatchRetries && !unrecognizedTvShows.isEmpty() && !cancel; retry++) {
+            LOGGER.info("=== 第{}轮批量重试开始 ({} 部未识别电视剧) ===", retry + 1, unrecognizedTvShows.size());
 
-            // 将当前批次的识别结果添加到总结果中
-            aiRecognitionResults.putAll(batchResults);
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.INFO, "批量重试",
+                    String.format("第 %d/%d 轮批量重试: %d 部未识别电视剧", retry, maxBatchRetries, unrecognizedTvShows.size())));
 
-            LOGGER.info("Batch {} AI recognition completed for {} TV shows", batchIndex + 1, batchResults.size());
+            // 等待2秒再重试（避免API限流）
+            try {
+              Thread.sleep(2000);
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              break;
+            }
 
-            // 立即提交当前批次的刮削任务（流式处理，用户能更快看到进度）
-            for (TvShow tvShow : currentBatch) {
+            // 对未识别的进行批量重试
+            Map<String, String> retryResults = batchService.batchRecognizeTvShowTitles(unrecognizedTvShows);
+            aiRecognitionResults.putAll(retryResults);
+            LOGGER.info("第{}轮批量重试完成: 成功识别 {} 部", retry + 1, retryResults.size());
+
+            // 提交本轮新识别成功的电视剧刮削任务
+            List<TvShow> newlyRecognized = new ArrayList<>();
+            for (TvShow tvShow : unrecognizedTvShows) {
+              if (retryResults.containsKey(tvShow.getDbId().toString())) {
+                newlyRecognized.add(tvShow);
+                submitTask(new Worker(tvShow, aiRecognitionResults));
+              }
+            }
+            LOGGER.info("本轮新识别 {} 部，已提交刮削任务", newlyRecognized.size());
+
+            // 更新未识别列表
+            unrecognizedTvShows = collectUnrecognizedTvShows(unrecognizedTvShows, aiRecognitionResults);
+            LOGGER.info("第{}轮后仍未识别: {} 部", retry + 1, unrecognizedTvShows.size());
+          }
+
+          // ========== 仍失败的提交刮削（会触发单次识别回退）==========
+          if (!unrecognizedTvShows.isEmpty()) {
+            LOGGER.info("经过 {} 轮批量重试后仍有 {} 部未识别，将使用单次识别回退", maxBatchRetries + 1, unrecognizedTvShows.size());
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.WARN, "批量识别",
+                    String.format("%d 部电视剧在 %d 轮批量识别后仍未成功，将使用单次识别", unrecognizedTvShows.size(), maxBatchRetries + 1)));
+
+            for (TvShow tvShow : unrecognizedTvShows) {
               submitTask(new Worker(tvShow, aiRecognitionResults));
             }
           }
 
-          LOGGER.info("All batches AI recognition completed for {} TV shows", aiRecognitionResults.size());
+          LOGGER.info("=== 批量AI识别流程完成 ===");
 
           // 发送批量AI识别完成消息到Message history
           int successCount = aiRecognitionResults.size();
@@ -187,10 +232,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
         }
         catch (Exception e) {
-          LOGGER.warn("Batch AI recognition failed, skipping individual fallback to prevent API spam: {}", e.getMessage());
+          LOGGER.warn("Batch AI recognition failed: {}", e.getMessage());
 
-          // 发送批量AI识别失败消息到Message history，但不回退到个体识别
-          String failMsg = String.format("批量电视剧AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
+          // 发送批量AI识别失败消息到Message history
+          String failMsg = String.format("批量电视剧AI识别失败: %s", e.getMessage());
           MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "批量电视剧AI识别", failMsg));
 
           // 即使AI识别失败，也要提交所有电视剧的刮削任务
@@ -286,6 +331,28 @@ public class TvShowScrapeTask extends TmmThreadPool {
     }
 
     LOGGER.debug("done scraping tv shows...");
+  }
+
+  /**
+   * 收集未被AI识别的电视剧
+   *
+   * @param tvShows
+   *          电视剧列表
+   * @param aiRecognitionResults
+   *          AI识别结果Map
+   * @return 未识别的电视剧列表
+   */
+  private List<TvShow> collectUnrecognizedTvShows(List<TvShow> tvShows, Map<String, String> aiRecognitionResults) {
+    List<TvShow> unrecognized = new ArrayList<>();
+    for (TvShow tvShow : tvShows) {
+      if (tvShow != null && tvShow.getDbId() != null) {
+        String dbId = tvShow.getDbId().toString();
+        if (!aiRecognitionResults.containsKey(dbId)) {
+          unrecognized.add(tvShow);
+        }
+      }
+    }
+    return unrecognized;
   }
 
   private class Worker implements Runnable {
@@ -464,50 +531,53 @@ public class TvShowScrapeTask extends TmmThreadPool {
           }
 
           // always add all episode data (for missing episodes and episode list)
-          List<TvShowEpisode> episodes = new ArrayList<>();
-          try {
-            if (episodeList == null) {
-              episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
-            }
-            for (MediaMetadata me : episodeList) {
-              TvShowEpisode ep = new TvShowEpisode();
-              ep.setEpisodeNumbers(me.getEpisodeNumbers());
-              ep.setFirstAired(me.getReleaseDate());
-              ep.setTitle(me.getTitle());
-              ep.setOriginalTitle(me.getOriginalTitle());
-              ep.setPlot(me.getPlot());
-              ep.setActors(me.getCastMembers(Person.Type.ACTOR));
-              ep.setCrew(me.getCastMembers(Person.Type.DIRECTOR));
-              ep.setCrew(me.getCastMembers(Person.Type.WRITER));
-              ep.setCrew(me.getCastMembers(Person.Type.PRODUCER));
-              ep.setCrew(me.getCastMembers(Person.Type.OTHER));
-
-              Map<String, MediaRating> newRatings = new HashMap<>();
-
-              for (MediaRating mediaRating : me.getRatings()) {
-                newRatings.put(mediaRating.getId(), mediaRating);
+          // 如果设置了跳过剧集列表，则不获取剧集数据（可显著加快刮削速度）
+          if (!TvShowModuleManager.getInstance().getSettings().isSkipEpisodeListOnScrape()) {
+            List<TvShowEpisode> episodes = new ArrayList<>();
+            try {
+              if (episodeList == null) {
+                episodeList = ((ITvShowMetadataProvider) mediaMetadataScraper.getMediaProvider()).getEpisodeList(options);
               }
-              ep.setRatings(newRatings);
+              for (MediaMetadata me : episodeList) {
+                TvShowEpisode ep = new TvShowEpisode();
+                ep.setEpisodeNumbers(me.getEpisodeNumbers());
+                ep.setFirstAired(me.getReleaseDate());
+                ep.setTitle(me.getTitle());
+                ep.setOriginalTitle(me.getOriginalTitle());
+                ep.setPlot(me.getPlot());
+                ep.setActors(me.getCastMembers(Person.Type.ACTOR));
+                ep.setCrew(me.getCastMembers(Person.Type.DIRECTOR));
+                ep.setCrew(me.getCastMembers(Person.Type.WRITER));
+                ep.setCrew(me.getCastMembers(Person.Type.PRODUCER));
+                ep.setCrew(me.getCastMembers(Person.Type.OTHER));
 
-              episodes.add(ep);
+                Map<String, MediaRating> newRatings = new HashMap<>();
+
+                for (MediaRating mediaRating : me.getRatings()) {
+                  newRatings.put(mediaRating.getId(), mediaRating);
+                }
+                ep.setRatings(newRatings);
+
+                episodes.add(ep);
+              }
             }
-          }
-          catch (MissingIdException e) {
-            LOGGER.warn("Could not get episode list for TV show '{}' - no IDs available", tvShow.getTitle());
-            MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
-          }
-          catch (ScrapeException e) {
-            LOGGER.error("Could not get episode list for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
-            MessageManager.getInstance()
-                .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
-                    new String[] { ":", e.getLocalizedMessage() }));
-          }
-          catch (Exception e) {
-            LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
-          }
+            catch (MissingIdException e) {
+              LOGGER.warn("Could not get episode list for TV show '{}' - no IDs available", tvShow.getTitle());
+              MessageManager.getInstance().pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "scraper.error.missingid"));
+            }
+            catch (ScrapeException e) {
+              LOGGER.error("Could not get episode list for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+              MessageManager.getInstance()
+                  .pushMessage(new Message(Message.MessageLevel.ERROR, tvShow, "message.scrape.episodelistfailed",
+                      new String[] { ":", e.getLocalizedMessage() }));
+            }
+            catch (Exception e) {
+              LOGGER.error("Unforeseen error in TV show scrape for '{}'", tvShow.getTitle(), e);
+            }
 
-          tvShow.setDummyEpisodes(episodes);
-          tvShow.saveToDb();
+            tvShow.setDummyEpisodes(episodes);
+            tvShow.saveToDb();
+          }
 
           if (isTaskCancelled()) {
             return;
@@ -768,30 +838,42 @@ public class TvShowScrapeTask extends TmmThreadPool {
       LOGGER.info("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
 
       try {
+        MediaSearchResult aiResult = null;
+        // 1. 首先优先从文件路径/文件名解析 TMDB ID（比 tvShow.getTmdbId() 更可靠）
+        // 这里提前解析 ID，如果存在直接使用 ID 匹配，避免用错误的 AI 标题去搜索导致找不到结果
+        int pathTmdbId = 0;
+        String showPath = tvShow.getPathNIO() != null ? tvShow.getPathNIO().toString() : "";
+        pathTmdbId = ParserUtils.detectTmdbId(showPath);
+        // 如果目录路径中没有找到，尝试从第一个视频文件名中解析
+        if (pathTmdbId <= 0 && !tvShow.getEpisodes().isEmpty()) {
+          TvShowEpisode firstEpisode = tvShow.getEpisodes().get(0);
+          if (firstEpisode.getMainVideoFile() != null) {
+            String fileName = firstEpisode.getMainVideoFile().getFilename();
+            pathTmdbId = ParserUtils.detectTmdbId(fileName);
+          }
+        }
+
+        // 注意：使用 AI 识别时，不使用电视剧对象中已存储的 TMDB ID（可能是错误的旧数据）
+        LOGGER.info("TV Show '{}' TMDB ID from path/filename: {}, from object: {} (object ID ignored for AI matching)", tvShow.getTitle(), pathTmdbId,
+            tvShow.getTmdbId());
+
+        if (pathTmdbId > 0) {
+          // 如果有明确的 Path ID，直接构造一个结果，不再用 AI 标题搜索
+          MediaSearchResult idResult = new MediaSearchResult(mediaMetadataScraper.getMediaProvider().getProviderInfo().getId(), MediaType.TV_SHOW);
+          idResult.setTitle(aiProcessedTitle);
+          idResult.setYear(aiProcessedYear != null ? aiProcessedYear : 0);
+          idResult.setId(MediaMetadata.TMDB, String.valueOf(pathTmdbId));
+          idResult.setScore(1.0f);
+
+          LOGGER.info("Found valid TMDB ID {} from path/filename, skipping search and using ID match directly", pathTmdbId);
+          return idResult;
+        }
+
         // AI 识别搜索时不传入电视剧原有 ID，以避免因旧 ID 返回错误结果
         List<MediaSearchResult> aiResults = tvShowList.searchTvShow(aiProcessedTitle, aiProcessedYear, null, mediaMetadataScraper);
 
         if (ListUtils.isNotEmpty(aiResults)) {
-          // 1. 首先优先从文件路径解析 TMDB ID（比 tvShow.getTmdbId() 更可靠）
-          MediaSearchResult aiResult = null;
-          int pathTmdbId = 0;
-          String showPath = tvShow.getPathNIO() != null ? tvShow.getPathNIO().toString() : "";
-          pathTmdbId = ParserUtils.detectTmdbId(showPath);
-          if (pathTmdbId <= 0) {
-            // 如果路径中没有，使用电视剧对象中已存储的 ID 作为备用
-            pathTmdbId = tvShow.getTmdbId();
-          }
-          LOGGER.info("TV Show '{}' TMDB ID from path: {}, from object: {}", tvShow.getTitle(), ParserUtils.detectTmdbId(showPath),
-              tvShow.getTmdbId());
-          if (pathTmdbId > 0) {
-            for (MediaSearchResult result : aiResults) {
-              if (result.getIdAsInt(MediaMetadata.TMDB) == pathTmdbId) {
-                aiResult = result;
-                LOGGER.info("Found exact TMDB ID match: title='{}', tmdbId={}, score={}", result.getTitle(), pathTmdbId, result.getScore());
-                break;
-              }
-            }
-          }
+          // 2. 在年份匹配的结果中选择标题相似度最高的
 
           // 2. 如果没有 ID 匹配，在年份匹配的结果中选择标题相似度最高的
           if (aiResult == null && aiProcessedYear > 0) {
@@ -800,9 +882,21 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
             for (MediaSearchResult result : aiResults) {
               if (result.getYear() == aiProcessedYear) {
-                // 计算标题相似度
-                float similarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getTitle());
-                LOGGER.debug("Year match candidate: title='{}', year={}, similarity={}", result.getTitle(), result.getYear(), similarity);
+                // 计算标题相似度 - 比较 title、originalTitle 和 englishTitle，取最高值
+                float titleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getTitle());
+                float originalTitleSimilarity = 0.0f;
+                float englishTitleSimilarity = 0.0f;
+                if (org.apache.commons.lang3.StringUtils.isNotBlank(result.getOriginalTitle())) {
+                  originalTitleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getOriginalTitle());
+                }
+                if (org.apache.commons.lang3.StringUtils.isNotBlank(result.getEnglishTitle())) {
+                  englishTitleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getEnglishTitle());
+                }
+                float similarity = Math.max(Math.max(titleSimilarity, originalTitleSimilarity), englishTitleSimilarity);
+                LOGGER.debug(
+                    "Year match candidate: title='{}', originalTitle='{}', englishTitle='{}', year={}, titleSim={}, origSim={}, engSim={}, bestSim={}",
+                    result.getTitle(), result.getOriginalTitle(), result.getEnglishTitle(), result.getYear(), titleSimilarity,
+                    originalTitleSimilarity, englishTitleSimilarity, similarity);
 
                 if (similarity > bestSimilarity) {
                   bestSimilarity = similarity;
@@ -955,6 +1049,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
       return null;
     }
+
   }
 
   @Override

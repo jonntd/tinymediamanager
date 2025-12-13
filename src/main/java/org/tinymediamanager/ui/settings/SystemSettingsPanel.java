@@ -61,7 +61,7 @@ import org.tinymediamanager.LauncherExtraConfig;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.entities.Movie;
-import org.tinymediamanager.core.movie.services.ChatGPTMovieRecognitionService;
+import org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService;
 import org.tinymediamanager.core.services.AIApiRateLimiter;
 
 import org.tinymediamanager.ui.TmmFontHelper;
@@ -659,20 +659,20 @@ class SystemSettingsPanel extends JPanel {
         mockFile.setFile(java.nio.file.Paths.get(testPath));
         testMovie.addToMediaFiles(mockFile);
 
-        // Test both individual and batch recognition
+        // Test recognition using unified batch service (even for single movie)
         StringBuilder resultText = new StringBuilder();
 
-        // 1. Test individual recognition
-        ChatGPTMovieRecognitionService individualService = new ChatGPTMovieRecognitionService();
-        String individualResult = individualService.recognizeMovieTitle(testMovie);
-        resultText.append("Individual Recognition: ").append(individualResult != null ? individualResult : "Failed").append("\n\n");
-
-        // 2. Test batch recognition
         try {
           java.util.List<Movie> testMovies = new java.util.ArrayList<>();
           testMovies.add(testMovie);
 
-          org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService = new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+          BatchChatGPTMovieRecognitionService batchService = new BatchChatGPTMovieRecognitionService();
+
+          // Test single movie recognition (internally uses batch mode with size 1)
+          String singleResult = batchService.recognizeMovieTitle(testMovie);
+          resultText.append("Single Recognition (Batch Mode): ").append(singleResult != null ? singleResult : "Failed").append("\n\n");
+
+          // Also test batch recognition for comparison
           java.util.Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(testMovies);
 
           if (batchResults.isEmpty()) {
@@ -685,8 +685,8 @@ class SystemSettingsPanel extends JPanel {
             }
           }
         }
-        catch (Exception batchError) {
-          resultText.append("Batch Recognition: Error - ").append(batchError.getMessage());
+        catch (Exception e) {
+          resultText.append("Recognition Error: ").append(e.getMessage());
         }
 
         return resultText.toString();

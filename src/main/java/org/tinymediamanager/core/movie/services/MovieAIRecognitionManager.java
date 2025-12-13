@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.movie.entities.Movie;
+import org.tinymediamanager.core.movie.services.utils.MoviePathUtils;
 import org.tinymediamanager.core.services.AIApiRateLimiter;
 
 /**
@@ -31,7 +32,8 @@ public class MovieAIRecognitionManager {
     private final Map<String, AtomicInteger>          attemptCounters           = new ConcurrentHashMap<>();
 
     // 复用的单个识别服务实例
-    private ChatGPTMovieRecognitionService            individualService;
+    // 复用的批量识别服务实例（单个识别也使用批量模式）
+    private BatchChatGPTMovieRecognitionService       aiRecognitionService;
 
     /**
      * 缓存条目
@@ -92,7 +94,7 @@ public class MovieAIRecognitionManager {
         }
 
         String movieId = movie.getDbId().toString();
-        String cacheKey = generateCacheKey(movie);
+        String cacheKey = MoviePathUtils.generateCacheKey(movie);
 
         // 1. 优先使用批量识别结果
         if (batchResults != null && batchResults.containsKey(movieId)) {
@@ -145,7 +147,7 @@ public class MovieAIRecognitionManager {
                     MAX_AI_ATTEMPTS_PER_MOVIE);
 
             // 使用复用的服务实例
-            ChatGPTMovieRecognitionService service = getIndividualService();
+            BatchChatGPTMovieRecognitionService service = getAIRecognitionService();
             String recognizedTitle = service.recognizeMovieTitle(movie);
 
             if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
@@ -184,7 +186,7 @@ public class MovieAIRecognitionManager {
             return;
         }
 
-        String cacheKey = generateCacheKey(movie);
+        String cacheKey = MoviePathUtils.generateCacheKey(movie);
         sessionCache.put(cacheKey, new CacheEntry(recognizedTitle, true));
         LOGGER.debug("Marked AI result as validated for movie '{}': '{}'", movie.getTitle(), recognizedTitle);
     }
@@ -201,7 +203,7 @@ public class MovieAIRecognitionManager {
             return false;
         }
 
-        String cacheKey = generateCacheKey(movie);
+        String cacheKey = MoviePathUtils.generateCacheKey(movie);
         AtomicInteger counter = attemptCounters.get(cacheKey);
 
         if (counter == null) {
@@ -219,36 +221,19 @@ public class MovieAIRecognitionManager {
             return 0;
         }
 
-        String cacheKey = generateCacheKey(movie);
+        String cacheKey = MoviePathUtils.generateCacheKey(movie);
         AtomicInteger counter = attemptCounters.get(cacheKey);
         return counter != null ? counter.get() : 0;
     }
 
     /**
-     * 生成缓存键
+     * 获取复用的AI识别服务实例 使用BatchChatGPTMovieRecognitionService，单个识别也走批量模式（批量大小为1）
      */
-    private String generateCacheKey(Movie movie) {
-        // 使用电影路径作为缓存键，确保相同路径的电影共享缓存
-        org.tinymediamanager.core.entities.MediaFile mainFile = movie.getMainFile();
-        if (mainFile != null && mainFile != org.tinymediamanager.core.entities.MediaFile.EMPTY_MEDIAFILE) {
-            String path = mainFile.getFileAsPath().toString();
-            if (path != null && !path.trim().isEmpty()) {
-                return path;
-            }
+    private synchronized BatchChatGPTMovieRecognitionService getAIRecognitionService() {
+        if (aiRecognitionService == null) {
+            aiRecognitionService = new BatchChatGPTMovieRecognitionService();
         }
-
-        // 回退到使用数据库ID
-        return "movie_" + movie.getDbId();
-    }
-
-    /**
-     * 获取复用的单个识别服务实例
-     */
-    private synchronized ChatGPTMovieRecognitionService getIndividualService() {
-        if (individualService == null) {
-            individualService = new ChatGPTMovieRecognitionService();
-        }
-        return individualService;
+        return aiRecognitionService;
     }
 
     /**
@@ -268,7 +253,7 @@ public class MovieAIRecognitionManager {
     public synchronized void reset() {
         sessionCache.clear();
         attemptCounters.clear();
-        individualService = null;
+        aiRecognitionService = null;
         LOGGER.info("MovieAIRecognitionManager reset");
     }
 }

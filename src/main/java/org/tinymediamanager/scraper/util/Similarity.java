@@ -146,4 +146,95 @@ public class Similarity {
       return (float) 0.0;
     }
   }
+
+  /**
+   * 检测字符串是否包含CJK（中日韩）字符
+   * 
+   * @param str
+   *          待检测的字符串
+   * @return 如果包含CJK字符返回true
+   */
+  public static boolean containsCJK(String str) {
+    if (str == null) {
+      return false;
+    }
+    for (char c : str.toCharArray()) {
+      if (Character.UnicodeScript.of(c) == Character.UnicodeScript.HAN || Character.UnicodeScript.of(c) == Character.UnicodeScript.HIRAGANA
+          || Character.UnicodeScript.of(c) == Character.UnicodeScript.KATAKANA || Character.UnicodeScript.of(c) == Character.UnicodeScript.HANGUL) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * 使用基于字符的Jaccard相似度算法比较两个字符串 该算法更适合中文等无空格分词的语言
+   * 
+   * @param str1
+   *          第一个字符串
+   * @param str2
+   *          第二个字符串
+   * @return 相似度分数 [0,1]
+   */
+  public static float compareStringsJaccard(String str1, String str2) {
+    if (str1 == null || str2 == null) {
+      return 0.0f;
+    }
+    if (str1.equalsIgnoreCase(str2)) {
+      return 1.0f;
+    }
+
+    // 移除空格和标点，转为小写
+    String s1 = str1.replaceAll("[\\s\\p{Punct}]", "").toLowerCase(Locale.ROOT);
+    String s2 = str2.replaceAll("[\\s\\p{Punct}]", "").toLowerCase(Locale.ROOT);
+
+    if (s1.isEmpty() || s2.isEmpty()) {
+      return 0.0f;
+    }
+
+    // 计算字符集合的交集和并集
+    java.util.Set<Character> set1 = new java.util.HashSet<>();
+    java.util.Set<Character> set2 = new java.util.HashSet<>();
+
+    for (char c : s1.toCharArray()) {
+      set1.add(c);
+    }
+    for (char c : s2.toCharArray()) {
+      set2.add(c);
+    }
+
+    java.util.Set<Character> intersection = new java.util.HashSet<>(set1);
+    intersection.retainAll(set2);
+
+    java.util.Set<Character> union = new java.util.HashSet<>(set1);
+    union.addAll(set2);
+
+    if (union.isEmpty()) {
+      return 0.0f;
+    }
+
+    return (float) intersection.size() / union.size();
+  }
+
+  /**
+   * 智能字符串比较，根据字符串内容自动选择最佳算法 如果包含CJK字符，结合Letter Pairs和Jaccard算法取较高值
+   * 
+   * @param str1
+   *          第一个字符串
+   * @param str2
+   *          第二个字符串
+   * @return 相似度分数 [0,1]
+   */
+  public static float compareStringsSmartCJK(String str1, String str2) {
+    float letterPairScore = compareStrings(str1, str2);
+
+    // 如果任一字符串包含CJK字符，额外使用Jaccard算法
+    if (containsCJK(str1) || containsCJK(str2)) {
+      float jaccardScore = compareStringsJaccard(str1, str2);
+      // 返回两个算法的较高分数
+      return Math.max(letterPairScore, jaccardScore);
+    }
+
+    return letterPairScore;
+  }
 }
