@@ -256,8 +256,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, TmmResourceBundle.getString("ai.batch.recognition"), progressMsg));
 
       // 详细日志
-      LOGGER.debug("Progress: {:.1f}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]", percentage, processedFiles, totalFiles, successfulFiles,
-          failedFiles, currentFile, currentStage);
+      LOGGER.debug("Progress: {}% ({}/{}) - Success: {}, Failed: {}, Current: {} [{}]", String.format("%.1f", percentage), processedFiles, totalFiles,
+          successfulFiles, failedFiles, currentFile, currentStage);
     }
 
     private String formatTime(long milliseconds) {
@@ -3030,8 +3030,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     // 计算内存使用率
     double memoryUsageRatio = (double) usedMemory / maxMemory;
 
-    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={:.1f}%", usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
-        maxMemory / 1024 / 1024, memoryUsageRatio * 100);
+    LOGGER.debug("Memory status: used={}MB, total={}MB, max={}MB, usage={}%", usedMemory / 1024 / 1024, totalMemory / 1024 / 1024,
+        maxMemory / 1024 / 1024, String.format("%.1f", memoryUsageRatio * 100));
 
     // 根据内存压力调整批量大小
     if (memoryUsageRatio > 0.8) {

@@ -28,37 +28,37 @@ import org.tinymediamanager.scraper.entities.MediaEpisodeNumber;
 import org.tinymediamanager.scraper.entities.MediaEpisodeGroup;
 
 /**
- * 电视剧剧集批量AI识别任务
- * 用于批量识别复杂命名的剧集文件，自动提取季数和集数信息
+ * 电视剧剧集批量AI识别任务 用于批量识别复杂命名的剧集文件，自动提取季数和集数信息
  * 
  * @author AI Assistant
  */
 public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TvShowEpisodeBatchAiRecognitionTask.class);
-    
+    private static final Logger       LOGGER = LoggerFactory.getLogger(TvShowEpisodeBatchAiRecognitionTask.class);
+
     private final List<TvShowEpisode> episodesToProcess;
-    private final boolean useHybridMode;
-    
+    private final boolean             useHybridMode;
+
     /**
      * 构造函数
      * 
-     * @param episodes 要处理的剧集列表
-     * @param useHybridMode 是否使用混合模式（传统解析失败时才用AI）
+     * @param episodes
+     *            要处理的剧集列表
+     * @param useHybridMode
+     *            是否使用混合模式（传统解析失败时才用AI）
      */
     public TvShowEpisodeBatchAiRecognitionTask(List<TvShowEpisode> episodes, boolean useHybridMode) {
         super(TmmResourceBundle.getString("task.episodeairecognition"));
         this.episodesToProcess = new ArrayList<>(episodes);
         this.useHybridMode = useHybridMode;
     }
-    
+
     @Override
     protected void doInBackground() {
         LOGGER.info("=== Starting Batch Episode AI Recognition ===");
         LOGGER.info("Episodes to process: {}", episodesToProcess.size());
         LOGGER.info("Recognition mode: {}", useHybridMode ? "Hybrid (Traditional + AI)" : "Pure AI");
-        LOGGER.info("Processing strategy: {}", useHybridMode ?
-            "Try traditional parsing first, fallback to AI if failed" :
-            "Direct AI recognition for all episodes");
+        LOGGER.info("Processing strategy: {}",
+                useHybridMode ? "Try traditional parsing first, fallback to AI if failed" : "Direct AI recognition for all episodes");
 
         // 统计需要处理的剧集类型
         int needsProcessing = 0;
@@ -66,17 +66,18 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
         for (TvShowEpisode ep : episodesToProcess) {
             if (ep.getAiredSeason() <= 0 || ep.getAiredEpisode() <= 0) {
                 needsProcessing++;
-            } else {
+            }
+            else {
                 alreadyProcessed++;
             }
         }
         LOGGER.info("Episodes needing processing: {}", needsProcessing);
         LOGGER.info("Episodes already processed: {}", alreadyProcessed);
-        
+
         int successCount = 0;
         int failureCount = 0;
         int skippedCount = 0;
-        
+
         // 使用真正的批量处理，而不是一条一条提交任务
         LOGGER.info("Starting batch episode AI recognition for {} episodes", episodesToProcess.size());
 
@@ -97,26 +98,26 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
 
             submitTask(new BatchEpisodeAiRecognitionTask(batch));
         }
-        
+
         waitForCompletionOrCancel();
-        
+
         // 统计结果
         List<String> successList = new ArrayList<>();
         List<String> failureList = new ArrayList<>();
         List<String> skippedList = new ArrayList<>();
 
         for (TvShowEpisode episode : episodesToProcess) {
-            String episodeName = episode.getMainVideoFile() != null ?
-                episode.getMainVideoFile().getFilename() : episode.getTitle();
+            String episodeName = episode.getMainVideoFile() != null ? episode.getMainVideoFile().getFilename() : episode.getTitle();
 
             if (episode.getAiredSeason() > 0 && episode.getAiredEpisode() > 0) {
                 successCount++;
-                successList.add(String.format("%s -> S%02dE%02d",
-                    episodeName, episode.getAiredSeason(), episode.getAiredEpisode()));
-            } else if (episode.getTitle().contains("[SKIPPED]")) {
+                successList.add(String.format("%s -> S%02dE%02d", episodeName, episode.getAiredSeason(), episode.getAiredEpisode()));
+            }
+            else if (episode.getTitle().contains("[SKIPPED]")) {
                 skippedCount++;
                 skippedList.add(episodeName);
-            } else {
+            }
+            else {
                 failureCount++;
                 failureList.add(episodeName);
             }
@@ -124,12 +125,12 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
 
         LOGGER.info("=== Batch Episode AI Recognition Complete ===");
         LOGGER.info("Total processed: {}", episodesToProcess.size());
-        LOGGER.info("Success: {} ({:.1f}%)", successCount,
-            (successCount * 100.0 / episodesToProcess.size()));
-        LOGGER.info("Failed: {} ({:.1f}%)", failureCount,
-            (failureCount * 100.0 / episodesToProcess.size()));
-        LOGGER.info("Skipped: {} ({:.1f}%)", skippedCount,
-            (skippedCount * 100.0 / episodesToProcess.size()));
+        double successPct = episodesToProcess.isEmpty() ? 0 : (successCount * 100.0 / episodesToProcess.size());
+        double failurePct = episodesToProcess.isEmpty() ? 0 : (failureCount * 100.0 / episodesToProcess.size());
+        double skippedPct = episodesToProcess.isEmpty() ? 0 : (skippedCount * 100.0 / episodesToProcess.size());
+        LOGGER.info("Success: {} ({} %)", successCount, String.format("%.1f", successPct));
+        LOGGER.info("Failed: {} ({} %)", failureCount, String.format("%.1f", failurePct));
+        LOGGER.info("Skipped: {} ({} %)", skippedCount, String.format("%.1f", skippedPct));
 
         // 详细列出成功的识别结果
         if (!successList.isEmpty()) {
@@ -146,19 +147,15 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
                 LOGGER.info("✗ {}", failure);
             }
         }
-        
+
         // 显示详细的完成消息
         StringBuilder messageBuilder = new StringBuilder();
         messageBuilder.append("批量AI识别完成！\n");
         messageBuilder.append(String.format("总计: %d 个剧集\n", episodesToProcess.size()));
-        messageBuilder.append(String.format("成功: %d (%.1f%%)\n",
-            successCount, (successCount * 100.0 / episodesToProcess.size())));
-        messageBuilder.append(String.format("失败: %d (%.1f%%)\n",
-            failureCount, (failureCount * 100.0 / episodesToProcess.size())));
-        messageBuilder.append(String.format("跳过: %d (%.1f%%)\n",
-            skippedCount, (skippedCount * 100.0 / episodesToProcess.size())));
-        messageBuilder.append(String.format("识别模式: %s",
-            useHybridMode ? "混合模式" : "纯AI模式"));
+        messageBuilder.append(String.format("成功: %d (%.1f%%)\n", successCount, (successCount * 100.0 / episodesToProcess.size())));
+        messageBuilder.append(String.format("失败: %d (%.1f%%)\n", failureCount, (failureCount * 100.0 / episodesToProcess.size())));
+        messageBuilder.append(String.format("跳过: %d (%.1f%%)\n", skippedCount, (skippedCount * 100.0 / episodesToProcess.size())));
+        messageBuilder.append(String.format("识别模式: %s", useHybridMode ? "混合模式" : "纯AI模式"));
 
         // 如果有成功的识别，显示前几个示例
         if (!successList.isEmpty()) {
@@ -173,8 +170,7 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
         }
 
         MessageLevel level = failureCount > successCount ? MessageLevel.WARN : MessageLevel.INFO;
-        MessageManager.getInstance().pushMessage(
-            new Message(level, "批量AI识别", messageBuilder.toString()));
+        MessageManager.getInstance().pushMessage(new Message(level, "批量AI识别", messageBuilder.toString()));
     }
 
     @Override
@@ -182,7 +178,7 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
         // 回调方法，处理任务完成后的操作
         // 这里可以添加额外的处理逻辑
     }
-    
+
     /**
      * 批量剧集AI识别任务（真正的批量处理）
      */
@@ -240,15 +236,16 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
 
                         // 发送成功消息
                         String successMsg = String.format("批量剧集AI识别: %s → S%02dE%02d", filename, season, episodeNum);
-                        MessageManager.getInstance().pushMessage(
-                            new Message(MessageLevel.INFO, "批量剧集AI识别", successMsg));
-                    } else {
+                        MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量剧集AI识别", successMsg));
+                    }
+                    else {
                         String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
                         LOGGER.warn("Batch AI recognition failed for episode: {}", filename);
                     }
                 }
 
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 LOGGER.error("Batch episode AI recognition failed: {}", e.getMessage());
 
                 // 批量失败时，不再回退到逐个处理，避免频繁API调用
@@ -279,9 +276,9 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
 
                 // 发送成功消息
                 String successMsg = String.format("剧集AI识别: %s → S%02dE%02d", filename, season, episodeNum);
-                MessageManager.getInstance().pushMessage(
-                    new Message(MessageLevel.INFO, "剧集AI识别", successMsg));
-            } else {
+                MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "剧集AI识别", successMsg));
+            }
+            else {
                 LOGGER.warn("AI recognition failed for episode: {}", filename);
             }
         }
@@ -292,48 +289,46 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
      */
     private class EpisodeAiRecognitionTask implements Callable<Object> {
         private final TvShowEpisode episode;
-        
+
         public EpisodeAiRecognitionTask(TvShowEpisode episode) {
             this.episode = episode;
         }
-        
+
         @Override
         public Object call() {
             try {
                 // 检查是否需要处理
                 if (!needsProcessing(episode)) {
-                    LOGGER.debug("Skipping episode (already has season/episode): {}", 
-                        episode.getMainVideoFile().getFilename());
+                    LOGGER.debug("Skipping episode (already has season/episode): {}", episode.getMainVideoFile().getFilename());
                     episode.setTitle(episode.getTitle() + " [SKIPPED]");
                     return null;
                 }
-                
+
                 // 获取文件名和电视剧标题
                 String filename = getEpisodeFilename(episode);
                 String tvShowTitle = episode.getTvShow().getTitle();
-                
+
                 if (filename == null || filename.trim().isEmpty()) {
                     LOGGER.warn("Cannot get filename for episode: {}", episode.getDbId());
                     return null;
                 }
-                
-                LOGGER.info("=== Processing Episode {} of {} ===",
-                    episodesToProcess.indexOf(episode) + 1, episodesToProcess.size());
+
+                LOGGER.info("=== Processing Episode {} of {} ===", episodesToProcess.indexOf(episode) + 1, episodesToProcess.size());
                 LOGGER.info("Episode filename: {}", filename);
                 LOGGER.info("TV show title: {}", tvShowTitle);
-                LOGGER.info("Current season/episode: S{}E{}",
-                    episode.getAiredSeason(), episode.getAiredEpisode());
-                
+                LOGGER.info("Current season/episode: S{}E{}", episode.getAiredSeason(), episode.getAiredEpisode());
+
                 // 执行AI识别
                 EpisodeMatchingResult result;
                 if (useHybridMode) {
                     // 混合模式：先传统解析，失败时用AI
                     result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(filename, tvShowTitle);
-                } else {
+                }
+                else {
                     // 纯AI模式
                     result = TvShowEpisodeAndSeasonParser.detectEpisodeWithAI(filename, tvShowTitle);
                 }
-                
+
                 // 应用识别结果
                 if (result != null && result.season != -1 && !result.episodes.isEmpty()) {
                     int oldSeason = episode.getAiredSeason();
@@ -347,56 +342,53 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
                     LOGGER.info("Changed: {}", (oldSeason != newSeason || oldEpisode != newEpisode));
 
                     // 更新任务描述，显示当前处理的剧集信息
-                    publishState(String.format("处理中: %s S%02dE%02d",
-                        episode.getTvShow().getTitle(), newSeason, newEpisode));
+                    publishState(String.format("处理中: %s S%02dE%02d", episode.getTvShow().getTitle(), newSeason, newEpisode));
 
                     // 发送单个识别成功消息到Message history
-                    String successMsg = String.format("AI识别: %s → S%02dE%02d",
-                        filename, newSeason, newEpisode);
-                    MessageManager.getInstance().pushMessage(
-                        new Message(MessageLevel.INFO, "批量AI识别", successMsg));
+                    String successMsg = String.format("AI识别: %s → S%02dE%02d", filename, newSeason, newEpisode);
+                    MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "批量AI识别", successMsg));
 
                     // 更新剧集信息 - 使用正确的API
-                    MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(
-                        MediaEpisodeGroup.DEFAULT_AIRED, newSeason, newEpisode);
+                    MediaEpisodeNumber newEpisodeNumber = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, newSeason, newEpisode);
                     episode.setEpisode(newEpisodeNumber);
-                    
+
                     // 保存到数据库
                     episode.saveToDb();
                     episode.writeNFO();
-                    
-                } else {
+
+                }
+                else {
                     LOGGER.warn("=== AI Recognition Failed ===");
                     LOGGER.warn("Episode filename: {}", filename);
                     LOGGER.warn("TV show title: {}", tvShowTitle);
                     LOGGER.warn("Recognition mode: {}", useHybridMode ? "Hybrid" : "Pure AI");
                     if (result != null) {
                         LOGGER.warn("Result season: {}, episodes: {}", result.season, result.episodes);
-                    } else {
+                    }
+                    else {
                         LOGGER.warn("Result is null");
                     }
 
                     // 更新任务描述显示失败信息
                     publishState(String.format("失败: %s",
-                        episode.getMainVideoFile() != null ?
-                        episode.getMainVideoFile().getFilename() : episode.getTitle()));
+                            episode.getMainVideoFile() != null ? episode.getMainVideoFile().getFilename() : episode.getTitle()));
 
                     // 发送单个识别失败消息到Message history
                     String failMsg = String.format("AI识别失败: %s", filename);
-                    MessageManager.getInstance().pushMessage(
-                        new Message(MessageLevel.WARN, "批量AI识别", failMsg));
+                    MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "批量AI识别", failMsg));
                 }
-                
-            } catch (Exception e) {
-                LOGGER.error("Error processing episode {}: {}", 
-                    episode.getMainVideoFile().getFilename(), e.getMessage());
-            } finally {
+
+            }
+            catch (Exception e) {
+                LOGGER.error("Error processing episode {}: {}", episode.getMainVideoFile().getFilename(), e.getMessage());
+            }
+            finally {
                 publishState(progressDone);
             }
-            
+
             return null;
         }
-        
+
         /**
          * 检查剧集是否需要处理
          */
@@ -404,7 +396,7 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
             // 如果已经有季数和集数，且不是默认值，则跳过
             return episode.getAiredSeason() <= 0 || episode.getAiredEpisode() <= 0;
         }
-        
+
         /**
          * 获取剧集文件名
          */
@@ -413,7 +405,7 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
             if (mainFile != null) {
                 return mainFile.getFilename();
             }
-            
+
             // 回退到标题
             return episode.getTitle();
         }
