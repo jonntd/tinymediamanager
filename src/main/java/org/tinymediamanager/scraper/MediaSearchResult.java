@@ -497,57 +497,147 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
 
   /**
    * calculate the search score by comparing the available result with the search options
+   * 
+   * 使用分层加权设计： - 标题相似度：60% 权重 - 年份匹配：25% 权重 - 其他因素：15% 权重（海报、包含匹配等）
    *
    * @param options
    *          the search options which have been used for searching
    */
   public void calculateScore(MediaSearchAndScrapeOptions options) {
-
-    // compare score based on names (translated, original title, and english title)
-    float calculatedScore = Math.max(
-        Math.max(MetadataUtil.calculateScore(options.getSearchQuery(), title), MetadataUtil.calculateScore(options.getSearchQuery(), originalTitle)),
-        MetadataUtil.calculateScore(options.getSearchQuery(), englishTitle));
-
-    // Year handling: bonus for exact match, penalty for mismatch
+    String searchQuery = options.getSearchQuery();
     int searchYear = options.getSearchYear();
-    if (searchYear > 1900 && year > 0) {
-      if (searchYear == year) {
-        // Exact year match - give bonus score
-        // This helps when title doesn't match (e.g., Chinese title vs English search)
-        // Ensure at least 0.3 base score for exact year match
-        if (calculatedScore < 0.3f) {
-          LOGGER.trace("exact year match but low title score - boosting score from {} to 0.3", calculatedScore);
-          calculatedScore = 0.3f;
-        }
-        // Additional small bonus for exact year match
-        calculatedScore += 0.05f;
-      }
-      else {
-        // Year mismatch - apply penalty
-        float yearPenalty = MetadataUtil.calculateYearPenalty(searchYear, year);
-        if (yearPenalty > 0) {
-          LOGGER.trace("parsed year does not match search result year - downgrading score by {}", yearPenalty);
-          calculatedScore -= yearPenalty;
-        }
-      }
+
+    // 权重配置
+    final float TITLE_WEIGHT = 0.60f;
+    final float YEAR_WEIGHT = 0.25f;
+    final float OTHER_WEIGHT = 0.15f;
+
+    // ========== 1. 标题相似度得分 (0-1) ==========
+    float titleScore = calculateTitleScore(searchQuery);
+
+    // ========== 2. 年份匹配得分 (0-1) ==========
+    float yearScore = calculateYearScore(searchYear, year);
+
+    // ========== 3. 其他因素得分 (0-1) ==========
+    float otherScore = calculateOtherScore(searchQuery);
+
+    // ========== 4. 加权计算最终分数 ==========
+    float calculatedScore = titleScore * TITLE_WEIGHT + yearScore * YEAR_WEIGHT + otherScore * OTHER_WEIGHT;
+
+    // ========== 5. 边界保护 ==========
+    calculatedScore = Math.max(0, Math.min(1, calculatedScore));
+
+    LOGGER.debug("Score calculation: query='{}' title='{}' year={}/{} => title={:.2f}*{:.0f}% + year={:.2f}*{:.0f}% + other={:.2f}*{:.0f}% = {:.2f}",
+        searchQuery, title, year, searchYear, titleScore, TITLE_WEIGHT * 100, yearScore, YEAR_WEIGHT * 100, otherScore, OTHER_WEIGHT * 100,
+        calculatedScore);
+
+    setScore(calculatedScore);
+  }
+
+  /**
+   * 计算标题相似度得分
+   * 
+   * @param searchQuery
+   *          搜索词
+   * @return 相似度得分 [0, 1]
+   */
+  private float calculateTitleScore(String searchQuery) {
+    // 比较搜索词与各种标题的相似度，取最高分
+    float score = Math.max(Math.max(MetadataUtil.calculateScore(searchQuery, title), MetadataUtil.calculateScore(searchQuery, originalTitle)),
+        MetadataUtil.calculateScore(searchQuery, englishTitle));
+
+    // 如果搜索词完全包含在标题中，确保至少有合理的基础分
+    if (isSearchContainedInTitle(searchQuery)) {
+      score = Math.max(score, 0.70f);
+      LOGGER.trace("search '{}' contained in title '{}' - ensuring minimum score 0.70", searchQuery, title);
+    }
+
+    return score;
+  }
+
+  /**
+   * 检查搜索词是否完全包含在标题中
+   */
+  private boolean isSearchContainedInTitle(String searchQuery) {
+    if (StringUtils.isBlank(searchQuery)) {
+      return false;
+    }
+
+    String searchLower = searchQuery.replaceAll("[\\s\\p{Punct}]", "").toLowerCase();
+    if (searchLower.isEmpty()) {
+      return false;
+    }
+
+    String titleLower = title.replaceAll("[\\s\\p{Punct}]", "").toLowerCase();
+    String originalTitleLower = StringUtils.isNotBlank(originalTitle) ? originalTitle.replaceAll("[\\s\\p{Punct}]", "").toLowerCase() : "";
+
+    return titleLower.contains(searchLower) || originalTitleLower.contains(searchLower);
+  }
+
+  /**
+   * 计算年份匹配得分
+   * 
+   * @param searchYear
+   *          搜索年份
+   * @param resultYear
+   *          结果年份
+   * @return 年份得分 [0, 1]
+   */
+  private float calculateYearScore(int searchYear, int resultYear) {
+    // 无搜索年份 - 返回中性分数
+    if (searchYear <= 1900) {
+      return 0.5f;
+    }
+
+    // 结果无年份 - 返回较低分数
+    if (resultYear == 0) {
+      return 0.3f;
+    }
+
+    int diff = Math.abs(searchYear - resultYear);
+
+    // 根据年份差异返回得分
+    if (diff == 0) {
+      return 1.0f; // 精确匹配
+    }
+    else if (diff == 1) {
+      return 0.85f; // ±1年容差（发行年份常有差异）
+    }
+    else if (diff == 2) {
+      return 0.65f; // ±2年
+    }
+    else if (diff == 3) {
+      return 0.45f; // ±3年
+    }
+    else if (diff <= 5) {
+      return 0.25f; // ±4-5年
     }
     else {
-      // No search year or no result year - just apply penalty calculation
-      float yearPenalty = MetadataUtil.calculateYearPenalty(options.getSearchYear(), year);
-      if (yearPenalty > 0) {
-        LOGGER.trace("parsed year does not match search result year - downgrading score by {}", yearPenalty);
-        calculatedScore -= yearPenalty;
-      }
+      return 0.0f; // >5年差异
+    }
+  }
+
+  /**
+   * 计算其他因素得分
+   * 
+   * @param searchQuery
+   *          搜索词
+   * @return 其他因素得分 [0, 1]
+   */
+  private float calculateOtherScore(String searchQuery) {
+    float score = 0.5f; // 基础分
+
+    // 有海报加分
+    if (StringUtils.isNotBlank(posterUrl)) {
+      score += 0.25f;
     }
 
-    if (StringUtils.isBlank(posterUrl)) {
-      // no poster?
-      LOGGER.trace("no poster - downgrading score by 0.01");
-      calculatedScore -= 0.01f;
+    // 搜索词包含在标题中额外加分
+    if (isSearchContainedInTitle(searchQuery)) {
+      score += 0.25f;
     }
 
-    LOGGER.debug(String.format("Similarity Score: [%s] [%s / %s]=[%s]", options.getSearchQuery(), title, originalTitle, calculatedScore));
-    setScore(calculatedScore);
+    return Math.min(1.0f, score);
   }
 
   /**

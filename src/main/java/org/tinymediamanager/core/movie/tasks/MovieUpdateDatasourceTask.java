@@ -505,6 +505,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   private List<WebDavFile> listWebDavFilesRecursive(WebDavClient client, String path, java.util.Set<String> visitedPaths) {
     List<WebDavFile> allFiles = new ArrayList<>();
 
+    // 检查取消标志
+    if (cancel) {
+      return allFiles;
+    }
+
     // Normalize path for comparison (remove trailing slash)
     String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
 
@@ -522,6 +527,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.debug("Listed {} items in WebDAV directory: {}", files.size(), path);
 
       for (WebDavFile file : files) {
+        // 检查取消标志
+        if (cancel) {
+          break;
+        }
         allFiles.add(file);
         if (file.isDirectory()) {
           // Skip common system/hidden folders
@@ -1156,6 +1165,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         // List all files in this directory recursively
         List<WebDavFile> allFiles = listWebDavFilesRecursive(client, dirPath);
 
+        // 检查取消标志
+        if (cancel) {
+          return null;
+        }
+
         // Group files by their directory
         java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
         for (WebDavFile file : allFiles) {
@@ -1175,6 +1189,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
         // Process each directory with video files
         for (java.util.Map.Entry<String, List<WebDavFile>> entry : filesByDir.entrySet()) {
+          // 检查取消标志
+          if (cancel) {
+            break;
+          }
           String subDirPath = entry.getKey();
           List<WebDavFile> filesInDir = entry.getValue();
           List<WebDavFile> videoFiles = filesInDir.stream().filter(WebDavFile::isVideoFile).collect(java.util.stream.Collectors.toList());

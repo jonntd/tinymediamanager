@@ -201,6 +201,7 @@ public final class TvShowSettings extends AbstractSettings {
   final List<TvShowEpisodeScraperMetadataConfig> episodeScraperMetadataConfig           = new ArrayList<>();
   boolean                                        doNotOverwriteExistingData             = false;
   boolean                                        fetchAllRatings                        = false;
+  boolean                                        skipEpisodeListOnScrape                = false;
   final List<RatingProvider.RatingSource>        fetchRatingSources                     = new ArrayList<>();
   int                                            automaticScraperRetryCount             = 2;
 
@@ -212,6 +213,16 @@ public final class TvShowSettings extends AbstractSettings {
     int oldValue = this.automaticScraperRetryCount;
     this.automaticScraperRetryCount = newValue;
     firePropertyChange("automaticScraperRetryCount", oldValue, newValue);
+  }
+
+  public boolean isSkipEpisodeListOnScrape() {
+    return skipEpisodeListOnScrape;
+  }
+
+  public void setSkipEpisodeListOnScrape(boolean newValue) {
+    boolean oldValue = this.skipEpisodeListOnScrape;
+    this.skipEpisodeListOnScrape = newValue;
+    firePropertyChange("skipEpisodeListOnScrape", oldValue, newValue);
   }
 
   // artwork scraper

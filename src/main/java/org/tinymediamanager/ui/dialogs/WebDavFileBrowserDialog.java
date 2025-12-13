@@ -38,6 +38,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
@@ -197,7 +198,7 @@ public class WebDavFileBrowserDialog extends TmmDialog {
         });
 
         JScrollPane treeScrollPane = new JScrollPane(tree);
-        contentPanel.add(treeScrollPane, "cell 0 3, grow");
+        // contentPanel.add(treeScrollPane, "cell 0 3, grow");
 
         // Right panel: File Table
         tableModel = new WebDavFileTableModel();
@@ -247,7 +248,9 @@ public class WebDavFileBrowserDialog extends TmmDialog {
                 if (e.isPopupTrigger()) {
                     int row = table.rowAtPoint(e.getPoint());
                     if (row >= 0) {
-                        table.setRowSelectionInterval(row, row);
+                        if (!table.isRowSelected(row)) {
+                            table.setRowSelectionInterval(row, row);
+                        }
                         showContextMenu(e);
                     }
                 }
@@ -255,7 +258,13 @@ public class WebDavFileBrowserDialog extends TmmDialog {
         });
 
         JScrollPane scrollPane = new JScrollPane(table);
-        contentPanel.add(scrollPane, "cell 1 3, grow");
+        // contentPanel.add(scrollPane, "cell 1 3, grow");
+
+        // Split Pane
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScrollPane, scrollPane);
+        splitPane.setContinuousLayout(true);
+        splitPane.setDividerLocation(250);
+        contentPanel.add(splitPane, "cell 0 3, span 2, grow");
 
         // Status
         lblStatus = new JLabel("");
@@ -286,9 +295,23 @@ public class WebDavFileBrowserDialog extends TmmDialog {
     }
 
     private void showContextMenu(MouseEvent e) {
-        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
-        WebDavFile file = tableModel.getFileAt(modelRow);
-        if (file == null) {
+        // 获取所有选中的文件
+        int[] selectedRows = table.getSelectedRows();
+        if (selectedRows.length == 0) {
+            return;
+        }
+
+        // 转换为模型索引并获取文件列表
+        List<WebDavFile> selectedFiles = new ArrayList<>();
+        for (int row : selectedRows) {
+            int modelRow = table.convertRowIndexToModel(row);
+            WebDavFile file = tableModel.getFileAt(modelRow);
+            if (file != null) {
+                selectedFiles.add(file);
+            }
+        }
+
+        if (selectedFiles.isEmpty()) {
             return;
         }
 
@@ -301,14 +324,21 @@ public class WebDavFileBrowserDialog extends TmmDialog {
 
         popup.addSeparator();
 
-        // Rename
+        // Rename (只有选中单个文件时才启用)
         JMenuItem renameItem = new JMenuItem(TmmResourceBundle.getString("Button.rename"), IconManager.EDIT);
-        renameItem.addActionListener(evt -> renameFile(file));
+        if (selectedFiles.size() == 1) {
+            renameItem.addActionListener(evt -> renameFile(selectedFiles.get(0)));
+        }
+        else {
+            renameItem.setEnabled(false);
+        }
         popup.add(renameItem);
 
-        // Delete
-        JMenuItem deleteItem = new JMenuItem(TmmResourceBundle.getString("webdav.browser.delete"), IconManager.DELETE);
-        deleteItem.addActionListener(evt -> deleteFile(file));
+        // Delete (支持多选)
+        String deleteLabel = selectedFiles.size() > 1 ? TmmResourceBundle.getString("webdav.browser.delete") + " (" + selectedFiles.size() + ")"
+                : TmmResourceBundle.getString("webdav.browser.delete");
+        JMenuItem deleteItem = new JMenuItem(deleteLabel, IconManager.DELETE);
+        deleteItem.addActionListener(evt -> deleteFiles(selectedFiles));
         popup.add(deleteItem);
 
         popup.show(e.getComponent(), e.getX(), e.getY());
@@ -725,9 +755,35 @@ public class WebDavFileBrowserDialog extends TmmDialog {
         worker.execute();
     }
 
-    private void deleteFile(WebDavFile file) {
-        int result = JOptionPane.showConfirmDialog(this, TmmResourceBundle.getString("webdav.browser.delete.confirm") + "\n" + file.getName(),
-                TmmResourceBundle.getString("webdav.browser.delete"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+    /**
+     * 删除多个文件（支持多选）
+     */
+    private void deleteFiles(List<WebDavFile> files) {
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+
+        // 构建确认消息
+        String message;
+        if (files.size() == 1) {
+            message = TmmResourceBundle.getString("webdav.browser.delete.confirm") + "\n" + files.get(0).getName();
+        }
+        else {
+            StringBuilder sb = new StringBuilder();
+            sb.append(TmmResourceBundle.getString("webdav.browser.delete.confirm"));
+            sb.append("\n\n");
+            int showCount = Math.min(files.size(), 5); // 最多显示5个文件名
+            for (int i = 0; i < showCount; i++) {
+                sb.append("• ").append(files.get(i).getName()).append("\n");
+            }
+            if (files.size() > 5) {
+                sb.append("... 还有 ").append(files.size() - 5).append(" 个文件");
+            }
+            message = sb.toString();
+        }
+
+        int result = JOptionPane.showConfirmDialog(this, message, TmmResourceBundle.getString("webdav.browser.delete") + " (" + files.size() + ")",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (result != JOptionPane.YES_OPTION) {
             return;
@@ -736,26 +792,49 @@ public class WebDavFileBrowserDialog extends TmmDialog {
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         setButtonsEnabled(false);
 
-        SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
+        SwingWorker<int[], Void> worker = new SwingWorker<>() {
             @Override
-            protected Boolean doInBackground() throws Exception {
-                return client.delete(file.getPath());
+            protected int[] doInBackground() throws Exception {
+                int successCount = 0;
+                int failCount = 0;
+
+                for (WebDavFile file : files) {
+                    try {
+                        if (client.delete(file.getPath())) {
+                            successCount++;
+                            LOGGER.info("成功删除: {}", file.getPath());
+                        }
+                        else {
+                            failCount++;
+                            LOGGER.warn("删除失败: {}", file.getPath());
+                        }
+                    }
+                    catch (Exception e) {
+                        failCount++;
+                        LOGGER.error("删除出错 {}: {}", file.getPath(), e.getMessage());
+                    }
+                }
+
+                return new int[] { successCount, failCount };
             }
 
             @Override
             protected void done() {
                 try {
-                    Boolean success = get();
-                    if (success) {
-                        refreshCurrentDirectory();
-                    }
-                    else {
-                        JOptionPane.showMessageDialog(WebDavFileBrowserDialog.this, TmmResourceBundle.getString("webdav.browser.error.delete"),
-                                TmmResourceBundle.getString("webdav.browser.delete"), JOptionPane.ERROR_MESSAGE);
+                    int[] counts = get();
+                    int successCount = counts[0];
+                    int failCount = counts[1];
+
+                    refreshCurrentDirectory();
+
+                    if (failCount > 0) {
+                        String msg = String.format("删除完成：成功 %d，失败 %d", successCount, failCount);
+                        JOptionPane.showMessageDialog(WebDavFileBrowserDialog.this, msg, TmmResourceBundle.getString("webdav.browser.delete"),
+                                failCount == files.size() ? JOptionPane.ERROR_MESSAGE : JOptionPane.WARNING_MESSAGE);
                     }
                 }
                 catch (Exception e) {
-                    LOGGER.error("Failed to delete file: {}", e.getMessage());
+                    LOGGER.error("批量删除失败: {}", e.getMessage());
                     JOptionPane.showMessageDialog(WebDavFileBrowserDialog.this,
                             TmmResourceBundle.getString("webdav.browser.error.delete") + ": " + e.getMessage(),
                             TmmResourceBundle.getString("webdav.browser.delete"), JOptionPane.ERROR_MESSAGE);

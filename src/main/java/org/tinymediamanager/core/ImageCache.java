@@ -590,7 +590,7 @@ public class ImageCache {
         WebDavDataSourceHelper.isWebDavPath(path.toString()), path.toAbsolutePath(), CACHE_DIR.toAbsolutePath(), isInCacheDir);
 
     if (isInCacheDir) {
-      LOGGER.info("getCachedFile: path is already in cache dir, returning directly: {}", path);
+      LOGGER.debug("getCachedFile: path is already in cache dir, returning directly: {}", path);
       return path;
     }
 

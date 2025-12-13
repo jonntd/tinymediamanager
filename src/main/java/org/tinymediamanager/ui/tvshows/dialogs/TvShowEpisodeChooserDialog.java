@@ -123,7 +123,10 @@ public class TvShowEpisodeChooserDialog extends TmmDialog implements ActionListe
       final JPanel panelPath = new JPanel();
       panelPath.setLayout(new MigLayout("", "[grow]", "[]"));
       {
-        JLabel lblPath = new JLabel(episode.getPathNIO().resolve(episode.getMainVideoFile().getFilename()).toString());
+        JTextField lblPath = new JTextField(episode.getPathNIO().resolve(episode.getMainVideoFile().getFilename()).toString());
+        lblPath.setEditable(false);
+        lblPath.setBorder(null);
+        lblPath.setOpaque(false);
         TmmFontHelper.changeFont(lblPath, 1.16667, Font.BOLD);
         panelPath.add(lblPath, "cell 0 0, wmin 0");
       }

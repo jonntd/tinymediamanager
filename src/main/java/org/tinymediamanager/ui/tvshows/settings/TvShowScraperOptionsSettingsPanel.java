@@ -70,6 +70,7 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
   private JCheckBox                 chckbxRatingTraktTv;
   private JCheckBox                 chckbxRatingLetterboxd;
   private JSpinner                  spAutomaticRetryCount;
+  private JCheckBox                 chckbxSkipEpisodeList;
 
   /**
    * Instantiates a new movie scraper settings panel.
@@ -156,6 +157,10 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
 
         chckbxCapitalizeWords = new JCheckBox(TmmResourceBundle.getString("Settings.scraper.capitalizeWords"));
         panelOptions.add(chckbxCapitalizeWords, "cell 1 8");
+
+        chckbxSkipEpisodeList = new JCheckBox(TmmResourceBundle.getString("Settings.tvshow.skipEpisodeList"));
+        chckbxSkipEpisodeList.setToolTipText(TmmResourceBundle.getString("Settings.tvshow.skipEpisodeList.desc"));
+        panelOptions.add(chckbxSkipEpisodeList, "cell 1 9 2 1");
 
       }
     }
@@ -298,5 +303,10 @@ class TvShowScraperOptionsSettingsPanel extends JPanel {
     AutoBinding autoBinding_Retry = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_Retry, spAutomaticRetryCount,
         jSpinnerBeanProperty_Retry);
     autoBinding_Retry.bind();
+    //
+    Property settingsBeanProperty_SkipEpisodeList = BeanProperty.create("skipEpisodeListOnScrape");
+    AutoBinding autoBinding_SkipEpisodeList = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_SkipEpisodeList,
+        chckbxSkipEpisodeList, jCheckBoxBeanProperty);
+    autoBinding_SkipEpisodeList.bind();
   }
 }

@@ -131,7 +131,8 @@ public class MovieScrapeTask extends TmmThreadPool {
     // 开始新的AI识别会话，清空缓存和计数器
     MovieAIRecognitionManager.getInstance().startNewSession();
 
-    // 批量AI识别优化：批次处理，识别一部分就刮削一部分
+    // ========== 多轮批量AI识别优化 ==========
+    // 策略：批量识别 → 收集未识别 → 批量重试（最多N轮）→ 仍失败才单次识别
     if (movieScrapeParams.doSearch && !movieScrapeParams.moviesToScrape.isEmpty()) {
       // 检查是否配置了 OpenAI API Key
       String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -147,36 +148,80 @@ public class MovieScrapeTask extends TmmThreadPool {
 
           BatchChatGPTMovieRecognitionService batchService = new BatchChatGPTMovieRecognitionService();
 
-          // 手动拆分批次，从设置中获取批次大小
-          int batchSize = Settings.getInstance().getAiBatchSize();
+          // 从设置中获取批次大小（用于日志统计）
           int totalMovies = movieScrapeParams.moviesToScrape.size();
-          int totalBatches = (int) Math.ceil((double) totalMovies / batchSize);
 
-          LOGGER.info("Processing {} movies in {} batches of {} movies each", totalMovies, totalBatches, batchSize);
+          // ========== 第一轮批量识别 ==========
+          LOGGER.info("=== 第1轮批量AI识别开始 ({} 部电影) ===", totalMovies);
+          Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(movieScrapeParams.moviesToScrape);
+          aiRecognitionResults.putAll(batchResults);
+          LOGGER.info("第1轮批量AI识别完成: 成功识别 {} 部", batchResults.size());
 
-          // 循环处理每个批次
-          for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            int startIndex = batchIndex * batchSize;
-            int endIndex = Math.min(startIndex + batchSize, totalMovies);
-            List<Movie> currentBatch = movieScrapeParams.moviesToScrape.subList(startIndex, endIndex);
+          // 收集未识别的电影
+          List<Movie> unrecognizedMovies = collectUnrecognizedMovies(movieScrapeParams.moviesToScrape, aiRecognitionResults);
+          LOGGER.info("第1轮未识别: {} 部", unrecognizedMovies.size());
 
-            LOGGER.info("Processing batch {}/{} ({} movies)", batchIndex + 1, totalBatches, currentBatch.size());
+          // 先提交已识别的电影刮削任务
+          List<Movie> recognizedMovies = new ArrayList<>();
+          for (Movie movie : movieScrapeParams.moviesToScrape) {
+            if (aiRecognitionResults.containsKey(movie.getDbId().toString())) {
+              recognizedMovies.add(movie);
+              submitTask(new Worker(movie, aiRecognitionResults));
+            }
+          }
+          LOGGER.info("已提交 {} 部已识别电影的刮削任务", recognizedMovies.size());
 
-            // 处理当前批次的AI识别
-            Map<String, String> batchResults = batchService.batchRecognizeMovieTitles(currentBatch);
+          // ========== 多轮批量重试（最多3轮）==========
+          int maxBatchRetries = 3;
+          for (int retry = 1; retry <= maxBatchRetries && !unrecognizedMovies.isEmpty() && !cancel; retry++) {
+            LOGGER.info("=== 第{}轮批量重试开始 ({} 部未识别电影) ===", retry + 1, unrecognizedMovies.size());
 
-            // 将当前批次的识别结果添加到总结果中
-            aiRecognitionResults.putAll(batchResults);
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.INFO, "批量重试",
+                    String.format("第 %d/%d 轮批量重试: %d 部未识别电影", retry, maxBatchRetries, unrecognizedMovies.size())));
 
-            LOGGER.info("Batch {} AI recognition completed for {} movies", batchIndex + 1, batchResults.size());
+            // 等待2秒再重试（避免API限流）
+            try {
+              Thread.sleep(2000);
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              break;
+            }
 
-            // 立即提交当前批次的刮削任务
-            for (Movie movie : currentBatch) {
+            // 对未识别的进行批量重试
+            Map<String, String> retryResults = batchService.batchRecognizeMovieTitles(unrecognizedMovies);
+            aiRecognitionResults.putAll(retryResults);
+            LOGGER.info("第{}轮批量重试完成: 成功识别 {} 部", retry + 1, retryResults.size());
+
+            // 提交本轮新识别成功的电影刮削任务
+            List<Movie> newlyRecognized = new ArrayList<>();
+            for (Movie movie : unrecognizedMovies) {
+              if (retryResults.containsKey(movie.getDbId().toString())) {
+                newlyRecognized.add(movie);
+                submitTask(new Worker(movie, aiRecognitionResults));
+              }
+            }
+            LOGGER.info("本轮新识别 {} 部，已提交刮削任务", newlyRecognized.size());
+
+            // 更新未识别列表
+            unrecognizedMovies = collectUnrecognizedMovies(unrecognizedMovies, aiRecognitionResults);
+            LOGGER.info("第{}轮后仍未识别: {} 部", retry + 1, unrecognizedMovies.size());
+          }
+
+          // ========== 仍失败的提交刮削（会触发单次识别回退）==========
+          if (!unrecognizedMovies.isEmpty()) {
+            LOGGER.info("经过 {} 轮批量重试后仍有 {} 部未识别，将使用单次识别回退", maxBatchRetries + 1, unrecognizedMovies.size());
+            MessageManager.getInstance()
+                .pushMessage(new Message(MessageLevel.WARN, "批量识别",
+                    String.format("%d 部电影在 %d 轮批量识别后仍未成功，将使用单次识别", unrecognizedMovies.size(), maxBatchRetries + 1)));
+
+            for (Movie movie : unrecognizedMovies) {
               submitTask(new Worker(movie, aiRecognitionResults));
             }
           }
 
-          LOGGER.info("All batches AI recognition completed for {} movies", aiRecognitionResults.size());
+          LOGGER.info("=== 批量AI识别流程完成 ===");
 
           // 发送批量AI识别完成消息到Message history
           int successCount = aiRecognitionResults.size();
@@ -186,10 +231,10 @@ public class MovieScrapeTask extends TmmThreadPool {
 
         }
         catch (Exception e) {
-          LOGGER.warn("Batch AI recognition failed, skipping individual fallback to prevent API spam: {}", e.getMessage());
+          LOGGER.warn("Batch AI recognition failed: {}", e.getMessage());
 
-          // 发送批量AI识别失败消息到Message history，但不回退到个体识别
-          String failMsg = String.format("批量电影AI识别失败，已跳过个体回退以防止API过度调用: %s", e.getMessage());
+          // 发送批量AI识别失败消息到Message history
+          String failMsg = String.format("批量电影AI识别失败: %s", e.getMessage());
           MessageManager.getInstance().pushMessage(new Message(MessageLevel.WARN, "批量电影AI识别", failMsg));
 
           // 即使AI识别失败，也要提交所有电影的刮削任务
@@ -314,6 +359,28 @@ public class MovieScrapeTask extends TmmThreadPool {
     }
 
     LOGGER.info("Finished scraping movies - took {} ms", getRuntime());
+  }
+
+  /**
+   * 收集未被AI识别的电影
+   *
+   * @param movies
+   *          电影列表
+   * @param aiRecognitionResults
+   *          AI识别结果Map
+   * @return 未识别的电影列表
+   */
+  private List<Movie> collectUnrecognizedMovies(List<Movie> movies, Map<String, String> aiRecognitionResults) {
+    List<Movie> unrecognized = new ArrayList<>();
+    for (Movie movie : movies) {
+      if (movie != null && movie.getDbId() != null) {
+        String dbId = movie.getDbId().toString();
+        if (!aiRecognitionResults.containsKey(dbId)) {
+          unrecognized.add(movie);
+        }
+      }
+    }
+    return unrecognized;
   }
 
   @Override
@@ -606,29 +673,42 @@ public class MovieScrapeTask extends TmmThreadPool {
         LOGGER.info("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
 
         // 确保年份不是 null 时正确传递给 searchMovie（int 参数）
-        // 注意：AI 识别搜索时不传入电影原有 ID，以避免因旧 ID 返回错误结果
         int searchYear = aiProcessedYear != null ? aiProcessedYear : 0;
+
+        // 1. 首先优先从文件路径/文件名解析 TMDB ID（比 movie.getTmdbId() 更可靠）
+        // 这里提前解析 ID，如果存在直接使用 ID 匹配，避免用错误的 AI 标题去搜索导致找不到结果
+        int pathTmdbId = 0;
+        String moviePath = movie.getPathNIO() != null ? movie.getPathNIO().toString() : "";
+        pathTmdbId = ParserUtils.detectTmdbId(moviePath);
+        // 如果目录路径中没有找到，尝试从文件名中解析
+        if (pathTmdbId <= 0 && !movie.getMediaFiles().isEmpty()) {
+          String fileName = movie.getMainVideoFile() != null ? movie.getMainVideoFile().getFilename() : "";
+          pathTmdbId = ParserUtils.detectTmdbId(fileName);
+        }
+
+        // 注意：使用 AI 识别时，不使用电影对象中已存储的 TMDB ID（可能是错误的旧数据）
+        LOGGER.info("Movie '{}' TMDB ID from path/filename: {}, from object: {} (object ID ignored for AI matching)", movie.getTitle(), pathTmdbId,
+            movie.getTmdbId());
+
+        if (pathTmdbId > 0) {
+          // 如果有明确的 Path ID，直接构造一个结果，不再用 AI 标题搜索
+          // 这样可以避免 AI 返回的标题不准确导致 TMDB 搜索结果中根本不包含正确电影的情况
+          MediaSearchResult idResult = new MediaSearchResult(mediaMetadataProvider.getMediaProvider().getProviderInfo().getId(), MediaType.MOVIE);
+          idResult.setTitle(aiProcessedTitle); // 暂用 AI 标题，后续 setMetadata 会修正
+          idResult.setYear(searchYear);
+          idResult.setId(MediaMetadata.TMDB, String.valueOf(pathTmdbId));
+          idResult.setScore(1.0f);
+
+          LOGGER.info("Found valid TMDB ID {} from path/filename, skipping search and using ID match directly", pathTmdbId);
+          return idResult;
+        }
+
+        // 如果没有 ID，才使用 AI 标题进行搜索
+        // 注意：AI 识别搜索时不传入电影原有 ID，以避免因旧 ID 返回错误结果
         List<MediaSearchResult> aiResults = movieList.searchMovie(aiProcessedTitle, searchYear, null, mediaMetadataProvider);
 
         if (ListUtils.isNotEmpty(aiResults)) {
-          // 1. 首先优先从文件路径解析 TMDB ID（比 movie.getTmdbId() 更可靠）
-          int pathTmdbId = 0;
-          String moviePath = movie.getPathNIO() != null ? movie.getPathNIO().toString() : "";
-          pathTmdbId = ParserUtils.detectTmdbId(moviePath);
-          if (pathTmdbId <= 0) {
-            // 如果路径中没有，使用电影对象中已存储的 ID 作为备用
-            pathTmdbId = movie.getTmdbId();
-          }
-          LOGGER.info("Movie '{}' TMDB ID from path: {}, from object: {}", movie.getTitle(), ParserUtils.detectTmdbId(moviePath), movie.getTmdbId());
-          if (pathTmdbId > 0) {
-            for (MediaSearchResult result : aiResults) {
-              if (result.getIdAsInt(MediaMetadata.TMDB) == pathTmdbId) {
-                aiResult = result;
-                LOGGER.info("Found exact TMDB ID match: title='{}', tmdbId={}, score={}", result.getTitle(), pathTmdbId, result.getScore());
-                break;
-              }
-            }
-          }
+          // 2. 在年份匹配的结果中选择标题相似度最高的
 
           // 2. 如果没有 ID 匹配，在年份匹配的结果中选择标题相似度最高的
           if (aiResult == null && searchYear > 0) {
@@ -637,9 +717,21 @@ public class MovieScrapeTask extends TmmThreadPool {
 
             for (MediaSearchResult result : aiResults) {
               if (result.getYear() == searchYear) {
-                // 计算标题相似度
-                float similarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getTitle());
-                LOGGER.debug("Year match candidate: title='{}', year={}, similarity={}", result.getTitle(), result.getYear(), similarity);
+                // 计算标题相似度 - 比较 title、originalTitle 和 englishTitle，取最高值
+                float titleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getTitle());
+                float originalTitleSimilarity = 0.0f;
+                float englishTitleSimilarity = 0.0f;
+                if (StringUtils.isNotBlank(result.getOriginalTitle())) {
+                  originalTitleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getOriginalTitle());
+                }
+                if (StringUtils.isNotBlank(result.getEnglishTitle())) {
+                  englishTitleSimilarity = org.tinymediamanager.scraper.util.Similarity.compareStrings(aiProcessedTitle, result.getEnglishTitle());
+                }
+                float similarity = Math.max(Math.max(titleSimilarity, originalTitleSimilarity), englishTitleSimilarity);
+                LOGGER.debug(
+                    "Year match candidate: title='{}', originalTitle='{}', englishTitle='{}', year={}, titleSim={}, origSim={}, engSim={}, bestSim={}",
+                    result.getTitle(), result.getOriginalTitle(), result.getEnglishTitle(), result.getYear(), titleSimilarity,
+                    originalTitleSimilarity, englishTitleSimilarity, similarity);
 
                 if (similarity > bestSimilarity) {
                   bestSimilarity = similarity;
@@ -660,25 +752,61 @@ public class MovieScrapeTask extends TmmThreadPool {
             }
           }
 
-          // 3. 如果都没有匹配，使用第一个结果
+          // 3. 如果都没有匹配，验证第一个结果的年份是否与 AI 识别年份接近
           if (aiResult == null) {
-            aiResult = aiResults.get(0);
+            MediaSearchResult firstResult = aiResults.get(0);
+
+            // 如果 AI 识别有年份，验证搜索结果的年份是否接近（差距不超过 2 年）
+            if (searchYear > 0 && firstResult.getYear() > 0) {
+              int yearDiff = Math.abs(firstResult.getYear() - searchYear);
+
+              if (yearDiff <= 2) {
+                // 年份接近，可以接受（可能是发行日期差异）
+                aiResult = firstResult;
+                LOGGER.info("Using first result with acceptable year difference: expected={}, got={}, diff={}", searchYear, firstResult.getYear(),
+                    yearDiff);
+              }
+              else {
+                // 年份差距过大（如 2024 vs 2007），拒绝此结果
+                LOGGER.warn(
+                    "First result year mismatch too large: AI year={}, result year={}, diff={}. "
+                        + "Rejecting result '{}' to avoid wrong match like '绑架游戏 2024' -> '绑架 2007'",
+                    searchYear, firstResult.getYear(), yearDiff, firstResult.getTitle());
+                // 不设置 aiResult，继续到下面的回退逻辑
+              }
+            }
+            else {
+              // 没有年份信息，使用第一个结果
+              aiResult = firstResult;
+              LOGGER.debug("No year info available, using first result: '{}'", firstResult.getTitle());
+            }
           }
 
-          final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
-
-          if (aiResult.getScore() >= scraperTreshold) {
-            LOGGER.info("AI recognition successful! Found match with score: {}", aiResult.getScore());
-            return aiResult;
-          }
-          else {
-            LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold ({})", aiResult.getScore(), scraperTreshold);
-            // 尝试单个文件AI识别回退
+          // 如果 aiResult 仍然为 null（因年份差距过大被拒绝），尝试单个 AI 识别回退
+          if (aiResult == null) {
+            LOGGER.info("No acceptable result found (year mismatch), attempting individual AI recognition fallback for '{}'", movie.getTitle());
             MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
             if (fallbackResult != null) {
               return fallbackResult;
             }
-            aiResult = null; // 重置结果，继续常规搜索
+            // 如果回退也失败，继续到常规搜索
+          }
+          else {
+            final double scraperTreshold = MovieModuleManager.getInstance().getSettings().getScraperThreshold();
+
+            if (aiResult.getScore() >= scraperTreshold) {
+              LOGGER.info("AI recognition successful! Found match with score: {}", aiResult.getScore());
+              return aiResult;
+            }
+            else {
+              LOGGER.warn("AI recognized title found, but score ({}) is lower than threshold ({})", aiResult.getScore(), scraperTreshold);
+              // 尝试单个文件AI识别回退
+              MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(movie, processedTitle, processedYear, mediaMetadataProvider);
+              if (fallbackResult != null) {
+                return fallbackResult;
+              }
+              aiResult = null; // 重置结果，继续常规搜索
+            }
           }
         }
         else {

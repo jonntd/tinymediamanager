@@ -39,7 +39,7 @@ import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.scraper.util.MediaIdUtil;
 import org.tinymediamanager.scraper.util.ParserUtils;
 import org.tinymediamanager.scraper.util.StrgUtils;
-import org.tinymediamanager.core.tvshow.services.ChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.core.tvshow.services.BatchChatGPTEpisodeRecognitionService;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.Message.MessageLevel;
 import org.tinymediamanager.core.MessageManager;
@@ -1058,7 +1058,18 @@ public class TvShowEpisodeAndSeasonParser {
     }
 
     LOGGER.info("Attempting AI-assisted episode recognition for: {}", filename);
-    EpisodeMatchingResult aiResult = ChatGPTEpisodeRecognitionService.recognizeEpisode(filename, tvShowTitle);
+    // 使用统一的 BatchChatGPTEpisodeRecognitionService
+    BatchChatGPTEpisodeRecognitionService batchService = new BatchChatGPTEpisodeRecognitionService();
+    // 创建临时 Episode 对象用于 AI 识别
+    org.tinymediamanager.core.tvshow.entities.TvShowEpisode tempEpisode = new org.tinymediamanager.core.tvshow.entities.TvShowEpisode();
+    tempEpisode.setTitle(filename);
+    // 设置电视剧标题（如果有的话）
+    if (tvShowTitle != null && !tvShowTitle.isEmpty()) {
+      org.tinymediamanager.core.tvshow.entities.TvShow tempShow = new org.tinymediamanager.core.tvshow.entities.TvShow();
+      tempShow.setTitle(tvShowTitle);
+      tempEpisode.setTvShow(tempShow);
+    }
+    EpisodeMatchingResult aiResult = batchService.recognizeEpisode(tempEpisode);
 
     // 缓存AI识别结果（无论成功还是失败）
     smartCacheStore(aiCacheKey, aiResult);

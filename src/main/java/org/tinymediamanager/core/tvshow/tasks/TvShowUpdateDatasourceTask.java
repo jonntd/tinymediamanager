@@ -890,6 +890,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Group files by their directory to associate with episodes
       java.util.Map<String, List<WebDavFile>> filesByDir = new java.util.HashMap<>();
       for (WebDavFile file : allFiles) {
+        // 检查取消标志
+        if (cancel) {
+          return;
+        }
         if (!file.isDirectory()) {
           // Use the full path of the file to get its directory
           String filePath = file.getPath();
@@ -908,6 +912,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Find video files (episodes) and process them
       List<TvShowEpisode> processedEpisodes = new ArrayList<>();
       for (WebDavFile file : allFiles) {
+        // 检查取消标志
+        if (cancel) {
+          return;
+        }
         if (!file.isDirectory() && file.isVideoFile()) {
           // Construct the WebDAV path for this video file
           String videoWebDavPath = "webdav://" + source.getName() + file.getPath();
@@ -1133,6 +1141,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private List<WebDavFile> listWebDavFilesRecursive(WebDavClient client, String path, java.util.Set<String> visitedPaths) {
     List<WebDavFile> allFiles = new ArrayList<>();
 
+    // 检查取消标志
+    if (cancel) {
+      return allFiles;
+    }
+
     // Normalize path for comparison (remove trailing slash)
     String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
 
@@ -1150,6 +1163,10 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       LOGGER.debug("Listed {} items in WebDAV directory: {}", files.size(), path);
 
       for (WebDavFile file : files) {
+        // 检查取消标志
+        if (cancel) {
+          break;
+        }
         allFiles.add(file);
         if (file.isDirectory()) {
           String name = file.getName().toUpperCase(Locale.ROOT);

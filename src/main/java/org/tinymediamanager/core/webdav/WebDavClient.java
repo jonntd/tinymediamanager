@@ -179,9 +179,9 @@ public class WebDavClient {
             LOGGER.warn("Failed to decode href '{}': {}", normalizedHref, e.getMessage());
           }
 
-          LOGGER.trace("Comparing href='{}' (decoded='{}') with urlPath='{}'", normalizedHref, decodedHref, urlPath);
+          // LOGGER.trace("Comparing href='{}' (decoded='{}') with urlPath='{}'", normalizedHref, decodedHref, urlPath);
           if (decodedHref.equals(urlPath) || normalizedHref.equals(urlPath)) {
-            LOGGER.trace("Skipping parent directory: {}", href);
+            // LOGGER.trace("Skipping parent directory: {}", href);
             continue;
           }
         }
@@ -208,6 +208,22 @@ public class WebDavClient {
       }
     }
     catch (IOException e) {
+      // Handle network errors (SSL handshake, connection reset) by reconnecting and retrying once
+      if (allowRetry && e.getMessage() != null && (e.getMessage().contains("Remote host terminated the handshake")
+          || e.getMessage().contains("Connection reset") || e.getMessage().contains("unexpected end of stream"))) {
+
+        LOGGER.warn("WebDAV network error ('{}'), attempting to reconnect...", e.getMessage());
+        try {
+          reconnect();
+          return listWithRetry(path, false); // Retry once without further retries
+        }
+        catch (IOException reconnectError) {
+          LOGGER.error("Failed to reconnect to WebDAV server: {}", reconnectError.getMessage());
+          // If reconnection fails, throw the original error or the new one
+          throw new IOException("WebDAV network error and reconnection failed: " + e.getMessage(), e);
+        }
+      }
+
       LOGGER.error("Failed to list WebDAV directory '{}': {}", fullUrl, e.getMessage());
       throw e;
     }
@@ -412,7 +428,7 @@ public class WebDavClient {
 
       String finalUrl = baseUrl + encodedPath;
       // Use safeDecode for logging
-      LOGGER.trace("Built URL: {} from path: {}", finalUrl, safeDecode(path));
+      // LOGGER.trace("Built URL: {} from path: {}", finalUrl, safeDecode(path));
       return finalUrl;
     }
     catch (Exception e) {
