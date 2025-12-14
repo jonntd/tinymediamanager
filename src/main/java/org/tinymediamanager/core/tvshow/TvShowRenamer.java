@@ -2915,31 +2915,40 @@ public class TvShowRenamer {
    * @return true, when we copied file OR DEST IS EXISTING
    */
   private static boolean copyFile(Path oldFilename, Path newFilename) {
-    String oldPath = WebDavDataSourceHelper.normalizeWebDavPath(oldFilename.toString());
-    String newPath = WebDavDataSourceHelper.normalizeWebDavPath(newFilename.toString());
+    // Check if paths are WebDAV paths
+    String oldPathStr = oldFilename.toString();
+    String newPathStr = newFilename.toString();
 
-    // 检查源路径是否是本地缓存路径（即使目标是 WebDAV）
-    // 缓存路径通常包含 "cache/image" 或以 cache 目录开头
-    boolean isOldPathCache = oldPath.contains("/cache/image/") || oldPath.contains("\\cache\\image\\");
+    // 检测源路径是否包含本地缓存路径特征（artwork/tvshows, artwork/movies, cache/image）
+    // 这些路径是本地缓存目录结构，不应该存在于 WebDAV 上
+    boolean isOldPathCacheLike = oldPathStr.contains("/artwork/tvshows/") || oldPathStr.contains("\\artwork\\tvshows\\")
+        || oldPathStr.contains("/artwork/movies/") || oldPathStr.contains("\\artwork\\movies\\") || oldPathStr.contains("/cache/image/")
+        || oldPathStr.contains("\\cache\\image\\");
 
-    // 如果源路径看起来像是本地缓存路径，但被错误地拼接到了 WebDAV 路径中，
-    // 这是一个配置问题，跳过处理并返回 true（因为原始缓存文件仍存在）
-    if (WebDavDataSourceHelper.isWebDavPath(oldPath) && isOldPathCache) {
-      LOGGER.warn("Skipping copy: source path '{}' appears to be a local cache path incorrectly embedded in WebDAV path", oldPath);
-      // 返回 true 以避免阻断重命名流程，用户可以手动处理或重新刮削
-      return true;
+    // 如果源路径包含缓存路径特征，即使被格式化为 WebDAV 路径，也跳过复制
+    // 因为这个文件实际上不存在于 WebDAV 服务器上
+    // 返回 false 以避免 renamer 用错误的路径替换原有的 MediaFile
+    if (isOldPathCacheLike) {
+      LOGGER.warn("Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, or cache/image). "
+          + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.", oldPathStr);
+      return false; // 返回 false 让 renamer 知道复制失败，不替换 MediaFile
     }
 
-    // Handle WebDAV paths specially (both source and destination are WebDAV)
-    if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
-      if (oldPath.equals(newPath)) {
+    if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
+      // Both are WebDAV paths - use WebDAV operations
+      if (oldPathStr.equals(newPathStr)) {
         return true; // same file, nothing to do
       }
-      LOGGER.debug("Copying WebDAV file '{}' to '{}'", oldPath, newPath);
-      return WebDavFileOperations.copyWebDavFile(oldPath, newPath);
+      LOGGER.debug("Copying WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
+      return WebDavFileOperations.copyWebDavFile(oldPathStr, newPathStr);
+    }
+    else if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
+      // One is WebDAV and one is local - not supported
+      LOGGER.error("Cannot copy files between WebDAV and local file system: {} -> {}", oldPathStr, newPathStr);
+      return false;
     }
 
-    // Local filesystem handling
+    // Both are local paths - use standard file operations
     if (!oldFilename.toAbsolutePath().toString().equals(newFilename.toAbsolutePath().toString())) {
       LOGGER.debug("copy file '{}' to '{}'", oldFilename, newFilename);
       if (oldFilename.equals(newFilename)) {
