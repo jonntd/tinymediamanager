@@ -479,8 +479,9 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern CHINESE_PART_PATTERN           = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])部分?", Pattern.CASE_INSENSITIVE);
   private static final Pattern CHINESE_CHAPTER_PATTERN        = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])章", Pattern.CASE_INSENSITIVE);
 
-  // 特殊格式模式
-  private static final Pattern ROMAN_NUMERAL_PATTERN          = Pattern.compile("([IVX]+)", Pattern.CASE_INSENSITIVE);
+  // 特殊格式模式 - 罗马数字必须紧跟在中文字符后面（如"大海战II"），避免误匹配其他位置的字母
+  private static final Pattern ROMAN_NUMERAL_PATTERN          = Pattern.compile("([\\u4e00-\\u9fa5])([IVX]{1,5})(?:\\s|$|[^a-zA-Z])",
+      Pattern.CASE_INSENSITIVE);
   private static final Pattern DOCUMENTARY_PATTERN            = Pattern.compile("(\\d{1,2})(?:of|/)(\\d{1,2})", Pattern.CASE_INSENSITIVE);
   // (1/6) with normal or unicode slash!
   private static final Pattern EPISODE_PATTERN_NR             = Pattern.compile("(\\d{1,2})[⧸/](\\d{1,2})", Pattern.CASE_INSENSITIVE);
@@ -803,15 +804,16 @@ public class TvShowEpisodeAndSeasonParser {
       }
     }
 
-    // 尝试罗马数字格式（如"大海战II"）
+    // 尝试罗马数字格式（如"大海战II"）- 必须紧跟在中文字符后面
     if (result.episodes.isEmpty()) {
       m = ROMAN_NUMERAL_PATTERN.matcher(name);
       if (m.find()) {
         try {
-          int romanNum = romanToInt(m.group(1));
+          // group(1) 是中文字符，group(2) 是罗马数字
+          int romanNum = romanToInt(m.group(2));
           if (romanNum > 0) {
             result.episodes.add(romanNum);
-            LOGGER.debug("Parsed Roman numeral format: Episode {}", romanNum);
+            LOGGER.debug("Parsed Roman numeral format after Chinese char '{}': Episode {}", m.group(1), romanNum);
           }
         }
         catch (Exception e) {
@@ -1236,26 +1238,36 @@ public class TvShowEpisodeAndSeasonParser {
     EpisodeMatchingResult result = new EpisodeMatchingResult();
     String nameNoExt = name.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
 
-    // 【优先解析中文格式】- 确保中文格式（如"第51话"）被优先识别，避免被 Anime 模式误匹配
-    result = parseChineseEpisodeFormat(result, nameNoExt);
-    if (!result.episodes.isEmpty()) {
-      LOGGER.debug("Chinese format parsed successfully for: {}", name);
-      // 尝试从路径中提取季号 (如: 熊出没之探险日记(2) 中的 2)
-      if (result.season == -1) {
-        result = parseSeasonFromPath(result, name);
+    // 【标准 SxxExx 格式优先】- 如果文件名包含明确的 SxxExx 格式，直接使用标准解析
+    // 避免被中文格式解析中的罗马数字等误匹配
+    Pattern standardSexxExxPattern = Pattern.compile("[Ss](\\d{1,4})[Ee](\\d{1,4})", Pattern.CASE_INSENSITIVE);
+    Matcher sexxExxMatcher = standardSexxExxPattern.matcher(nameNoExt);
+    if (sexxExxMatcher.find()) {
+      LOGGER.debug("Found standard SxxExx format in filename, skipping Chinese format parsing: {}", name);
+      // 直接跳到标准解析流程
+    }
+    else {
+      // 【优先解析中文格式】- 确保中文格式（如"第51话"）被优先识别，避免被 Anime 模式误匹配
+      result = parseChineseEpisodeFormat(result, nameNoExt);
+      if (!result.episodes.isEmpty()) {
+        LOGGER.debug("Chinese format parsed successfully for: {}", name);
+        // 尝试从路径中提取季号 (如: 熊出没之探险日记(2) 中的 2)
+        if (result.season == -1) {
+          result = parseSeasonFromPath(result, name);
+        }
+        // 如果还是没有季号，尝试从标题中提取隐含的季号 (如: 熊出没之探险日记2 中的 2)
+        if (result.season == -1) {
+          result = parseSeasonFromTitle(result, nameNoExt);
+        }
+        // 如果仍然没有季号，默认为第1季
+        if (result.season == -1) {
+          result.season = 1;
+          LOGGER.trace("No season found, defaulting to season 1");
+        }
+        result.name = nameNoExt;
+        smartCacheStore(generateCacheKey("filename", name, ""), result);
+        return result;
       }
-      // 如果还是没有季号，尝试从标题中提取隐含的季号 (如: 熊出没之探险日记2 中的 2)
-      if (result.season == -1) {
-        result = parseSeasonFromTitle(result, nameNoExt);
-      }
-      // 如果仍然没有季号，默认为第1季
-      if (result.season == -1) {
-        result.season = 1;
-        LOGGER.trace("No season found, defaulting to season 1");
-      }
-      result.name = nameNoExt;
-      smartCacheStore(generateCacheKey("filename", name, ""), result);
-      return result;
     }
 
     // parse ANIME exclusively in front, unmodified
