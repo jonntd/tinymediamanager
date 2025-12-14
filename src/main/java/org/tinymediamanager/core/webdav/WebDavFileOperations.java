@@ -243,6 +243,12 @@ public class WebDavFileOperations {
         return false;
       }
 
+      // Check if source and destination are the same
+      if (sourcePath.equals(destPath)) {
+        LOGGER.info("Source and destination are the same, skipping copy: {}", sourcePath);
+        return true;
+      }
+
       // Ensure parent directory exists
       String destParent = getParentPath(destPath);
       if (destParent != null && !destParent.isEmpty() && !client.exists(destParent)) {
