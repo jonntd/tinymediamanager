@@ -102,6 +102,12 @@ public class WebDavFileOperations {
         return false;
       }
 
+      // Check if source and destination are the same
+      if (sourcePath.equals(destPath)) {
+        LOGGER.info("Source and destination are the same, skipping move: {}", sourcePath);
+        return true;
+      }
+
       // Ensure parent directory exists
       String destParent = getParentPath(destPath);
       if (destParent != null && !destParent.isEmpty()) {
@@ -235,6 +241,12 @@ public class WebDavFileOperations {
       if (client == null) {
         LOGGER.error("Failed to create WebDAV client for source: {}", sourceId);
         return false;
+      }
+
+      // Check if source and destination are the same
+      if (sourcePath.equals(destPath)) {
+        LOGGER.info("Source and destination are the same, skipping copy: {}", sourcePath);
+        return true;
       }
 
       // Ensure parent directory exists

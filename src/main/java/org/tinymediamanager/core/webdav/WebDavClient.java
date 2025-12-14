@@ -258,33 +258,80 @@ public class WebDavClient {
    *          the destination path (relative to WebDAV root)
    * @return true if the move was successful
    */
+  /**
+   * Move/rename a file or directory on the WebDAV server with retry support
+   *
+   * @param sourcePath
+   *          the source path (relative to WebDAV root)
+   * @param destPath
+   *          the destination path (relative to WebDAV root)
+   * @return true if the move was successful
+   */
   public boolean move(String sourcePath, String destPath) {
-    ensureConnected();
-    try {
-      String sourceUrl = buildUrl(sourcePath);
-      String destUrl = buildUrl(destPath);
-
-      // Check if source and destination are the same
-      if (sourceUrl.equals(destUrl)) {
-        LOGGER.info("Source and destination are the same, skipping move: {}", safeDecode(sourcePath));
-        return true;
-      }
-
-      LOGGER.debug("Moving WebDAV file from '{}' to '{}'", safeDecode(sourcePath), safeDecode(destPath));
-      LOGGER.debug("Raw source path: '{}', raw dest path: '{}'", safeDecode(sourcePath), safeDecode(destPath));
-      sardine.move(sourceUrl, destUrl);
-      return true;
-    }
-    catch (IOException e) {
-      LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-      LOGGER.error("Exception details: {}", e.toString());
-      LOGGER.debug("Full stack trace:", e);
-      return false;
-    }
+    return moveWithRetry(sourcePath, destPath, 3); // 最多重试 3 次
   }
 
   /**
-   * Copy a file or directory on the WebDAV server
+   * Internal move method with retry support for transient server errors (5xx)
+   */
+  private boolean moveWithRetry(String sourcePath, String destPath, int maxRetries) {
+    ensureConnected();
+    String sourceUrl = buildUrl(sourcePath);
+    String destUrl = buildUrl(destPath);
+
+    // Check if source and destination are the same
+    if (sourceUrl.equals(destUrl)) {
+      LOGGER.info("Source and destination are the same, skipping move: {}", safeDecode(sourcePath));
+      return true;
+    }
+
+    int attempt = 0;
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        LOGGER.debug("Moving WebDAV file from '{}' to '{}' (attempt {}/{})", safeDecode(sourcePath), safeDecode(destPath), attempt, maxRetries);
+        sardine.move(sourceUrl, destUrl);
+        return true;
+      }
+      catch (com.github.sardine.impl.SardineException e) {
+        int statusCode = e.getStatusCode();
+        // 对于服务器错误 (5xx)，可以重试
+        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
+          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+          LOGGER.warn("WebDAV move failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            // 重新连接以刷新连接状态
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+        // 对于客户端错误 (4xx) 或重试次数用尽，直接失败
+        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.error("Exception details: {}", e.toString());
+        LOGGER.debug("Full stack trace:", e);
+        return false;
+      }
+      catch (IOException e) {
+        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.error("Exception details: {}", e.toString());
+        LOGGER.debug("Full stack trace:", e);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Copy a file or directory on the WebDAV server with retry support
    *
    * @param sourcePath
    *          the source path (relative to WebDAV root)
@@ -293,18 +340,56 @@ public class WebDavClient {
    * @return true if the copy was successful
    */
   public boolean copy(String sourcePath, String destPath) {
+    return copyWithRetry(sourcePath, destPath, 3); // 最多重试 3 次
+  }
+
+  /**
+   * Internal copy method with retry support for transient server errors (5xx)
+   */
+  private boolean copyWithRetry(String sourcePath, String destPath, int maxRetries) {
     ensureConnected();
-    try {
-      String sourceUrl = buildUrl(sourcePath);
-      String destUrl = buildUrl(destPath);
-      LOGGER.debug("Copying WebDAV file from '{}' to '{}'", safeDecode(sourcePath), safeDecode(destPath));
-      sardine.copy(sourceUrl, destUrl);
-      return true;
+    String sourceUrl = buildUrl(sourcePath);
+    String destUrl = buildUrl(destPath);
+
+    int attempt = 0;
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        LOGGER.debug("Copying WebDAV file from '{}' to '{}' (attempt {}/{})", safeDecode(sourcePath), safeDecode(destPath), attempt, maxRetries);
+        sardine.copy(sourceUrl, destUrl);
+        return true;
+      }
+      catch (com.github.sardine.impl.SardineException e) {
+        int statusCode = e.getStatusCode();
+        // 对于服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
+        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
+          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+          LOGGER.warn("WebDAV copy failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            // 重新连接以刷新连接状态
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+        // 对于客户端错误 (4xx) 或重试次数用尽，直接失败
+        LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        return false;
+      }
+      catch (IOException e) {
+        LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        return false;
+      }
     }
-    catch (IOException e) {
-      LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-      return false;
-    }
+    return false;
   }
 
   /**

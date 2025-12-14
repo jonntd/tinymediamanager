@@ -2918,7 +2918,19 @@ public class TvShowRenamer {
     String oldPath = WebDavDataSourceHelper.normalizeWebDavPath(oldFilename.toString());
     String newPath = WebDavDataSourceHelper.normalizeWebDavPath(newFilename.toString());
 
-    // Handle WebDAV paths specially
+    // 检查源路径是否是本地缓存路径（即使目标是 WebDAV）
+    // 缓存路径通常包含 "cache/image" 或以 cache 目录开头
+    boolean isOldPathCache = oldPath.contains("/cache/image/") || oldPath.contains("\\cache\\image\\");
+
+    // 如果源路径看起来像是本地缓存路径，但被错误地拼接到了 WebDAV 路径中，
+    // 这是一个配置问题，跳过处理并返回 true（因为原始缓存文件仍存在）
+    if (WebDavDataSourceHelper.isWebDavPath(oldPath) && isOldPathCache) {
+      LOGGER.warn("Skipping copy: source path '{}' appears to be a local cache path incorrectly embedded in WebDAV path", oldPath);
+      // 返回 true 以避免阻断重命名流程，用户可以手动处理或重新刮削
+      return true;
+    }
+
+    // Handle WebDAV paths specially (both source and destination are WebDAV)
     if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
       if (oldPath.equals(newPath)) {
         return true; // same file, nothing to do
