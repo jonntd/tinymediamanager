@@ -356,7 +356,7 @@ public class BatchChatGPTTvShowRecognitionService {
                     String title = matcher.group(2).trim();
 
                     TvShow tvShow = indexToTvShow.get(index);
-                    if (tvShow != null && !title.equals("未知电视剧") && !title.isEmpty()) {
+                    if (tvShow != null && !title.isEmpty()) {
                         results.put(tvShow.getDbId().toString(), title);
                         matchedCount++;
                         LOGGER.debug("Matched [<<{}>>] -> {}", index, title);
@@ -375,7 +375,7 @@ public class BatchChatGPTTvShowRecognitionService {
                             int index = Integer.parseInt(parts[0].trim());
                             String title = parts[1].trim();
                             TvShow tvShow = indexToTvShow.get(index);
-                            if (tvShow != null && !title.equals("未知电视剧") && !title.isEmpty()) {
+                            if (tvShow != null && !title.isEmpty()) {
                                 results.put(tvShow.getDbId().toString(), title);
                                 matchedCount++;
                                 LOGGER.debug("Fallback matched [{}] -> {}", index, title);
