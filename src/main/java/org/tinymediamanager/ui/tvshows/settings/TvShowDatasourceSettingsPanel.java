@@ -47,6 +47,7 @@ import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.TvShowSettings;
 import org.tinymediamanager.core.tvshow.tasks.TvShowRemoveDatasourceTask;
+import org.tinymediamanager.core.tvshow.tasks.TvShowUpdateDatasourceTask;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
 import org.tinymediamanager.ui.TmmUIHelper;
@@ -69,7 +70,7 @@ import net.miginfocom.swing.MigLayout;
  * 
  * @author Manuel Laggner
  */
-class TvShowDatasourceSettingsPanel extends JPanel {
+public class TvShowDatasourceSettingsPanel extends JPanel {
   private final TvShowSettings settings = TvShowModuleManager.getInstance().getSettings();
 
   private JTextField           tfAddBadword;
@@ -89,8 +90,9 @@ class TvShowDatasourceSettingsPanel extends JPanel {
   private JButton              btnMoveDownDatasource;
   private JButton              btnExchangeDatasource;
   private JButton              btnAddWebDavDatasource;
+  private JButton              btnRefreshDatasource;
 
-  TvShowDatasourceSettingsPanel() {
+  public TvShowDatasourceSettingsPanel() {
     // UI initializations
     initComponents();
     initDataBindings();
@@ -289,6 +291,18 @@ class TvShowDatasourceSettingsPanel extends JPanel {
         }
       }
     });
+
+    // 刷新选中的数据源（支持多选）
+    btnRefreshDatasource.addActionListener(arg0 -> {
+      int[] selectedIndices = listDatasources.getSelectedIndices();
+      if (selectedIndices.length > 0) {
+        java.util.List<String> datasources = new java.util.ArrayList<>();
+        for (int index : selectedIndices) {
+          datasources.add(TvShowModuleManager.getInstance().getSettings().getTvShowDataSource().get(index));
+        }
+        TmmTaskManager.getInstance().addUnnamedTask(new TvShowUpdateDatasourceTask(datasources));
+      }
+    });
   }
 
   private void initComponents() {
@@ -306,7 +320,7 @@ class TvShowDatasourceSettingsPanel extends JPanel {
         panelDatasources.add(scrollPaneDataSources, "cell 1 0 1 2,grow");
 
         listDatasources = new JList();
-        listDatasources.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        listDatasources.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         // Set custom renderer to decode WebDAV paths
         listDatasources.setCellRenderer(new DatasourceListCellRenderer());
         scrollPaneDataSources.setViewportView(listDatasources);
@@ -334,6 +348,10 @@ class TvShowDatasourceSettingsPanel extends JPanel {
         btnExchangeDatasource = new SquareIconButton(IconManager.EXCHANGE);
         btnExchangeDatasource.setToolTipText(TmmResourceBundle.getString("Settings.exchangedatasource.desc"));
         panelDatasources.add(btnExchangeDatasource, "cell 2 1");
+
+        btnRefreshDatasource = new SquareIconButton(IconManager.REFRESH_INV);
+        btnRefreshDatasource.setToolTipText(TmmResourceBundle.getString("Toolbar.update"));
+        panelDatasources.add(btnRefreshDatasource, "cell 2 0, growx, aligny top");
       }
     }
     {

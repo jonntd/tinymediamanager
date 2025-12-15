@@ -119,6 +119,7 @@ import org.tinymediamanager.ui.tvshows.panels.tvshow.TvShowInformationPanel;
 import org.tinymediamanager.ui.tvshows.panels.tvshow.TvShowMediaInformationPanel;
 import org.tinymediamanager.ui.tvshows.panels.tvshow.TvShowTrailerPanel;
 import org.tinymediamanager.ui.tvshows.settings.TvShowSettingsNode;
+import org.tinymediamanager.ui.tvshows.settings.TvShowDatasourceSettingsPanel;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -137,6 +138,8 @@ public class TvShowUIModule extends AbstractTmmUIModule {
   private final TvShowFilterDialog  tvShowFilterDialog;
 
   private final TmmSettingsNode     settingsNode;
+
+  private final JPanel              datasourcePanel;
 
   private TvShowUIModule() {
 
@@ -212,6 +215,9 @@ public class TvShowUIModule extends AbstractTmmUIModule {
     // build settings node
     settingsNode = new TvShowSettingsNode();
 
+    // build datasource panel
+    datasourcePanel = new TvShowDatasourceSettingsPanel();
+
     // further initializations
     init();
   }
@@ -274,6 +280,11 @@ public class TvShowUIModule extends AbstractTmmUIModule {
   @Override
   public TmmSettingsNode getSettingsNode() {
     return settingsNode;
+  }
+
+  @Override
+  public JPanel getDatasourcePanel() {
+    return datasourcePanel;
   }
 
   private void createActions() {

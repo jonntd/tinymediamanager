@@ -198,6 +198,7 @@ public class IconManager {
   public static final ImageIcon              REMOVE_INV                   = createButtonIcon("minus.svg");
   public static final ImageIcon              SEARCH_INV                   = createButtonIcon("search.svg");
   public static final ImageIcon              STOP_INV                     = createButtonIcon("circle-stop.svg");
+  public static final ImageIcon              REFRESH_INV                  = createButtonIcon("redo.svg");
 
   // font awesome icons - column headers
   public static final ImageIcon              ABSOLUTE                     = createTextIcon("abs", 1.0);

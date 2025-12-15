@@ -46,6 +46,7 @@ import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieSettings;
 import org.tinymediamanager.core.movie.tasks.MovieRemoveDatasourceTask;
+import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.ui.IconManager;
 import org.tinymediamanager.ui.MainWindow;
@@ -69,7 +70,7 @@ import net.miginfocom.swing.MigLayout;
  * 
  * @author Manuel Laggner
  */
-class MovieDatasourceSettingsPanel extends JPanel {
+public class MovieDatasourceSettingsPanel extends JPanel {
   private final MovieSettings settings = MovieModuleManager.getInstance().getSettings();
 
   private JTextField          tfAddBadword;
@@ -89,11 +90,12 @@ class MovieDatasourceSettingsPanel extends JPanel {
   private JButton             btnMoveDownDatasource;
   private JButton             btnExchangeDatasource;
   private JButton             btnAddWebDavDatasource;
+  private JButton             btnRefreshDatasource;
 
   /**
    * Instantiates a new movie settings panel.
    */
-  MovieDatasourceSettingsPanel() {
+  public MovieDatasourceSettingsPanel() {
     // UI initializations
     initComponents();
     initDataBindings();
@@ -292,6 +294,18 @@ class MovieDatasourceSettingsPanel extends JPanel {
         }
       }
     });
+
+    // 刷新选中的数据源（支持多选）
+    btnRefreshDatasource.addActionListener(arg0 -> {
+      int[] selectedIndices = listDatasources.getSelectedIndices();
+      if (selectedIndices.length > 0) {
+        java.util.List<String> datasources = new java.util.ArrayList<>();
+        for (int index : selectedIndices) {
+          datasources.add(MovieModuleManager.getInstance().getSettings().getMovieDataSource().get(index));
+        }
+        TmmTaskManager.getInstance().addUnnamedTask(new MovieUpdateDatasourceTask(datasources));
+      }
+    });
   }
 
   private void initComponents() {
@@ -309,7 +323,7 @@ class MovieDatasourceSettingsPanel extends JPanel {
         panelDatasources.add(scrollPaneDataSources, "cell 1 0 1 2,grow");
 
         listDatasources = new JList();
-        listDatasources.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        listDatasources.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         // Set custom renderer to decode WebDAV paths
         listDatasources.setCellRenderer(new DatasourceListCellRenderer());
         scrollPaneDataSources.setViewportView(listDatasources);
@@ -337,6 +351,10 @@ class MovieDatasourceSettingsPanel extends JPanel {
         btnExchangeDatasource = new SquareIconButton(IconManager.EXCHANGE);
         btnExchangeDatasource.setToolTipText(TmmResourceBundle.getString("Settings.exchangedatasource.desc"));
         panelDatasources.add(btnExchangeDatasource, "cell 2 1");
+
+        btnRefreshDatasource = new SquareIconButton(IconManager.REFRESH_INV);
+        btnRefreshDatasource.setToolTipText(TmmResourceBundle.getString("Toolbar.update"));
+        panelDatasources.add(btnRefreshDatasource, "cell 2 0, growx, aligny top");
       }
     }
 
