@@ -527,15 +527,16 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
     // ========== 4. 加权计算最终分数 ==========
     float calculatedScore = titleScore * TITLE_WEIGHT + yearScore * YEAR_WEIGHT + otherScore * OTHER_WEIGHT;
 
-    // ========== 5. 部分ID匹配加分 ==========
+    // ========== 5. 部分ID匹配加分（不钳制，允许超过1.0以确保排序优先）==========
     float idBonus = calculateIdBonus(options);
     if (idBonus > 0) {
       calculatedScore += idBonus;
-      LOGGER.trace("ID bonus applied: +{:.2f}", idBonus);
+      LOGGER.trace("ID bonus applied: +{:.2f}, score now: {:.2f}", idBonus, calculatedScore);
     }
 
-    // ========== 6. 边界保护 ==========
-    calculatedScore = Math.max(0, Math.min(1, calculatedScore));
+    // ========== 6. 边界保护（下限0，上限不限制以保持ID匹配优先级）==========
+    calculatedScore = Math.max(0, calculatedScore);
+    // 注意：不再将分数钳制在1.0以下，允许ID匹配的结果超过100%以确保排序优先
 
     LOGGER.debug(
         "Score calculation: query='{}' title='{}' year={}/{} => title={:.2f}*{:.0f}% + year={:.2f}*{:.0f}% + other={:.2f}*{:.0f}% + idBonus={:.2f} = {:.2f}",
@@ -684,8 +685,12 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
       LOGGER.trace("IMDB ID match bonus applied: +0.20");
     }
 
-    // TMDB ID 匹配加分
+    // TMDB ID 匹配加分（同时检查 tmdb 和 tmdb_score_only 两个键）
     int optionTmdbId = options.getIdAsIntOrDefault("tmdb", 0);
+    if (optionTmdbId == 0) {
+      // 如果 tmdb 键没有值，尝试获取 tmdb_score_only 键（仅用于评分的路径 ID）
+      optionTmdbId = options.getIdAsIntOrDefault("tmdb_score_only", 0);
+    }
     int resultTmdbId = getIdAsInt("tmdb");
     if (optionTmdbId > 0 && optionTmdbId == resultTmdbId) {
       idBonus = Math.max(idBonus, 0.25f);

@@ -883,6 +883,29 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
     }
 
+    // 从文件夹名称中提取 ID（与电影扫描逻辑一致）
+    if (!MediaIdUtil.isValidImdbId(tvShow.getImdbId())) {
+      String imdbId = ParserUtils.detectImdbId(folderName);
+      if (StringUtils.isNotBlank(imdbId)) {
+        tvShow.setId(MediaMetadata.IMDB, imdbId);
+        LOGGER.debug("Detected IMDB ID '{}' from folder name: {}", imdbId, folderName);
+      }
+    }
+    if (tvShow.getTmdbId() == 0) {
+      int tmdbId = ParserUtils.detectTmdbId(folderName);
+      if (tmdbId > 0) {
+        tvShow.setId(MediaMetadata.TMDB, tmdbId);
+        LOGGER.debug("Detected TMDB ID '{}' from folder name: {}", tmdbId, folderName);
+      }
+    }
+    if (tvShow.getIdAsInt(MediaMetadata.TVDB) == 0) {
+      String tvdbId = ParserUtils.detectTvdbId(folderName);
+      if (StringUtils.isNotBlank(tvdbId)) {
+        tvShow.setId(MediaMetadata.TVDB, tvdbId);
+        LOGGER.debug("Detected TVDB ID '{}' from folder name: {}", tvdbId, folderName);
+      }
+    }
+
     try {
       // List all files in the show directory recursively
       List<WebDavFile> allFiles = listWebDavFilesRecursive(client, dirPath);
