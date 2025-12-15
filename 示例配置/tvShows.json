@@ -91,7 +91,7 @@
   "renamerSeasonPathnameSpaceSubstitution": false,
   "renamerShowPathnameSpaceReplacement": "_",
   "renamerShowPathnameSpaceSubstitution": false,
-  "renamerTvShowFoldername": "${showTitle} (${showYear}) [tmdb-${showTmdb}]",
+  "renamerTvShowFoldername": "${showTitle} (${showYear}) ${[tmdb-,showTmdb,]}",
   "resetNewFlagOnUds": true,
   "runtimeFromMediaInfo": false,
   "saveArtworkToCache": true,
@@ -149,9 +149,7 @@
     "GENRES"
   ],
   "tvShowConnector": "EMBY",
-  "tvShowDataSource": [
-    ""
-  ],
+  "tvShowDataSource": [],
   "tvShowDisplayAllMissingArtwork": false,
   "tvShowDisplayAllMissingMetadata": false,
   "tvShowScraperMetadataConfig": [

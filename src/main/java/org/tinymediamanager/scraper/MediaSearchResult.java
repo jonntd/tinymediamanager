@@ -16,7 +16,9 @@
 package org.tinymediamanager.scraper;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -56,6 +58,7 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
   private float                     score            = 0;
   private MediaMetadata             metadata         = null;
   private String                    posterUrl        = "";
+  private final List<String>        aliases          = new ArrayList<>();                               // 别名列表，用于多语言匹配
 
   public MediaSearchResult(String providerId, MediaType type) {
     this.providerId = providerId;
@@ -524,11 +527,19 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
     // ========== 4. 加权计算最终分数 ==========
     float calculatedScore = titleScore * TITLE_WEIGHT + yearScore * YEAR_WEIGHT + otherScore * OTHER_WEIGHT;
 
-    // ========== 5. 边界保护 ==========
+    // ========== 5. 部分ID匹配加分 ==========
+    float idBonus = calculateIdBonus(options);
+    if (idBonus > 0) {
+      calculatedScore += idBonus;
+      LOGGER.trace("ID bonus applied: +{:.2f}", idBonus);
+    }
+
+    // ========== 6. 边界保护 ==========
     calculatedScore = Math.max(0, Math.min(1, calculatedScore));
 
-    LOGGER.debug("Score calculation: query='{}' title='{}' year={}/{} => title={:.2f}*{:.0f}% + year={:.2f}*{:.0f}% + other={:.2f}*{:.0f}% = {:.2f}",
-        searchQuery, title, year, searchYear, titleScore, TITLE_WEIGHT * 100, yearScore, YEAR_WEIGHT * 100, otherScore, OTHER_WEIGHT * 100,
+    LOGGER.debug(
+        "Score calculation: query='{}' title='{}' year={}/{} => title={:.2f}*{:.0f}% + year={:.2f}*{:.0f}% + other={:.2f}*{:.0f}% + idBonus={:.2f} = {:.2f}",
+        searchQuery, title, year, searchYear, titleScore, TITLE_WEIGHT * 100, yearScore, YEAR_WEIGHT * 100, otherScore, OTHER_WEIGHT * 100, idBonus,
         calculatedScore);
 
     setScore(calculatedScore);
@@ -545,6 +556,13 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
     // 比较搜索词与各种标题的相似度，取最高分
     float score = Math.max(Math.max(MetadataUtil.calculateScore(searchQuery, title), MetadataUtil.calculateScore(searchQuery, originalTitle)),
         MetadataUtil.calculateScore(searchQuery, englishTitle));
+
+    // 遍历别名列表，取最高相似度分数
+    for (String alias : aliases) {
+      if (StringUtils.isNotBlank(alias)) {
+        score = Math.max(score, MetadataUtil.calculateScore(searchQuery, alias));
+      }
+    }
 
     // 如果搜索词完全包含在标题中，确保至少有合理的基础分
     if (isSearchContainedInTitle(searchQuery)) {
@@ -596,24 +614,24 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
 
     int diff = Math.abs(searchYear - resultYear);
 
-    // 根据年份差异返回得分
+    // 根据年份差异返回得分（针对电视剧优化，跨年播出常见）
     if (diff == 0) {
       return 1.0f; // 精确匹配
     }
     else if (diff == 1) {
-      return 0.85f; // ±1年容差（发行年份常有差异）
+      return 0.90f; // ±1年容差（电视剧跨年播出常见）
     }
     else if (diff == 2) {
-      return 0.65f; // ±2年
+      return 0.80f; // ±2年（季度延续）
     }
     else if (diff == 3) {
-      return 0.45f; // ±3年
+      return 0.65f; // ±3年
     }
     else if (diff <= 5) {
-      return 0.25f; // ±4-5年
+      return 0.45f; // ±4-5年
     }
     else {
-      return 0.0f; // >5年差异
+      return Math.max(0.1f, 0.45f - (diff - 5) * 0.05f); // 渐进衰减，最低0.1
     }
   }
 
@@ -638,6 +656,77 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
     }
 
     return Math.min(1.0f, score);
+  }
+
+  /**
+   * 计算部分ID匹配加分
+   * 
+   * @param options
+   *          搜索选项
+   * @return ID匹配加分 [0, 0.3]
+   */
+  private float calculateIdBonus(MediaSearchAndScrapeOptions options) {
+    float idBonus = 0f;
+
+    // TVDB ID 匹配加分
+    int optionTvdbId = options.getIdAsIntOrDefault("tvdb", 0);
+    int resultTvdbId = getIdAsInt("tvdb");
+    if (optionTvdbId > 0 && optionTvdbId == resultTvdbId) {
+      idBonus = Math.max(idBonus, 0.15f);
+      LOGGER.trace("TVDB ID match bonus applied: +0.15");
+    }
+
+    // IMDB ID 匹配加分
+    String optionImdbId = options.getImdbId();
+    String resultImdbId = getIMDBId();
+    if (StringUtils.isNotBlank(optionImdbId) && optionImdbId.equals(resultImdbId)) {
+      idBonus = Math.max(idBonus, 0.20f);
+      LOGGER.trace("IMDB ID match bonus applied: +0.20");
+    }
+
+    // TMDB ID 匹配加分
+    int optionTmdbId = options.getIdAsIntOrDefault("tmdb", 0);
+    int resultTmdbId = getIdAsInt("tmdb");
+    if (optionTmdbId > 0 && optionTmdbId == resultTmdbId) {
+      idBonus = Math.max(idBonus, 0.25f);
+      LOGGER.trace("TMDB ID match bonus applied: +0.25");
+    }
+
+    return idBonus;
+  }
+
+  /**
+   * 获取别名列表
+   * 
+   * @return 别名列表
+   */
+  public List<String> getAliases() {
+    return aliases;
+  }
+
+  /**
+   * 设置别名列表
+   * 
+   * @param aliases
+   *          别名列表
+   */
+  public void setAliases(List<String> aliases) {
+    this.aliases.clear();
+    if (aliases != null) {
+      this.aliases.addAll(aliases);
+    }
+  }
+
+  /**
+   * 添加单个别名
+   * 
+   * @param alias
+   *          别名
+   */
+  public void addAlias(String alias) {
+    if (StringUtils.isNotBlank(alias) && !this.aliases.contains(alias)) {
+      this.aliases.add(alias);
+    }
   }
 
   /**
