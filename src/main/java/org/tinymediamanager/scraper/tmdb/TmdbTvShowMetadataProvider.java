@@ -1615,8 +1615,9 @@ public class TmdbTvShowMetadataProvider extends TmdbMetadataProvider implements 
     // calculate score
     if ((StringUtils.isNotBlank(query.getImdbId()) && query.getImdbId().equals(result.getIMDBId()))
         || String.valueOf(query.getTmdbId()).equals(result.getId())) {
-      LOGGER.debug("perfect match by ID - set score to 1");
-      result.setScore(1f);
+      // ID 完美匹配，设置分数为 1.25 以确保排序优先且 UI 显示为 125%★
+      LOGGER.debug("perfect match by ID - set score to 1.25 (bonus for ID match)");
+      result.setScore(1.25f);
     }
     else {
       // calculate the score by comparing the search result with the search options

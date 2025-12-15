@@ -1,5 +1,5 @@
 {
-  "allowMultipleMoviesInSameDir": false,
+  "allowMultipleMoviesInSameDir": true,
   "artworkScrapers": [
     "tmdb"
   ],
@@ -129,7 +129,7 @@
   "renamerCleanupUnwanted": true,
   "renamerColonReplacement": "-",
   "renamerCreateMoviesetForSingleMovie": false,
-  "renamerFilename": "${title}${ - ,edition,} (${year}) [tmdb-${tmdb}] ${movie.videoFilesize;filesize}",
+  "renamerFilename": "${title}${ - ,edition,} (${year}) ${ [tmdb-,tmdb,] } ${movie.videoFilesize;filesize}",
   "renamerFirstCharacterNumberReplacement": "#",
   "renamerNfoCleanup": true,
   "renamerOnlyVideoFiles": true,

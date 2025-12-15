@@ -620,12 +620,37 @@ public class Movie extends MediaEntity implements IMediaInformation {
   }
 
   /**
-   * Gets the tmdb id.
+   * Gets the tmdb id. 如果存储的 ID 为 0，则尝试从路径或视频文件名中解析 TMDB ID 作为回退。
    * 
    * @return the tmdb id
    */
   public int getTmdbId() {
-    return this.getIdAsInt(MediaMetadata.TMDB);
+    int tmdbId = this.getIdAsInt(MediaMetadata.TMDB);
+
+    // 如果存储的 ID 为 0，尝试从路径或文件名中解析 TMDB ID（用于未刮削但路径/文件名中有 ID 的情况）
+    if (tmdbId == 0) {
+      // 1. 首先尝试从目录路径解析
+      if (getPathNIO() != null) {
+        String pathStr = getPathNIO().toString();
+        tmdbId = org.tinymediamanager.scraper.util.ParserUtils.detectTmdbId(pathStr);
+      }
+
+      // 2. 如果目录路径中没有，尝试从主视频文件名解析
+      if (tmdbId == 0) {
+        MediaFile mainVideo = getMainVideoFile();
+        if (mainVideo != null && org.apache.commons.lang3.StringUtils.isNotBlank(mainVideo.getFilename())) {
+          tmdbId = org.tinymediamanager.scraper.util.ParserUtils.detectTmdbId(mainVideo.getFilename());
+        }
+      }
+
+      // 如果解析出了 ID，保存到对象中以便下次直接获取
+      if (tmdbId > 0) {
+        LOGGER.debug("Detected TMDB ID {} from path/filename", tmdbId);
+        this.setId(MediaMetadata.TMDB, tmdbId);
+      }
+    }
+
+    return tmdbId;
   }
 
   /**

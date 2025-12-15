@@ -102,6 +102,7 @@ import org.tinymediamanager.ui.movies.panels.MovieListPanel;
 import org.tinymediamanager.ui.movies.panels.MovieMediaInformationPanel;
 import org.tinymediamanager.ui.movies.panels.MovieTrailerPanel;
 import org.tinymediamanager.ui.movies.settings.MovieSettingsNode;
+import org.tinymediamanager.ui.movies.settings.MovieDatasourceSettingsPanel;
 import org.tinymediamanager.ui.settings.TmmSettingsNode;
 import org.tinymediamanager.ui.thirdparty.KodiRPCMenu;
 
@@ -121,6 +122,7 @@ public class MovieUIModule extends AbstractTmmUIModule {
   private final MovieSelectionModel selectionModel;
   private final MovieFilterDialog   movieFilterDialog;
   private final TmmSettingsNode     settingsNode;
+  private final JPanel              datasourcePanel;
 
   private MovieUIModule() {
     listPanel = new MovieListPanel();
@@ -161,6 +163,9 @@ public class MovieUIModule extends AbstractTmmUIModule {
 
     // settings node
     settingsNode = new MovieSettingsNode();
+
+    // datasource panel
+    datasourcePanel = new MovieDatasourceSettingsPanel();
 
     // further initializations
     init();
@@ -502,6 +507,11 @@ public class MovieUIModule extends AbstractTmmUIModule {
   @Override
   public TmmSettingsNode getSettingsNode() {
     return settingsNode;
+  }
+
+  @Override
+  public JPanel getDatasourcePanel() {
+    return datasourcePanel;
   }
 
   public void setFilterDialogVisible(boolean selected) {

@@ -1051,18 +1051,27 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
         // 构建搜索用的 IDs
         Map<String, Object> searchIds = new java.util.HashMap<>();
 
-        // 1. 始终优先尝试从电视剧路径中解析 TMDB ID（这是最可信的来源）
+        // 1. 从电视剧路径中解析 TMDB ID（这是最可信的来源）
         String showPath = show.getPathNIO() != null ? show.getPathNIO().toString() : "";
         int pathTmdbId = ParserUtils.detectTmdbId(showPath);
 
-        if (withIds && pathTmdbId > 0) {
-          LOGGER.info("Detected TMDB ID from path: {}", pathTmdbId);
-          searchIds.put(MediaMetadata.TMDB, pathTmdbId);
+        // 2. 路径 ID 仅用于评分加分，不触发直接 ID 查询
+        // 使用特殊键名 "tmdb_score_only" 来传递，TMDB Provider 不会识别这个键
+        if (pathTmdbId > 0) {
+          LOGGER.info("Detected TMDB ID from path: {} (used for score bonus only)", pathTmdbId);
+          searchIds.put("tmdb_score_only", pathTmdbId);
         }
-        else if (withIds) {
-          // 2. 只有在没有路径 ID 且调用方请求使用 ID 时，才使用 show 对象中的 ID
-          // 这样在 AI 修正（传入 withIds=false）时，就不会混入旧的错误 ID
-          searchIds.putAll(show.getIds());
+
+        // 3. 只有在调用方请求使用 ID 时，才使用 show 对象中的 ID 进行直接查询
+        if (withIds) {
+          // 如果路径中有可信的 TMDB ID，则用于直接查询
+          if (pathTmdbId > 0) {
+            searchIds.put(MediaMetadata.TMDB, pathTmdbId);
+          }
+          else {
+            // 否则使用 show 对象中的 ID
+            searchIds.putAll(show.getIds());
+          }
         }
 
         searchResult = tvShowList.searchTvShow(actualSearchTerm, searchYear, searchIds, mediaScraper, language);
@@ -1280,13 +1289,19 @@ public class TvShowChooserDialog extends TmmDialog implements ActionListener {
       /*
        * score
        */
-      col = new Column(TmmResourceBundle.getString("tmm.similarityscore"), "score", result -> String.format("%d%%", (int) (result.getScore() * 100)),
-          String.class);
+      col = new Column(TmmResourceBundle.getString("tmm.similarityscore"), "score", result -> {
+        int percentage = (int) (result.getScore() * 100);
+        // 超过100%的是ID精确匹配，用星号标记
+        if (percentage > 100) {
+          return String.format("%d%%", percentage);
+        }
+        return String.format("%d%%", percentage);
+      }, String.class);
       col.setColumnResizeable(false);
       col.setHeaderIcon(IconManager.VIDEO_BITRATE);
       col.setCellRenderer(new RightAlignTableCellRenderer());
-      col.setMinWidth(fontMetrics.stringWidth("100%") + getCellPadding());
-      col.setMaxWidth(fontMetrics.stringWidth("100%") + getCellPadding());
+      col.setMinWidth(fontMetrics.stringWidth("125%") + getCellPadding());
+      col.setMaxWidth(fontMetrics.stringWidth("125%") + getCellPadding());
       addColumn(col);
     }
   }

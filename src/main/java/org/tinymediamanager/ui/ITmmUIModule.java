@@ -148,4 +148,13 @@ public interface ITmmUIModule {
    * @return the settings node
    */
   TmmSettingsNode getSettingsNode();
+
+  /**
+   * get the datasource panel (for managing datasources in the main view)
+   * 
+   * @return the datasource panel, or null if not available
+   */
+  default JPanel getDatasourcePanel() {
+    return null;
+  }
 }

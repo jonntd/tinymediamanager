@@ -263,6 +263,12 @@ public class MainWindow extends JFrame implements IModalPopupPanelProvider {
       }
     };
     tabbedPane.addTab(module.getTabTitle(), module.getTabPanel());
+
+    // 为电视剧和电影模块添加媒体库目录管理标签页
+    if (module.getDatasourcePanel() != null) {
+      tabbedPane.addTab(TmmResourceBundle.getString("Settings.source"), module.getDatasourcePanel());
+    }
+
     masterPanel.add(tabbedPane, module.getModuleId());
     detailPanel.add(module.getDetailPanel(), module.getModuleId());
 
