@@ -22,6 +22,7 @@ import org.tinymediamanager.core.tvshow.TvShowEpisodeAndSeasonParser.EpisodeMatc
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.services.utils.TvShowAIPromptTemplates;
 import org.tinymediamanager.core.tvshow.services.utils.TvShowAIResponseParser;
+import org.tinymediamanager.core.tvshow.services.utils.TvShowPathUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -187,12 +188,21 @@ public class BatchChatGPTEpisodeRecognitionService {
 
         for (int i = 0; i < episodes.size(); i++) {
             TvShowEpisode episode = episodes.get(i);
-            String filename = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+
+            // 使用倒数三层路径而非仅文件名，提供更多上下文
+            String episodePath = "";
+            if (episode.getMainFile() != null && episode.getMainFile().getFileAsPath() != null) {
+                episodePath = TvShowPathUtils.extractLastThreeDirectoryNames(episode.getMainFile().getFileAsPath().toString());
+            }
+            if (episodePath.isEmpty()) {
+                episodePath = episode.getMainFile() != null ? episode.getMainFile().getFilename() : episode.getTitle();
+            }
+
             String tvShowTitle = episode.getTvShow() != null ? episode.getTvShow().getTitle() : "";
 
             // 格式: <<序号>> 剧集文件: xxx 电视剧: xxx
             request.append("<<").append(i + 1).append(">> ");
-            request.append("剧集文件: ").append(filename);
+            request.append("剧集文件: ").append(episodePath);
             if (!tvShowTitle.isEmpty()) {
                 request.append(" 电视剧: ").append(tvShowTitle);
             }
@@ -216,6 +226,7 @@ public class BatchChatGPTEpisodeRecognitionService {
         Exception lastException = null;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            long startTime = System.currentTimeMillis();
             try {
                 LOGGER.debug("Batch episode API call attempt {}/{}", attempt, maxRetries);
 
@@ -247,6 +258,10 @@ public class BatchChatGPTEpisodeRecognitionService {
                 messages.addObject().put("role", "system").put("content", systemPrompt);
                 messages.addObject().put("role", "user").put("content", batchRequest);
 
+                // 输出AI请求摘要到活动日志
+                int episodeCount = batchRequest.split("\n").length;
+                LOGGER.info("[AI请求] 剧集批量识别 | 模型: {} | 数量: {} 集", model, episodeCount);
+
                 String requestBody = OBJECT_MAPPER.writeValueAsString(requestJson);
 
                 HttpRequest request = HttpRequest.newBuilder()
@@ -262,6 +277,8 @@ public class BatchChatGPTEpisodeRecognitionService {
                 if (response.statusCode() == 200) {
                     String content = TvShowAIResponseParser.extractContentFromResponse(response.body());
                     if (content != null && !content.isEmpty()) {
+                        long responseTime = System.currentTimeMillis() - startTime;
+                        LOGGER.info("[AI响应] 剧集批量识别 | 耗时: {}ms | 原始content:\n{}", responseTime, content);
                         return content;
                     }
                     else {
