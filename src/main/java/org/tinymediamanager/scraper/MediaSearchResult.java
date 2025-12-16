@@ -549,12 +549,26 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
   /**
    * 计算标题相似度得分
    * 
+   * 使用组合策略优化匹配优先级： 1. 精确匹配检测：搜索词与标题完全相等时直接返回满分 2. 标题长度比例惩罚：搜索词覆盖率越高，得分越高（优先短标题精确匹配）
+   * 
    * @param searchQuery
    *          搜索词
-   * @return 相似度得分 [0, 1]
+   * @return 相似度得分 [0, 1+]
    */
   private float calculateTitleScore(String searchQuery) {
-    // 比较搜索词与各种标题的相似度，取最高分
+    if (StringUtils.isBlank(searchQuery)) {
+      return 0f;
+    }
+
+    String normalizedQuery = searchQuery.trim().toLowerCase();
+
+    // ========== 策略1: 精确匹配检测 - 直接返回满分+加成 ==========
+    if (isExactMatch(normalizedQuery)) {
+      LOGGER.trace("Exact match found: query='{}' title='{}'", searchQuery, title);
+      return 1.05f; // 给予额外加成，确保排序优先
+    }
+
+    // ========== 计算基础相似度得分 ==========
     float score = Math.max(Math.max(MetadataUtil.calculateScore(searchQuery, title), MetadataUtil.calculateScore(searchQuery, originalTitle)),
         MetadataUtil.calculateScore(searchQuery, englishTitle));
 
@@ -571,7 +585,94 @@ public class MediaSearchResult implements Comparable<MediaSearchResult> {
       LOGGER.trace("search '{}' contained in title '{}' - ensuring minimum score 0.70", searchQuery, title);
     }
 
+    // ========== 策略2: 标题长度比例惩罚 ==========
+    // 搜索词覆盖率 = 搜索词长度 / 标题长度
+    // 覆盖率越高说明匹配越精确（"爱你"/"爱你"=1.0 vs "爱你"/"偏偏偏爱你"=0.4）
+    score = applyLengthPenalty(score, normalizedQuery);
+
     return score;
+  }
+
+  /**
+   * 检查搜索词是否与任一标题完全匹配（严格模式）
+   * 
+   * 只有当标题与搜索词完全相等时才返回 true，用于给予额外加分
+   */
+  private boolean isExactMatch(String normalizedQuery) {
+    // 为了避免误匹配，移除标点符号后再比较
+    String cleanQuery = normalizedQuery.replaceAll("[\\s\\p{Punct}]", "");
+    if (cleanQuery.isEmpty()) {
+      return false;
+    }
+
+    // 检查主标题
+    if (StringUtils.isNotBlank(title)) {
+      String cleanTitle = title.trim().toLowerCase().replaceAll("[\\s\\p{Punct}]", "");
+      if (cleanTitle.equals(cleanQuery)) {
+        LOGGER.trace("isExactMatch: title '{}' matches query '{}'", title, normalizedQuery);
+        return true;
+      }
+    }
+
+    // 检查原始标题
+    if (StringUtils.isNotBlank(originalTitle)) {
+      String cleanOriginal = originalTitle.trim().toLowerCase().replaceAll("[\\s\\p{Punct}]", "");
+      if (cleanOriginal.equals(cleanQuery)) {
+        LOGGER.trace("isExactMatch: originalTitle '{}' matches query '{}'", originalTitle, normalizedQuery);
+        return true;
+      }
+    }
+
+    // 注意：不检查 englishTitle 和别名，因为 TMDB 可能会将搜索词设置到所有结果的 englishTitle 中
+    // 导致所有结果都被误判为精确匹配
+    // 例如搜索 "爱你"，TMDB 会把所有返回结果的 englishTitle 都设为 "爱你"
+
+    return false;
+  }
+
+  /**
+   * 应用标题长度比例惩罚
+   * 
+   * 搜索词覆盖率越高，得分保持越高；覆盖率低则适当降低得分 公式: finalScore = baseScore * (0.6 + 0.4 * lengthRatio)
+   * 
+   * @param baseScore
+   *          基础相似度得分
+   * @param normalizedQuery
+   *          标准化的搜索词
+   * @return 应用惩罚后的得分
+   */
+  private float applyLengthPenalty(float baseScore, String normalizedQuery) {
+    // 获取最短匹配标题的长度（用于计算覆盖率）
+    int queryLen = normalizedQuery.replaceAll("[\\s\\p{Punct}]", "").length();
+    if (queryLen == 0) {
+      return baseScore;
+    }
+
+    // 找到最佳匹配标题的长度
+    int bestMatchLen = Integer.MAX_VALUE;
+    if (StringUtils.isNotBlank(title)) {
+      bestMatchLen = Math.min(bestMatchLen, title.replaceAll("[\\s\\p{Punct}]", "").length());
+    }
+    if (StringUtils.isNotBlank(originalTitle)) {
+      bestMatchLen = Math.min(bestMatchLen, originalTitle.replaceAll("[\\s\\p{Punct}]", "").length());
+    }
+
+    if (bestMatchLen == 0 || bestMatchLen == Integer.MAX_VALUE) {
+      return baseScore;
+    }
+
+    // 计算覆盖率（封顶1.0）
+    float lengthRatio = Math.min(1.0f, (float) queryLen / bestMatchLen);
+
+    // 应用惩罚：baseScore * (0.6 + 0.4 * lengthRatio)
+    // 覆盖率为1.0时保持原分数，覆盖率为0时降到60%
+    float penaltyFactor = 0.6f + 0.4f * lengthRatio;
+    float adjustedScore = baseScore * penaltyFactor;
+
+    LOGGER.trace("Length penalty: query='{}' titleLen={} ratio={:.2f} factor={:.2f} score={:.2f}->{:.2f}", normalizedQuery, bestMatchLen, lengthRatio,
+        penaltyFactor, baseScore, adjustedScore);
+
+    return adjustedScore;
   }
 
   /**

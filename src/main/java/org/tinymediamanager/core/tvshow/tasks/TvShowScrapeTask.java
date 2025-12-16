@@ -829,10 +829,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
         }
       }
 
-      // 如果仍然没有解析出年份，使用电视剧原始年份（作为回退）
+      // 如果仍然没有解析出年份，优先从文件路径中解析年份
       if (aiProcessedYear == null) {
-        aiProcessedYear = tvShow.getYear();
-        LOGGER.debug("No year from AI, using original TV show year: {}", aiProcessedYear);
+        // 尝试从电视剧路径中提取年份（如 "成家（2025）完结" 或 "2025年/4月剧集分享/成家"）
+        String showPath = tvShow.getPathNIO() != null ? tvShow.getPathNIO().toString() : "";
+        Integer pathYear = extractYearFromPath(showPath);
+        if (pathYear != null) {
+          aiProcessedYear = pathYear;
+          LOGGER.info("Year extracted from path: {} -> {}", showPath, aiProcessedYear);
+        }
+        else {
+          // 最后回退到电视剧对象中存储的年份
+          aiProcessedYear = tvShow.getYear();
+          LOGGER.debug("No year from AI or path, using TV show stored year: {}", aiProcessedYear);
+        }
       }
 
       LOGGER.info("AI processed title '{}' -> '{}' (year: {})", recognizedTitle, aiProcessedTitle, aiProcessedYear);
@@ -1045,6 +1055,69 @@ public class TvShowScrapeTask extends TmmThreadPool {
       }
       catch (Exception e) {
         LOGGER.error("Error during individual AI recognition fallback: {}", e.getMessage());
+      }
+
+      return null;
+    }
+
+    /**
+     * 从文件路径中提取年份
+     * 
+     * 支持多种格式： - "成家（2025）完结" -> 2025 - "成家 (2025) 完结" -> 2025 - "2025年/4月剧集分享/成家" -> 2025 - "webdav://aaa/剧集/2025年/..." -> 2025
+     * 
+     * @param path
+     *          文件路径
+     * @return 年份，如果未找到则返回 null
+     */
+    private Integer extractYearFromPath(String path) {
+      if (org.apache.commons.lang3.StringUtils.isBlank(path)) {
+        return null;
+      }
+
+      int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+
+      // 模式1: 匹配括号内的年份，如 "成家（2025）" 或 "成家 (2025)"
+      java.util.regex.Pattern bracketYearPattern = java.util.regex.Pattern.compile("[（(](\\d{4})[）)]");
+      java.util.regex.Matcher bracketMatcher = bracketYearPattern.matcher(path);
+      if (bracketMatcher.find()) {
+        try {
+          int year = Integer.parseInt(bracketMatcher.group(1));
+          if (year > 1900 && year <= currentYear + 2) {
+            return year;
+          }
+        }
+        catch (NumberFormatException ignored) {
+        }
+      }
+
+      // 模式2: 匹配 "2025年" 格式
+      java.util.regex.Pattern cnYearPattern = java.util.regex.Pattern.compile("(\\d{4})年");
+      java.util.regex.Matcher cnMatcher = cnYearPattern.matcher(path);
+      if (cnMatcher.find()) {
+        try {
+          int year = Integer.parseInt(cnMatcher.group(1));
+          if (year > 1900 && year <= currentYear + 2) {
+            return year;
+          }
+        }
+        catch (NumberFormatException ignored) {
+        }
+      }
+
+      // 模式3: 匹配路径中独立的4位数年份（需避免误匹配 TMDB ID）
+      // 只匹配路径名部分，如 "/2025/" 或结尾的 "2025"
+      java.util.regex.Pattern pathYearPattern = java.util.regex.Pattern.compile("/(\\d{4})(?:/|$)");
+      java.util.regex.Matcher pathMatcher = pathYearPattern.matcher(path);
+      while (pathMatcher.find()) {
+        try {
+          int year = Integer.parseInt(pathMatcher.group(1));
+          // 只接受合理的年份范围（排除可能的 ID）
+          if (year >= 2000 && year <= currentYear + 2) {
+            return year;
+          }
+        }
+        catch (NumberFormatException ignored) {
+        }
       }
 
       return null;
