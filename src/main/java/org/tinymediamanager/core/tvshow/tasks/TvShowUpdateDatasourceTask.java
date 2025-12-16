@@ -594,6 +594,36 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // update shows grouped by data source
         // update shows grouped by data source
         for (String ds : showDatasources) {
+          // Check if this is a WebDAV data source - use different processing
+          if (org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds)) {
+            // WebDAV data source - process each selected show directly
+            for (TvShow show : showsToUpdate) {
+              if (!show.getDataSource().equals(ds)) {
+                continue;
+              }
+              showsToCleanup.add(show);
+
+              // Parse the show path for WebDAV processing
+              String showPath = show.getPath();
+              String[] parsed = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.parseWebDavPath(showPath);
+              if (parsed != null) {
+                String sourceId = parsed[0];
+                String remotePath = parsed[1];
+                WebDavSource source = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.getWebDavSource(sourceId);
+                if (source != null) {
+                  submitTask(new FindWebDavTvShowTask(ds, sourceId, source, remotePath, showPath));
+                }
+                else {
+                  LOGGER.warn("Could not find WebDAV source for ID: {}", sourceId);
+                }
+              }
+              else {
+                LOGGER.warn("Could not parse WebDAV path: {}", showPath);
+              }
+            }
+            continue; // Skip the normal file system processing for WebDAV
+          }
+
           Path dsAsPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.getWebDavPath(ds);
           // first of all check if the DS is available; we can take the
           // Files.exist here:

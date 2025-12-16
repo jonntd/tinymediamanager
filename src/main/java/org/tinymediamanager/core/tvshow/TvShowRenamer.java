@@ -2872,6 +2872,12 @@ public class TvShowRenamer {
 
       // Handle WebDAV paths specially
       if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
+        // 先在本地比较路径，相同则直接跳过，避免创建网络连接
+        if (oldPath.equals(newPath)) {
+          LOGGER.debug("Source and destination are the same, skipping move (local check): {}", oldPath);
+          return true;
+        }
+
         LOGGER.debug("Moving WebDAV file '{}' to '{}'", oldPath, newPath);
         boolean ok = WebDavFileOperations.moveWebDavFile(oldPath, newPath);
         if (ok) {

@@ -295,9 +295,10 @@ public class WebDavClient {
       }
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
-        // 对于服务器错误 (5xx)，可以重试
-        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
-          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+        // 对于 423 Locked 和服务器错误 (5xx)，可以重试
+        // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
           LOGGER.warn("WebDAV move failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -361,9 +362,10 @@ public class WebDavClient {
       }
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
-        // 对于服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
-        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
-          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+        // 对于 423 Locked 和服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
+        // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
           LOGGER.warn("WebDAV copy failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
