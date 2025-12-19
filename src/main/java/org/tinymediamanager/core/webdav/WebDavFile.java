@@ -90,6 +90,16 @@ public class WebDavFile {
       computedUrl = href;
     }
 
+    // URL 解码 relativePath（WebDAV 服务器返回的路径可能是 URL 编码的）
+    try {
+      // 保留 '+' 符号，避免被转换为空格
+      String preserved = relativePath.replace("+", "%2B");
+      relativePath = java.net.URLDecoder.decode(preserved, "UTF-8");
+    }
+    catch (Exception e) {
+      LOGGER.debug("Failed to URL decode path: {}", relativePath);
+    }
+
     this.path = relativePath;
     this.fullUrl = computedUrl;
   }

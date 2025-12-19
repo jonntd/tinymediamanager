@@ -472,9 +472,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             continue;
           }
 
-          LOGGER.info("Starting \"update data sources\" on datasource: {}", ds);
+          LOGGER.info("Starting \"update data sources\" on datasource: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
           initThreadPool(3, "update");
-          setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + ds + "'");
+          setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + WebDavDataSourceHelper.decodeWebDavPath(ds) + "'");
           publishState();
 
           // first of all check if the DS is available; we can take the
@@ -594,13 +594,17 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // update shows grouped by data source
         // update shows grouped by data source
         for (String ds : showDatasources) {
-          LOGGER.info("Processing datasource: '{}', isWebDavPath={}", ds, org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds));
+          // 解码路径用于日志显示
+          String decodedDs = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(ds);
+          LOGGER.info("Processing datasource: '{}', isWebDavPath={}", decodedDs,
+              org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds));
           // Check if this is a WebDAV data source - use different processing
           if (org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds)) {
             // WebDAV data source - process each selected show directly
             for (TvShow show : showsToUpdate) {
               boolean matches = show.getDataSource().equals(ds);
-              LOGGER.info("Comparing: show.getDataSource()='{}' vs ds='{}', equals={}", show.getDataSource(), ds, matches);
+              LOGGER.info("Comparing: show.getDataSource()='{}' vs ds='{}', equals={}",
+                  org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(show.getDataSource()), decodedDs, matches);
               if (!matches) {
                 continue;
               }
@@ -832,20 +836,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       // Submit parallel tasks for each TV show directory
       for (WebDavFile dir : rootDirs) {
         if (dir.isDirectory() && !dir.getName().startsWith(".") && !dir.getName().startsWith("@")) {
-          // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
+          // WebDavFile.getPath() 现在已返回解码后的路径
           String dirPath = dir.getPath();
-          String decodedDirPath = dirPath;
-          try {
-            // Escape lone '%' and preserve '+' in URL path
-            String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
-            decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
-          }
-          catch (Exception e) {
-            LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
-          }
 
           // Build show path: webdav://[source-id]/dirPath
-          String showPath = "webdav://" + sourceId + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+          String showPath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
           // Normalize path (remove trailing slash)
           if (showPath.endsWith("/")) {
             showPath = showPath.substring(0, showPath.length() - 1);
@@ -853,7 +848,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
           // Submit task for parallel processing (each task creates its own WebDavClient)
           LOGGER.debug("Submitting WebDAV TV show task: datasource={}, showPath={}", ds, showPath);
-          submitTask(new FindWebDavTvShowTask(ds, sourceId, source, decodedDirPath, showPath));
+          submitTask(new FindWebDavTvShowTask(ds, sourceId, source, dirPath, showPath));
         }
       }
 
@@ -1332,20 +1327,11 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Try to parse episode info from filename
     String showRoot = showRootPath.endsWith("/") ? showRootPath : showRootPath + "/";
+    // WebDavFile.getPath() 现在已返回解码后的路径
     String relativePath = videoFile.getPath();
 
     if (relativePath.startsWith(showRoot)) {
       relativePath = relativePath.substring(showRoot.length());
-    }
-
-    // Decode URL encoded characters (e.g. %20 -> space)
-    try {
-      // Escape lone '%' and preserve '+' in URL path
-      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(relativePath.replace("+", "%2B"));
-      relativePath = java.net.URLDecoder.decode(prepared, "UTF-8");
-    }
-    catch (Exception e) {
-      LOGGER.warn("Failed to decode path '{}': {}", relativePath, e.getMessage());
     }
 
     // Pass relative path to parser instead of just filename
@@ -1533,10 +1519,16 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private void collectAllWebDavFiles(WebDavClient client, String dirPath, Set<String> result) throws IOException {
     List<WebDavFile> files = client.list(dirPath);
     for (WebDavFile file : files) {
+      // WebDavFile.getPath() 现在已经返回解码后的路径
       String filePath = file.getPath();
+
       // 规范化路径：确保以 / 开头
       if (!filePath.startsWith("/")) {
         filePath = "/" + filePath;
+      }
+      // 移除尾部斜杠以统一格式
+      if (filePath.endsWith("/") && filePath.length() > 1) {
+        filePath = filePath.substring(0, filePath.length() - 1);
       }
 
       if (file.isDirectory()) {
@@ -1599,10 +1591,22 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // Check and clean up TV show media files
         List<MediaFile> showFilesToRemove = new ArrayList<>();
         for (MediaFile mf : tvShow.getMediaFiles()) {
-          String mfPath = mf.getPath();
-          String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfPath);
-          if (mfParsed != null && !existingFiles.contains(mfParsed[1])) {
-            LOGGER.debug("Removing orphaned WebDAV file from TV show: {}", mfPath);
+          // 拼接完整路径：目录 + 文件名
+          String mfDirPath = mf.getPath();
+          String mfFilename = mf.getFilename();
+          String mfFullPath = mfDirPath;
+          if (mfFilename != null && !mfFilename.isEmpty()) {
+            mfFullPath = mfDirPath.endsWith("/") ? mfDirPath + mfFilename : mfDirPath + "/" + mfFilename;
+          }
+
+          String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
+          String mfRemotePath = mfParsed != null ? mfParsed[1] : null;
+          // 规范化路径：移除尾部斜杠
+          if (mfRemotePath != null && mfRemotePath.endsWith("/") && mfRemotePath.length() > 1) {
+            mfRemotePath = mfRemotePath.substring(0, mfRemotePath.length() - 1);
+          }
+          if (mfParsed != null && !existingFiles.contains(mfRemotePath)) {
+            LOGGER.debug("Removing orphaned WebDAV file from TV show: {}", mfFullPath);
             showFilesToRemove.add(mf);
             if (mf.isGraphic()) {
               ImageCache.invalidateCachedImage(mf);
@@ -1619,23 +1623,65 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         for (TvShowEpisode episode : tvShow.getEpisodes()) {
           List<MediaFile> episodeFilesToRemove = new ArrayList<>();
           for (MediaFile mf : episode.getMediaFiles()) {
-            // Get the full file path (directory + filename)
+            // 获取 MediaFile 的相对路径（相对于 TV show 根目录）
+            // mf.getPath() 可能格式不正确，所以我们需要从中提取相对部分
             String mfDirPath = mf.getPath();
             String mfFilename = mf.getFilename();
-            String mfFullPath = mfDirPath;
+
+            // 尝试从 mfDirPath 中提取相对于 TV show 的路径
+            // remotePath 示例: /转存1p/动漫/3动漫/动漫/间谍过家家 (2022)
+            String tvShowRemotePath = remotePath.endsWith("/") ? remotePath.substring(0, remotePath.length() - 1) : remotePath;
+
+            // 从 MediaFile 路径中提取相对路径
+            // mf.getPath() 可能是: webdav://aaa转存1p/动漫/3动漫/动漫/间谍过家家 (2022)/Season 1
+            // 或者: webdav://aaa/转存1p/动漫/3动漫/动漫/间谍过家家 (2022)/Season 1
+            String mfRelativePath = "";
+
+            // 尝试多种方式提取相对路径
+            // 方式1: 使用 parseWebDavPath
+            String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfDirPath);
+            if (mfParsed != null) {
+              String mfRemoteDir = mfParsed[1];
+              // 检查是否包含 TV show 路径
+              if (mfRemoteDir.startsWith(tvShowRemotePath)) {
+                mfRelativePath = mfRemoteDir.substring(tvShowRemotePath.length());
+              }
+              else {
+                // 可能路径格式问题导致解析不完整，尝试查找 TV show 名称
+                String showName = tvShow.getTitle();
+                int showNameIndex = mfRemoteDir.indexOf(showName);
+                if (showNameIndex >= 0) {
+                  // 从 TV show 名称开始
+                  int nextSlash = mfRemoteDir.indexOf('/', showNameIndex);
+                  if (nextSlash >= 0) {
+                    mfRelativePath = mfRemoteDir.substring(nextSlash);
+                  }
+                }
+              }
+            }
+
+            // 构建完整的远程路径来检查
+            String fullRemotePath = tvShowRemotePath + mfRelativePath;
             if (mfFilename != null && !mfFilename.isEmpty()) {
-              mfFullPath = mfDirPath.endsWith("/") ? mfDirPath + mfFilename : mfDirPath + "/" + mfFilename;
+              fullRemotePath = fullRemotePath.endsWith("/") ? fullRemotePath + mfFilename : fullRemotePath + "/" + mfFilename;
+            }
+            // 规范化路径
+            if (fullRemotePath.endsWith("/") && fullRemotePath.length() > 1) {
+              fullRemotePath = fullRemotePath.substring(0, fullRemotePath.length() - 1);
             }
 
-            String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
-            if (mfParsed == null) {
-              continue;
-            }
-
-            // 使用内存中的 Set 比较，不再调用网络 API
-            boolean exists = existingFiles.contains(mfParsed[1]);
+            // 使用内存中的 Set 比较
+            boolean exists = existingFiles.contains(fullRemotePath);
             if (!exists) {
-              LOGGER.info("Removing orphaned WebDAV file from episode: {}", mfFullPath);
+              // 如果完整路径不匹配，尝试只用文件名在 existingFiles 中查找
+              String filenameToFind = mfFilename;
+              exists = existingFiles.stream().anyMatch(f -> f.endsWith("/" + filenameToFind));
+            }
+
+            if (!exists) {
+              String mfFullPath = mfDirPath.endsWith("/") ? mfDirPath + mfFilename : mfDirPath + "/" + mfFilename;
+              LOGGER.debug("Removing orphaned WebDAV file from episode: {} (fullRemotePath='{}')", mfFullPath, fullRemotePath);
+              LOGGER.debug("existingFiles sample: {}", existingFiles.stream().limit(3).toList());
               episodeFilesToRemove.add(mf);
               if (mf.isGraphic()) {
                 ImageCache.invalidateCachedImage(mf);
@@ -1670,7 +1716,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       return;
     }
 
-    if (!tvShow.isNewlyAdded() || tvShow.hasNewlyAddedEpisodes()) {
+    if (!tvShow.isNewlyAdded() || tvShow.hasNewlyAddedEpisodes())
+
+    {
       // check and delete all not found MediaFiles
       for (MediaFile mf : tvShow.getMediaFiles()) {
         boolean fileFound = filesFound.contains(mf.getFileAsPath());

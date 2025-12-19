@@ -274,10 +274,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      LOGGER.info("Starting \"update data sources\" on datasource: {}", ds);
+      LOGGER.info("Starting \"update data sources\" on datasource: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
       miTasks.clear();
       initThreadPool(3, "update");
-      setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + ds + "'");
+      setTaskName(TmmResourceBundle.getString("update.datasource") + " '" + WebDavDataSourceHelper.decodeWebDavPath(ds) + "'");
       publishState();
 
       // first of all check if the DS is available; we can take the
@@ -462,21 +462,12 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // Submit parallel tasks for each directory
       for (WebDavFile dir : rootDirs) {
         if (dir.isDirectory() && !dir.getName().startsWith(".") && !dir.getName().startsWith("@")) {
+          // WebDavFile.getPath() 现在已返回解码后的路径
           String dirPath = dir.getPath();
-          String decodedDirPath = dirPath;
-          try {
-            // Preserve '+' in URL path (URLDecoder converts '+' to space)
-            // Escape lone '%' that are not valid URL sequences
-            String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
-            decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
-          }
-          catch (Exception e) {
-            LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
-          }
 
           // Submit task for parallel processing
-          LOGGER.debug("Submitting WebDAV movie task: datasource={}, dirPath={}", ds, decodedDirPath);
-          submitTask(new FindWebDavMovieTask(ds, source, decodedDirPath));
+          LOGGER.debug("Submitting WebDAV movie task: datasource={}, dirPath={}", ds, dirPath);
+          submitTask(new FindWebDavMovieTask(ds, source, dirPath));
         }
       }
 
@@ -538,17 +529,8 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           // Skip common system/hidden folders
           String name = file.getName().toUpperCase(Locale.ROOT);
           if (!SKIP_FOLDERS.contains(name) && !file.getName().startsWith(".") && !file.getName().startsWith("@")) {
-            String nextPath = file.getPath();
-            try {
-              // Preserve '+' in URL path (URLDecoder converts '+' to space)
-              // Escape lone '%' that are not valid URL sequences
-              String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(file.getPath().replace("+", "%2B"));
-              nextPath = java.net.URLDecoder.decode(prepared, "UTF-8");
-            }
-            catch (Exception e) {
-              LOGGER.warn("Failed to decode path '{}': {}", file.getPath(), e.getMessage());
-            }
-            allFiles.addAll(listWebDavFilesRecursive(client, nextPath, visitedPaths));
+            // WebDavFile.getPath() 现在已返回解码后的路径
+            allFiles.addAll(listWebDavFilesRecursive(client, file.getPath(), visitedPaths));
           }
         }
       }
@@ -605,20 +587,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     for (WebDavFile videoFile : videoFiles) {
       // Create a unique path for this movie based on the directory, not the filename
       String sourceIdentifier = source.getName();
-      String decodedDirPath = dirPath;
-      try {
-        // Preserve '+' in URL path (URLDecoder converts '+' to space)
-        // Escape lone '%' that are not valid URL sequences
-        String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
-        decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
-      }
-      catch (Exception e) {
-        LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
-      }
+      // dirPath 已经是解码后的路径（来自 WebDavFile.getPath()）
 
       // For multi-movie directory, use the directory path as the movie path
       // This is consistent with local file handling
-      String moviePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+      String moviePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
 
       // Normalize path
       if (moviePath.endsWith("/")) {
@@ -632,8 +605,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       // For multi-movie directories, we need to find the movie by its video file, not by path
       // because all movies in the same directory share the same path
-      String videoFilePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath)
-          + "/" + videoFilename;
+      String videoFilePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath) + "/" + videoFilename;
 
       // Check if movie already exists by looking for a movie that contains this video file
       List<Movie> candidateMovies = new ArrayList<>(movieList.getMoviesByPath(WebDavDataSourceHelper.getWebDavPath(moviePath)));
@@ -771,41 +743,19 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // dirPath is the relative path from WebDAV root (not from datasource path)
     // We need to build: webdav://[source-name]/dirPath
     String sourceIdentifier = source.getName();
+    // dirPath 已经是解码后的路径（来自 WebDavFile.getPath()）
 
-    // Decode the dirPath for display (handle URL encoding like %E6%97%A0)
-    String decodedDirPath = dirPath;
-    try {
-      // Preserve '+' in URL path (URLDecoder converts '+' to space)
-      // Escape lone '%' that are not valid URL sequences
-      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
-      decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
-      ;
-    }
-    catch (Exception e) {
-      LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
-    }
-
-    String moviePath = "webdav://" + sourceIdentifier + "/" + (decodedDirPath.startsWith("/") ? decodedDirPath.substring(1) : decodedDirPath);
+    String moviePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
 
     // Normalize path (remove trailing slash)
     if (moviePath.endsWith("/")) {
       moviePath = moviePath.substring(0, moviePath.length() - 1);
     }
 
-    LOGGER.debug("Processing WebDAV single movie directory: datasource={}, dirPath={}, decodedDirPath={}, moviePath={}", datasource, dirPath,
-        decodedDirPath, moviePath);
+    LOGGER.debug("Processing WebDAV single movie directory: datasource={}, dirPath={}, moviePath={}", datasource, dirPath, moviePath);
 
     // Check if movie already exists
     Movie existingMovie = movieList.getMovieByPath(Paths.get(moviePath));
-
-    // Fallback: check encoded path if not found via decoded path
-    if (existingMovie == null) {
-      String rawMoviePath = "webdav://" + sourceIdentifier + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
-      if (rawMoviePath.endsWith("/")) {
-        rawMoviePath = rawMoviePath.substring(0, rawMoviePath.length() - 1);
-      }
-      existingMovie = movieList.getMovieByPath(Paths.get(rawMoviePath));
-    }
 
     if (existingMovie != null && existingMovie.isLocked()) {
       LOGGER.debug("Movie '{}' is locked, skipping", existingMovie.getTitle());
@@ -828,7 +778,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     // Try to detect title and year from folder name or video filename
     if (StringUtils.isBlank(movie.getTitle())) {
       // First try from folder name
-      String folderName = decodedDirPath.substring(decodedDirPath.lastIndexOf('/') + 1);
+      String folderName = dirPath.substring(dirPath.lastIndexOf('/') + 1);
       String[] titleYear = ParserUtils.detectCleanTitleAndYear(folderName, MovieModuleManager.getInstance().getSettings().getBadWord());
 
       // If no title from folder name, try from video filename
@@ -2236,10 +2186,16 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
   private void collectAllWebDavFiles(WebDavClient client, String dirPath, Set<String> result) throws IOException {
     List<WebDavFile> files = client.list(dirPath);
     for (WebDavFile file : files) {
+      // WebDavFile.getPath() 现在已经返回解码后的路径
       String filePath = file.getPath();
+
       // 规范化路径：确保以 / 开头
       if (!filePath.startsWith("/")) {
         filePath = "/" + filePath;
+      }
+      // 移除尾部斜杠以统一格式
+      if (filePath.endsWith("/") && filePath.length() > 1) {
+        filePath = filePath.substring(0, filePath.length() - 1);
       }
 
       if (file.isDirectory()) {
@@ -2323,17 +2279,54 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
                   // 检查并清理不存在的文件
                   List<MediaFile> mediaFiles = new ArrayList<>(movie.getMediaFiles());
+                  String movieRemotePath = remotePath.endsWith("/") ? remotePath.substring(0, remotePath.length() - 1) : remotePath;
+
                   for (MediaFile mf : mediaFiles) {
                     String mfPath = mf.getPath();
                     String mfFilename = mf.getFilename();
-                    String mfFullPath = mfPath;
-                    if (mfFilename != null && !mfFilename.isEmpty()) {
-                      mfFullPath = mfPath.endsWith("/") ? mfPath + mfFilename : mfPath + "/" + mfFilename;
+
+                    // 尝试从 mfPath 中提取相对于 movie 的路径
+                    String mfRelativePath = "";
+                    String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfPath);
+                    if (mfParsed != null) {
+                      String mfRemoteDir = mfParsed[1];
+                      if (mfRemoteDir.startsWith(movieRemotePath)) {
+                        mfRelativePath = mfRemoteDir.substring(movieRemotePath.length());
+                      }
+                      else {
+                        // 可能路径格式问题导致解析不完整，尝试查找 movie 名称
+                        String movieTitle = movie.getTitle();
+                        int movieNameIndex = mfRemoteDir.indexOf(movieTitle);
+                        if (movieNameIndex >= 0) {
+                          int nextSlash = mfRemoteDir.indexOf('/', movieNameIndex);
+                          if (nextSlash >= 0) {
+                            mfRelativePath = mfRemoteDir.substring(nextSlash);
+                          }
+                        }
+                      }
                     }
 
-                    String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
-                    if (mfParsed != null && !existingFiles.contains(mfParsed[1])) {
-                      LOGGER.info("Removing orphaned WebDAV file from movie: {}", mfFullPath);
+                    // 构建完整的远程路径来检查
+                    String fullRemotePath = movieRemotePath + mfRelativePath;
+                    if (mfFilename != null && !mfFilename.isEmpty()) {
+                      fullRemotePath = fullRemotePath.endsWith("/") ? fullRemotePath + mfFilename : fullRemotePath + "/" + mfFilename;
+                    }
+                    // 规范化路径
+                    if (fullRemotePath.endsWith("/") && fullRemotePath.length() > 1) {
+                      fullRemotePath = fullRemotePath.substring(0, fullRemotePath.length() - 1);
+                    }
+
+                    // 使用内存中的 Set 比较
+                    boolean exists = existingFiles.contains(fullRemotePath);
+                    if (!exists) {
+                      // 如果完整路径不匹配，尝试只用文件名在 existingFiles 中查找
+                      String filenameToFind = mfFilename;
+                      exists = existingFiles.stream().anyMatch(f -> f.endsWith("/" + filenameToFind));
+                    }
+
+                    if (!exists) {
+                      String mfFullPath = mfPath.endsWith("/") ? mfPath + mfFilename : mfPath + "/" + mfFilename;
+                      LOGGER.debug("Removing orphaned WebDAV file from movie: {} (fullRemotePath='{}')", mfFullPath, fullRemotePath);
                       movie.removeFromMediaFiles(mf);
                       if (mf.isGraphic()) {
                         ImageCache.invalidateCachedImage(mf);
