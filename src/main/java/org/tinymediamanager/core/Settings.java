@@ -191,6 +191,7 @@ public final class Settings extends AbstractSettings {
   private int                                              aiMinIntervalSeconds         = 1;
   private boolean                                          aiIndividualFallbackEnabled  = true;
   private int                                              aiBatchSize                  = 5;
+  private int                                              aiMaxRetries                 = 5;
 
   /**
    * Instantiates a new settings.
@@ -1842,5 +1843,16 @@ public final class Settings extends AbstractSettings {
     int oldValue = this.aiBatchSize;
     this.aiBatchSize = newValue;
     firePropertyChange("aiBatchSize", oldValue, newValue);
+  }
+
+  // AI Max Retries
+  public int getAiMaxRetries() {
+    return aiMaxRetries;
+  }
+
+  public void setAiMaxRetries(int newValue) {
+    int oldValue = this.aiMaxRetries;
+    this.aiMaxRetries = newValue;
+    firePropertyChange("aiMaxRetries", oldValue, newValue);
   }
 }

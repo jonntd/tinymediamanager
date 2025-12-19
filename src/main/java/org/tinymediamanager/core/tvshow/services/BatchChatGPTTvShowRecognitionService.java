@@ -46,8 +46,6 @@ public class BatchChatGPTTvShowRecognitionService {
     // 自适应批量处理器
     private final AdaptiveBatchProcessor adaptiveBatchProcessor = AdaptiveBatchProcessor.getInstance();
 
-    private static final int             MAX_RETRIES            = 3;
-
     // 双尖括号索引匹配正则：<<数字>> 内容
     private static final Pattern         INDEXED_RESULT_PATTERN = Pattern.compile("^<<(\\d+)>>\\s*(.+)$");
 
@@ -96,7 +94,7 @@ public class BatchChatGPTTvShowRecognitionService {
         }
 
         List<TvShow> singleBatch = Collections.singletonList(tvShow);
-        Map<String, String> results = batchRecognizeTvShowTitles(singleBatch, 1, MAX_RETRIES);
+        Map<String, String> results = batchRecognizeTvShowTitles(singleBatch, 1, settings.getAiMaxRetries());
 
         String result = results.get(tvShow.getDbId().toString());
         if (result != null) {
@@ -112,7 +110,7 @@ public class BatchChatGPTTvShowRecognitionService {
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows) {
         int batchSize = settings.getAiBatchSize();
         LOGGER.info("Using configured batch size: {} for {} TV shows", batchSize, tvShows.size());
-        return batchRecognizeTvShowTitles(tvShows, batchSize, MAX_RETRIES);
+        return batchRecognizeTvShowTitles(tvShows, batchSize, settings.getAiMaxRetries());
     }
 
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows, int batchSize, int maxRetries) {
@@ -176,7 +174,7 @@ public class BatchChatGPTTvShowRecognitionService {
                         success = true;
                     }
                     else {
-                        LOGGER.warn("批量处理尝试 {}/{} 失败: 解析结果为空", attempt, maxRetries);
+                        LOGGER.warn("批量处理尝试 {}/{} 失败: 解析结果为空, 原始响应: {}", attempt, maxRetries, apiResponse);
                         // 如果解析不到结果，可能是格式问题，重试
                         if (attempt < maxRetries) {
                             RetryUtils.waitBeforeRetry(attempt, "Empty batch results");

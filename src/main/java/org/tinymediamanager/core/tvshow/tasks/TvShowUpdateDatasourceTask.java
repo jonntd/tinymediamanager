@@ -1520,6 +1520,37 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
   }
 
+  /**
+   * 递归收集 WebDAV 目录下的所有文件路径（用于批量清理优化）
+   *
+   * @param client
+   *          WebDAV 客户端
+   * @param dirPath
+   *          目录路径
+   * @param result
+   *          收集结果的 Set（存储所有文件的完整路径）
+   */
+  private void collectAllWebDavFiles(WebDavClient client, String dirPath, Set<String> result) throws IOException {
+    List<WebDavFile> files = client.list(dirPath);
+    for (WebDavFile file : files) {
+      String filePath = file.getPath();
+      // 规范化路径：确保以 / 开头
+      if (!filePath.startsWith("/")) {
+        filePath = "/" + filePath;
+      }
+
+      if (file.isDirectory()) {
+        // 递归收集子目录
+        collectAllWebDavFiles(client, filePath, result);
+        // 也添加目录本身
+        result.add(filePath);
+      }
+      else {
+        result.add(filePath);
+      }
+    }
+  }
+
   private void cleanup(TvShow tvShow) {
     boolean dirty = false;
 
@@ -1536,6 +1567,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       String sourceId = parsed[0];
+      String remotePath = parsed[1];
       WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
       LOGGER.info("getWebDavSource('{}') = {}", sourceId, source != null ? source.getName() : "null");
       if (source == null) {
@@ -1553,12 +1585,23 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       try {
         LOGGER.info("Performing WebDAV cleanup for TV show: {}", tvShow.getTitle());
 
+        // 优化：一次性递归列出 TV show 目录下的所有文件，避免逐个 exists() 调用
+        Set<String> existingFiles = new HashSet<>();
+        try {
+          collectAllWebDavFiles(client, remotePath, existingFiles);
+          LOGGER.info("Collected {} existing files from WebDAV for TV show: {}", existingFiles.size(), tvShow.getTitle());
+        }
+        catch (Exception e) {
+          LOGGER.warn("Failed to list WebDAV directory for cleanup: {}. Skipping cleanup for this show.", e.getMessage());
+          return;
+        }
+
         // Check and clean up TV show media files
         List<MediaFile> showFilesToRemove = new ArrayList<>();
         for (MediaFile mf : tvShow.getMediaFiles()) {
           String mfPath = mf.getPath();
           String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfPath);
-          if (mfParsed != null && !client.exists(mfParsed[1])) {
+          if (mfParsed != null && !existingFiles.contains(mfParsed[1])) {
             LOGGER.debug("Removing orphaned WebDAV file from TV show: {}", mfPath);
             showFilesToRemove.add(mf);
             if (mf.isGraphic()) {
@@ -1574,7 +1617,6 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // Check and clean up episode media files
         List<TvShowEpisode> episodesToRemove = new ArrayList<>();
         for (TvShowEpisode episode : tvShow.getEpisodes()) {
-          LOGGER.info("Checking episode: {} - {} media files", episode.getTitle(), episode.getMediaFiles().size());
           List<MediaFile> episodeFilesToRemove = new ArrayList<>();
           for (MediaFile mf : episode.getMediaFiles()) {
             // Get the full file path (directory + filename)
@@ -1584,16 +1626,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             if (mfFilename != null && !mfFilename.isEmpty()) {
               mfFullPath = mfDirPath.endsWith("/") ? mfDirPath + mfFilename : mfDirPath + "/" + mfFilename;
             }
-            LOGGER.info("  MediaFile full path: {} (dir='{}', file='{}')", mfFullPath, mfDirPath, mfFilename);
 
             String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
             if (mfParsed == null) {
-              LOGGER.info("  parseWebDavPath returned null for: {}", mfFullPath);
               continue;
             }
-            boolean exists = client.exists(mfParsed[1]);
-            LOGGER.info("  exists('{}') = {}", mfParsed[1], exists);
 
+            // 使用内存中的 Set 比较，不再调用网络 API
+            boolean exists = existingFiles.contains(mfParsed[1]);
             if (!exists) {
               LOGGER.info("Removing orphaned WebDAV file from episode: {}", mfFullPath);
               episodeFilesToRemove.add(mf);

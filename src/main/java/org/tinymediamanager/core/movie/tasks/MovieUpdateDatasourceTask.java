@@ -2223,6 +2223,37 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     }
   }
 
+  /**
+   * 递归收集 WebDAV 目录下的所有文件路径（用于批量清理优化）
+   *
+   * @param client
+   *          WebDAV 客户端
+   * @param dirPath
+   *          目录路径
+   * @param result
+   *          收集结果的 Set（存储所有文件的完整路径）
+   */
+  private void collectAllWebDavFiles(WebDavClient client, String dirPath, Set<String> result) throws IOException {
+    List<WebDavFile> files = client.list(dirPath);
+    for (WebDavFile file : files) {
+      String filePath = file.getPath();
+      // 规范化路径：确保以 / 开头
+      if (!filePath.startsWith("/")) {
+        filePath = "/" + filePath;
+      }
+
+      if (file.isDirectory()) {
+        // 递归收集子目录
+        collectAllWebDavFiles(client, filePath, result);
+        // 也添加目录本身
+        result.add(filePath);
+      }
+      else {
+        result.add(filePath);
+      }
+    }
+  }
+
   private void cleanup(List<Movie> movies) {
     setTaskName(TmmResourceBundle.getString("update.cleanup"));
     setTaskDescription(null);
@@ -2274,24 +2305,73 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       // have a look if that movie has just been added -> so we don't need any
       // cleanup
       if (!movie.isNewlyAdded()) {
-        // check and delete all not found MediaFiles
-        List<MediaFile> mediaFiles = new ArrayList<>(movie.getMediaFiles());
-        for (MediaFile mf : mediaFiles) {
-          boolean fileFound = filesFound.contains(mf.getFileAsPath());
+        // For WebDAV movies, use batch cleanup with Set comparison
+        if (WebDavDataSourceHelper.isWebDavPath(movie.getPath())) {
+          String[] parsed = WebDavDataSourceHelper.parseWebDavPath(movie.getPath());
+          if (parsed != null) {
+            String sourceId = parsed[0];
+            String remotePath = parsed[1];
+            WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+            if (source != null) {
+              WebDavClient client = WebDavDataSourceHelper.createClient(source);
+              if (client != null) {
+                try {
+                  // 批量列出电影目录下所有文件
+                  Set<String> existingFiles = new HashSet<>();
+                  collectAllWebDavFiles(client, remotePath, existingFiles);
+                  LOGGER.debug("Collected {} files for WebDAV movie cleanup: {}", existingFiles.size(), movie.getTitle());
 
-          if (!fileFound) {
-            LOGGER.debug("removing orphaned file from DB: {}", mf.getFileAsPath());
-            movie.removeFromMediaFiles(mf);
-            // invalidate the image cache
-            if (mf.isGraphic()) {
-              ImageCache.invalidateCachedImage(mf);
+                  // 检查并清理不存在的文件
+                  List<MediaFile> mediaFiles = new ArrayList<>(movie.getMediaFiles());
+                  for (MediaFile mf : mediaFiles) {
+                    String mfPath = mf.getPath();
+                    String mfFilename = mf.getFilename();
+                    String mfFullPath = mfPath;
+                    if (mfFilename != null && !mfFilename.isEmpty()) {
+                      mfFullPath = mfPath.endsWith("/") ? mfPath + mfFilename : mfPath + "/" + mfFilename;
+                    }
+
+                    String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
+                    if (mfParsed != null && !existingFiles.contains(mfParsed[1])) {
+                      LOGGER.info("Removing orphaned WebDAV file from movie: {}", mfFullPath);
+                      movie.removeFromMediaFiles(mf);
+                      if (mf.isGraphic()) {
+                        ImageCache.invalidateCachedImage(mf);
+                      }
+                      dirty = true;
+                    }
+                  }
+                }
+                catch (Exception e) {
+                  LOGGER.warn("Failed to list WebDAV directory for movie cleanup: {}", e.getMessage());
+                }
+                finally {
+                  client.disconnect();
+                }
+              }
             }
-            dirty = true;
           }
         }
+        else {
+          // For non-WebDAV movies, check and delete all not found MediaFiles
+          List<MediaFile> mediaFiles = new ArrayList<>(movie.getMediaFiles());
+          for (MediaFile mf : mediaFiles) {
+            boolean fileFound = filesFound.contains(mf.getFileAsPath());
 
-        if (dirty && !movie.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
-          movie.saveToDb();
+            if (!fileFound) {
+              LOGGER.debug("removing orphaned file from DB: {}", mf.getFileAsPath());
+              movie.removeFromMediaFiles(mf);
+              // invalidate the image cache
+              if (mf.isGraphic()) {
+                ImageCache.invalidateCachedImage(mf);
+              }
+              dirty = true;
+            }
+          }
+
+          if (dirty && !movie.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
+            movie.saveToDb();
+          }
         }
       }
 

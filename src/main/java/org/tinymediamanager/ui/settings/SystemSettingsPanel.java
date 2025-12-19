@@ -116,6 +116,7 @@ class SystemSettingsPanel extends JPanel {
   private JSpinner             spAiMinIntervalSeconds;
   private JCheckBox            chkAiIndividualFallbackEnabled;
   private JSpinner             spAiBatchSize;
+  private JSpinner             spAiMaxRetries;
   private JLabel               lblAiStatistics;
   private JButton              btnResetAiStatistics;
 
@@ -348,18 +349,23 @@ class SystemSettingsPanel extends JPanel {
       spAiBatchSize = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
       panelOpenAI.add(spAiBatchSize, "cell 2 11");
 
+      JLabel lblAiMaxRetries = new JLabel(TmmResourceBundle.getString("Settings.ai.maxretries") + ":");
+      panelOpenAI.add(lblAiMaxRetries, "cell 1 12,alignx trailing");
+      spAiMaxRetries = new JSpinner(new SpinnerNumberModel(5, 1, 10, 1));
+      panelOpenAI.add(spAiMaxRetries, "cell 2 12");
+
       chkAiIndividualFallbackEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.ai.individualfallback"));
-      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 12,spanx 2");
+      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 13,spanx 2");
 
       // AI Statistics Display
       JLabel lblAiStatsTitle = new JLabel(TmmResourceBundle.getString("Settings.ai.statistics") + ":");
-      panelOpenAI.add(lblAiStatsTitle, "cell 1 13,alignx trailing");
+      panelOpenAI.add(lblAiStatsTitle, "cell 1 14,alignx trailing");
       lblAiStatistics = new JLabel(TmmResourceBundle.getString("Settings.loading"));
-      panelOpenAI.add(lblAiStatistics, "cell 2 13");
+      panelOpenAI.add(lblAiStatistics, "cell 2 14");
 
       btnResetAiStatistics = new JButton(TmmResourceBundle.getString("Settings.ai.statistics.reset"));
       btnResetAiStatistics.addActionListener(e -> resetAiStatistics());
-      panelOpenAI.add(btnResetAiStatistics, "cell 2 14,alignx right");
+      panelOpenAI.add(btnResetAiStatistics, "cell 2 15,alignx right");
 
       add(collapsiblePanel, "cell 0 6,growx,wmin 0");
     }
@@ -610,6 +616,13 @@ class SystemSettingsPanel extends JPanel {
     AutoBinding autoBinding_23 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_22, spAiBatchSize,
         jSpinnerBeanProperty_4);
     autoBinding_23.bind();
+
+    // AI Max Retries
+    Property settingsBeanProperty_23 = BeanProperty.create("aiMaxRetries");
+    Property jSpinnerBeanProperty_5 = BeanProperty.create("value");
+    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_23, spAiMaxRetries,
+        jSpinnerBeanProperty_5);
+    autoBinding_24.bind();
 
     // 启动统计更新定时器
     updateAiStatistics();

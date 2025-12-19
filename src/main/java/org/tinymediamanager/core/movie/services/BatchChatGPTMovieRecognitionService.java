@@ -85,7 +85,7 @@ public class BatchChatGPTMovieRecognitionService {
         }
 
         List<Movie> singleBatch = Collections.singletonList(movie);
-        Map<String, String> results = batchRecognizeMovieTitles(singleBatch, 3);
+        Map<String, String> results = batchRecognizeMovieTitles(singleBatch, settings.getAiMaxRetries());
 
         String result = results.get(movie.getDbId().toString());
         if (result != null) {
@@ -103,7 +103,7 @@ public class BatchChatGPTMovieRecognitionService {
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
         LOGGER.info("Starting batch recognition for {} movies with adaptive batching", movies.size());
-        return batchRecognizeMovieTitles(movies, 6);
+        return batchRecognizeMovieTitles(movies, settings.getAiMaxRetries());
     }
 
     /**
@@ -151,8 +151,8 @@ public class BatchChatGPTMovieRecognitionService {
         int totalMovies = validMovies.size();
 
         while (i < totalMovies) {
-            // 获取当前建议的批量大小
-            int batchSize = adaptiveBatchProcessor.getCurrentBatchSize();
+            // 使用配置的批量大小
+            int batchSize = settings.getAiBatchSize();
             int endIndex = Math.min(i + batchSize, totalMovies);
 
             if (endIndex <= i)
