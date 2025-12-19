@@ -77,6 +77,8 @@ import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.core.bus.Event;
 import org.tinymediamanager.core.bus.EventBus;
 import org.tinymediamanager.core.entities.MediaEntity;
@@ -2323,7 +2325,56 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    * DS\.backup\&lt;moviename&gt;
    */
   public boolean deleteFilesSafely() {
+    String showPath = getPath();
+    // Check if this is a WebDAV path
+    if (WebDavDataSourceHelper.isWebDavPath(showPath)) {
+      return deleteWebDavDirectory();
+    }
     return Utils.deleteDirectorySafely(getPathNIO(), getDataSource());
+  }
+
+  /**
+   * Delete the TV show directory from WebDAV server
+   *
+   * @return true if deletion was successful
+   */
+  private boolean deleteWebDavDirectory() {
+    try {
+      String showPath = getPath();
+      LOGGER.info("Deleting WebDAV TV show directory: {}", WebDavDataSourceHelper.decodeWebDavPath(showPath));
+
+      // Get the WebDAV client for this datasource
+      WebDavClient client = WebDavDataSourceHelper.getClientForPath(getDataSource());
+      if (client == null) {
+        LOGGER.error("Could not get WebDAV client for datasource: {}", getDataSource());
+        return false;
+      }
+
+      try {
+        // Extract the relative path from the full WebDAV path
+        String relativePath = WebDavDataSourceHelper.extractRelativePath(getDataSource(), showPath);
+        if (relativePath == null) {
+          LOGGER.error("Could not extract relative path for TV show: {}", showPath);
+          return false;
+        }
+
+        boolean result = client.delete(relativePath);
+        if (result) {
+          LOGGER.info("Successfully deleted WebDAV TV show directory: {}", WebDavDataSourceHelper.decodeWebDavPath(showPath));
+        }
+        else {
+          LOGGER.error("Failed to delete WebDAV TV show directory: {}", WebDavDataSourceHelper.decodeWebDavPath(showPath));
+        }
+        return result;
+      }
+      finally {
+        client.disconnect();
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Error deleting WebDAV TV show directory: {}", e.getMessage());
+      return false;
+    }
   }
 
   @Override

@@ -2239,7 +2239,17 @@ public class MovieRenamer {
       if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
         // Both are WebDAV paths - use WebDAV operations
         LOGGER.debug("Moving WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
-        return WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        String actualPath = WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        if (actualPath != null) {
+          if (!actualPath.equals(newPathStr)) {
+            LOGGER.warn("WebDAV file was moved to a different path than expected: expected '{}', actual '{}'", newPathStr, actualPath);
+          }
+          return true;
+        }
+        else {
+          LOGGER.error("Could not move WebDAV file '{}' to '{}'", oldPathStr, newPathStr);
+          return false;
+        }
       }
       else if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
         // One is WebDAV and one is local - not supported
@@ -2312,7 +2322,17 @@ public class MovieRenamer {
       if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
         // Both are WebDAV paths - use WebDAV operations
         LOGGER.debug("Moving WebDAV directory from '{}' to '{}'", oldPathStr, newPathStr);
-        return WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        String actualPath = WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        if (actualPath != null) {
+          if (!actualPath.equals(newPathStr)) {
+            LOGGER.warn("WebDAV directory was moved to a different path than expected: expected '{}', actual '{}'", newPathStr, actualPath);
+          }
+          return true;
+        }
+        else {
+          LOGGER.error("Could not move WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
+          return false;
+        }
       }
       else if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
         // One is WebDAV and one is local - not supported

@@ -328,12 +328,54 @@ public class WebDavPath {
       // should NOT be converted to space. Only %2B represents a plus sign.
       // So we need to preserve '+' by pre-encoding it before decoding.
       String preservedPlus = component.replace("+", "%2B");
+      // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+      preservedPlus = escapeLonePercentSigns(preservedPlus);
       return URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (UnsupportedEncodingException e) {
       LOGGER.debug("Failed to decode URL component '{}': {}", component, e.getMessage());
       return component;
     }
+  }
+
+  /**
+   * Escape lone '%' characters that are not part of valid URL-encoded sequences. Converts '%' not followed by 2 hex chars to '%25' (the encoding of
+   * '%').
+   */
+  private static String escapeLonePercentSigns(String input) {
+    if (input == null || !input.contains("%")) {
+      return input;
+    }
+
+    StringBuilder result = new StringBuilder();
+    int length = input.length();
+
+    for (int i = 0; i < length; i++) {
+      char c = input.charAt(i);
+      if (c == '%') {
+        // Check if this '%' is followed by exactly 2 hex characters
+        if (i + 2 < length && isHexDigit(input.charAt(i + 1)) && isHexDigit(input.charAt(i + 2))) {
+          // Valid URL-encoded sequence, keep as-is
+          result.append(c);
+        }
+        else {
+          // Lone '%', escape it
+          result.append("%25");
+        }
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Check if a character is a hexadecimal digit (0-9, A-F, a-f)
+   */
+  private static boolean isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
   }
 
   /**

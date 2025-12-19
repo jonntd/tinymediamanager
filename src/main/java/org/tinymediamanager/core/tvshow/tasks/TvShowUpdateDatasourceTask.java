@@ -594,13 +594,17 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         // update shows grouped by data source
         // update shows grouped by data source
         for (String ds : showDatasources) {
+          LOGGER.info("Processing datasource: '{}', isWebDavPath={}", ds, org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds));
           // Check if this is a WebDAV data source - use different processing
           if (org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds)) {
             // WebDAV data source - process each selected show directly
             for (TvShow show : showsToUpdate) {
-              if (!show.getDataSource().equals(ds)) {
+              boolean matches = show.getDataSource().equals(ds);
+              LOGGER.info("Comparing: show.getDataSource()='{}' vs ds='{}', equals={}", show.getDataSource(), ds, matches);
+              if (!matches) {
                 continue;
               }
+              LOGGER.info("DataSource matched! Processing show: {}", show.getTitle());
               showsToCleanup.add(show);
 
               // Parse the show path for WebDAV processing
@@ -786,7 +790,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
    *          the WebDAV data source path (webdav://[source-id]/remote/path)
    */
   private void updateWebDavDatasource(String ds) {
-    LOGGER.info("Starting \"update data sources\" on WebDAV datasource: {}", ds);
+    LOGGER.info("Starting \"update data sources\" on WebDAV datasource: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
 
     String[] parsed = WebDavDataSourceHelper.parseWebDavPath(ds);
     if (parsed == null) {
@@ -832,7 +836,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           String dirPath = dir.getPath();
           String decodedDirPath = dirPath;
           try {
-            decodedDirPath = java.net.URLDecoder.decode(dirPath, "UTF-8");
+            // Escape lone '%' and preserve '+' in URL path
+            String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
+            decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
           }
           catch (Exception e) {
             LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -852,7 +858,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       }
 
       waitForCompletionOrCancel();
-      LOGGER.info("Finished updating WebDAV data source: {}", ds);
+      LOGGER.info("Finished updating WebDAV data source: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
     }
     catch (Exception e) {
       LOGGER.error("Error updating WebDAV data source '{}': {}", ds, e.getMessage());
@@ -1334,7 +1340,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Decode URL encoded characters (e.g. %20 -> space)
     try {
-      relativePath = java.net.URLDecoder.decode(relativePath, "UTF-8");
+      // Escape lone '%' and preserve '+' in URL path
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(relativePath.replace("+", "%2B"));
+      relativePath = java.net.URLDecoder.decode(prepared, "UTF-8");
     }
     catch (Exception e) {
       LOGGER.warn("Failed to decode path '{}': {}", relativePath, e.getMessage());
@@ -1390,8 +1398,20 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      // For WebDAV paths, we can't use Files.exists(), so we skip the show existence check
-      if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath()) && !Files.exists(tvShow.getPathNIO())) {
+      // Check if the TV show path exists
+      boolean showExists;
+      if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+        // For WebDAV paths, check existence via WebDAV client
+        showExists = checkWebDavPathExists(tvShow.getPath());
+      }
+      else {
+        // For local paths, use Files.exists()
+        showExists = Files.exists(tvShow.getPathNIO());
+      }
+
+      if (!showExists) {
+        LOGGER.info("Removing TV show '{}' - path no longer exists: {}", tvShow.getTitle(),
+            WebDavDataSourceHelper.decodeWebDavPath(tvShow.getPath()));
         tvShowList.removeTvShow(tvShow);
       }
       else {
@@ -1439,8 +1459,20 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         continue;
       }
 
-      // For WebDAV paths, we can't use Files.exists(), so we skip the show existence check
-      if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath()) && !Files.exists(tvShow.getPathNIO())) {
+      // Check if the TV show path exists
+      boolean showExists;
+      if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+        // For WebDAV paths, check existence via WebDAV client
+        showExists = checkWebDavPathExists(tvShow.getPath());
+      }
+      else {
+        // For local paths, use Files.exists()
+        showExists = Files.exists(tvShow.getPathNIO());
+      }
+
+      if (!showExists) {
+        LOGGER.info("Removing TV show '{}' - path no longer exists: {}", tvShow.getTitle(),
+            WebDavDataSourceHelper.decodeWebDavPath(tvShow.getPath()));
         tvShowList.removeTvShow(tvShow);
       }
       else {
@@ -1449,13 +1481,152 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     }
   }
 
+  /**
+   * Check if a WebDAV path exists on the server
+   *
+   * @param webDavPath
+   *          the WebDAV path to check (format: webdav://source-id/path)
+   * @return true if the path exists, false otherwise
+   */
+  private boolean checkWebDavPathExists(String webDavPath) {
+    String[] parsed = WebDavDataSourceHelper.parseWebDavPath(webDavPath);
+    if (parsed == null || parsed.length < 2) {
+      LOGGER.warn("Could not parse WebDAV path: {}", webDavPath);
+      return false;
+    }
+
+    String sourceId = parsed[0];
+    String remotePath = parsed[1];
+
+    WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+    if (source == null) {
+      LOGGER.warn("Could not find WebDAV source: {}", sourceId);
+      return false;
+    }
+
+    WebDavClient client = WebDavDataSourceHelper.createClient(source);
+    if (client == null) {
+      LOGGER.warn("Could not create WebDAV client for source: {}", sourceId);
+      return false;
+    }
+
+    try {
+      boolean exists = client.exists(remotePath);
+      LOGGER.debug("WebDAV path exists check: {} = {}", WebDavDataSourceHelper.decodeWebDavPath(webDavPath), exists);
+      return exists;
+    }
+    finally {
+      client.disconnect();
+    }
+  }
+
   private void cleanup(TvShow tvShow) {
     boolean dirty = false;
 
-    // Skip cleanup for WebDAV TV shows, as we don't have accurate fileFound information
-    // and can't reliably check if files still exist on the remote server
-    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
-      LOGGER.debug("Skipping cleanup for WebDAV TV show: {}", tvShow.getTitle());
+    LOGGER.info("cleanup() called for TV show: '{}', path='{}'", tvShow.getTitle(), tvShow.getPath());
+    // WebDAV TV shows need special cleanup - check file existence via WebDAV client
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(tvShow.getPath());
+    LOGGER.info("isWebDavPath('{}') = {}", tvShow.getPath(), isWebDav);
+    if (isWebDav) {
+      String[] parsed = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
+      LOGGER.info("parseWebDavPath result: {}", parsed != null ? "sourceId=" + parsed[0] + ", remotePath=" + parsed[1] : "null");
+      if (parsed == null) {
+        LOGGER.warn("Could not parse WebDAV path for cleanup: {}", tvShow.getPath());
+        return;
+      }
+
+      String sourceId = parsed[0];
+      WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+      LOGGER.info("getWebDavSource('{}') = {}", sourceId, source != null ? source.getName() : "null");
+      if (source == null) {
+        LOGGER.warn("Could not find WebDAV source for cleanup: {}", sourceId);
+        return;
+      }
+
+      WebDavClient client = WebDavDataSourceHelper.createClient(source);
+      LOGGER.info("createClient result: {}", client != null ? "OK" : "null");
+      if (client == null) {
+        LOGGER.warn("Could not create WebDAV client for cleanup: {}", tvShow.getTitle());
+        return;
+      }
+
+      try {
+        LOGGER.info("Performing WebDAV cleanup for TV show: {}", tvShow.getTitle());
+
+        // Check and clean up TV show media files
+        List<MediaFile> showFilesToRemove = new ArrayList<>();
+        for (MediaFile mf : tvShow.getMediaFiles()) {
+          String mfPath = mf.getPath();
+          String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfPath);
+          if (mfParsed != null && !client.exists(mfParsed[1])) {
+            LOGGER.debug("Removing orphaned WebDAV file from TV show: {}", mfPath);
+            showFilesToRemove.add(mf);
+            if (mf.isGraphic()) {
+              ImageCache.invalidateCachedImage(mf);
+            }
+            dirty = true;
+          }
+        }
+        for (MediaFile mf : showFilesToRemove) {
+          tvShow.removeFromMediaFiles(mf);
+        }
+
+        // Check and clean up episode media files
+        List<TvShowEpisode> episodesToRemove = new ArrayList<>();
+        for (TvShowEpisode episode : tvShow.getEpisodes()) {
+          LOGGER.info("Checking episode: {} - {} media files", episode.getTitle(), episode.getMediaFiles().size());
+          List<MediaFile> episodeFilesToRemove = new ArrayList<>();
+          for (MediaFile mf : episode.getMediaFiles()) {
+            // Get the full file path (directory + filename)
+            String mfDirPath = mf.getPath();
+            String mfFilename = mf.getFilename();
+            String mfFullPath = mfDirPath;
+            if (mfFilename != null && !mfFilename.isEmpty()) {
+              mfFullPath = mfDirPath.endsWith("/") ? mfDirPath + mfFilename : mfDirPath + "/" + mfFilename;
+            }
+            LOGGER.info("  MediaFile full path: {} (dir='{}', file='{}')", mfFullPath, mfDirPath, mfFilename);
+
+            String[] mfParsed = WebDavDataSourceHelper.parseWebDavPath(mfFullPath);
+            if (mfParsed == null) {
+              LOGGER.info("  parseWebDavPath returned null for: {}", mfFullPath);
+              continue;
+            }
+            boolean exists = client.exists(mfParsed[1]);
+            LOGGER.info("  exists('{}') = {}", mfParsed[1], exists);
+
+            if (!exists) {
+              LOGGER.info("Removing orphaned WebDAV file from episode: {}", mfFullPath);
+              episodeFilesToRemove.add(mf);
+              if (mf.isGraphic()) {
+                ImageCache.invalidateCachedImage(mf);
+              }
+              dirty = true;
+            }
+          }
+          for (MediaFile mf : episodeFilesToRemove) {
+            episode.removeFromMediaFiles(mf);
+          }
+
+          // Remove episode if no video files left
+          if (episode.getMediaFiles(MediaFileType.VIDEO).isEmpty()) {
+            episodesToRemove.add(episode);
+            dirty = true;
+          }
+        }
+        for (TvShowEpisode episode : episodesToRemove) {
+          tvShow.removeEpisode(episode);
+        }
+
+        if (dirty) {
+          tvShow.saveToDb();
+        }
+      }
+      catch (Exception e) {
+        LOGGER.warn("Error during WebDAV cleanup for '{}': {}", tvShow.getTitle(), e.getMessage());
+      }
+      finally {
+        client.disconnect();
+      }
       return;
     }
 

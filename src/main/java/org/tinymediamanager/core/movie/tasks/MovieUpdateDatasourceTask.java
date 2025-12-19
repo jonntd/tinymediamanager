@@ -419,7 +419,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
    *          the WebDAV data source path (webdav://[source-id]/remote/path)
    */
   private void updateWebDavDatasource(String ds) {
-    LOGGER.info("Starting \"update data sources\" on WebDAV datasource: {}", ds);
+    LOGGER.info("Starting \"update data sources\" on WebDAV datasource: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
 
     String[] parsed = WebDavDataSourceHelper.parseWebDavPath(ds);
     if (parsed == null) {
@@ -466,7 +466,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
           String decodedDirPath = dirPath;
           try {
             // Preserve '+' in URL path (URLDecoder converts '+' to space)
-            decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
+            // Escape lone '%' that are not valid URL sequences
+            String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
+            decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
           }
           catch (Exception e) {
             LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -480,7 +482,7 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       waitForCompletionOrCancel();
 
-      LOGGER.info("Finished updating WebDAV data source: {}", ds);
+      LOGGER.info("Finished updating WebDAV data source: {}", WebDavDataSourceHelper.decodeWebDavPath(ds));
     }
     catch (Exception e) {
       LOGGER.error("Error updating WebDAV data source '{}': {}", ds, e.getMessage());
@@ -539,7 +541,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
             String nextPath = file.getPath();
             try {
               // Preserve '+' in URL path (URLDecoder converts '+' to space)
-              nextPath = java.net.URLDecoder.decode(file.getPath().replace("+", "%2B"), "UTF-8");
+              // Escape lone '%' that are not valid URL sequences
+              String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(file.getPath().replace("+", "%2B"));
+              nextPath = java.net.URLDecoder.decode(prepared, "UTF-8");
             }
             catch (Exception e) {
               LOGGER.warn("Failed to decode path '{}': {}", file.getPath(), e.getMessage());
@@ -604,7 +608,9 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
       String decodedDirPath = dirPath;
       try {
         // Preserve '+' in URL path (URLDecoder converts '+' to space)
-        decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
+        // Escape lone '%' that are not valid URL sequences
+        String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
+        decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
       }
       catch (Exception e) {
         LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -770,7 +776,10 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     String decodedDirPath = dirPath;
     try {
       // Preserve '+' in URL path (URLDecoder converts '+' to space)
-      decodedDirPath = java.net.URLDecoder.decode(dirPath.replace("+", "%2B"), "UTF-8");
+      // Escape lone '%' that are not valid URL sequences
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(dirPath.replace("+", "%2B"));
+      decodedDirPath = java.net.URLDecoder.decode(prepared, "UTF-8");
+      ;
     }
     catch (Exception e) {
       LOGGER.warn("Failed to decode dirPath '{}': {}", dirPath, e.getMessage());
@@ -903,9 +912,11 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
     // Try decoding
     try {
-      // Preserve '+' in URL path (URLDecoder converts '+' to space)
-      String d1 = java.net.URLDecoder.decode(p1.replace("+", "%2B"), "UTF-8");
-      String d2 = java.net.URLDecoder.decode(p2.replace("+", "%2B"), "UTF-8");
+      // Escape lone '%' and preserve '+' in URL path
+      String prepared1 = WebDavDataSourceHelper.escapeLonePercentSigns(p1.replace("+", "%2B"));
+      String prepared2 = WebDavDataSourceHelper.escapeLonePercentSigns(p2.replace("+", "%2B"));
+      String d1 = java.net.URLDecoder.decode(prepared1, "UTF-8");
+      String d2 = java.net.URLDecoder.decode(prepared2, "UTF-8");
       return d1.equals(d2);
     }
     catch (Exception e) {
@@ -2173,6 +2184,45 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
     cleanup(moviesToclean);
   }
 
+  /**
+   * Check if a WebDAV path exists on the server
+   *
+   * @param webDavPath
+   *          the WebDAV path to check (format: webdav://source-id/path)
+   * @return true if the path exists, false otherwise
+   */
+  private boolean checkWebDavPathExists(String webDavPath) {
+    String[] parsed = WebDavDataSourceHelper.parseWebDavPath(webDavPath);
+    if (parsed == null || parsed.length < 2) {
+      LOGGER.warn("Could not parse WebDAV path: {}", webDavPath);
+      return false;
+    }
+
+    String sourceId = parsed[0];
+    String remotePath = parsed[1];
+
+    WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+    if (source == null) {
+      LOGGER.warn("Could not find WebDAV source: {}", sourceId);
+      return false;
+    }
+
+    WebDavClient client = WebDavDataSourceHelper.createClient(source);
+    if (client == null) {
+      LOGGER.warn("Could not create WebDAV client for source: {}", sourceId);
+      return false;
+    }
+
+    try {
+      boolean exists = client.exists(remotePath);
+      LOGGER.debug("WebDAV path exists check: {} = {}", WebDavDataSourceHelper.decodeWebDavPath(webDavPath), exists);
+      return exists;
+    }
+    finally {
+      client.disconnect();
+    }
+  }
+
   private void cleanup(List<Movie> movies) {
     setTaskName(TmmResourceBundle.getString("update.cleanup"));
     setTaskDescription(null);
@@ -2201,8 +2251,18 @@ public class MovieUpdateDatasourceTask extends TmmThreadPool {
 
       if (!dirFound) {
         // dir is not in hashset - check with exists to be sure it is not here
-        if (!Files.exists(movieDir)) {
-          LOGGER.debug("movie directory '{}' not found, removing from DB...", movieDir);
+        boolean pathExists;
+        if (WebDavDataSourceHelper.isWebDavPath(movie.getPath())) {
+          // For WebDAV paths, check existence via WebDAV client
+          pathExists = checkWebDavPathExists(movie.getPath());
+        }
+        else {
+          // For local paths, use Files.exists()
+          pathExists = Files.exists(movieDir);
+        }
+
+        if (!pathExists) {
+          LOGGER.info("Movie directory '{}' not found, removing from DB...", WebDavDataSourceHelper.decodeWebDavPath(movie.getPath()));
           moviesToRemove.add(movie);
         }
         else {

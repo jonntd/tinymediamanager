@@ -82,6 +82,8 @@ import org.tinymediamanager.core.TmmDateFormat;
 import org.tinymediamanager.core.TrailerQuality;
 import org.tinymediamanager.core.TrailerSources;
 import org.tinymediamanager.core.Utils;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaFile;
 import org.tinymediamanager.core.entities.MediaGenres;
@@ -2410,7 +2412,57 @@ public class Movie extends MediaEntity implements IMediaInformation {
       return ok;
     }
     else {
+      // Single movie directory - delete the entire folder
+      String moviePath = getPath();
+      // Check if this is a WebDAV path
+      if (WebDavDataSourceHelper.isWebDavPath(moviePath)) {
+        return deleteWebDavDirectory();
+      }
       return Utils.deleteDirectorySafely(getPathNIO(), getDataSource());
+    }
+  }
+
+  /**
+   * Delete the movie directory from WebDAV server
+   *
+   * @return true if deletion was successful
+   */
+  private boolean deleteWebDavDirectory() {
+    try {
+      String moviePath = getPath();
+      LOGGER.info("Deleting WebDAV movie directory: {}", WebDavDataSourceHelper.decodeWebDavPath(moviePath));
+
+      // Get the WebDAV client for this datasource
+      WebDavClient client = WebDavDataSourceHelper.getClientForPath(getDataSource());
+      if (client == null) {
+        LOGGER.error("Could not get WebDAV client for datasource: {}", getDataSource());
+        return false;
+      }
+
+      try {
+        // Extract the relative path from the full WebDAV path
+        String relativePath = WebDavDataSourceHelper.extractRelativePath(getDataSource(), moviePath);
+        if (relativePath == null) {
+          LOGGER.error("Could not extract relative path for movie: {}", moviePath);
+          return false;
+        }
+
+        boolean result = client.delete(relativePath);
+        if (result) {
+          LOGGER.info("Successfully deleted WebDAV movie directory: {}", WebDavDataSourceHelper.decodeWebDavPath(moviePath));
+        }
+        else {
+          LOGGER.error("Failed to delete WebDAV movie directory: {}", WebDavDataSourceHelper.decodeWebDavPath(moviePath));
+        }
+        return result;
+      }
+      finally {
+        client.disconnect();
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Error deleting WebDAV movie directory: {}", e.getMessage());
+      return false;
     }
   }
 

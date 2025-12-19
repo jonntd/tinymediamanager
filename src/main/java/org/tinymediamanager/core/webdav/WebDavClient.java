@@ -76,6 +76,12 @@ public class WebDavClient {
       int statusCode = e.getStatusCode();
       String reasonPhrase = e.getResponsePhrase();
 
+      // 207 Multi-Status is a valid WebDAV success response, treat it as success
+      if (statusCode == 207) {
+        LOGGER.debug("WebDAV connection test received 207 Multi-Status - this is a valid WebDAV response, treating as success");
+        return true;
+      }
+
       if (statusCode == 401) {
         LOGGER.warn("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
         LOGGER.warn("Authentication issue for WebDAV source '{}'. This may be temporary - will retry if configured.", source.getName());
@@ -173,6 +179,8 @@ public class WebDavClient {
           try {
             // Preserve '+' in URL path (URLDecoder converts '+' to space)
             String preservedPlus = normalizedHref.replace("+", "%2B");
+            // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+            preservedPlus = escapeLonePercentSigns(preservedPlus);
             decodedHref = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
           }
           catch (Exception e) {
@@ -245,6 +253,29 @@ public class WebDavClient {
     }
     catch (IOException e) {
       LOGGER.warn("Error checking if path exists: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * Check if a path is a directory on the WebDAV server
+   *
+   * @param path
+   *          the path to check
+   * @return true if the path is a directory, false if it is a file or does not exist
+   */
+  public boolean isDirectory(String path) {
+    ensureConnected();
+    try {
+      // Depth 0 to check the resource itself
+      List<DavResource> resources = sardine.list(buildUrl(path), 0);
+      if (resources != null && !resources.isEmpty()) {
+        return resources.get(0).isDirectory();
+      }
+      return false;
+    }
+    catch (IOException e) {
+      LOGGER.warn("Error checking if path is directory: {}", e.getMessage());
       return false;
     }
   }
@@ -507,6 +538,8 @@ public class WebDavClient {
       // should NOT be converted to space. Only %2B represents a plus sign.
       // So we need to preserve '+' by pre-encoding it before decoding.
       String pathWithPreservedPlus = path.replace("+", "%2B");
+      // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+      pathWithPreservedPlus = escapeLonePercentSigns(pathWithPreservedPlus);
       String decodedPath = java.net.URLDecoder.decode(pathWithPreservedPlus, "UTF-8");
 
       // Use URLEncoder to be more aggressive with encoding (e.g. handle parentheses)
@@ -537,10 +570,52 @@ public class WebDavClient {
     try {
       // Preserve '+' in URL path (URLDecoder converts '+' to space)
       String preservedPlus = path.replace("+", "%2B");
+      // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+      preservedPlus = escapeLonePercentSigns(preservedPlus);
       return java.net.URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (Exception e) {
       return path;
     }
+  }
+
+  /**
+   * Escape lone '%' characters that are not part of valid URL-encoded sequences. Converts '%' not followed by 2 hex chars to '%25' (the encoding of
+   * '%').
+   */
+  private static String escapeLonePercentSigns(String input) {
+    if (input == null || !input.contains("%")) {
+      return input;
+    }
+
+    StringBuilder result = new StringBuilder();
+    int length = input.length();
+
+    for (int i = 0; i < length; i++) {
+      char c = input.charAt(i);
+      if (c == '%') {
+        // Check if this '%' is followed by exactly 2 hex characters
+        if (i + 2 < length && isHexDigit(input.charAt(i + 1)) && isHexDigit(input.charAt(i + 2))) {
+          // Valid URL-encoded sequence, keep as-is
+          result.append(c);
+        }
+        else {
+          // Lone '%', escape it
+          result.append("%25");
+        }
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Check if a character is a hexadecimal digit (0-9, A-F, a-f)
+   */
+  private static boolean isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
   }
 }
