@@ -281,14 +281,67 @@ public final class TvShowList extends AbstractModelObject {
    *          the new value
    */
   public void addTvShow(TvShow newValue) {
+    LOGGER.debug("addTvShow() called: title='{}', path='{}', current list size={}", newValue.getTitle(), newValue.getPath(), tvShows.size());
+
+    // 使用写锁保护整个检查和添加操作，防止并发重复添加
     readWriteLock.writeLock().lock();
-    int oldValue = tvShows.size();
-    tvShows.add(newValue);
-    readWriteLock.writeLock().unlock();
+    try {
+      // 检查是否已存在（避免重复添加）
+      if (tvShows.contains(newValue)) {
+        LOGGER.debug("addTvShow() SKIPPED (contains): title='{}' already in list", newValue.getTitle());
+        return;
+      }
+
+      // 额外检查：按路径判断是否已存在（防止不同对象但相同路径的情况）
+      String newPath = newValue.getPath();
+      if (StringUtils.isNotBlank(newPath)) {
+        // WebDAV 路径需要解码后比较（与 getTvShowByPath() 保持一致）
+        boolean isWebDav = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(newPath);
+        String normalizedNewPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(newPath) : newPath;
+        // Apply NFC normalization for WebDAV paths (consistent with getTvShowByPath)
+        if (isWebDav) {
+          normalizedNewPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedNewPath);
+        }
+        // 标准化尾部斜杠
+        normalizedNewPath = normalizedNewPath.endsWith("/") ? normalizedNewPath.substring(0, normalizedNewPath.length() - 1) : normalizedNewPath;
+
+        LOGGER.debug("addTvShow: checking for duplicates, newPath='{}', normalized='{}', tvShows.size={}", newPath, normalizedNewPath,
+            tvShows.size());
+
+        for (TvShow existing : tvShows) {
+          String existingPath = existing.getPath();
+          if (StringUtils.isNotBlank(existingPath)) {
+            String normalizedExistingPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(existingPath)
+                : existingPath;
+            // Apply NFC normalization for WebDAV paths (consistent with getTvShowByPath)
+            if (isWebDav) {
+              normalizedExistingPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedExistingPath);
+            }
+            // 标准化尾部斜杠
+            normalizedExistingPath = normalizedExistingPath.endsWith("/") ? normalizedExistingPath.substring(0, normalizedExistingPath.length() - 1)
+                : normalizedExistingPath;
+
+            boolean equals = normalizedNewPath.equals(normalizedExistingPath);
+            LOGGER.trace("addTvShow: comparing '{}' vs '{}' - equals={}", normalizedNewPath, normalizedExistingPath, equals);
+
+            if (equals) {
+              LOGGER.debug("addTvShow() SKIPPED (path match): title='{}' path matches existing title='{}'", newValue.getTitle(), existing.getTitle());
+              return;
+            }
+          }
+        }
+      }
+
+      tvShows.add(newValue);
+      LOGGER.debug("addTvShow() SUCCESS: title='{}' added, new list size={}", newValue.getTitle(), tvShows.size());
+    }
+    finally {
+      readWriteLock.writeLock().unlock();
+    }
 
     firePropertyChange(TV_SHOWS, null, tvShows);
     firePropertyChange(ADDED_TV_SHOW, null, newValue);
-    firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
+    firePropertyChange(TV_SHOW_COUNT, tvShows.size() - 1, tvShows.size());
   }
 
   /**
@@ -1364,33 +1417,56 @@ public final class TvShowList extends AbstractModelObject {
     String pathStr = path.toString();
     boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(pathStr);
 
-    for (TvShow tvShow : this.tvShows) {
-      Path showPath = tvShow.getPathNIO();
-      if (showPath == null) {
-        continue;
-      }
-
-      // For WebDAV paths, compare strings directly (both decoded)
-      // For local paths, use toAbsolutePath() for proper comparison
-      if (isWebDav) {
-        // Decode both paths for comparison
-        String decodedPathStr = WebDavDataSourceHelper.decodeWebDavPath(pathStr);
-        String decodedShowPath = WebDavDataSourceHelper.decodeWebDavPath(showPath.toString());
-        // Normalize trailing slashes
-        decodedPathStr = decodedPathStr.endsWith("/") ? decodedPathStr.substring(0, decodedPathStr.length() - 1) : decodedPathStr;
-        decodedShowPath = decodedShowPath.endsWith("/") ? decodedShowPath.substring(0, decodedShowPath.length() - 1) : decodedShowPath;
-        if (decodedShowPath.equals(decodedPathStr)) {
-          return tvShow;
-        }
-      }
-      else {
-        if (showPath.compareTo(path.toAbsolutePath()) == 0) {
-          return tvShow;
-        }
-      }
+    // Log the input path (DEBUG level)
+    if (isWebDav) {
+      LOGGER.debug("getTvShowByPath: input path='{}', tvShows.size={}", pathStr, tvShows.size());
     }
 
-    return null;
+    // Use read lock to ensure thread safety when reading tvShows list
+    readWriteLock.readLock().lock();
+    try {
+      for (TvShow tvShow : this.tvShows) {
+        Path showPath = tvShow.getPathNIO();
+        if (showPath == null) {
+          continue;
+        }
+
+        // For WebDAV paths, compare strings directly (both decoded)
+        // For local paths, use toAbsolutePath() for proper comparison
+        if (isWebDav) {
+          // Decode both paths for comparison
+          String decodedPathStr = WebDavDataSourceHelper.decodeWebDavPath(pathStr);
+          String decodedShowPath = WebDavDataSourceHelper.decodeWebDavPath(showPath.toString());
+          // Apply NFC normalization for consistent comparison with stored paths
+          // (paths are stored in NFC format, so comparison must also use NFC)
+          decodedPathStr = WebDavDataSourceHelper.normalizeToNFC(decodedPathStr);
+          decodedShowPath = WebDavDataSourceHelper.normalizeToNFC(decodedShowPath);
+          // Normalize trailing slashes
+          decodedPathStr = decodedPathStr.endsWith("/") ? decodedPathStr.substring(0, decodedPathStr.length() - 1) : decodedPathStr;
+          decodedShowPath = decodedShowPath.endsWith("/") ? decodedShowPath.substring(0, decodedShowPath.length() - 1) : decodedShowPath;
+
+          // Log comparison details (INFO level for visibility)
+          boolean equals = decodedShowPath.equals(decodedPathStr);
+          LOGGER.trace("getTvShowByPath: comparing '{}' vs '{}' - equals={}", decodedPathStr, decodedShowPath, equals);
+
+          if (equals) {
+            LOGGER.debug("getTvShowByPath: FOUND existing show '{}' for path '{}'", tvShow.getTitle(), pathStr);
+            return tvShow;
+          }
+        }
+        else {
+          if (showPath.compareTo(path.toAbsolutePath()) == 0) {
+            return tvShow;
+          }
+        }
+      }
+
+      LOGGER.debug("getTvShowByPath: NO MATCH found for path '{}'", pathStr);
+      return null;
+    }
+    finally {
+      readWriteLock.readLock().unlock();
+    }
   }
 
   /**

@@ -47,7 +47,7 @@ public class WebDavFileOperations {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
       if (sourceParts == null || sourceParts.length < 2) {
-        LOGGER.error("Invalid source WebDAV path: {}", sourceWebDavPath);
+        LOGGER.error("Invalid source WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath));
         return null;
       }
       String sourceId = sourceParts[0];
@@ -56,7 +56,7 @@ public class WebDavFileOperations {
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
       if (destParts == null || destParts.length < 2) {
-        LOGGER.error("Invalid destination WebDAV path: {}", destWebDavPath);
+        LOGGER.error("Invalid destination WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return null;
       }
       String destId = destParts[0];
@@ -84,7 +84,8 @@ public class WebDavFileOperations {
       }
 
       if (!sameServer) {
-        LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
+        LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+            WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return null;
       }
 
@@ -175,7 +176,8 @@ public class WebDavFileOperations {
       }
     }
     catch (Exception e) {
-      LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", sourceWebDavPath, destWebDavPath, e.getMessage());
+      LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+          WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath), e.getMessage());
       return null;
     }
     finally {
@@ -201,7 +203,7 @@ public class WebDavFileOperations {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
       if (sourceParts == null || sourceParts.length < 2) {
-        LOGGER.error("Invalid source WebDAV path: {}", sourceWebDavPath);
+        LOGGER.error("Invalid source WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath));
         return false;
       }
       String sourceId = sourceParts[0];
@@ -210,7 +212,7 @@ public class WebDavFileOperations {
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
       if (destParts == null || destParts.length < 2) {
-        LOGGER.error("Invalid destination WebDAV path: {}", destWebDavPath);
+        LOGGER.error("Invalid destination WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return false;
       }
       String destId = destParts[0];
@@ -238,7 +240,8 @@ public class WebDavFileOperations {
       }
 
       if (!sameServer) {
-        LOGGER.error("Cannot copy files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
+        LOGGER.error("Cannot copy files between different WebDAV servers: {} -> {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+            WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return false;
       }
 
@@ -276,7 +279,8 @@ public class WebDavFileOperations {
       return client.copy(sourcePath, destPath);
     }
     catch (Exception e) {
-      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", sourceWebDavPath, destWebDavPath, e.getMessage());
+      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+          WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath), e.getMessage());
       return false;
     }
     finally {

@@ -485,7 +485,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             // error - continue with next datasource
             LOGGER.warn("Datasource '{}' not available/empty", ds);
             MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+                .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+                    new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
             continue;
           }
           publishState();
@@ -510,7 +511,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             if (isEmpty) {
               // error - continue with next datasource
               MessageManager.getInstance()
-                  .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+                  .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+                      new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
               continue;
             }
           }
@@ -640,7 +642,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           if (!Files.exists(dsAsPath) && !org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(ds)) {
             // error - continue with next datasource
             MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+                .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+                    new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
             continue;
           }
 
@@ -661,7 +664,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             if (isEmpty) {
               // error - continue with next datasource
               MessageManager.getInstance()
-                  .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+                  .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+                      new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
               continue;
             }
           }
@@ -800,7 +804,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (parsed == null) {
       LOGGER.error("Invalid WebDAV path: {}", ds);
       MessageManager.getInstance()
-          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+              new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
       return;
     }
 
@@ -811,12 +816,14 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (source == null) {
       LOGGER.error("WebDAV source not found for ID: {}", sourceId);
       MessageManager.getInstance()
-          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+              new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
       return;
     }
 
     initThreadPool(3, "update-webdav");
-    setTaskName(TmmResourceBundle.getString("update.datasource") + " 'WebDAV: " + source.getName() + remotePath + "'");
+    setTaskName(TmmResourceBundle.getString("update.datasource") + " 'WebDAV: " + source.getName()
+        + WebDavDataSourceHelper.decodeWebDavPath(remotePath) + "'");
     publishState();
 
     // Use a temporary client just to list root directories
@@ -824,7 +831,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     if (listClient == null) {
       LOGGER.error("Could not connect to WebDAV source: {}", source.getName());
       MessageManager.getInstance()
-          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable", new String[] { ds }));
+          .pushMessage(new Message(MessageLevel.ERROR, "update.datasource", "update.datasource.unavailable",
+              new String[] { WebDavDataSourceHelper.decodeWebDavPath(ds) }));
       return;
     }
 
@@ -840,7 +848,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
           String dirPath = dir.getPath();
 
           // Build show path: webdav://[source-id]/dirPath
-          String showPath = "webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath);
+          // Apply NFC normalization to ensure consistent storage format
+          String showPath = WebDavDataSourceHelper
+              .normalizeToNFC("webdav://" + sourceId + "/" + (dirPath.startsWith("/") ? dirPath.substring(1) : dirPath));
           // Normalize path (remove trailing slash)
           if (showPath.endsWith("/")) {
             showPath = showPath.substring(0, showPath.length() - 1);
@@ -1160,11 +1170,13 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
     String webdavPath;
     if (parentPath.isEmpty()) {
       // Top level directory
-      webdavPath = "webdav://" + source.getName();
+      // Apply NFC normalization to ensure consistent storage format
+      webdavPath = WebDavDataSourceHelper.normalizeToNFC("webdav://" + source.getName());
     }
     else {
       // Add the full parent path to ensure correct directory structure
-      webdavPath = "webdav://" + source.getName() + parentPath;
+      // Apply NFC normalization to ensure consistent storage format
+      webdavPath = WebDavDataSourceHelper.normalizeToNFC("webdav://" + source.getName() + parentPath);
     }
 
     mf.setPath(webdavPath);
@@ -1291,7 +1303,8 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
     // Construct proper WebDAV path for the episode
     String filePath = videoFile.getPath();
-    String episodePath = "webdav://" + source.getName() + filePath;
+    // Apply NFC normalization to ensure consistent storage format
+    String episodePath = WebDavDataSourceHelper.normalizeToNFC("webdav://" + source.getName() + filePath);
     episode.setPath(episodePath);
 
     // Create MediaFile for the video
@@ -1546,15 +1559,15 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
   private void cleanup(TvShow tvShow) {
     boolean dirty = false;
 
-    LOGGER.info("cleanup() called for TV show: '{}', path='{}'", tvShow.getTitle(), tvShow.getPath());
+    LOGGER.info("cleanup() called for TV show: '{}', path='{}'", tvShow.getTitle(), WebDavDataSourceHelper.decodeWebDavPath(tvShow.getPath()));
     // WebDAV TV shows need special cleanup - check file existence via WebDAV client
     boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(tvShow.getPath());
-    LOGGER.info("isWebDavPath('{}') = {}", tvShow.getPath(), isWebDav);
+    LOGGER.info("isWebDavPath('{}') = {}", WebDavDataSourceHelper.decodeWebDavPath(tvShow.getPath()), isWebDav);
     if (isWebDav) {
       String[] parsed = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
       LOGGER.info("parseWebDavPath result: {}", parsed != null ? "sourceId=" + parsed[0] + ", remotePath=" + parsed[1] : "null");
       if (parsed == null) {
-        LOGGER.warn("Could not parse WebDAV path for cleanup: {}", tvShow.getPath());
+        LOGGER.warn("Could not parse WebDAV path for cleanup: {}", WebDavDataSourceHelper.decodeWebDavPath(tvShow.getPath()));
         return;
       }
 

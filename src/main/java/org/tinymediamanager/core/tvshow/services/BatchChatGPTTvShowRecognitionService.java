@@ -49,6 +49,21 @@ public class BatchChatGPTTvShowRecognitionService {
     // 双尖括号索引匹配正则：<<数字>> 内容
     private static final Pattern         INDEXED_RESULT_PATTERN = Pattern.compile("^<<(\\d+)>>\\s*(.+)$");
 
+    /**
+     * 批量识别回调接口 每当一批电视剧识别成功后会调用此接口，允许调用方立即处理识别结果
+     */
+    public interface BatchRecognitionCallback {
+        /**
+         * 当一批电视剧识别成功时调用
+         * 
+         * @param batchResults
+         *            本批次识别结果 (dbId -> recognizedTitle)
+         * @param recognizedTvShows
+         *            本批次识别成功的电视剧列表
+         */
+        void onBatchRecognized(Map<String, String> batchResults, List<TvShow> recognizedTvShows);
+    }
+
     public BatchChatGPTTvShowRecognitionService() {
         this.settings = Settings.getInstance();
 
@@ -108,12 +123,42 @@ public class BatchChatGPTTvShowRecognitionService {
     }
 
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows) {
+        return batchRecognizeTvShowTitles(tvShows, null);
+    }
+
+    /**
+     * 批量识别电视剧标题（带回调） 每当一批识别成功后，立即通过回调通知调用方，实现边识别边处理
+     *
+     * @param tvShows
+     *            待识别的电视剧列表
+     * @param callback
+     *            识别成功回调（可为null，则等待全部完成后返回）
+     * @return 所有识别结果的汇总 (dbId -> recognizedTitle)
+     */
+    public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows, BatchRecognitionCallback callback) {
         int batchSize = settings.getAiBatchSize();
         LOGGER.info("Using configured batch size: {} for {} TV shows", batchSize, tvShows.size());
-        return batchRecognizeTvShowTitles(tvShows, batchSize, settings.getAiMaxRetries());
+        return batchRecognizeTvShowTitles(tvShows, batchSize, settings.getAiMaxRetries(), callback);
     }
 
     public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows, int batchSize, int maxRetries) {
+        return batchRecognizeTvShowTitles(tvShows, batchSize, maxRetries, null);
+    }
+
+    /**
+     * 批量识别电视剧标题（完整参数版，带回调）
+     *
+     * @param tvShows
+     *            待识别的电视剧列表
+     * @param batchSize
+     *            每批处理的数量
+     * @param maxRetries
+     *            最大重试次数
+     * @param callback
+     *            识别成功回调（可为null）
+     * @return 所有识别结果的汇总
+     */
+    public Map<String, String> batchRecognizeTvShowTitles(List<TvShow> tvShows, int batchSize, int maxRetries, BatchRecognitionCallback callback) {
         Map<String, String> results = new HashMap<>();
 
         if (tvShows == null || tvShows.isEmpty()) {
@@ -146,6 +191,19 @@ public class BatchChatGPTTvShowRecognitionService {
 
             Map<String, String> batchResults = processBatch(batch, maxRetries);
             results.putAll(batchResults);
+
+            // 如果有回调且本批次有识别结果，立即通知调用方
+            if (callback != null && !batchResults.isEmpty()) {
+                // 找出本批次识别成功的电视剧
+                List<TvShow> recognizedInBatch = new ArrayList<>();
+                for (TvShow tvShow : batch) {
+                    if (batchResults.containsKey(tvShow.getDbId().toString())) {
+                        recognizedInBatch.add(tvShow);
+                    }
+                }
+                LOGGER.info("Batch {} completed with {} recognized, invoking callback immediately", (i / batchSize) + 1, recognizedInBatch.size());
+                callback.onBatchRecognized(batchResults, recognizedInBatch);
+            }
         }
 
         return results;

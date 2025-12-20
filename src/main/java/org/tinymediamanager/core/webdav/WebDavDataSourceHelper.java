@@ -142,6 +142,10 @@ public class WebDavDataSourceHelper {
             // Escape lone '%' characters that are not valid URL-encoded sequences
             preservedPlus = escapeLonePercentSigns(preservedPlus);
             String decodedPath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
+            // Apply NFC normalization after decoding to ensure consistent format
+            // This is critical: WebDAV servers may return NFD-format Unicode,
+            // but we need NFC for consistent comparison and storage
+            decodedPath = normalizeToNFC(decodedPath);
             result = WEBDAV_PREFIX + sourceId + decodedPath;
             // LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
           }
@@ -152,7 +156,10 @@ public class WebDavDataSourceHelper {
       }
     }
 
-    return result;
+    // Always apply NFC normalization to the final result
+    // This ensures consistent Unicode format regardless of whether the path was URL-encoded or not
+    // Critical for path comparison: "刮削测试" (NFC) must match "刮削测试" (NFD)
+    return normalizeToNFC(result);
   }
 
   /**
@@ -424,6 +431,27 @@ public class WebDavDataSourceHelper {
     // Decode the remote path for display
     String decodedPath = decodeUrlPath(parsed[1]);
     return "WebDAV: " + source.getName() + decodedPath;
+  }
+
+  /**
+   * Normalize a string to NFC (Canonical Decomposition, followed by Canonical Composition). This ensures consistent Unicode representation for path
+   * comparison and storage.
+   * 
+   * @param text
+   *          the text to normalize
+   * @return the normalized text in NFC form, or the original text if normalization fails
+   */
+  public static String normalizeToNFC(String text) {
+    if (text == null || text.isEmpty()) {
+      return text;
+    }
+    try {
+      return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC);
+    }
+    catch (Exception e) {
+      LOGGER.debug("Failed to normalize text to NFC: {}", e.getMessage());
+      return text;
+    }
   }
 
   /**
