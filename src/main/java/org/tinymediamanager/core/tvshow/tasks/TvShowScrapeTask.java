@@ -132,8 +132,8 @@ public class TvShowScrapeTask extends TmmThreadPool {
     // 开始新的AI识别会话，清空缓存和计数器
     TvShowAIRecognitionManager.getInstance().startNewSession();
 
-    // ========== 多轮批量AI识别优化 ==========
-    // 策略：批量识别 → 收集未识别 → 批量重试（最多N轮）→ 仍失败才单次识别
+    // ========== 边识别边刮削：使用回调机制实现并行处理 ==========
+    // 策略：使用回调机制，每批识别成功后立即提交刮削任务，无需等待全部识别完成
     if (tvShowScrapeParams.doSearch && !tvShowScrapeParams.tvShowsToScrape.isEmpty()) {
       // 检查是否配置了 OpenAI API Key
       String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
@@ -149,80 +149,48 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
           BatchChatGPTTvShowRecognitionService batchService = new BatchChatGPTTvShowRecognitionService();
 
-          // 从设置中获取批次大小（用于日志统计）
-          int totalTvShows = tvShowScrapeParams.tvShowsToScrape.size();
+          // 记录已提交刮削任务的电视剧，避免重复提交
+          java.util.Set<String> submittedTvShows = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
-          // ========== 第一轮批量识别 ==========
-          LOGGER.info("=== 第1轮批量AI识别开始 ({} 部电视剧) ===", totalTvShows);
-          Map<String, String> batchResults = batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape);
-          aiRecognitionResults.putAll(batchResults);
-          LOGGER.info("第1轮批量AI识别完成: 成功识别 {} 部", batchResults.size());
+          // 使用回调机制：每批识别成功后立即提交刮削任务
+          BatchChatGPTTvShowRecognitionService.BatchRecognitionCallback callback = (batchResults, recognizedTvShows) -> {
+            // 将识别结果添加到全局结果集
+            aiRecognitionResults.putAll(batchResults);
 
-          // 收集未识别的电视剧
+            // 立即提交本批次识别成功的电视剧刮削任务
+            int submittedCount = 0;
+            for (TvShow tvShow : recognizedTvShows) {
+              String dbId = tvShow.getDbId().toString();
+              // 避免重复提交
+              if (submittedTvShows.add(dbId)) {
+                submitTask(new Worker(tvShow, aiRecognitionResults));
+                submittedCount++;
+              }
+            }
+            LOGGER.info("回调触发：本批次识别 {} 部，已提交 {} 部刮削任务（边识别边刮削）", recognizedTvShows.size(), submittedCount);
+          };
+
+          // 调用带回调的批量识别方法
+          LOGGER.info("=== 批量AI识别开始（边识别边刮削模式）===");
+          batchService.batchRecognizeTvShowTitles(tvShowScrapeParams.tvShowsToScrape, callback);
+
+          LOGGER.info("=== 批量AI识别流程完成 ===");
+
+          // 收集未识别的电视剧，提交到刮削任务（会触发单次AI识别回退）
           List<TvShow> unrecognizedTvShows = collectUnrecognizedTvShows(tvShowScrapeParams.tvShowsToScrape, aiRecognitionResults);
-          LOGGER.info("第1轮未识别: {} 部", unrecognizedTvShows.size());
-
-          // 先提交已识别的电视剧刮削任务
-          List<TvShow> recognizedTvShows = new ArrayList<>();
-          for (TvShow tvShow : tvShowScrapeParams.tvShowsToScrape) {
-            if (aiRecognitionResults.containsKey(tvShow.getDbId().toString())) {
-              recognizedTvShows.add(tvShow);
-              submitTask(new Worker(tvShow, aiRecognitionResults));
-            }
-          }
-          LOGGER.info("已提交 {} 部已识别电视剧的刮削任务", recognizedTvShows.size());
-
-          // ========== 多轮批量重试（最多3轮）==========
-          int maxBatchRetries = 3;
-          for (int retry = 1; retry <= maxBatchRetries && !unrecognizedTvShows.isEmpty() && !cancel; retry++) {
-            LOGGER.info("=== 第{}轮批量重试开始 ({} 部未识别电视剧) ===", retry + 1, unrecognizedTvShows.size());
-
+          if (!unrecognizedTvShows.isEmpty()) {
+            LOGGER.info("批量识别后仍有 {} 部未识别，提交刮削任务（将使用单次识别回退）", unrecognizedTvShows.size());
             MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.INFO, "批量重试",
-                    String.format("第 %d/%d 轮批量重试: %d 部未识别电视剧", retry, maxBatchRetries, unrecognizedTvShows.size())));
+                .pushMessage(new Message(MessageLevel.WARN, "批量识别", String.format("%d 部电视剧批量识别失败，将使用单次识别", unrecognizedTvShows.size())));
 
-            // 等待2秒再重试（避免API限流）
-            try {
-              Thread.sleep(2000);
-            }
-            catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              break;
-            }
-
-            // 对未识别的进行批量重试
-            Map<String, String> retryResults = batchService.batchRecognizeTvShowTitles(unrecognizedTvShows);
-            aiRecognitionResults.putAll(retryResults);
-            LOGGER.info("第{}轮批量重试完成: 成功识别 {} 部", retry + 1, retryResults.size());
-
-            // 提交本轮新识别成功的电视剧刮削任务
-            List<TvShow> newlyRecognized = new ArrayList<>();
             for (TvShow tvShow : unrecognizedTvShows) {
-              if (retryResults.containsKey(tvShow.getDbId().toString())) {
-                newlyRecognized.add(tvShow);
+              String dbId = tvShow.getDbId().toString();
+              // 避免重复提交
+              if (submittedTvShows.add(dbId)) {
                 submitTask(new Worker(tvShow, aiRecognitionResults));
               }
             }
-            LOGGER.info("本轮新识别 {} 部，已提交刮削任务", newlyRecognized.size());
-
-            // 更新未识别列表
-            unrecognizedTvShows = collectUnrecognizedTvShows(unrecognizedTvShows, aiRecognitionResults);
-            LOGGER.info("第{}轮后仍未识别: {} 部", retry + 1, unrecognizedTvShows.size());
           }
-
-          // ========== 仍失败的提交刮削（会触发单次识别回退）==========
-          if (!unrecognizedTvShows.isEmpty()) {
-            LOGGER.info("经过 {} 轮批量重试后仍有 {} 部未识别，将使用单次识别回退", maxBatchRetries + 1, unrecognizedTvShows.size());
-            MessageManager.getInstance()
-                .pushMessage(new Message(MessageLevel.WARN, "批量识别",
-                    String.format("%d 部电视剧在 %d 轮批量识别后仍未成功，将使用单次识别", unrecognizedTvShows.size(), maxBatchRetries + 1)));
-
-            for (TvShow tvShow : unrecognizedTvShows) {
-              submitTask(new Worker(tvShow, aiRecognitionResults));
-            }
-          }
-
-          LOGGER.info("=== 批量AI识别流程完成 ===");
 
           // 发送批量AI识别完成消息到Message history
           int successCount = aiRecognitionResults.size();
@@ -373,6 +341,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
         List<MediaScraper> trailerScrapers = tvShowScrapeParams.scrapeOptions.getTrailerScrapers();
 
         // scrape tv show
+        boolean isAiEnabled = org.tinymediamanager.core.Settings.getInstance().isEnableAi();
 
         // search for tv show
         MediaSearchResult result1 = null;
@@ -392,13 +361,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
                 MediaSearchResult result2 = results.get(1);
                 // if both results have the same score - do not take any result
                 if (result1.getScore() == result2.getScore()) {
-                  LOGGER.warn("Two identical results for '{}', attempting AI fallback", tvShow.getTitle());
-                  // 尝试单个文件AI识别回退
-                  MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-                  if (fallbackResult != null) {
-                    result1 = fallbackResult;
+                  if (isAiEnabled) {
+                    LOGGER.warn("Two identical results for '{}', attempting AI fallback", tvShow.getTitle());
+                    // 尝试单个文件AI识别回退
+                    MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                    if (fallbackResult != null) {
+                      result1 = fallbackResult;
+                    }
+                    else {
+                      smartScrapeList.add(tvShow);
+                      return;
+                    }
                   }
                   else {
+                    LOGGER.info("Two identical results for '{}', AI disabled. Adding to smart scrape.", tvShow.getTitle());
                     smartScrapeList.add(tvShow);
                     return;
                   }
@@ -406,13 +382,21 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
                 // create a threshold of 0.75 - to minimize false positives
                 if (result1.getScore() < 0.75) {
-                  LOGGER.warn("Score ({}) is lower than threshold for '{}', attempting AI fallback", result1.getScore(), tvShow.getTitle());
-                  // 尝试单个文件AI识别回退
-                  MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-                  if (fallbackResult != null) {
-                    result1 = fallbackResult;
+                  if (isAiEnabled) {
+                    LOGGER.warn("Score ({}) is lower than threshold for '{}', attempting AI fallback", result1.getScore(), tvShow.getTitle());
+                    // 尝试单个文件AI识别回退
+                    MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                    if (fallbackResult != null) {
+                      result1 = fallbackResult;
+                    }
+                    else {
+                      smartScrapeList.add(tvShow);
+                      return;
+                    }
                   }
                   else {
+                    LOGGER.info("Score ({}) is lower than threshold for '{}', AI disabled. Adding to smart scrape.", result1.getScore(),
+                        tvShow.getTitle());
                     smartScrapeList.add(tvShow);
                     return;
                   }
@@ -420,13 +404,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
               }
             }
             else {
-              LOGGER.info("No result found for '{}', attempting AI fallback", tvShow.getTitle());
-              // 尝试单个文件AI识别回退
-              MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-              if (fallbackResult != null) {
-                result1 = fallbackResult;
+              if (isAiEnabled) {
+                LOGGER.info("No result found for '{}', attempting AI fallback", tvShow.getTitle());
+                // 尝试单个文件AI识别回退
+                MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                if (fallbackResult != null) {
+                  result1 = fallbackResult;
+                }
+                else {
+                  smartScrapeList.add(tvShow);
+                  return;
+                }
               }
               else {
+                LOGGER.info("No result found for '{}', AI disabled. Adding to smart scrape.", tvShow.getTitle());
                 smartScrapeList.add(tvShow);
                 return;
               }
@@ -971,6 +962,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
       try {
         // 使用TvShowAIRecognitionManager检查是否还可以进行AI识别
         TvShowAIRecognitionManager aiManager = TvShowAIRecognitionManager.getInstance();
+
+        if (!org.tinymediamanager.core.Settings.getInstance().isEnableAi()) {
+          return null;
+        }
 
         if (!aiManager.canAttemptRecognition(tvShow)) {
           LOGGER.debug("Max AI recognition attempts reached for TV show '{}', skipping fallback", tvShow.getTitle());

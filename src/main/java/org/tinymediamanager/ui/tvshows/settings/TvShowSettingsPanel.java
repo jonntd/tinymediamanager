@@ -56,9 +56,9 @@ import net.miginfocom.swing.MigLayout;
  * @author Manuel Laggner
  */
 class TvShowSettingsPanel extends JPanel {
-  private static final int     COL_COUNT = 7;
+  private static final int     COL_COUNT      = 7;
 
-  private final TvShowSettings settings  = TvShowModuleManager.getInstance().getSettings();
+  private final TvShowSettings settings       = TvShowModuleManager.getInstance().getSettings();
   private final Settings       globalSettings = Settings.getInstance();
 
   private JCheckBox            chckbxImageCache;
@@ -82,10 +82,10 @@ class TvShowSettingsPanel extends JPanel {
   private JCheckBox            chckbxTraktWatched;
   private JCheckBox            chckbxTraktRating;
   private JCheckBox            chckbxSpecialSeason;
-  private JCheckBox           chckbxCreateMissingSeasonItems;
-  private JCheckBox           chckbxFetchVideoInfoOnUpdate;
-  private JCheckBox           chckbxUpdateFileSizeOnUpdate;
-  private JCheckBox           chckbxUpdateFileSizeOnRename;
+  private JCheckBox            chckbxCreateMissingSeasonItems;
+  private JCheckBox            chckbxFetchVideoInfoOnUpdate;
+  private JCheckBox            chckbxUpdateFileSizeOnUpdate;
+  private JCheckBox            chckbxUpdateFileSizeOnRename;
   private JCheckBox            chckbxResetNewFlag;
   private JCheckBox            chckbxReadNomedia;
 
@@ -326,6 +326,7 @@ class TvShowSettingsPanel extends JPanel {
     gbc.gridx++;
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void initDataBindings() {
     Property settingsBeanProperty = BeanProperty.create("syncTrakt");
     Property jCheckBoxBeanProperty = BeanProperty.create("selected");
@@ -412,18 +413,18 @@ class TvShowSettingsPanel extends JPanel {
     autoBinding_7.bind();
     //
     Property globalSettingsBeanProperty_1 = BeanProperty.create("fetchVideoInfoOnUpdate");
-    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_1, chckbxFetchVideoInfoOnUpdate,
-        jCheckBoxBeanProperty);
+    AutoBinding autoBinding_19 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_1,
+        chckbxFetchVideoInfoOnUpdate, jCheckBoxBeanProperty);
     autoBinding_19.bind();
     //
     Property globalSettingsBeanProperty_2 = BeanProperty.create("tvShowUpdateFileSizeOnUpdate");
-    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_2, chckbxUpdateFileSizeOnUpdate,
-        jCheckBoxBeanProperty);
+    AutoBinding autoBinding_20 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_2,
+        chckbxUpdateFileSizeOnUpdate, jCheckBoxBeanProperty);
     autoBinding_20.bind();
     //
     Property globalSettingsBeanProperty_3 = BeanProperty.create("tvShowUpdateFileSizeOnRename");
-    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_3, chckbxUpdateFileSizeOnRename,
-        jCheckBoxBeanProperty);
+    AutoBinding autoBinding_21 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, globalSettings, globalSettingsBeanProperty_3,
+        chckbxUpdateFileSizeOnRename, jCheckBoxBeanProperty);
     autoBinding_21.bind();
   }
 }

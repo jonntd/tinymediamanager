@@ -76,6 +76,12 @@ public class WebDavClient {
       int statusCode = e.getStatusCode();
       String reasonPhrase = e.getResponsePhrase();
 
+      // 207 Multi-Status is a valid WebDAV success response, treat it as success
+      if (statusCode == 207) {
+        LOGGER.debug("WebDAV connection test received 207 Multi-Status - this is a valid WebDAV response, treating as success");
+        return true;
+      }
+
       if (statusCode == 401) {
         LOGGER.warn("WebDAV connection test failed: status code: {}, reason phrase: {}", statusCode, reasonPhrase);
         LOGGER.warn("Authentication issue for WebDAV source '{}'. This may be temporary - will retry if configured.", source.getName());
@@ -173,6 +179,8 @@ public class WebDavClient {
           try {
             // Preserve '+' in URL path (URLDecoder converts '+' to space)
             String preservedPlus = normalizedHref.replace("+", "%2B");
+            // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+            preservedPlus = escapeLonePercentSigns(preservedPlus);
             decodedHref = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
           }
           catch (Exception e) {
@@ -209,8 +217,10 @@ public class WebDavClient {
     }
     catch (IOException e) {
       // Handle network errors (SSL handshake, connection reset) by reconnecting and retrying once
-      if (allowRetry && e.getMessage() != null && (e.getMessage().contains("Remote host terminated the handshake")
-          || e.getMessage().contains("Connection reset") || e.getMessage().contains("unexpected end of stream"))) {
+      if (allowRetry && e.getMessage() != null
+          && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+              || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+              || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
 
         LOGGER.warn("WebDAV network error ('{}'), attempting to reconnect...", e.getMessage());
         try {
@@ -245,6 +255,29 @@ public class WebDavClient {
     }
     catch (IOException e) {
       LOGGER.warn("Error checking if path exists: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * Check if a path is a directory on the WebDAV server
+   *
+   * @param path
+   *          the path to check
+   * @return true if the path is a directory, false if it is a file or does not exist
+   */
+  public boolean isDirectory(String path) {
+    ensureConnected();
+    try {
+      // Depth 0 to check the resource itself
+      List<DavResource> resources = sardine.list(buildUrl(path), 0);
+      if (resources != null && !resources.isEmpty()) {
+        return resources.get(0).isDirectory();
+      }
+      return false;
+    }
+    catch (IOException e) {
+      LOGGER.warn("Error checking if path is directory: {}", e.getMessage());
       return false;
     }
   }
@@ -295,9 +328,10 @@ public class WebDavClient {
       }
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
-        // 对于服务器错误 (5xx)，可以重试
-        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
-          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+        // 对于 423 Locked 和服务器错误 (5xx)，可以重试
+        // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
           LOGGER.warn("WebDAV move failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -321,6 +355,29 @@ public class WebDavClient {
         return false;
       }
       catch (IOException e) {
+        // Handle network errors by reconnecting and retrying
+        if (attempt < maxRetries && e.getMessage() != null
+            && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+                || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+                || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
+
+          long waitMs = 2000L * attempt;
+          LOGGER.warn("WebDAV move network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+
         LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
         LOGGER.error("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
@@ -361,9 +418,10 @@ public class WebDavClient {
       }
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
-        // 对于服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
-        if (statusCode >= 500 && statusCode < 600 && attempt < maxRetries) {
-          long waitMs = 1000L * attempt; // 指数退避：1s, 2s, 3s...
+        // 对于 423 Locked 和服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
+        // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
           LOGGER.warn("WebDAV copy failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -385,6 +443,29 @@ public class WebDavClient {
         return false;
       }
       catch (IOException e) {
+        // Handle network errors by reconnecting and retrying
+        if (attempt < maxRetries && e.getMessage() != null
+            && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+                || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+                || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
+
+          long waitMs = 2000L * attempt;
+          LOGGER.warn("WebDAV copy network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+
         LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
         return false;
       }
@@ -505,6 +586,8 @@ public class WebDavClient {
       // should NOT be converted to space. Only %2B represents a plus sign.
       // So we need to preserve '+' by pre-encoding it before decoding.
       String pathWithPreservedPlus = path.replace("+", "%2B");
+      // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+      pathWithPreservedPlus = escapeLonePercentSigns(pathWithPreservedPlus);
       String decodedPath = java.net.URLDecoder.decode(pathWithPreservedPlus, "UTF-8");
 
       // Use URLEncoder to be more aggressive with encoding (e.g. handle parentheses)
@@ -535,10 +618,52 @@ public class WebDavClient {
     try {
       // Preserve '+' in URL path (URLDecoder converts '+' to space)
       String preservedPlus = path.replace("+", "%2B");
+      // Escape lone '%' that are not valid URL sequences (e.g. "100%")
+      preservedPlus = escapeLonePercentSigns(preservedPlus);
       return java.net.URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (Exception e) {
       return path;
     }
+  }
+
+  /**
+   * Escape lone '%' characters that are not part of valid URL-encoded sequences. Converts '%' not followed by 2 hex chars to '%25' (the encoding of
+   * '%').
+   */
+  private static String escapeLonePercentSigns(String input) {
+    if (input == null || !input.contains("%")) {
+      return input;
+    }
+
+    StringBuilder result = new StringBuilder();
+    int length = input.length();
+
+    for (int i = 0; i < length; i++) {
+      char c = input.charAt(i);
+      if (c == '%') {
+        // Check if this '%' is followed by exactly 2 hex characters
+        if (i + 2 < length && isHexDigit(input.charAt(i + 1)) && isHexDigit(input.charAt(i + 2))) {
+          // Valid URL-encoded sequence, keep as-is
+          result.append(c);
+        }
+        else {
+          // Lone '%', escape it
+          result.append("%25");
+        }
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Check if a character is a hexadecimal digit (0-9, A-F, a-f)
+   */
+  private static boolean isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
   }
 }

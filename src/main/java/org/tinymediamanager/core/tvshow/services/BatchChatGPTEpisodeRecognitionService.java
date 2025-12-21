@@ -61,6 +61,11 @@ public class BatchChatGPTEpisodeRecognitionService {
             return new EpisodeMatchingResult();
         }
 
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping episode recognition.");
+            return new EpisodeMatchingResult();
+        }
+
         List<TvShowEpisode> singleBatch = Collections.singletonList(episode);
         Map<String, EpisodeMatchingResult> results = batchRecognizeEpisodes(singleBatch);
 
@@ -82,6 +87,11 @@ public class BatchChatGPTEpisodeRecognitionService {
         Map<String, EpisodeMatchingResult> results = new HashMap<>();
 
         if (episodes == null || episodes.isEmpty()) {
+            return results;
+        }
+
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping batch episode recognition.");
             return results;
         }
 

@@ -24,6 +24,8 @@ import java.util.List;
 import javax.swing.tree.TreeNode;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.bus.Event;
 import org.tinymediamanager.core.bus.EventBus;
@@ -43,9 +45,10 @@ import org.tinymediamanager.ui.components.treetable.TmmTreeTableFormat;
  * @author Manuel Laggner
  */
 public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
-  private final TmmTreeNode root       = new TmmTreeNode(new Object(), this);
+  private static final Logger LOGGER     = LoggerFactory.getLogger(TvShowTreeDataProvider.class);
+  private final TmmTreeNode   root       = new TmmTreeNode(new Object(), this);
 
-  private final TvShowList  tvShowList = TvShowModuleManager.getInstance().getTvShowList();
+  private final TvShowList    tvShowList = TvShowModuleManager.getInstance().getTvShowList();
 
   public TvShowTreeDataProvider(TmmTreeTableFormat<TmmTreeNode> tableFormat) {
 
@@ -71,8 +74,12 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   }
 
   private void processTvShow(TvShow tvShow, String eventType) {
+    LOGGER.debug("processTvShow: title='{}', eventType='{}'", tvShow.getTitle(), eventType);
+
     // check if existing
     TmmTreeNode tvShowNode = getNodeFromCache(tvShow);
+    LOGGER.trace("processTvShow: nodeFromCache={}", tvShowNode != null ? "EXISTS" : "NULL");
+
     if (tvShowNode != null) {
       if (Event.TYPE_REMOVE.equals(eventType)) {
         // TV show deleted
@@ -85,8 +92,11 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       }
     }
     else {
-      // TV show added
-      addTvShow(tvShow);
+      // TV show added OR missing in cache (recovery mode)
+      if (!Event.TYPE_REMOVE.equals(eventType)) {
+        LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD", tvShow.getTitle(), eventType);
+        addTvShow(tvShow);
+      }
     }
   }
 
@@ -262,9 +272,26 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   public List<TmmTreeNode> getChildren(TmmTreeNode parent) {
     if (parent == root) {
       List<TmmTreeNode> nodes = new ArrayList<>();
-      for (TvShow tvShow : new ArrayList<>(tvShowList.getTvShows())) {
-        nodes.add(getOrCreateNode(tvShow));
+      List<TvShow> shows = new ArrayList<>(tvShowList.getTvShows());
+      LOGGER.debug("getChildren(root): tvShowList.size={}", shows.size());
+
+      // 使用路径去重,防止同一路径的电视节目创建多个节点
+      java.util.Set<String> seenPaths = new java.util.HashSet<>();
+      for (TvShow tvShow : shows) {
+        String path = tvShow.getPath();
+        if (path != null && seenPaths.contains(path)) {
+          LOGGER.warn("getChildren: DUPLICATE PATH detected for '{}', path='{}', skipping", tvShow.getTitle(), path);
+          continue;
+        }
+        if (path != null) {
+          seenPaths.add(path);
+        }
+
+        TmmTreeNode node = getOrCreateNode(tvShow);
+        LOGGER.trace("getChildren: adding node for '{}'", tvShow.getTitle());
+        nodes.add(node);
       }
+      LOGGER.debug("getChildren(root): returning {} nodes", nodes.size());
       return nodes;
     }
     else if (parent.getUserObject() instanceof TvShow tvShow) {
@@ -298,10 +325,22 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       return cachedNode;
     }
 
+    // 验证电视节目是否仍在 tvShowList 中，防止已删除的电视节目被重新添加到 UI
+    if (!tvShowList.getTvShows().contains(tvShow)) {
+      return null;
+    }
+
     // add a new node
     TmmTreeNode node = new TvShowTreeNode(tvShow, this);
     putNodeToCache(tvShow, node);
     firePropertyChange(NODE_INSERTED, null, node);
+
+    // check if there are already seasons for this tv show
+    for (TvShowSeason season : tvShow.getSeasons()) {
+      if (!season.getEpisodesForDisplay().isEmpty()) {
+        addTvShowSeason(season);
+      }
+    }
 
     return node;
   }
@@ -326,11 +365,16 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   private TmmTreeNode getOrCreateNode(MediaEntity entity) {
     TmmTreeNode cachedNode = getNodeFromCache(entity);
     if (cachedNode != null) {
+      if (entity instanceof TvShow tvShow) {
+        LOGGER.debug("getOrCreateNode: CACHE HIT for '{}', node={}", tvShow.getTitle(), System.identityHashCode(cachedNode));
+      }
       return cachedNode;
     }
 
     if (entity instanceof TvShow tvShow) {
       TmmTreeNode node = new TvShowTreeNode(tvShow, this);
+      LOGGER.debug("=== getOrCreateNode: CREATING NEW NODE for '{}', node={}, tvShow={} ===", tvShow.getTitle(), System.identityHashCode(node),
+          System.identityHashCode(tvShow));
       putNodeToCache(tvShow, node);
       return node;
     }
@@ -354,6 +398,12 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     TmmTreeNode cachedNode = getNodeFromCache(season);
     if (cachedNode != null) {
       return cachedNode;
+    }
+
+    // Integrity Check: Ensure parent TV Show node exists
+    if (getNodeFromCache(season.getTvShow()) == null) {
+      LOGGER.debug("addTvShowSeason: parent TvShow node missing for '{}' - auto-creating", season.getTvShow().getTitle());
+      addTvShow(season.getTvShow());
     }
 
     // add a new node (only if there is at least one EP inside)

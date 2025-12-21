@@ -29,6 +29,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.threading.TmmThreadPool;
 import org.tinymediamanager.core.tvshow.TvShowRenamer;
+import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 
@@ -87,8 +88,18 @@ public class TvShowRenameTask extends TmmThreadPool {
     try {
       LOGGER.info("Renaming '{}' TV shows / '{}' episodes", tvShowsToRename.size(), episodesToRename.size());
 
-      // 动态调整线程池大小，最多使用4个线程或可用处理器数量，以提高重命名速度
-      int threadCount = Math.min(4, Runtime.getRuntime().availableProcessors());
+      // 检测是否有 WebDAV 数据源，如果有则使用单线程避免并发冲突（123pan等服务器对并发支持较差）
+      boolean hasWebDav = TvShowModuleManager.getInstance()
+          .getSettings()
+          .getTvShowDataSource()
+          .stream()
+          .anyMatch(ds -> ds != null && ds.toLowerCase().startsWith("webdav://"));
+
+      // WebDAV 数据源使用单线程避免 423 Locked 和 500 错误，本地文件系统使用多线程提高性能
+      int threadCount = hasWebDav ? 1 : Math.min(4, Runtime.getRuntime().availableProcessors());
+      if (hasWebDav) {
+        LOGGER.info("WebDAV data source detected, using single thread to avoid concurrency conflicts");
+      }
       initThreadPool(threadCount, "rename");
 
       // 1. episodes first (to get the right season folders for moving season artwork)

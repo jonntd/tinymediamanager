@@ -93,6 +93,12 @@ public class MovieAIRecognitionManager {
             return null;
         }
 
+        // 0. Global AI switch check
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.debug("AI scraping disabled in settings, skipping movie recognition for '{}'", movie.getTitle());
+            return null;
+        }
+
         String movieId = movie.getDbId().toString();
         String cacheKey = MoviePathUtils.generateCacheKey(movie);
 

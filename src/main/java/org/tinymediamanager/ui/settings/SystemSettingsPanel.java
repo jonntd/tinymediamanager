@@ -24,7 +24,7 @@ import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.File;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -45,7 +45,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.SwingUtilities;
+
 import javax.swing.Timer;
 
 import org.apache.commons.lang3.SystemUtils;
@@ -116,8 +116,10 @@ class SystemSettingsPanel extends JPanel {
   private JSpinner             spAiMinIntervalSeconds;
   private JCheckBox            chkAiIndividualFallbackEnabled;
   private JSpinner             spAiBatchSize;
+  private JSpinner             spAiMaxRetries;
   private JLabel               lblAiStatistics;
   private JButton              btnResetAiStatistics;
+  private JCheckBox            chkbxEnableAi;
 
   /**
    * Instantiates a new general settings panel.
@@ -348,18 +350,26 @@ class SystemSettingsPanel extends JPanel {
       spAiBatchSize = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
       panelOpenAI.add(spAiBatchSize, "cell 2 11");
 
+      JLabel lblAiMaxRetries = new JLabel(TmmResourceBundle.getString("Settings.ai.maxretries") + ":");
+      panelOpenAI.add(lblAiMaxRetries, "cell 1 12,alignx trailing");
+      spAiMaxRetries = new JSpinner(new SpinnerNumberModel(5, 1, 10, 1));
+      panelOpenAI.add(spAiMaxRetries, "cell 2 12");
+
       chkAiIndividualFallbackEnabled = new JCheckBox(TmmResourceBundle.getString("Settings.ai.individualfallback"));
-      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 12,spanx 2");
+      panelOpenAI.add(chkAiIndividualFallbackEnabled, "cell 1 13,spanx 2");
 
       // AI Statistics Display
       JLabel lblAiStatsTitle = new JLabel(TmmResourceBundle.getString("Settings.ai.statistics") + ":");
-      panelOpenAI.add(lblAiStatsTitle, "cell 1 13,alignx trailing");
+      panelOpenAI.add(lblAiStatsTitle, "cell 1 14,alignx trailing");
       lblAiStatistics = new JLabel(TmmResourceBundle.getString("Settings.loading"));
-      panelOpenAI.add(lblAiStatistics, "cell 2 13");
+      panelOpenAI.add(lblAiStatistics, "cell 2 14");
 
       btnResetAiStatistics = new JButton(TmmResourceBundle.getString("Settings.ai.statistics.reset"));
       btnResetAiStatistics.addActionListener(e -> resetAiStatistics());
-      panelOpenAI.add(btnResetAiStatistics, "cell 2 14,alignx right");
+      panelOpenAI.add(btnResetAiStatistics, "cell 2 15,alignx right");
+
+      chkbxEnableAi = new JCheckBox(TmmResourceBundle.getString("Settings.ai.enable"));
+      panelOpenAI.add(chkbxEnableAi, "cell 1 16 2 1");
 
       add(collapsiblePanel, "cell 0 6,growx,wmin 0");
     }
@@ -481,6 +491,7 @@ class SystemSettingsPanel extends JPanel {
     chckbxDisableD3d.setSelected(disableDirect3d);
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void initDataBindings() {
     Property settingsBeanProperty = BeanProperty.create("proxyHost");
     Property jTextFieldBeanProperty = BeanProperty.create("text");
@@ -611,6 +622,20 @@ class SystemSettingsPanel extends JPanel {
         jSpinnerBeanProperty_4);
     autoBinding_23.bind();
 
+    // AI Max Retries
+    Property settingsBeanProperty_23 = BeanProperty.create("aiMaxRetries");
+    Property jSpinnerBeanProperty_5 = BeanProperty.create("value");
+    AutoBinding autoBinding_24 = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_23, spAiMaxRetries,
+        jSpinnerBeanProperty_5);
+    autoBinding_24.bind();
+
+    // AI Master Switch
+    Property settingsBeanProperty_ai_enable = BeanProperty.create("enableAi");
+    Property jCheckBoxBeanProperty_ai_enable = BeanProperty.create("selected");
+    AutoBinding autoBinding_ai_enable = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_ai_enable, chkbxEnableAi,
+        jCheckBoxBeanProperty_ai_enable);
+    autoBinding_ai_enable.bind();
+
     // 启动统计更新定时器
     updateAiStatistics();
     startStatisticsTimer();
@@ -727,60 +752,30 @@ class SystemSettingsPanel extends JPanel {
   }
 
   /**
-   * Test the batch OpenAI recognition service
-   */
-  private void testBatchOpenAiRecognition() {
-    try {
-      // Create test movies list
-      java.util.List<Movie> testMovies = new java.util.ArrayList<>();
-
-      // Create a test movie object
-      Movie testMovie = new Movie();
-      testMovie.setTitle("Test Movie");
-
-      // Use the user-provided test path from the text field
-      String testPath = tfOpenAiTestPath.getText().trim();
-      if (testPath.isEmpty()) {
-        testPath = System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv";
-        tfOpenAiTestPath.setText(testPath);
-      }
-
-      // Add a mock media file path for testing
-      org.tinymediamanager.core.entities.MediaFile mockFile = new org.tinymediamanager.core.entities.MediaFile();
-      mockFile.setFile(java.nio.file.Paths.get(testPath));
-      testMovie.addToMediaFiles(mockFile);
-
-      testMovies.add(testMovie);
-
-      // Create BatchChatGPTMovieRecognitionService instance
-      org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService = new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
-
-      // Test the batch recognition
-      java.util.Map<String, String> results = batchService.batchRecognizeMovieTitles(testMovies);
-
-      // Show the result in a message dialog
-      if (results.isEmpty()) {
-        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.batchtest.noresults"),
-            TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.WARNING_MESSAGE);
-      }
-      else {
-        StringBuilder resultText = new StringBuilder(TmmResourceBundle.getString("Settings.ai.batchtest.results") + "\n");
-        for (java.util.Map.Entry<String, String> entry : results.entrySet()) {
-          resultText.append("Movie ID: ").append(entry.getKey()).append(" -> Title: ").append(entry.getValue()).append("\n");
-        }
-        JOptionPane.showMessageDialog(this, resultText.toString(), TmmResourceBundle.getString("Settings.ai.batchtest"),
-            JOptionPane.INFORMATION_MESSAGE);
-      }
-    }
-    catch (Exception e) {
-      LOGGER.error("Error testing batch OpenAI recognition", e);
-      JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.batchtest.error") + "\n" + e.getMessage(),
-          TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.ERROR_MESSAGE);
-    }
-  }
-
-  /**
-   * 更新AI统计信息显示
+   * 
+   * // Use the user-provided test path from the text field String testPath = tfOpenAiTestPath.getText().trim(); if (testPath.isEmpty()) { testPath =
+   * System.getProperty("user.home") + "/Movies/Test Movie/Test Movie.mkv"; tfOpenAiTestPath.setText(testPath); }
+   * 
+   * // Add a mock media file path for testing org.tinymediamanager.core.entities.MediaFile mockFile = new
+   * org.tinymediamanager.core.entities.MediaFile(); mockFile.setFile(java.nio.file.Paths.get(testPath)); testMovie.addToMediaFiles(mockFile);
+   * 
+   * testMovies.add(testMovie);
+   * 
+   * // Create BatchChatGPTMovieRecognitionService instance org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService batchService
+   * = new org.tinymediamanager.core.movie.services.BatchChatGPTMovieRecognitionService();
+   * 
+   * // Test the batch recognition java.util.Map<String, String> results = batchService.batchRecognizeMovieTitles(testMovies);
+   * 
+   * // Show the result in a message dialog if (results.isEmpty()) { JOptionPane.showMessageDialog(this,
+   * TmmResourceBundle.getString("Settings.ai.batchtest.noresults"), TmmResourceBundle.getString("Settings.ai.batchtest"),
+   * JOptionPane.WARNING_MESSAGE); } else { StringBuilder resultText = new StringBuilder(TmmResourceBundle.getString("Settings.ai.batchtest.results")
+   * + "\n"); for (java.util.Map.Entry<String, String> entry : results.entrySet()) { resultText.append("Movie ID: ").append(entry.getKey()).append("
+   * -> Title: ").append(entry.getValue()).append("\n"); } JOptionPane.showMessageDialog(this, resultText.toString(),
+   * TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.INFORMATION_MESSAGE); } } catch (Exception e) { LOGGER.error("Error testing
+   * batch OpenAI recognition", e); JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("Settings.ai.batchtest.error") + "\n" +
+   * e.getMessage(), TmmResourceBundle.getString("Settings.ai.batchtest"), JOptionPane.ERROR_MESSAGE); } }
+   * 
+   * /** 更新AI统计信息显示
    */
   private void updateAiStatistics() {
     try {

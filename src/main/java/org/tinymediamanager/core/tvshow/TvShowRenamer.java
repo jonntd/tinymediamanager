@@ -2301,6 +2301,16 @@ public class TvShowRenamer {
     try {
       if (StringUtils.isNotBlank(template)) {
         String dataSource = tvShow.getDataSource();
+
+        // Fix for WebDAV paths where datasource might be empty (e.g. migration or DB inconsistency)
+        // If we don't fix this, it would fall back to Paths.get(dataSource, destination) which creates a relative path
+        // that later gets converted to an absolute LOCAL path, breaking image cache locators.
+        if (StringUtils.isBlank(dataSource) && WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+          String[] parts = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
+          if (parts != null && parts.length > 0) {
+            dataSource = "webdav://" + parts[0];
+          }
+        }
         String destination = createDestination(template, tvShow);
 
         // For WebDAV paths, use decoded dataSource and string concatenation
@@ -2872,9 +2882,18 @@ public class TvShowRenamer {
 
       // Handle WebDAV paths specially
       if (WebDavDataSourceHelper.isWebDavPath(oldPath)) {
+        // 先在本地比较路径，相同则直接跳过，避免创建网络连接
+        if (oldPath.equals(newPath)) {
+          LOGGER.debug("Source and destination are the same, skipping move (local check): {}", oldPath);
+          return true;
+        }
+
         LOGGER.debug("Moving WebDAV file '{}' to '{}'", oldPath, newPath);
-        boolean ok = WebDavFileOperations.moveWebDavFile(oldPath, newPath);
-        if (ok) {
+        String actualPath = WebDavFileOperations.moveWebDavFile(oldPath, newPath);
+        if (actualPath != null) {
+          if (!actualPath.equals(newPath)) {
+            LOGGER.warn("WebDAV file was moved to a different path than expected: expected '{}', actual '{}'", newPath, actualPath);
+          }
           return true;
         }
         else {
@@ -3011,7 +3030,17 @@ public class TvShowRenamer {
       // Handle WebDAV paths specially
       if (WebDavDataSourceHelper.isWebDavPath(oldPathStr)) {
         LOGGER.debug("Moving WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
-        return WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        String actualPath = WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
+        if (actualPath != null) {
+          if (!actualPath.equals(newPathStr)) {
+            LOGGER.warn("WebDAV directory was moved to a different path than expected: expected '{}', actual '{}'", newPathStr, actualPath);
+          }
+          return true;
+        }
+        else {
+          LOGGER.error("Could not move WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
+          return false;
+        }
       }
 
       // Local filesystem handling

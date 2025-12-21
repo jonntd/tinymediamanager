@@ -430,7 +430,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
 
   private void initComponents() {
     // to draw the shadow beneath window frame, encapsulate the panel
-    JLayer<JComponent> rootLayer = new JLayer(tabbedPane, new ShadowLayerUI()); // removed <> because this leads WBP to crash
+    JLayer<JComponent> rootLayer = new JLayer<>(tabbedPane, new ShadowLayerUI()); // removed <> because this leads WBP to crash
     getContentPane().add(rootLayer, BorderLayout.CENTER);
 
     /**********************************************************************************
@@ -730,7 +730,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         JScrollPane scrollPaneTags = new JScrollPane();
         details2Panel.add(scrollPaneTags, "cell 7 8,grow");
 
-        listTags = new JList();
+        listTags = new JList<>();
         scrollPaneTags.setViewportView(listTags);
 
         cbTags = new AutocompleteComboBox<>(tvShowList.getTagsInTvShows());
@@ -1123,7 +1123,7 @@ public class TvShowEditorDialog extends AbstractEditorDialog {
         JLabel lblEpisodeOrderT = new JLabel(TmmResourceBundle.getString("metatag.episode.group"));
         episodesPanel.add(lblEpisodeOrderT, "flowx,cell 0 0 2 1");
 
-        cbEpisodeOrder = new JComboBox();
+        cbEpisodeOrder = new JComboBox<>();
         episodesPanel.add(cbEpisodeOrder, "cell 0 0 2 1");
 
         JLabel lblEpisodeOrderHint = new JLabel(IconManager.HINT);

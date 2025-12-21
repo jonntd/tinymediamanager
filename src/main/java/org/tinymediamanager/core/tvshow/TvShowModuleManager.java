@@ -610,6 +610,9 @@ public final class TvShowModuleManager implements ITmmModule {
       lock.writeLock().lock();
       pendingChanges.remove(tvShow);
       tvShowMap.remove(tvShow.getDbId());
+      // Commit immediately to ensure deletion is persisted
+      mvStore.commit();
+      LOGGER.debug("Removed TV show from database: {}", tvShow.getTitle());
     }
     finally {
       lock.writeLock().unlock();
@@ -631,6 +634,8 @@ public final class TvShowModuleManager implements ITmmModule {
       lock.writeLock().lock();
       pendingChanges.remove(season);
       seasonMap.remove(season.getDbId());
+      // Commit immediately to ensure deletion is persisted
+      mvStore.commit();
     }
     finally {
       lock.writeLock().unlock();
@@ -652,6 +657,8 @@ public final class TvShowModuleManager implements ITmmModule {
       lock.writeLock().lock();
       pendingChanges.remove(episode);
       episodeMap.remove(episode.getDbId());
+      // Commit immediately to ensure deletion is persisted
+      mvStore.commit();
     }
     finally {
       lock.writeLock().unlock();

@@ -48,6 +48,7 @@ import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmToStringStyle;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavClient;
 import org.tinymediamanager.core.mediainfo.MediaInfo3D;
 import org.tinymediamanager.scraper.util.ListUtils;
 import org.tinymediamanager.thirdparty.MediaInfo.StreamKind;
@@ -257,6 +258,9 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
       case AUDIO:
       case NFO:
         return true;
+
+      default:
+        break;
     }
 
     if (isGraphic()) {
@@ -547,7 +551,8 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
   public String getFilenameDecoded() {
     if (WebDavDataSourceHelper.isWebDavPath(path)) {
       try {
-        return java.net.URLDecoder.decode(filename, "UTF-8");
+        String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(filename.replace("+", "%2B"));
+        return java.net.URLDecoder.decode(prepared, "UTF-8");
       }
       catch (Exception e) {
         return filename;
@@ -1859,7 +1864,57 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
    * @return true/false if successful
    */
   public boolean deleteSafely(String datasource) {
+    // Check if this is a WebDAV path
+    if (WebDavDataSourceHelper.isWebDavPath(path)) {
+      return deleteWebDavFile(datasource);
+    }
     return Utils.deleteFileWithBackup(getFileAsPath(), datasource);
+  }
+
+  /**
+   * Delete a WebDAV file using the WebDAV client
+   *
+   * @param datasource
+   *          the data source
+   * @return true if deletion was successful
+   */
+  private boolean deleteWebDavFile(String datasource) {
+    try {
+      String filePath = getFileAsPath().toString();
+      LOGGER.info("Deleting WebDAV file: {}", WebDavDataSourceHelper.decodeWebDavPath(filePath));
+
+      // Get the WebDAV client for this datasource
+      WebDavClient client = WebDavDataSourceHelper.getClientForPath(datasource);
+      if (client == null) {
+        LOGGER.error("Could not get WebDAV client for datasource: {}", datasource);
+        return false;
+      }
+
+      try {
+        // Extract the relative path from the full WebDAV path
+        String relativePath = WebDavDataSourceHelper.extractRelativePath(datasource, filePath);
+        if (relativePath == null) {
+          LOGGER.error("Could not extract relative path for file: {}", filePath);
+          return false;
+        }
+
+        boolean result = client.delete(relativePath);
+        if (result) {
+          LOGGER.info("Successfully deleted WebDAV file: {}", WebDavDataSourceHelper.decodeWebDavPath(filePath));
+        }
+        else {
+          LOGGER.error("Failed to delete WebDAV file: {}", WebDavDataSourceHelper.decodeWebDavPath(filePath));
+        }
+        return result;
+      }
+      finally {
+        client.disconnect();
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Error deleting WebDAV file: {}", e.getMessage());
+      return false;
+    }
   }
 
   /**

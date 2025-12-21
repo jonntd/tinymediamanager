@@ -139,7 +139,13 @@ public class WebDavDataSourceHelper {
           if (remotePath.contains("%")) {
             // Preserve '+' by pre-encoding it before decoding
             String preservedPlus = remotePath.replace("+", "%2B");
+            // Escape lone '%' characters that are not valid URL-encoded sequences
+            preservedPlus = escapeLonePercentSigns(preservedPlus);
             String decodedPath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
+            // Apply NFC normalization after decoding to ensure consistent format
+            // This is critical: WebDAV servers may return NFD-format Unicode,
+            // but we need NFC for consistent comparison and storage
+            decodedPath = normalizeToNFC(decodedPath);
             result = WEBDAV_PREFIX + sourceId + decodedPath;
             // LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
           }
@@ -150,7 +156,10 @@ public class WebDavDataSourceHelper {
       }
     }
 
-    return result;
+    // Always apply NFC normalization to the final result
+    // This ensures consistent Unicode format regardless of whether the path was URL-encoded or not
+    // Critical for path comparison: "刮削测试" (NFC) must match "刮削测试" (NFD)
+    return normalizeToNFC(result);
   }
 
   /**
@@ -425,6 +434,27 @@ public class WebDavDataSourceHelper {
   }
 
   /**
+   * Normalize a string to NFC (Canonical Decomposition, followed by Canonical Composition). This ensures consistent Unicode representation for path
+   * comparison and storage.
+   * 
+   * @param text
+   *          the text to normalize
+   * @return the normalized text in NFC form, or the original text if normalization fails
+   */
+  public static String normalizeToNFC(String text) {
+    if (text == null || text.isEmpty()) {
+      return text;
+    }
+    try {
+      return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFC);
+    }
+    catch (Exception e) {
+      LOGGER.debug("Failed to normalize text to NFC: {}", e.getMessage());
+      return text;
+    }
+  }
+
+  /**
    * Decode URL-encoded characters in a WebDAV path for display purposes
    * 
    * @param webDavPath
@@ -476,11 +506,119 @@ public class WebDavDataSourceHelper {
       // which converts '+' to space. But in URL paths, '+' is a valid character and
       // should NOT be converted to space. Preserve '+' by pre-encoding it.
       String preservedPlus = path.replace("+", "%2B");
+
+      // Escape lone '%' characters that are not valid URL-encoded sequences.
+      // A valid URL-encoded sequence is '%' followed by exactly 2 hex characters.
+      // Lone '%' (like in "100%") would cause URLDecoder to throw an exception.
+      preservedPlus = escapeLonePercentSigns(preservedPlus);
+
       return java.net.URLDecoder.decode(preservedPlus, "UTF-8");
     }
     catch (Exception e) {
       LOGGER.debug("Failed to decode URL path '{}': {}", path, e.getMessage());
       return path;
     }
+  }
+
+  /**
+   * Escape lone '%' characters that are not part of valid URL-encoded sequences. Converts '%' not followed by 2 hex chars to '%25' (the encoding of
+   * '%'). This is useful before calling URLDecoder.decode() to handle paths like "100%" that would otherwise throw IllegalArgumentException.
+   * 
+   * @param input
+   *          the input string
+   * @return the string with lone '%' characters escaped
+   */
+  public static String escapeLonePercentSigns(String input) {
+    if (input == null || !input.contains("%")) {
+      return input;
+    }
+
+    StringBuilder result = new StringBuilder();
+    int length = input.length();
+
+    for (int i = 0; i < length; i++) {
+      char c = input.charAt(i);
+      if (c == '%') {
+        // Check if this '%' is followed by exactly 2 hex characters
+        if (i + 2 < length && isHexDigit(input.charAt(i + 1)) && isHexDigit(input.charAt(i + 2))) {
+          // Valid URL-encoded sequence, keep as-is
+          result.append(c);
+        }
+        else {
+          // Lone '%', escape it
+          result.append("%25");
+        }
+      }
+      else {
+        result.append(c);
+      }
+    }
+
+    return result.toString();
+  }
+
+  /**
+   * Check if a character is a hexadecimal digit (0-9, A-F, a-f)
+   */
+  private static boolean isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+  }
+
+  /**
+   * Get a WebDAV client for the given datasource path. The client should be disconnected after use.
+   *
+   * @param datasourcePath
+   *          the datasource path (e.g., "webdav://source-id/path/to/folder")
+   * @return WebDavClient or null if connection failed
+   */
+  public static WebDavClient getClientForPath(String datasourcePath) {
+    if (!isWebDavPath(datasourcePath)) {
+      return null;
+    }
+
+    String[] parsed = parseWebDavPath(datasourcePath);
+    if (parsed == null || parsed.length < 1) {
+      LOGGER.error("Could not parse WebDAV path: {}", datasourcePath);
+      return null;
+    }
+
+    WebDavSource source = getWebDavSource(parsed[0]);
+    if (source == null) {
+      LOGGER.error("Could not find WebDAV source: {}", parsed[0]);
+      return null;
+    }
+
+    return createClient(source);
+  }
+
+  /**
+   * Extract the relative path from a full WebDAV file path, relative to the datasource.
+   *
+   * @param datasourcePath
+   *          the datasource path (e.g., "webdav://source-id/movies")
+   * @param filePath
+   *          the full file path (e.g., "webdav://source-id/movies/MyMovie/movie.mkv")
+   * @return the relative path (e.g., "/movies/MyMovie/movie.mkv") or null if paths don't match
+   */
+  public static String extractRelativePath(String datasourcePath, String filePath) {
+    if (!isWebDavPath(datasourcePath) || !isWebDavPath(filePath)) {
+      return null;
+    }
+
+    String[] parsedDatasource = parseWebDavPath(datasourcePath);
+    String[] parsedFile = parseWebDavPath(filePath);
+
+    if (parsedDatasource == null || parsedFile == null) {
+      return null;
+    }
+
+    // Ensure same source ID
+    if (!parsedDatasource[0].equals(parsedFile[0])) {
+      LOGGER.warn("Source ID mismatch: datasource='{}', file='{}'", parsedDatasource[0], parsedFile[0]);
+      return null;
+    }
+
+    // Return the remote path from the file
+    return parsedFile.length > 1 ? parsedFile[1] : "/";
   }
 }

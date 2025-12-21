@@ -845,6 +845,13 @@ public class MovieChooserDialog extends TmmDialog implements ActionListener {
   }
 
   private void aiFixSearchTerms() {
+    // 检查全局AI开关
+    if (!org.tinymediamanager.core.Settings.getInstance().isEnableAi()) {
+      // AI disabled, just perform standard search with original title
+      searchMovie(textFieldSearchString.getText(), true);
+      return;
+    }
+
     // 检查API Key配置
     String apiKey = org.tinymediamanager.core.Settings.getInstance().getOpenAiApiKey();
     if (apiKey == null || apiKey.trim().isEmpty()) {

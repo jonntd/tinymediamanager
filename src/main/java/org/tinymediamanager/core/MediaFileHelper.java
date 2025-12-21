@@ -66,6 +66,7 @@ import org.tinymediamanager.core.mediainfo.MediaInfoXmlCreator;
 import org.tinymediamanager.core.tasks.MediaFileARDetectorTask;
 import org.tinymediamanager.core.threading.TmmTask;
 import org.tinymediamanager.core.utils.FixStatistics;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.library.bluray.playlist.MPLSObject;
 import org.tinymediamanager.library.bluray.playlist.MPLSReader;
 import org.tinymediamanager.library.bluray.playlist.PlayItem;
@@ -790,6 +791,13 @@ public class MediaFileHelper {
   public static boolean gatherFileInformation(MediaFile mediaFile, BasicFileAttributes basicFileAttributes) {
     boolean dirty = false;
 
+    // 对于 WebDAV 路径，Java NIO API 不支持，跳过本地文件属性获取
+    // WebDAV 文件的属性应该通过 WebDAV 客户端获取，而不是本地文件系统 API
+    if (WebDavDataSourceHelper.isWebDavPath(mediaFile.getPath())) {
+      LOGGER.debug("跳过 WebDAV 文件的本地属性获取: {}", mediaFile.getFilename());
+      return false;
+    }
+
     // get basic infos; file size, creation date and last modified
     try {
       BasicFileAttributes view;
@@ -822,73 +830,72 @@ public class MediaFileHelper {
         // 如果目录大小计算失败，尝试递归计算
         if (size <= 0) {
           try {
-            size = Files.walk(mediaFile.getFileAsPath())
-                .filter(Files::isRegularFile)
-                .mapToLong(path -> {
-                  try {
-                    return Files.size(path);
-                  } catch (IOException e) {
-                    LOGGER.debug("无法获取文件大小: {} - {}", path, e.getMessage());
-                    return 0L;
-                  }
-                })
-                .sum();
-          } catch (IOException e) {
+            size = Files.walk(mediaFile.getFileAsPath()).filter(Files::isRegularFile).mapToLong(path -> {
+              try {
+                return Files.size(path);
+              }
+              catch (IOException e) {
+                LOGGER.debug("无法获取文件大小: {} - {}", path, e.getMessage());
+                return 0L;
+              }
+            }).sum();
+          }
+          catch (IOException e) {
             LOGGER.debug("无法计算目录大小: {} - {}", mediaFile.getFileAsPath(), e.getMessage());
           }
         }
       }
-      
+
       long oldSize = mediaFile.getFilesize();
       boolean fileExists = Files.exists(mediaFile.getFileAsPath());
-      
+
       // 添加详细的调试日志
-      LOGGER.debug("文件大小收集详情 - 文件: {} - 路径: {} - 旧大小: {} - 新大小: {} - 是否目录: {} - 是否存在: {}", 
-          mediaFile.getFilename(), mediaFile.getFileAsPath(), oldSize, size, view.isDirectory(), fileExists);
-      
+      LOGGER.debug("文件大小收集详情 - 文件: {} - 路径: {} - 旧大小: {} - 新大小: {} - 是否目录: {} - 是否存在: {}", mediaFile.getFilename(), mediaFile.getFileAsPath(),
+          oldSize, size, view.isDirectory(), fileExists);
+
       // 验证文件大小的合理性
       if (size < 0) {
         LOGGER.warn("检测到负文件大小，重置为0: {} - {}", mediaFile.getFilename(), size);
         size = 0;
       }
-      
+
       // 文件大小变化检测
       if (size != oldSize) {
         if (fileExists || size > 0) {
           dirty = true;
-          LOGGER.info("文件大小更新 - 文件: {} - 旧: {} - 新: {} - 差异: {}", 
-              mediaFile.getFilename(), oldSize, size, Math.abs(size - oldSize));
-          
+          LOGGER.info("文件大小更新 - 文件: {} - 旧: {} - 新: {} - 差异: {}", mediaFile.getFilename(), oldSize, size, Math.abs(size - oldSize));
+
           // 记录统计信息
           if (size > oldSize) {
             FixStatistics.recordFileSizeUpdate(size - oldSize);
-          } else {
+          }
+          else {
             FixStatistics.recordFileSizeUpdate(oldSize - size);
           }
-        } else {
+        }
+        else {
           LOGGER.warn("跳过文件大小更新 - 文件不存在: {}", mediaFile.getFileAsPath());
         }
       }
-      
+
       // 零大小文件的特殊处理
       if (size == 0 && fileExists) {
-        LOGGER.warn("检测到零大小文件: {} - 路径: {}", 
-            mediaFile.getFilename(), mediaFile.getFileAsPath());
+        LOGGER.warn("检测到零大小文件: {} - 路径: {}", mediaFile.getFilename(), mediaFile.getFileAsPath());
         // 对于零大小文件，保持旧值不变，避免覆盖为0
         if (oldSize > 0) {
-          LOGGER.debug("保持原有文件大小: {} - 旧值: {} - 避免设置为0", 
-              mediaFile.getFilename(), oldSize);
+          LOGGER.debug("保持原有文件大小: {} - 旧值: {} - 避免设置为0", mediaFile.getFilename(), oldSize);
           return dirty;
         }
       }
-      
+
       // 只有当文件存在或大小大于0时才更新
       if (fileExists || size > 0) {
         mediaFile.setFilesize(size);
-      } else {
+      }
+      else {
         LOGGER.debug("跳过文件大小更新 - 文件不存在且大小为0: {}", mediaFile.getFileAsPath());
       }
-      
+
       // 确保containerFormat被设置，即使libmediainfo被禁用
       if (StringUtils.isBlank(mediaFile.getContainerFormat())) {
         String extension = mediaFile.getExtension();
@@ -899,8 +906,7 @@ public class MediaFileHelper {
       }
     }
     catch (Exception e) {
-      LOGGER.warn("无法获取文件信息 (大小/日期) - 文件: {} - 错误: {}", 
-          mediaFile.getFileAsPath(), e.getMessage());
+      LOGGER.warn("无法获取文件信息 (大小/日期) - 文件: {} - 错误: {}", mediaFile.getFileAsPath(), e.getMessage());
     }
 
     return dirty;

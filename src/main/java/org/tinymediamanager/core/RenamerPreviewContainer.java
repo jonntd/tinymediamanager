@@ -49,7 +49,9 @@ public class RenamerPreviewContainer {
         // URL decode the path to display readable characters
         String pathToUse = entity.getPath();
         try {
-          pathToUse = java.net.URLDecoder.decode(entity.getPath(), "UTF-8");
+          // Escape lone '%' and preserve '+' in URL path
+          String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(entity.getPath().replace("+", "%2B"));
+          pathToUse = java.net.URLDecoder.decode(prepared, "UTF-8");
         }
         catch (Exception e) {
           // If decoding fails, use the original path
@@ -83,7 +85,8 @@ public class RenamerPreviewContainer {
     String pathStr = oldPath.toString();
     // URL decode the path to display readable characters
     try {
-      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(pathStr.replace("+", "%2B"));
+      return java.net.URLDecoder.decode(prepared, "UTF-8");
     }
     catch (Exception e) {
       return pathStr;
@@ -102,8 +105,10 @@ public class RenamerPreviewContainer {
 
       // URL decode both paths to ensure proper comparison
       try {
-        fullPath = java.net.URLDecoder.decode(fullPath, "UTF-8");
-        datasource = java.net.URLDecoder.decode(datasource, "UTF-8");
+        String preparedFull = WebDavDataSourceHelper.escapeLonePercentSigns(fullPath.replace("+", "%2B"));
+        String preparedDs = WebDavDataSourceHelper.escapeLonePercentSigns(datasource.replace("+", "%2B"));
+        fullPath = java.net.URLDecoder.decode(preparedFull, "UTF-8");
+        datasource = java.net.URLDecoder.decode(preparedDs, "UTF-8");
       }
       catch (Exception e) {
         // If decoding fails, use the original paths
@@ -140,7 +145,8 @@ public class RenamerPreviewContainer {
     String pathStr = newPath.toString();
     // URL decode the path to display readable characters
     try {
-      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(pathStr.replace("+", "%2B"));
+      return java.net.URLDecoder.decode(prepared, "UTF-8");
     }
     catch (Exception e) {
       return pathStr;
@@ -159,8 +165,10 @@ public class RenamerPreviewContainer {
 
       // URL decode both paths to ensure proper comparison
       try {
-        fullPath = java.net.URLDecoder.decode(fullPath, "UTF-8");
-        datasource = java.net.URLDecoder.decode(datasource, "UTF-8");
+        String preparedFull = WebDavDataSourceHelper.escapeLonePercentSigns(fullPath.replace("+", "%2B"));
+        String preparedDs = WebDavDataSourceHelper.escapeLonePercentSigns(datasource.replace("+", "%2B"));
+        fullPath = java.net.URLDecoder.decode(preparedFull, "UTF-8");
+        datasource = java.net.URLDecoder.decode(preparedDs, "UTF-8");
       }
       catch (Exception e) {
         // If decoding fails, use the original paths
@@ -191,7 +199,8 @@ public class RenamerPreviewContainer {
     String pathStr = relativePath.toString();
     // URL decode the path to display readable characters
     try {
-      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(pathStr.replace("+", "%2B"));
+      return java.net.URLDecoder.decode(prepared, "UTF-8");
     }
     catch (Exception e) {
       return pathStr;
@@ -206,7 +215,8 @@ public class RenamerPreviewContainer {
     String pathStr = relativePath.toString();
     // URL decode the path to display readable characters
     try {
-      return java.net.URLDecoder.decode(pathStr, "UTF-8");
+      String prepared = WebDavDataSourceHelper.escapeLonePercentSigns(pathStr.replace("+", "%2B"));
+      return java.net.URLDecoder.decode(prepared, "UTF-8");
     }
     catch (Exception e) {
       return pathStr;
@@ -217,8 +227,10 @@ public class RenamerPreviewContainer {
     // For WebDAV paths, compare using string representation after URL decoding
     if (WebDavDataSourceHelper.isWebDavPath(entity.getPath())) {
       try {
-        String decodedOldPath = java.net.URLDecoder.decode(entity.getPath(), "UTF-8");
-        String decodedNewPath = java.net.URLDecoder.decode(newPath.toString(), "UTF-8");
+        String preparedOld = WebDavDataSourceHelper.escapeLonePercentSigns(entity.getPath().replace("+", "%2B"));
+        String preparedNew = WebDavDataSourceHelper.escapeLonePercentSigns(newPath.toString().replace("+", "%2B"));
+        String decodedOldPath = java.net.URLDecoder.decode(preparedOld, "UTF-8");
+        String decodedNewPath = java.net.URLDecoder.decode(preparedNew, "UTF-8");
         if (!decodedOldPath.equals(decodedNewPath)) {
           return true;
         }

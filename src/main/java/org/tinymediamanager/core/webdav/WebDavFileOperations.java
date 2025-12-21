@@ -39,16 +39,16 @@ public class WebDavFileOperations {
    *          the source WebDAV path (format: webdav://source-id/path)
    * @param destWebDavPath
    *          the destination WebDAV path (format: webdav://source-id/path)
-   * @return true if the move was successful
+   * @return the actual destination path if move was successful (may differ from destWebDavPath if file already existed), or null if move failed
    */
-  public static boolean moveWebDavFile(String sourceWebDavPath, String destWebDavPath) {
+  public static String moveWebDavFile(String sourceWebDavPath, String destWebDavPath) {
     WebDavClient client = null;
     try {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
       if (sourceParts == null || sourceParts.length < 2) {
-        LOGGER.error("Invalid source WebDAV path: {}", sourceWebDavPath);
-        return false;
+        LOGGER.error("Invalid source WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath));
+        return null;
       }
       String sourceId = sourceParts[0];
       String sourcePath = sourceParts[1];
@@ -56,8 +56,8 @@ public class WebDavFileOperations {
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
       if (destParts == null || destParts.length < 2) {
-        LOGGER.error("Invalid destination WebDAV path: {}", destWebDavPath);
-        return false;
+        LOGGER.error("Invalid destination WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
+        return null;
       }
       String destId = destParts[0];
       String destPath = destParts[1];
@@ -83,29 +83,53 @@ public class WebDavFileOperations {
         }
       }
 
+      // Fix for malformed source path (missing slash after sourceId)
+      // Example: src="webdav://aaaPath/...", dest="webdav://aaa/Path/..."
+      // This happens if URI construction missed a slash. If we can match destId as prefix, we assume it's the same server.
+      if (!sameServer && sourceId.startsWith(destId)) {
+        String expectedPrefix = "webdav://" + destId;
+        if (sourceWebDavPath.startsWith(expectedPrefix) && !sourceWebDavPath.startsWith(expectedPrefix + "/")) {
+          // Try to inject the missing slash
+          String fixedSourcePath = expectedPrefix + "/" + sourceWebDavPath.substring(expectedPrefix.length());
+          String[] fixedSourceParts = WebDavDataSourceHelper.parseWebDavPath(fixedSourcePath);
+
+          if (fixedSourceParts != null && fixedSourceParts[0].equals(destId)) {
+            LOGGER.warn("Detected malformed WebDAV source path (possible missing slash), auto-fixing: '{}' -> '{}'",
+                WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath), WebDavDataSourceHelper.decodeWebDavPath(fixedSourcePath));
+
+            // Assign fixed values
+            sourceId = fixedSourceParts[0];
+            sourcePath = fixedSourceParts[1];
+            sourceWebDavPath = fixedSourcePath; // Update the path variable for subsequent use
+            sameServer = true;
+          }
+        }
+      }
+
       if (!sameServer) {
-        LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
-        return false;
+        LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+            WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
+        return null;
       }
 
       // Get WebDAV source
       WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
       if (source == null) {
         LOGGER.error("WebDAV source not found: {}", sourceId);
-        return false;
+        return null;
       }
 
       // Get WebDAV client
       client = WebDavDataSourceHelper.createClient(source);
       if (client == null) {
         LOGGER.error("Failed to create WebDAV client for source: {}", sourceId);
-        return false;
+        return null;
       }
 
       // Check if source and destination are the same
       if (sourcePath.equals(destPath)) {
         LOGGER.info("Source and destination are the same, skipping move: {}", sourcePath);
-        return true;
+        return destWebDavPath;
       }
 
       // Ensure parent directory exists
@@ -122,7 +146,7 @@ public class WebDavFileOperations {
             LOGGER.debug("Creating parent directory: {}", destParent);
             if (!client.createDirectory(destParent)) {
               LOGGER.error("Failed to create parent directory: {}", destParent);
-              return false;
+              return null;
             }
             LOGGER.debug("Successfully created parent directory: {}", destParent);
           }
@@ -136,34 +160,48 @@ public class WebDavFileOperations {
         DIRECTORY_LOCKS.remove(lockKey, lock);
       }
 
+      // Check if destination file already exists and generate unique filename if needed
+      String actualDestPath = destPath;
+      if (client.exists(destPath)) {
+        LOGGER.warn("Destination file already exists: {}", destPath);
+        // Generate unique filename by adding suffix
+        actualDestPath = generateUniqueDestPath(client, destPath);
+        LOGGER.info("Using unique destination path: {}", actualDestPath);
+      }
+
+      // Build the actual WebDAV path with prefix for return value
+      String actualDestWebDavPath = "webdav://" + destId + actualDestPath;
+
       // Move the file
-      if (client.move(sourcePath, destPath)) {
-        LOGGER.info("Moved WebDAV file from '{}' to '{}'", sourcePath, destPath);
-        return true;
+      if (client.move(sourcePath, actualDestPath)) {
+        LOGGER.info("Moved WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+        return actualDestWebDavPath;
       }
       else {
         // Fallback: Copy and Delete (Standard workaround for buggy WebDAV servers returning 500/409 on MOVE)
         LOGGER.warn("Move failed (possible server error 500), attempting copy and delete fallback regarding '{}'", sourcePath);
-        if (client.copy(sourcePath, destPath)) {
+        if (client.copy(sourcePath, actualDestPath)) {
           if (client.delete(sourcePath)) {
-            LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, destPath);
-            return true;
+            LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+            return actualDestWebDavPath;
           }
           else {
-            // Copy succeeded, delete failed. This results in duplication, but data is safe.
-            LOGGER.warn("Failed to delete source file after copy: '{}'. File is now duplicated at destination.", sourcePath);
-            // We return true because the goal (having file at dest) is achieved, and renamer flow can continue.
-            return true;
+            // Copy succeeded, delete failed. Return null to prevent path update.
+            // This leaves the source file intact, and we clean up the destination copy to avoid duplication.
+            LOGGER.error("Failed to delete source file after copy: '{}'. Cleaning up copy and returning null to prevent path update.", sourcePath);
+            client.delete(actualDestPath);
+            return null;
           }
         }
 
-        LOGGER.error("Failed to move (and copy fallback) WebDAV file from '{}' to '{}'", sourcePath, destPath);
-        return false;
+        LOGGER.error("Failed to move (and copy fallback) WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+        return null;
       }
     }
     catch (Exception e) {
-      LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", sourceWebDavPath, destWebDavPath, e.getMessage());
-      return false;
+      LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+          WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath), e.getMessage());
+      return null;
     }
     finally {
       // Always disconnect the client to prevent resource leaks
@@ -188,7 +226,7 @@ public class WebDavFileOperations {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
       if (sourceParts == null || sourceParts.length < 2) {
-        LOGGER.error("Invalid source WebDAV path: {}", sourceWebDavPath);
+        LOGGER.error("Invalid source WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath));
         return false;
       }
       String sourceId = sourceParts[0];
@@ -197,7 +235,7 @@ public class WebDavFileOperations {
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
       if (destParts == null || destParts.length < 2) {
-        LOGGER.error("Invalid destination WebDAV path: {}", destWebDavPath);
+        LOGGER.error("Invalid destination WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return false;
       }
       String destId = destParts[0];
@@ -224,8 +262,28 @@ public class WebDavFileOperations {
         }
       }
 
+      // Fix for malformed source path (missing slash after sourceId)
+      if (!sameServer && sourceId.startsWith(destId)) {
+        String expectedPrefix = "webdav://" + destId;
+        if (sourceWebDavPath.startsWith(expectedPrefix) && !sourceWebDavPath.startsWith(expectedPrefix + "/")) {
+          String fixedSourcePath = expectedPrefix + "/" + sourceWebDavPath.substring(expectedPrefix.length());
+          String[] fixedSourceParts = WebDavDataSourceHelper.parseWebDavPath(fixedSourcePath);
+
+          if (fixedSourceParts != null && fixedSourceParts[0].equals(destId)) {
+            LOGGER.warn("Detected malformed WebDAV source path (possible missing slash), auto-fixing: '{}' -> '{}'",
+                WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath), WebDavDataSourceHelper.decodeWebDavPath(fixedSourcePath));
+
+            sourceId = fixedSourceParts[0];
+            sourcePath = fixedSourceParts[1];
+            sourceWebDavPath = fixedSourcePath;
+            sameServer = true;
+          }
+        }
+      }
+
       if (!sameServer) {
-        LOGGER.error("Cannot copy files between different WebDAV servers: {} -> {}", sourceWebDavPath, destWebDavPath);
+        LOGGER.error("Cannot copy files between different WebDAV servers: {} -> {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+            WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return false;
       }
 
@@ -263,7 +321,8 @@ public class WebDavFileOperations {
       return client.copy(sourcePath, destPath);
     }
     catch (Exception e) {
-      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", sourceWebDavPath, destWebDavPath, e.getMessage());
+      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
+          WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath), e.getMessage());
       return false;
     }
     finally {
@@ -290,5 +349,43 @@ public class WebDavFileOperations {
       return "/";
     }
     return path.substring(0, lastSlash);
+  }
+
+  /**
+   * Generate a unique destination path by adding suffix if the file already exists
+   * 
+   * @param client
+   *          the WebDAV client
+   * @param destPath
+   *          the original destination path
+   * @return a unique path that doesn't exist on the server
+   */
+  private static String generateUniqueDestPath(WebDavClient client, String destPath) {
+    // Extract base name and extension
+    int lastDot = destPath.lastIndexOf('.');
+    int lastSlash = destPath.lastIndexOf('/');
+
+    String basePath;
+    String extension;
+
+    if (lastDot > lastSlash) {
+      basePath = destPath.substring(0, lastDot);
+      extension = destPath.substring(lastDot);
+    }
+    else {
+      basePath = destPath;
+      extension = "";
+    }
+
+    // Try adding suffix until we find a unique name
+    for (int i = 1; i <= 99; i++) {
+      String newPath = basePath + "_" + i + extension;
+      if (!client.exists(newPath)) {
+        return newPath;
+      }
+    }
+
+    // Fallback: use timestamp
+    return basePath + "_" + System.currentTimeMillis() + extension;
   }
 }

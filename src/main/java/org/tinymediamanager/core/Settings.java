@@ -185,12 +185,14 @@ public final class Settings extends AbstractSettings {
   private String                                           openAiTestPath               = "/Users/jonntd/Movies/Test Movie/Test Movie.mkv";
 
   // AI调用控制设置
+  private boolean                                          enableAi                     = true;
   private boolean                                          aiRateLimitEnabled           = true;
   private int                                              aiMaxCallsPerMinute          = 50;
   private int                                              aiMaxCallsPerHour            = 1000;
   private int                                              aiMinIntervalSeconds         = 1;
   private boolean                                          aiIndividualFallbackEnabled  = true;
   private int                                              aiBatchSize                  = 5;
+  private int                                              aiMaxRetries                 = 5;
 
   /**
    * Instantiates a new settings.
@@ -1842,5 +1844,26 @@ public final class Settings extends AbstractSettings {
     int oldValue = this.aiBatchSize;
     this.aiBatchSize = newValue;
     firePropertyChange("aiBatchSize", oldValue, newValue);
+  }
+
+  // AI Max Retries
+  public int getAiMaxRetries() {
+    return aiMaxRetries;
+  }
+
+  public void setAiMaxRetries(int newValue) {
+    int oldValue = this.aiMaxRetries;
+    this.aiMaxRetries = newValue;
+    firePropertyChange("aiMaxRetries", oldValue, newValue);
+  }
+
+  public boolean isEnableAi() {
+    return enableAi;
+  }
+
+  public void setEnableAi(boolean newValue) {
+    boolean oldValue = this.enableAi;
+    this.enableAi = newValue;
+    firePropertyChange("enableAi", oldValue, newValue);
   }
 }

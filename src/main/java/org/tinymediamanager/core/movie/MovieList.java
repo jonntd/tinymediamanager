@@ -75,6 +75,7 @@ import org.tinymediamanager.core.movie.entities.MovieSet;
 import org.tinymediamanager.core.movie.tasks.MovieUpdateDatasourceTask;
 import org.tinymediamanager.core.threading.TmmTaskManager;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 import org.tinymediamanager.scraper.MediaMetadata;
 import org.tinymediamanager.scraper.MediaScraper;
 import org.tinymediamanager.scraper.MediaSearchResult;
@@ -202,14 +203,48 @@ public final class MovieList extends AbstractModelObject {
    *          the movie
    */
   public void addMovie(Movie movie) {
-    if (!movieList.contains(movie)) {
-      int oldValue = movieList.size();
-      movieList.add(movie);
+    // 使用写锁保护整个检查和添加操作，防止并发重复添加
+    readWriteLock.writeLock().lock();
+    try {
+      if (movieList.contains(movie)) {
+        return;
+      }
 
+      // 额外检查：按路径判断是否已存在（防止不同对象但相同路径的情况）
+      String newPath = movie.getPath();
+      if (StringUtils.isNotBlank(newPath)) {
+        // WebDAV 路径需要解码后比较
+        boolean isWebDav = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(newPath);
+        String normalizedNewPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(newPath) : newPath;
+        // 标准化尾部斜杠
+        normalizedNewPath = normalizedNewPath.endsWith("/") ? normalizedNewPath.substring(0, normalizedNewPath.length() - 1) : normalizedNewPath;
+
+        for (Movie existing : movieList) {
+          String existingPath = existing.getPath();
+          if (StringUtils.isNotBlank(existingPath)) {
+            String normalizedExistingPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(existingPath)
+                : existingPath;
+            // 标准化尾部斜杠
+            normalizedExistingPath = normalizedExistingPath.endsWith("/") ? normalizedExistingPath.substring(0, normalizedExistingPath.length() - 1)
+                : normalizedExistingPath;
+
+            if (normalizedNewPath.equals(normalizedExistingPath)) {
+              LOGGER.debug("Movie with same path already exists, skipping: {}", newPath);
+              return;
+            }
+          }
+        }
+      }
+
+      movieList.add(movie);
       updateLists(Collections.singletonList(movie));
-      firePropertyChange("movies", null, movieList);
-      firePropertyChange("movieCount", oldValue, movieList.size());
     }
+    finally {
+      readWriteLock.writeLock().unlock();
+    }
+
+    firePropertyChange("movies", null, movieList);
+    firePropertyChange("movieCount", movieList.size() - 1, movieList.size());
   }
 
   /**
@@ -611,10 +646,38 @@ public final class MovieList extends AbstractModelObject {
    */
   public synchronized Movie getMovieByPath(Path path) {
 
+    String pathStr = path.toString();
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(pathStr);
+
     for (Movie movie : movieList) {
-      if (movie.getPathNIO().compareTo(path.toAbsolutePath()) == 0) {
-        LOGGER.debug("Ok, found already existing movie '{}' in DB (path: {})", movie.getTitle(), path);
-        return movie;
+      Path moviePath = movie.getPathNIO();
+      if (moviePath == null) {
+        continue;
+      }
+
+      // For WebDAV paths, compare strings directly with NFC normalization
+      // For local paths, use toAbsolutePath() for proper comparison
+      if (isWebDav) {
+        // Decode both paths for comparison
+        String decodedPathStr = WebDavDataSourceHelper.decodeWebDavPath(pathStr);
+        String decodedMoviePath = WebDavDataSourceHelper.decodeWebDavPath(moviePath.toString());
+        // Apply NFC normalization for consistent comparison with stored paths
+        // (paths are stored in NFC format, so comparison must also use NFC)
+        decodedPathStr = WebDavDataSourceHelper.normalizeToNFC(decodedPathStr);
+        decodedMoviePath = WebDavDataSourceHelper.normalizeToNFC(decodedMoviePath);
+        // Normalize trailing slashes
+        decodedPathStr = decodedPathStr.endsWith("/") ? decodedPathStr.substring(0, decodedPathStr.length() - 1) : decodedPathStr;
+        decodedMoviePath = decodedMoviePath.endsWith("/") ? decodedMoviePath.substring(0, decodedMoviePath.length() - 1) : decodedMoviePath;
+        if (decodedMoviePath.equals(decodedPathStr)) {
+          LOGGER.debug("Ok, found already existing movie '{}' in DB (path: {})", movie.getTitle(), path);
+          return movie;
+        }
+      }
+      else {
+        if (moviePath.compareTo(path.toAbsolutePath()) == 0) {
+          LOGGER.debug("Ok, found already existing movie '{}' in DB (path: {})", movie.getTitle(), path);
+          return movie;
+        }
       }
     }
 

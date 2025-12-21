@@ -68,13 +68,13 @@ class UiSettingsPanelLite extends JPanel {
   private final Settings             settings           = Settings.getInstance();
   private final List<LocaleComboBox> locales            = new ArrayList<>();
 
-  private JComboBox                  cbLanguage;
+  private JComboBox<LocaleComboBox>  cbLanguage;
   private ImageLabel                 lblLight;
   private ImageLabel                 lblDark;
   private JRadioButton               rdbtnLight;
   private JRadioButton               rdbtnDark;
-  private JComboBox                  cbFontSize;
-  private JComboBox                  cbFontFamily;
+  private JComboBox<Integer>         cbFontSize;
+  private JComboBox<String>          cbFontFamily;
   private JLabel                     lblUpdate;
   private JLabel                     lblUpdateInterval;
   private JSpinner                   spUpdateInterval;
@@ -171,7 +171,7 @@ class UiSettingsPanelLite extends JPanel {
     JLabel lblLanguageT = new JLabel(TmmResourceBundle.getString("Settings.language"));
     add(lblLanguageT, "flowx,cell 1 3 2 1");
 
-    cbLanguage = new JComboBox(locales.toArray());
+    cbLanguage = new JComboBox<>(locales.toArray(new LocaleComboBox[0]));
     add(cbLanguage, "cell 1 3 2 1");
 
     JLabel lblThemeT = new JLabel(TmmResourceBundle.getString("Settings.uitheme"));
@@ -209,13 +209,13 @@ class UiSettingsPanelLite extends JPanel {
     add(lblFontT, "flowx,cell 1 9 2 1");
 
     GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
-    cbFontFamily = new JComboBox(env.getAvailableFontFamilyNames());
+    cbFontFamily = new JComboBox<>(env.getAvailableFontFamilyNames());
     add(cbFontFamily, "cell 1 9 2 1");
 
     JLabel lblSize = new JLabel(TmmResourceBundle.getString("Settings.fontsize"));
     add(lblSize, "flowx,cell 1 10");
 
-    cbFontSize = new JComboBox(DEFAULT_FONT_SIZES);
+    cbFontSize = new JComboBox<>(DEFAULT_FONT_SIZES);
     add(cbFontSize, "cell 1 10");
 
     JTextArea taFontHint = new ReadOnlyTextArea(TmmResourceBundle.getString("Settings.fonts.hint"));

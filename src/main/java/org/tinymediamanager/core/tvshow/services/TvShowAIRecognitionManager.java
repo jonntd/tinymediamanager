@@ -91,6 +91,12 @@ public class TvShowAIRecognitionManager {
             return null;
         }
 
+        // 0. 全局AI开关检查
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.debug("AI scraping disabled in settings, skipping TV show recognition for '{}'", tvShow.getTitle());
+            return null;
+        }
+
         String showId = tvShow.getDbId().toString();
         String cacheKey = generateCacheKey(tvShow);
 
@@ -103,19 +109,12 @@ public class TvShowAIRecognitionManager {
             return batchResult;
         }
 
-        // 2. 检查已验证的缓存结果
-        // 缓存已禁用
-        // CacheEntry cached = sessionCache.get(cacheKey);
-        // if (cached != null && cached.validated) {
-        // LOGGER.debug("Using validated cache for TV show '{}': '{}'", tvShow.getTitle(), cached.recognizedTitle);
-        // return cached.recognizedTitle;
-        // }
+        // 2. 缓存已禁用
+        // 注：缓存功能已禁用，直接进入调用次数检查
 
         // 3. 检查调用次数限制
         AtomicInteger counter = attemptCounters.computeIfAbsent(cacheKey, k -> new AtomicInteger(0));
         int currentAttempts = counter.get();
-        // 兼容旧逻辑，即使缓存禁用可能仍有引用
-        CacheEntry cached = null;
 
         if (currentAttempts >= MAX_AI_ATTEMPTS_PER_SHOW) {
             LOGGER.debug("Max AI attempts ({}) reached for TV show '{}', skipping further recognition", MAX_AI_ATTEMPTS_PER_SHOW, tvShow.getTitle());
@@ -133,18 +132,21 @@ public class TvShowAIRecognitionManager {
     }
 
     /**
-     * 执行单独AI识别 注意：只有成功获取有效结果时才增加调用计数，网络错误或空结果不计入
+     * 执行单独AI识别 注意：每次调用都会增加计数，避免无限重试
      */
     private String performIndividualRecognition(TvShow tvShow, String cacheKey, AtomicInteger counter) {
+        // 先增加调用计数，防止无限循环
+        int attemptNumber = counter.incrementAndGet();
+
         try {
             // 检查速率限制
             AIApiRateLimiter rateLimiter = AIApiRateLimiter.getInstance();
             if (!rateLimiter.waitForPermission("TvShowAIRecognitionManager", 30000)) {
-                LOGGER.warn("API rate limit timeout for TV show '{}', not counting as attempt", tvShow.getTitle());
-                return null; // 速率限制超时不计入调用次数
+                LOGGER.warn("API rate limit timeout for TV show '{}' (attempt {}/{})", tvShow.getTitle(), attemptNumber, MAX_AI_ATTEMPTS_PER_SHOW);
+                return null;
             }
 
-            LOGGER.info("Attempting individual AI recognition for TV show '{}' (current attempts: {}/{})", tvShow.getTitle(), counter.get(),
+            LOGGER.info("Attempting individual AI recognition for TV show '{}' (attempt {}/{})", tvShow.getTitle(), attemptNumber,
                     MAX_AI_ATTEMPTS_PER_SHOW);
 
             // 使用复用的服务实例（统一到批量服务）
@@ -152,23 +154,19 @@ public class TvShowAIRecognitionManager {
             String recognizedTitle = service.recognizeTvShowTitle(tvShow);
 
             if (recognizedTitle != null && !recognizedTitle.trim().isEmpty()) {
-                // 只有成功获取有效结果时才增加调用计数
-                int attemptNumber = counter.incrementAndGet();
                 LOGGER.info("Individual AI recognition successful for TV show '{}': '{}' (attempt {}/{})", tvShow.getTitle(), recognizedTitle,
                         attemptNumber, MAX_AI_ATTEMPTS_PER_SHOW);
-                // 缓存已禁用
-                // sessionCache.put(cacheKey, new CacheEntry(recognizedTitle, false));
                 return recognizedTitle;
             }
             else {
-                // AI返回空结果，不增加调用计数，让下次有机会重试
-                LOGGER.warn("Individual AI recognition returned empty for TV show '{}', not counting as attempt (allows retry)", tvShow.getTitle());
+                LOGGER.warn("Individual AI recognition returned empty for TV show '{}' (attempt {}/{})", tvShow.getTitle(), attemptNumber,
+                        MAX_AI_ATTEMPTS_PER_SHOW);
             }
 
         }
         catch (Exception e) {
-            // 异常情况也不增加调用计数，可能是临时网络问题
-            LOGGER.error("Error during individual AI recognition for TV show '{}': {} (not counting as attempt)", tvShow.getTitle(), e.getMessage());
+            LOGGER.error("Error during individual AI recognition for TV show '{}': {} (attempt {}/{})", tvShow.getTitle(), e.getMessage(),
+                    attemptNumber, MAX_AI_ATTEMPTS_PER_SHOW);
         }
 
         return null;
