@@ -261,12 +261,12 @@ public class ArdSettingsPanel extends JPanel {
   protected void initDataBindings() {
     Property ardRoundUpBeanProperty = BeanProperty.create("ardRoundUp");
     Property jCheckBoxBeanProperty = BeanProperty.create("selected");
-    AutoBinding autoBinding_ard_roundUp = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, ardRoundUpBeanProperty, rdbtnRoundUpToNext,
-        jCheckBoxBeanProperty);
+    AutoBinding<?, ?, ?, ?> autoBinding_ard_roundUp = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, ardRoundUpBeanProperty,
+        rdbtnRoundUpToNext, jCheckBoxBeanProperty);
     autoBinding_ard_roundUp.bind();
     //
     Property settingsBeanProperty = BeanProperty.create("ardEnabled");
-    AutoBinding autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty, chckbxARDEnabled,
+    AutoBinding<?, ?, ?, ?> autoBinding = Bindings.createAutoBinding(UpdateStrategy.READ_WRITE, settings, settingsBeanProperty, chckbxARDEnabled,
         jCheckBoxBeanProperty);
     autoBinding.bind();
   }

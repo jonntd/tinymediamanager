@@ -37,12 +37,10 @@ public class BatchChatGPTMovieRecognitionService {
     private static final ObjectMapper    OBJECT_MAPPER          = new ObjectMapper();
 
     private HttpClient                   httpClient;
-    private final Settings               settings;
+    // private final Settings settings; // Removed to prevent stale state
     private final AdaptiveBatchProcessor adaptiveBatchProcessor = AdaptiveBatchProcessor.getInstance();
 
     public BatchChatGPTMovieRecognitionService() {
-        this.settings = Settings.getInstance();
-
         if (LOGGER.isDebugEnabled()) {
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
             StringBuilder sb = new StringBuilder("BatchChatGPTMovieRecognitionService created from:\n");
@@ -52,7 +50,7 @@ public class BatchChatGPTMovieRecognitionService {
             LOGGER.debug(sb.toString());
         }
 
-        String apiKey = settings.getOpenAiApiKey();
+        String apiKey = Settings.getInstance().getOpenAiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
             LOGGER.warn("OpenAI API key is not configured in settings");
         }
@@ -79,13 +77,18 @@ public class BatchChatGPTMovieRecognitionService {
             return null;
         }
 
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping movie recognition.");
+            return null;
+        }
+
         if (httpClient == null) {
             LOGGER.warn("HTTP client is not initialized - please check OpenAI API key configuration");
             return null;
         }
 
         List<Movie> singleBatch = Collections.singletonList(movie);
-        Map<String, String> results = batchRecognizeMovieTitles(singleBatch, settings.getAiMaxRetries());
+        Map<String, String> results = batchRecognizeMovieTitles(singleBatch, Settings.getInstance().getAiMaxRetries());
 
         String result = results.get(movie.getDbId().toString());
         if (result != null) {
@@ -103,7 +106,7 @@ public class BatchChatGPTMovieRecognitionService {
      */
     public Map<String, String> batchRecognizeMovieTitles(List<Movie> movies) {
         LOGGER.info("Starting batch recognition for {} movies with adaptive batching", movies.size());
-        return batchRecognizeMovieTitles(movies, settings.getAiMaxRetries());
+        return batchRecognizeMovieTitles(movies, Settings.getInstance().getAiMaxRetries());
     }
 
     /**
@@ -116,8 +119,13 @@ public class BatchChatGPTMovieRecognitionService {
             return results;
         }
 
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping batch movie recognition.");
+            return results;
+        }
+
         // 检查API配置状态
-        String apiKey = settings.getOpenAiApiKey();
+        String apiKey = Settings.getInstance().getOpenAiApiKey();
         if (apiKey == null || apiKey.trim().isEmpty()) {
             LOGGER.warn("OpenAI API key is not configured");
             return results; // 返回空结果，由上层 MovieAIRecognitionManager 处理
@@ -152,7 +160,7 @@ public class BatchChatGPTMovieRecognitionService {
 
         while (i < totalMovies) {
             // 使用配置的批量大小
-            int batchSize = settings.getAiBatchSize();
+            int batchSize = Settings.getInstance().getAiBatchSize();
             int endIndex = Math.min(i + batchSize, totalMovies);
 
             if (endIndex <= i)
@@ -319,9 +327,9 @@ public class BatchChatGPTMovieRecognitionService {
      */
     private String callChatGPTBatchAPI(String batchRequest) {
         try {
-            String apiKey = settings.getOpenAiApiKey();
-            String apiUrl = settings.getOpenAiApiUrl();
-            String model = settings.getOpenAiModel();
+            String apiKey = Settings.getInstance().getOpenAiApiKey();
+            String apiUrl = Settings.getInstance().getOpenAiApiUrl();
+            String model = Settings.getInstance().getOpenAiModel();
 
             if (apiKey == null || apiKey.trim().isEmpty()) {
                 LOGGER.warn("OpenAI API key is not configured");

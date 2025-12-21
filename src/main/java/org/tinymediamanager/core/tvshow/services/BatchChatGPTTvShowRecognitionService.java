@@ -103,6 +103,11 @@ public class BatchChatGPTTvShowRecognitionService {
             return null;
         }
 
+        if (!settings.isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping TV show recognition.");
+            return null;
+        }
+
         if (httpClient == null) {
             LOGGER.warn("HTTP client is not initialized - please check OpenAI API key configuration");
             return null;
@@ -162,6 +167,11 @@ public class BatchChatGPTTvShowRecognitionService {
         Map<String, String> results = new HashMap<>();
 
         if (tvShows == null || tvShows.isEmpty()) {
+            return results;
+        }
+
+        if (!settings.isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping batch TV show recognition.");
             return results;
         }
 

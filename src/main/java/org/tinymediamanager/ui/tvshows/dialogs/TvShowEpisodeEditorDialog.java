@@ -523,7 +523,7 @@ public class TvShowEpisodeEditorDialog extends AbstractEditorDialog {
         JScrollPane scrollPaneTags = new JScrollPane();
         details2Panel.add(scrollPaneTags, "cell 1 4 3 1,grow");
 
-        listTags = new JList();
+        listTags = new JList<>();
         scrollPaneTags.setViewportView(listTags);
 
         JButton btnAddTag = new SquareIconButton(new AddTagAction());

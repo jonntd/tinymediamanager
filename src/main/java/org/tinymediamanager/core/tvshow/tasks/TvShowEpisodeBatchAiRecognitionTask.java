@@ -54,6 +54,13 @@ public class TvShowEpisodeBatchAiRecognitionTask extends TmmThreadPool {
 
     @Override
     protected void doInBackground() {
+        if (!org.tinymediamanager.core.Settings.getInstance().isEnableAi()) {
+            LOGGER.info("AI scraping is disabled in settings. Skipping Batch AI Recognition task.");
+            MessageManager.getInstance()
+                    .pushMessage(new Message(MessageLevel.ERROR, "task.episodeairecognition", "AI scraping is disabled in settings."));
+            return;
+        }
+
         LOGGER.info("=== Starting Batch Episode AI Recognition ===");
         LOGGER.info("Episodes to process: {}", episodesToProcess.size());
         LOGGER.info("Recognition mode: {}", useHybridMode ? "Hybrid (Traditional + AI)" : "Pure AI");

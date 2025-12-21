@@ -455,6 +455,7 @@ public class MovieSetArtworkHelper {
    *          indicator if we look for the dedicated movie set folder
    * @return a {@link List} of all allowed {@link IMovieSetFileNaming}s
    */
+  @SuppressWarnings("deprecation")
   private static List<IMovieSetFileNaming> getAllowedFileNamingsForMediaFileType(MediaFileType type, boolean inDedicatedFolder) {
     if (inDedicatedFolder) {
       switch (type) {
@@ -482,6 +483,9 @@ public class MovieSetArtworkHelper {
         case THUMB:
           return List.of(MovieSetThumbNaming.KODI_THUMB, MovieSetThumbNaming.AUTOMATOR_THUMB, MovieSetThumbNaming.KODI_LANDSCAPE,
               MovieSetThumbNaming.AUTOMATOR_LANDSCAPE);
+
+        default:
+          break;
       }
     }
     else {
@@ -507,6 +511,9 @@ public class MovieSetArtworkHelper {
 
         case THUMB:
           return List.of(MovieSetThumbNaming.MOVIESET_THUMB, MovieSetThumbNaming.MOVIESET_LANDSCAPE);
+
+        default:
+          break;
       }
     }
 

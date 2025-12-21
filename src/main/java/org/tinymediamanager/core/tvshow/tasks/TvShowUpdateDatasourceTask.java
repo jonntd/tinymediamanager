@@ -176,7 +176,7 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       Settings settings = Settings.getInstance();
       this.apiKey = settings.getOpenAiApiKey();
       this.apiUrl = settings.getOpenAiApiUrl();
-      this.aiEnabled = true; // 默认启用，可以从配置中读取
+      this.aiEnabled = settings.isEnableAi(); // Fix: Respect global AI setting
       this.maxRetries = 3; // 可以从配置中读取
       this.timestamp = System.currentTimeMillis();
     }
@@ -2384,11 +2384,39 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
           // 如果传统解析失败，收集这个文件用于后续批量AI识别
           if (result.season == -1 || result.episodes.isEmpty()) {
-            synchronized (pendingAIRecognitions) {
-              pendingAIRecognitions.add(new PendingAIRecognition(tvShow, relativePath, vid));
+            if (Settings.getInstance().isEnableAi()) {
+              synchronized (pendingAIRecognitions) {
+                pendingAIRecognitions.add(new PendingAIRecognition(tvShow, relativePath, vid));
+              }
+              LOGGER.debug("Added file for batch AI recognition: {}", relativePath);
+              continue; // 跳过当前文件，等待批量处理
             }
-            LOGGER.debug("Added file for batch AI recognition: {}", relativePath);
-            continue; // 跳过当前文件，等待批量处理
+            else {
+              LOGGER.info("AI scraping disabled, falling back to basic filename parsing for: {}", relativePath);
+              // Fallback: create episode with unknown S/E immediately
+              try {
+                TvShowEpisode episode = new TvShowEpisode();
+                episode.setTvShow(tvShow);
+                episode.setPath(vid.getPath());
+                episode.addToMediaFiles(vid);
+                episode.setNewlyAdded(true);
+                if (StringUtils.isBlank(episode.getOriginalFilename())) {
+                  episode.setOriginalFilename(vid.getFilename());
+                }
+
+                String title = !result.name.isEmpty() ? TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(result.name, tvShow.getTitle())
+                    : TvShowEpisodeAndSeasonParser.cleanEpisodeTitle(FilenameUtils.getBaseName(vid.getFilename()), tvShow.getTitle());
+                episode.setTitle(title);
+                episode.setEpisode(new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, -1, -1));
+
+                episode.saveToDb();
+                tvShow.addEpisode(episode);
+              }
+              catch (Exception e) {
+                LOGGER.error("Failed to create fallback episode for {}: {}", relativePath, e.getMessage(), e);
+              }
+              continue;
+            }
           }
 
           // second check: is the detected episode (>-1; season >-1) already in
@@ -3130,6 +3158,12 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         return;
       }
       batchProcessingInProgress = true;
+    }
+
+    // Check global AI setting first
+    if (!Settings.getInstance().isEnableAi()) {
+      LOGGER.info("AI scraping is disabled in settings. Skipping pending batch AI recognition.");
+      return;
     }
 
     try {

@@ -91,6 +91,12 @@ public class TvShowAIRecognitionManager {
             return null;
         }
 
+        // 0. 全局AI开关检查
+        if (!Settings.getInstance().isEnableAi()) {
+            LOGGER.debug("AI scraping disabled in settings, skipping TV show recognition for '{}'", tvShow.getTitle());
+            return null;
+        }
+
         String showId = tvShow.getDbId().toString();
         String cacheKey = generateCacheKey(tvShow);
 

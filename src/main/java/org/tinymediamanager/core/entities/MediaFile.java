@@ -258,6 +258,9 @@ public class MediaFile extends AbstractModelObject implements Comparable<MediaFi
       case AUDIO:
       case NFO:
         return true;
+
+      default:
+        break;
     }
 
     if (isGraphic()) {

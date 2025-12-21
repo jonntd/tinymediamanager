@@ -256,7 +256,7 @@ public class ExternalToolsSettingsPanel extends JPanel {
     //
     Property settingsBeanProperty_8 = BeanProperty.create("useInternalMediaFramework");
     Property jCheckBoxBeanProperty = BeanProperty.create("selected");
-    AutoBinding autoBinding_6 = Bindings.createAutoBinding(AutoBinding.UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_8,
+    AutoBinding<?, ?, ?, ?> autoBinding_6 = Bindings.createAutoBinding(AutoBinding.UpdateStrategy.READ_WRITE, settings, settingsBeanProperty_8,
         rdbtnFFmpegInternal, jCheckBoxBeanProperty);
     autoBinding_6.bind();
     //

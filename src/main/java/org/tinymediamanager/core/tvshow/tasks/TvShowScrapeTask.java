@@ -341,6 +341,7 @@ public class TvShowScrapeTask extends TmmThreadPool {
         List<MediaScraper> trailerScrapers = tvShowScrapeParams.scrapeOptions.getTrailerScrapers();
 
         // scrape tv show
+        boolean isAiEnabled = org.tinymediamanager.core.Settings.getInstance().isEnableAi();
 
         // search for tv show
         MediaSearchResult result1 = null;
@@ -360,13 +361,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
                 MediaSearchResult result2 = results.get(1);
                 // if both results have the same score - do not take any result
                 if (result1.getScore() == result2.getScore()) {
-                  LOGGER.warn("Two identical results for '{}', attempting AI fallback", tvShow.getTitle());
-                  // 尝试单个文件AI识别回退
-                  MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-                  if (fallbackResult != null) {
-                    result1 = fallbackResult;
+                  if (isAiEnabled) {
+                    LOGGER.warn("Two identical results for '{}', attempting AI fallback", tvShow.getTitle());
+                    // 尝试单个文件AI识别回退
+                    MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                    if (fallbackResult != null) {
+                      result1 = fallbackResult;
+                    }
+                    else {
+                      smartScrapeList.add(tvShow);
+                      return;
+                    }
                   }
                   else {
+                    LOGGER.info("Two identical results for '{}', AI disabled. Adding to smart scrape.", tvShow.getTitle());
                     smartScrapeList.add(tvShow);
                     return;
                   }
@@ -374,13 +382,21 @@ public class TvShowScrapeTask extends TmmThreadPool {
 
                 // create a threshold of 0.75 - to minimize false positives
                 if (result1.getScore() < 0.75) {
-                  LOGGER.warn("Score ({}) is lower than threshold for '{}', attempting AI fallback", result1.getScore(), tvShow.getTitle());
-                  // 尝试单个文件AI识别回退
-                  MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-                  if (fallbackResult != null) {
-                    result1 = fallbackResult;
+                  if (isAiEnabled) {
+                    LOGGER.warn("Score ({}) is lower than threshold for '{}', attempting AI fallback", result1.getScore(), tvShow.getTitle());
+                    // 尝试单个文件AI识别回退
+                    MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                    if (fallbackResult != null) {
+                      result1 = fallbackResult;
+                    }
+                    else {
+                      smartScrapeList.add(tvShow);
+                      return;
+                    }
                   }
                   else {
+                    LOGGER.info("Score ({}) is lower than threshold for '{}', AI disabled. Adding to smart scrape.", result1.getScore(),
+                        tvShow.getTitle());
                     smartScrapeList.add(tvShow);
                     return;
                   }
@@ -388,13 +404,20 @@ public class TvShowScrapeTask extends TmmThreadPool {
               }
             }
             else {
-              LOGGER.info("No result found for '{}', attempting AI fallback", tvShow.getTitle());
-              // 尝试单个文件AI识别回退
-              MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
-              if (fallbackResult != null) {
-                result1 = fallbackResult;
+              if (isAiEnabled) {
+                LOGGER.info("No result found for '{}', attempting AI fallback", tvShow.getTitle());
+                // 尝试单个文件AI识别回退
+                MediaSearchResult fallbackResult = fallbackToIndividualAIRecognition(tvShow, mediaMetadataScraper);
+                if (fallbackResult != null) {
+                  result1 = fallbackResult;
+                }
+                else {
+                  smartScrapeList.add(tvShow);
+                  return;
+                }
               }
               else {
+                LOGGER.info("No result found for '{}', AI disabled. Adding to smart scrape.", tvShow.getTitle());
                 smartScrapeList.add(tvShow);
                 return;
               }
@@ -939,6 +962,10 @@ public class TvShowScrapeTask extends TmmThreadPool {
       try {
         // 使用TvShowAIRecognitionManager检查是否还可以进行AI识别
         TvShowAIRecognitionManager aiManager = TvShowAIRecognitionManager.getInstance();
+
+        if (!org.tinymediamanager.core.Settings.getInstance().isEnableAi()) {
+          return null;
+        }
 
         if (!aiManager.canAttemptRecognition(tvShow)) {
           LOGGER.debug("Max AI recognition attempts reached for TV show '{}', skipping fallback", tvShow.getTitle());
