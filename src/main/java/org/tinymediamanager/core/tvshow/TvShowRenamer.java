@@ -2301,6 +2301,16 @@ public class TvShowRenamer {
     try {
       if (StringUtils.isNotBlank(template)) {
         String dataSource = tvShow.getDataSource();
+
+        // Fix for WebDAV paths where datasource might be empty (e.g. migration or DB inconsistency)
+        // If we don't fix this, it would fall back to Paths.get(dataSource, destination) which creates a relative path
+        // that later gets converted to an absolute LOCAL path, breaking image cache locators.
+        if (StringUtils.isBlank(dataSource) && WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+          String[] parts = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
+          if (parts != null && parts.length > 0) {
+            dataSource = "webdav://" + parts[0];
+          }
+        }
         String destination = createDestination(template, tvShow);
 
         // For WebDAV paths, use decoded dataSource and string concatenation

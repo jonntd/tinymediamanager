@@ -940,6 +940,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
       firePropertyChange(ADDED_SEASON, null, season);
       firePropertyChange(SEASON_COUNT, seasonCount, seasons.size());
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createAddEvent(season));
     }
   }
 
@@ -949,6 +950,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     if (seasons.remove(season)) {
       firePropertyChange(REMOVED_SEASON, null, season);
       firePropertyChange(SEASON_COUNT, seasonCount, seasons.size());
+      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createRemoveEvent(season));
     }
   }
 

@@ -92,9 +92,11 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       }
     }
     else {
-      // TV show added
-      LOGGER.debug("processTvShow: calling addTvShow for '{}'", tvShow.getTitle());
-      addTvShow(tvShow);
+      // TV show added OR missing in cache (recovery mode)
+      if (!Event.TYPE_REMOVE.equals(eventType)) {
+        LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD", tvShow.getTitle(), eventType);
+        addTvShow(tvShow);
+      }
     }
   }
 
@@ -333,6 +335,13 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     putNodeToCache(tvShow, node);
     firePropertyChange(NODE_INSERTED, null, node);
 
+    // check if there are already seasons for this tv show
+    for (TvShowSeason season : tvShow.getSeasons()) {
+      if (!season.getEpisodesForDisplay().isEmpty()) {
+        addTvShowSeason(season);
+      }
+    }
+
     return node;
   }
 
@@ -364,7 +373,7 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
 
     if (entity instanceof TvShow tvShow) {
       TmmTreeNode node = new TvShowTreeNode(tvShow, this);
-      LOGGER.info("=== getOrCreateNode: CREATING NEW NODE for '{}', node={}, tvShow={} ===", tvShow.getTitle(), System.identityHashCode(node),
+      LOGGER.debug("=== getOrCreateNode: CREATING NEW NODE for '{}', node={}, tvShow={} ===", tvShow.getTitle(), System.identityHashCode(node),
           System.identityHashCode(tvShow));
       putNodeToCache(tvShow, node);
       return node;
@@ -389,6 +398,12 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     TmmTreeNode cachedNode = getNodeFromCache(season);
     if (cachedNode != null) {
       return cachedNode;
+    }
+
+    // Integrity Check: Ensure parent TV Show node exists
+    if (getNodeFromCache(season.getTvShow()) == null) {
+      LOGGER.debug("addTvShowSeason: parent TvShow node missing for '{}' - auto-creating", season.getTvShow().getTitle());
+      addTvShow(season.getTvShow());
     }
 
     // add a new node (only if there is at least one EP inside)

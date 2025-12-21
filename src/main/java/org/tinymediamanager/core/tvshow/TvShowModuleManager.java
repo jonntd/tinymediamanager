@@ -612,7 +612,7 @@ public final class TvShowModuleManager implements ITmmModule {
       tvShowMap.remove(tvShow.getDbId());
       // Commit immediately to ensure deletion is persisted
       mvStore.commit();
-      LOGGER.info("Removed TV show from database: {}", tvShow.getTitle());
+      LOGGER.debug("Removed TV show from database: {}", tvShow.getTitle());
     }
     finally {
       lock.writeLock().unlock();

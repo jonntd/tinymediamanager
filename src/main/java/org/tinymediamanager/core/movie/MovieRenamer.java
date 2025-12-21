@@ -1102,14 +1102,44 @@ public class MovieRenamer {
           LOGGER.debug("Rename Debug - moviePath.remotePath: {}", moviePath.getRemotePath());
           LOGGER.debug("Rename Debug - datasourcePath.remotePath: {}", datasourcePath.getRemotePath());
 
-          newPathname = moviePath.getRelativePath(datasourcePath);
+          // Avoid WARN log in WebDavPath by checking Source ID equality first
+          if (moviePath.getSourceId().equals(datasourcePath.getSourceId())) {
+            newPathname = moviePath.getRelativePath(datasourcePath);
+          }
+          else {
+            newPathname = null; // Force fallback logic
+          }
 
           LOGGER.debug("Rename Debug - calculated newPathname: {}", newPathname);
 
           if (newPathname == null) {
-            // If relative path calculation failed, use the folder name
-            newPathname = moviePath.getFileName();
-            LOGGER.debug("Could not calculate relative path, using folder name: {}", newPathname);
+            // FALLBACK: Source ID mismatch? Try to match by remote path only
+            // e.g. "aaa" vs "aaa1" - if they point to same WebDAV root, paths should still match
+            String movieRemote = moviePath.getRemotePath();
+            String dsRemote = datasourcePath.getRemotePath();
+
+            // Normalize slashing for comparison
+            if (!dsRemote.endsWith("/")) {
+              dsRemote += "/";
+            }
+            if (!movieRemote.endsWith("/")) {
+              movieRemote += "/";
+            }
+
+            if (movieRemote.startsWith(dsRemote)) {
+              LOGGER.info("WebDAV Source ID mismatch ({} vs {}), but remote paths match. Using remote path fallback.", moviePath.getSourceId(),
+                  datasourcePath.getSourceId());
+              newPathname = movieRemote.substring(dsRemote.length());
+              // Remove trailing slash if present
+              if (newPathname.endsWith("/")) {
+                newPathname = newPathname.substring(0, newPathname.length() - 1);
+              }
+            }
+            else {
+              // If relative path calculation failed completely, use the folder name
+              newPathname = moviePath.getFileName();
+              LOGGER.debug("Could not calculate relative path (even with fallback), using folder name: {}", newPathname);
+            }
           }
         }
         catch (Exception e) {
@@ -1204,7 +1234,29 @@ public class MovieRenamer {
         WebDavPath newMovieDirPath = newMovieDirWebDavPath != null ? newMovieDirWebDavPath : new WebDavPath(movie.getDataSource());
 
         // Calculate relative path from old movie dir to file
-        String relativePart = filePath.getRelativePath(oldPath);
+        String relativePart = null;
+        // Avoid WARN log in WebDavPath by checking Source ID equality first
+        if (filePath.getSourceId().equals(oldPath.getSourceId())) {
+          relativePart = filePath.getRelativePath(oldPath);
+        }
+        // else relativePart remains null, triggering fallback below
+
+        if (relativePart == null) {
+          // FALLBACK: Try remote path only comparison
+          String fileRemote = filePath.getRemotePath();
+          String movieRemote = oldPath.getRemotePath();
+
+          if (!movieRemote.endsWith("/")) {
+            movieRemote += "/";
+          }
+          // File path doesn't need slash appending usually, but for containment check:
+
+          if (fileRemote.startsWith(movieRemote)) {
+            LOGGER.info("WebDAV Source ID mismatch in file rename ({} vs {}), using remote path fallback.", filePath.getSourceId(),
+                oldPath.getSourceId());
+            relativePart = fileRemote.substring(movieRemote.length());
+          }
+        }
 
         if (relativePart != null) {
           // Resolve relative path against new movie dir
@@ -1231,7 +1283,23 @@ public class MovieRenamer {
         WebDavPath moviePath = new WebDavPath(movie.getPath());
         WebDavPath filePath = new WebDavPath(filePathStr);
 
-        String relativePath = filePath.getRelativePath(moviePath);
+        String relativePath = null;
+        if (filePath.getSourceId().equals(moviePath.getSourceId())) {
+          relativePath = filePath.getRelativePath(moviePath);
+        }
+
+        if (relativePath == null) {
+          // FALLBACK for relativePathOfMediafile calculation
+          String fileRemote = filePath.getRemotePath();
+          String movieRemote = moviePath.getRemotePath();
+          if (!movieRemote.endsWith("/")) {
+            movieRemote += "/";
+          }
+          if (fileRemote.startsWith(movieRemote)) {
+            relativePath = fileRemote.substring(movieRemote.length());
+          }
+        }
+
         if (relativePath != null) {
           relativePathOfMediafile = Paths.get(relativePath);
         }

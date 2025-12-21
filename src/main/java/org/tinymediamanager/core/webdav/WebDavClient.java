@@ -217,8 +217,10 @@ public class WebDavClient {
     }
     catch (IOException e) {
       // Handle network errors (SSL handshake, connection reset) by reconnecting and retrying once
-      if (allowRetry && e.getMessage() != null && (e.getMessage().contains("Remote host terminated the handshake")
-          || e.getMessage().contains("Connection reset") || e.getMessage().contains("unexpected end of stream"))) {
+      if (allowRetry && e.getMessage() != null
+          && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+              || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+              || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
 
         LOGGER.warn("WebDAV network error ('{}'), attempting to reconnect...", e.getMessage());
         try {
@@ -353,6 +355,29 @@ public class WebDavClient {
         return false;
       }
       catch (IOException e) {
+        // Handle network errors by reconnecting and retrying
+        if (attempt < maxRetries && e.getMessage() != null
+            && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+                || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+                || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
+
+          long waitMs = 2000L * attempt;
+          LOGGER.warn("WebDAV move network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+
         LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
         LOGGER.error("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
@@ -418,6 +443,29 @@ public class WebDavClient {
         return false;
       }
       catch (IOException e) {
+        // Handle network errors by reconnecting and retrying
+        if (attempt < maxRetries && e.getMessage() != null
+            && (e.getMessage().contains("Remote host terminated the handshake") || e.getMessage().contains("Connection reset")
+                || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
+                || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
+
+          long waitMs = 2000L * attempt;
+          LOGGER.warn("WebDAV copy network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Retry interrupted");
+            break;
+          }
+          catch (IOException reconnectError) {
+            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+          }
+          continue;
+        }
+
         LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
         return false;
       }

@@ -83,6 +83,29 @@ public class WebDavFileOperations {
         }
       }
 
+      // Fix for malformed source path (missing slash after sourceId)
+      // Example: src="webdav://aaaPath/...", dest="webdav://aaa/Path/..."
+      // This happens if URI construction missed a slash. If we can match destId as prefix, we assume it's the same server.
+      if (!sameServer && sourceId.startsWith(destId)) {
+        String expectedPrefix = "webdav://" + destId;
+        if (sourceWebDavPath.startsWith(expectedPrefix) && !sourceWebDavPath.startsWith(expectedPrefix + "/")) {
+          // Try to inject the missing slash
+          String fixedSourcePath = expectedPrefix + "/" + sourceWebDavPath.substring(expectedPrefix.length());
+          String[] fixedSourceParts = WebDavDataSourceHelper.parseWebDavPath(fixedSourcePath);
+
+          if (fixedSourceParts != null && fixedSourceParts[0].equals(destId)) {
+            LOGGER.warn("Detected malformed WebDAV source path (possible missing slash), auto-fixing: '{}' -> '{}'",
+                WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath), WebDavDataSourceHelper.decodeWebDavPath(fixedSourcePath));
+
+            // Assign fixed values
+            sourceId = fixedSourceParts[0];
+            sourcePath = fixedSourceParts[1];
+            sourceWebDavPath = fixedSourcePath; // Update the path variable for subsequent use
+            sameServer = true;
+          }
+        }
+      }
+
       if (!sameServer) {
         LOGGER.error("Cannot move files between different WebDAV servers: {} -> {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
             WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
@@ -236,6 +259,25 @@ public class WebDavFileOperations {
 
         if (srcSource != null && destSource != null && srcSource.equals(destSource)) {
           sameServer = true;
+        }
+      }
+
+      // Fix for malformed source path (missing slash after sourceId)
+      if (!sameServer && sourceId.startsWith(destId)) {
+        String expectedPrefix = "webdav://" + destId;
+        if (sourceWebDavPath.startsWith(expectedPrefix) && !sourceWebDavPath.startsWith(expectedPrefix + "/")) {
+          String fixedSourcePath = expectedPrefix + "/" + sourceWebDavPath.substring(expectedPrefix.length());
+          String[] fixedSourceParts = WebDavDataSourceHelper.parseWebDavPath(fixedSourcePath);
+
+          if (fixedSourceParts != null && fixedSourceParts[0].equals(destId)) {
+            LOGGER.warn("Detected malformed WebDAV source path (possible missing slash), auto-fixing: '{}' -> '{}'",
+                WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath), WebDavDataSourceHelper.decodeWebDavPath(fixedSourcePath));
+
+            sourceId = fixedSourceParts[0];
+            sourcePath = fixedSourceParts[1];
+            sourceWebDavPath = fixedSourcePath;
+            sameServer = true;
+          }
         }
       }
 

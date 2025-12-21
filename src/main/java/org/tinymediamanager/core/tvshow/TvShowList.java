@@ -283,43 +283,33 @@ public final class TvShowList extends AbstractModelObject {
   public void addTvShow(TvShow newValue) {
     LOGGER.debug("addTvShow() called: title='{}', path='{}', current list size={}", newValue.getTitle(), newValue.getPath(), tvShows.size());
 
-    // 使用写锁保护整个检查和添加操作，防止并发重复添加
+    // 1. 预计算：在锁外进行耗时的路径标准化操作
+    String newPath = newValue.getPath();
+    String normalizedNewPath = null;
+    if (StringUtils.isNotBlank(newPath)) {
+      normalizedNewPath = getNormalizedPathForComparison(newPath);
+    }
+
+    // 2. 临界区：仅包含快速的集合检查和添加操作
     readWriteLock.writeLock().lock();
     try {
-      // 检查是否已存在（避免重复添加）
+      // 检查是否已存在（对象引用比较）
       if (tvShows.contains(newValue)) {
         LOGGER.debug("addTvShow() SKIPPED (contains): title='{}' already in list", newValue.getTitle());
         return;
       }
 
-      // 额外检查：按路径判断是否已存在（防止不同对象但相同路径的情况）
-      String newPath = newValue.getPath();
-      if (StringUtils.isNotBlank(newPath)) {
-        // WebDAV 路径需要解码后比较（与 getTvShowByPath() 保持一致）
-        boolean isWebDav = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(newPath);
-        String normalizedNewPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(newPath) : newPath;
-        // Apply NFC normalization for WebDAV paths (consistent with getTvShowByPath)
-        if (isWebDav) {
-          normalizedNewPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedNewPath);
-        }
-        // 标准化尾部斜杠
-        normalizedNewPath = normalizedNewPath.endsWith("/") ? normalizedNewPath.substring(0, normalizedNewPath.length() - 1) : normalizedNewPath;
-
+      // 额外检查：按路径判断是否已存在（逻辑去重）
+      if (normalizedNewPath != null) {
         LOGGER.debug("addTvShow: checking for duplicates, newPath='{}', normalized='{}', tvShows.size={}", newPath, normalizedNewPath,
             tvShows.size());
 
         for (TvShow existing : tvShows) {
           String existingPath = existing.getPath();
           if (StringUtils.isNotBlank(existingPath)) {
-            String normalizedExistingPath = isWebDav ? org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(existingPath)
-                : existingPath;
-            // Apply NFC normalization for WebDAV paths (consistent with getTvShowByPath)
-            if (isWebDav) {
-              normalizedExistingPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedExistingPath);
-            }
-            // 标准化尾部斜杠
-            normalizedExistingPath = normalizedExistingPath.endsWith("/") ? normalizedExistingPath.substring(0, normalizedExistingPath.length() - 1)
-                : normalizedExistingPath;
+            // 注意：这里仍需在循环内计算现有条目的归一化路径。
+            // 优化点：如果 TvShow 对象能缓存这一结果会更好，但目前先只优化比较逻辑。
+            String normalizedExistingPath = getNormalizedPathForComparison(existingPath);
 
             boolean equals = normalizedNewPath.equals(normalizedExistingPath);
             LOGGER.trace("addTvShow: comparing '{}' vs '{}' - equals={}", normalizedNewPath, normalizedExistingPath, equals);
@@ -342,6 +332,24 @@ public final class TvShowList extends AbstractModelObject {
     firePropertyChange(TV_SHOWS, null, tvShows);
     firePropertyChange(ADDED_TV_SHOW, null, newValue);
     firePropertyChange(TV_SHOW_COUNT, tvShows.size() - 1, tvShows.size());
+  }
+
+  /**
+   * Helper to normalize paths for duplicate checking. Handles WebDAV decoding, NFC normalization, and trailing slashes.
+   * 
+   * @param path
+   *          original path
+   * @return normalized path string
+   */
+  /**
+   * Helper to normalize paths for duplicate checking. Handles WebDAV decoding, NFC normalization, and trailing slashes.
+   * 
+   * @param path
+   *          original path
+   * @return normalized path string
+   */
+  private String getNormalizedPathForComparison(String path) {
+    return WebDavPathStrategy.getInstance().normalizePath(path);
   }
 
   /**
