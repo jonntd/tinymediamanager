@@ -204,10 +204,39 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     episodes.removeIf(Objects::isNull);
     dummyEpisodes.removeIf(Objects::isNull);
 
+    // 清理重复季数据：合并相同季号的季对象
+    cleanupDuplicateSeasons();
+
     // load dummy episodes
     for (TvShowEpisode episode : dummyEpisodes) {
       episode.setTvShow(this);
       addToSeason(episode);
+    }
+  }
+
+  /**
+   * 清理重复季数据：如果存在相同季号的多个季对象，将它们的剧集合并到第一个季对象中
+   */
+  private void cleanupDuplicateSeasons() {
+    Map<Integer, TvShowSeason> seasonMap = new HashMap<>();
+    List<TvShowSeason> duplicatesToRemove = new ArrayList<>();
+
+    for (TvShowSeason season : seasons) {
+      int seasonNumber = season.getSeason();
+      if (seasonMap.containsKey(seasonNumber)) {
+        // 发现重复季，标记为待删除
+        duplicatesToRemove.add(season);
+        LOGGER.info("发现重复季: 电视剧='{}', 季号={}", getTitle(), seasonNumber);
+      }
+      else {
+        seasonMap.put(seasonNumber, season);
+      }
+    }
+
+    // 移除重复季
+    if (!duplicatesToRemove.isEmpty()) {
+      LOGGER.info("清理电视剧 '{}' 中的 {} 个重复季", getTitle(), duplicatesToRemove.size());
+      seasons.removeAll(duplicatesToRemove);
     }
   }
 
@@ -801,6 +830,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
 
     // no one found - create one
     if (season == null) {
+      LOGGER.debug("getSeasonForEpisode: 创建新季，电视剧='{}', 季号={}", getTitle(), episode.getSeason());
       season = new TvShowSeason(episode.getSeason(), this);
       season.setTitle(getSeasonName(episode.getSeason()));
       season.setPlot(getSeasonOverview(episode.getSeason()));
@@ -838,7 +868,7 @@ public class TvShow extends MediaEntity implements IMediaInformation {
    *          the season number
    * @return the {@link TvShowSeason}
    */
-  public TvShowSeason getOrCreateSeason(int seasonNumber) {
+  public synchronized TvShowSeason getOrCreateSeason(int seasonNumber) {
     TvShowSeason season = getSeason(seasonNumber);
 
     if (season == null) {
@@ -932,16 +962,26 @@ public class TvShow extends MediaEntity implements IMediaInformation {
     }
   }
 
-  public void addSeason(TvShowSeason season) {
-    if (!seasons.contains(season)) {
-      int seasonCount = seasons.size();
-      seasons.add(season);
-      seasons.sort(TvShowSeason::compareTo);
-
-      firePropertyChange(ADDED_SEASON, null, season);
-      firePropertyChange(SEASON_COUNT, seasonCount, seasons.size());
-      EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createAddEvent(season));
+  public synchronized void addSeason(TvShowSeason season) {
+    // 使用季号进行去重检查，而不是依赖 equals() 方法
+    // 这防止了并发情况下多个相同季号的对象被添加
+    for (TvShowSeason s : seasons) {
+      if (s.getSeason() == season.getSeason()) {
+        LOGGER.warn("addSeason: 跳过重复季，电视剧='{}', 季号={}, 现有季对象={}, 新季对象={}", getTitle(), season.getSeason(), System.identityHashCode(s),
+            System.identityHashCode(season));
+        return; // 季已存在，跳过添加
+      }
     }
+
+    LOGGER.debug("addSeason: 添加新季，电视剧='{}' (UUID={}, Hash={}), 季号={}, 对象Hash={}", getTitle(), getDbId(), System.identityHashCode(this),
+        season.getSeason(), System.identityHashCode(season));
+    int seasonCount = seasons.size();
+    seasons.add(season);
+    seasons.sort(TvShowSeason::compareTo);
+
+    firePropertyChange(ADDED_SEASON, null, season);
+    firePropertyChange(SEASON_COUNT, seasonCount, seasons.size());
+    EventBus.publishEvent(TOPIC_TV_SHOWS, Event.createAddEvent(season));
   }
 
   void removeSeason(TvShowSeason season) {

@@ -2939,17 +2939,32 @@ public class TvShowRenamer {
     String newPathStr = newFilename.toString();
 
     // 检测源路径是否包含本地缓存路径特征（artwork/tvshows, artwork/movies, cache/image）
+    // 或者包含嵌入的 tvshows/ movies/ 模式（如 webdav://xxx/.../电影名/tvshows/电影名/poster.jpg）
     // 这些路径是本地缓存目录结构，不应该存在于 WebDAV 上
     boolean isOldPathCacheLike = oldPathStr.contains("/artwork/tvshows/") || oldPathStr.contains("\\artwork\\tvshows\\")
         || oldPathStr.contains("/artwork/movies/") || oldPathStr.contains("\\artwork\\movies\\") || oldPathStr.contains("/cache/image/")
         || oldPathStr.contains("\\cache\\image\\");
 
+    // 额外检测：WebDAV 路径中嵌入了 /tvshows/ 或 /movies/ 子目录
+    // 这表明本地缓存目录结构被错误拼接到了 WebDAV 路径中
+    // 例如：webdav://aaa/转存1p/.../黑镜 (2011)/tvshows/黑镜 (2011)/poster.jpg
+    // 正确应该是：webdav://aaa/转存1p/.../黑镜 (2011)/poster.jpg
+    if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && !isOldPathCacheLike) {
+      // 检测是否在 WebDAV 路径中包含 /tvshows/ 或 /movies/ 这种本地目录模式
+      // 注意：这里的 tvshows/ movies/ 必须包含斜杠以避免误匹配文件名
+      if (oldPathStr.contains("/tvshows/") || oldPathStr.contains("/movies/")) {
+        isOldPathCacheLike = true;
+      }
+    }
+
     // 如果源路径包含缓存路径特征，即使被格式化为 WebDAV 路径，也跳过复制
     // 因为这个文件实际上不存在于 WebDAV 服务器上
     // 返回 false 以避免 renamer 用错误的路径替换原有的 MediaFile
     if (isOldPathCacheLike) {
-      LOGGER.warn("Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, or cache/image). "
-          + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.", oldPathStr);
+      LOGGER.warn(
+          "Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, cache/image, or embedded tvshows/movies). "
+              + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.",
+          oldPathStr);
       return false; // 返回 false 让 renamer 知道复制失败，不替换 MediaFile
     }
 

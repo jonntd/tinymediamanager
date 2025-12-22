@@ -86,80 +86,81 @@ public class WebDavDataSourceHelper {
       result = WEBDAV_PREFIX + result.substring(8); // 8 = length of "webdav:/"
     }
 
-    // Step 2: Fix malformed paths where UUID or SourceID is directly followed by URL-encoded content
+    // Step 2: Fix malformed paths where UUID or SourceID is directly followed by URL-encoded or non-ASCII content
     if (result.startsWith(WEBDAV_PREFIX)) {
       String afterPrefix = result.substring(WEBDAV_PREFIX.length());
 
-      // Check if this looks like a missing slash: we have encoded chars (%) but no slash, or % appears before the slash
+      // Normalize multiple slashes at the beginning of the inner path
+      while (afterPrefix.startsWith("/")) {
+        afterPrefix = afterPrefix.substring(1);
+      }
+
       int percentIndex = afterPrefix.indexOf('%');
       int slashIndex = afterPrefix.indexOf('/');
+      int nonAsciiIndex = findFirstNonAsciiIndex(afterPrefix);
 
+      // Determine if we have a malformed path (missing root slash after SourceID)
+      boolean missingSlashDetected = false;
+      int problemIndex = -1;
+
+      // Case 1: URL-encoded content appears before first slash
       if (percentIndex >= 0 && (slashIndex == -1 || percentIndex < slashIndex)) {
-        // Missing slash detected!
+        missingSlashDetected = true;
+        problemIndex = percentIndex;
+      }
+      // Case 2: Non-ASCII content appears before first slash (e.g., "aaa转存1p")
+      else if (nonAsciiIndex >= 0 && (slashIndex == -1 || nonAsciiIndex < slashIndex)) {
+        missingSlashDetected = true;
+        problemIndex = nonAsciiIndex;
+      }
+
+      if (missingSlashDetected && problemIndex > 0) {
         String sourceId;
         String remotePath;
 
-        // Strategy A: Check for UUID (most precise)
         if (afterPrefix.length() >= 36 && isValidUuidFormat(afterPrefix.substring(0, 36))) {
           sourceId = afterPrefix.substring(0, 36);
           remotePath = afterPrefix.substring(36);
         }
         else {
-          // Strategy B: Generic - assume SourceID ends before the first '%'
-          // (Source IDs should valid hostnames/identifiers and not contain %)
-          if (percentIndex > 0) {
-            sourceId = afterPrefix.substring(0, percentIndex);
-            remotePath = afterPrefix.substring(percentIndex);
-          }
-          else {
-            // Edge case: path starts with %. Empty SourceID?
-            // Keep original behavior (do nothing), wait for validation to fail later
-            sourceId = null;
-            remotePath = null;
-          }
+          sourceId = afterPrefix.substring(0, problemIndex);
+          remotePath = afterPrefix.substring(problemIndex);
         }
 
-        if (sourceId != null) {
+        if (sourceId != null && !sourceId.isEmpty()) {
           result = WEBDAV_PREFIX + sourceId + "/" + remotePath;
-          // LOGGER.debug("Fixed malformed WebDAV path: added missing slash. Original: '{}', Fixed: '{}'", path, result);
         }
       }
     }
 
-    // Step 3: Decode URL-encoded characters in the path (after UUID)
-    // This converts %E5%88%AE%E5%89%8A%E6%B5%8B%E8%AF%95 -> 刮削测试
-    if (result.startsWith(WEBDAV_PREFIX) && result.contains("%")) {
+    // Step 3: Decode URL-encoded characters and apply strict normalization
+    if (result.startsWith(WEBDAV_PREFIX)) {
       try {
         String afterPrefix = result.substring(WEBDAV_PREFIX.length());
         int firstSlash = afterPrefix.indexOf('/');
+
         if (firstSlash > 0) {
           String sourceId = afterPrefix.substring(0, firstSlash);
           String remotePath = afterPrefix.substring(firstSlash);
-          // Decode the remote path portion only if it contains URL-encoded characters
+
           if (remotePath.contains("%")) {
-            // Preserve '+' by pre-encoding it before decoding
             String preservedPlus = remotePath.replace("+", "%2B");
-            // Escape lone '%' characters that are not valid URL-encoded sequences
             preservedPlus = escapeLonePercentSigns(preservedPlus);
-            String decodedPath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
-            // Apply NFC normalization after decoding to ensure consistent format
-            // This is critical: WebDAV servers may return NFD-format Unicode,
-            // but we need NFC for consistent comparison and storage
-            decodedPath = normalizeToNFC(decodedPath);
-            result = WEBDAV_PREFIX + sourceId + decodedPath;
-            // LOGGER.debug("Decoded URL-encoded WebDAV path: '{}' -> '{}'", path, result);
+            remotePath = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
           }
+
+          // Reconstruct with guaranteed format: webdav://sourceId/remotePath
+          result = WEBDAV_PREFIX + sourceId + remotePath;
         }
       }
       catch (Exception e) {
-        LOGGER.warn("Failed to decode WebDAV path: {} - {}", result, e.getMessage());
+        LOGGER.warn("Failed to normalize WebDAV path: {} - {}", result, e.getMessage());
       }
     }
 
-    // Always apply NFC normalization to the final result
-    // This ensures consistent Unicode format regardless of whether the path was URL-encoded or not
-    // Critical for path comparison: "刮削测试" (NFC) must match "刮削测试" (NFD)
-    return normalizeToNFC(result);
+    // Always apply NFC normalization and trim
+    result = normalizeToNFC(result);
+    return result != null ? result.trim() : null;
   }
 
   /**
@@ -291,6 +292,28 @@ public class WebDavDataSourceHelper {
     }
 
     return true;
+  }
+
+  /**
+   * Find the index of the first non-ASCII character in a string. Non-ASCII characters include Chinese characters, symbols, etc.
+   * 
+   * @param str
+   *          the string to search
+   * @return the index of the first non-ASCII character, or -1 if none found
+   */
+  private static int findFirstNonAsciiIndex(String str) {
+    if (str == null || str.isEmpty()) {
+      return -1;
+    }
+
+    for (int i = 0; i < str.length(); i++) {
+      char c = str.charAt(i);
+      if (c > 127) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 
   /**

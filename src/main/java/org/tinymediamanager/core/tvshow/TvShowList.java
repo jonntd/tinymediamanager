@@ -506,6 +506,22 @@ public final class TvShowList extends AbstractModelObject {
     tvShows.remove(tvShow);
     readWriteLock.writeLock().unlock();
 
+    LOGGER.info("deleteTvShow: Started deletion for '{}' (UUID={}, Hash={})", tvShow.getTitle(), tvShow.getDbId(), System.identityHashCode(tvShow));
+
+    // Step 0: Pre-submit physical deletion to ensure it runs even if UI/cache sync fails
+    DELETE_EXECUTOR.submit(() -> {
+      LOGGER.info("Starting asynchronous delete for TV show: {} (Path={})", tvShow.getTitle(), tvShow.getPath());
+      try {
+        long startTime = System.currentTimeMillis();
+        tvShow.deleteFilesSafely();
+        long duration = System.currentTimeMillis() - startTime;
+        LOGGER.info("Asynchronous delete completed in {}ms for TV show: {}", duration, tvShow.getTitle());
+      }
+      catch (Exception e) {
+        LOGGER.error("Asynchronous delete failed for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
+      }
+    });
+
     // Step 1: Delete all episodes from DB and clean cache
     for (TvShowEpisode episode : tvShow.getEpisodes()) {
       TvShowModuleManager.getInstance().getTvShowList().removeEpisodeFromDb(episode);
@@ -538,33 +554,23 @@ public final class TvShowList extends AbstractModelObject {
       LOGGER.error("Error removing TV show '{}' from DB - '{}'", tvShow.getTitle(), e.getMessage());
     }
 
-    // Step 4: Remove the image cache for the TV show
-    for (MediaFile mf : tvShow.getMediaFiles()) {
-      if (mf.isGraphic()) {
-        ImageCache.invalidateCachedImage(mf);
+    // Step 4 \u0026 5: Optional sync operations with try-catch
+    try {
+      // Step 4: Remove the image cache for the TV show
+      for (MediaFile mf : tvShow.getMediaFiles()) {
+        if (mf.isGraphic()) {
+          ImageCache.invalidateCachedImage(mf);
+        }
       }
+
+      // Step 5: Fire property changes to update UI immediately
+      firePropertyChange(TV_SHOWS, null, tvShows);
+      firePropertyChange(REMOVED_TV_SHOW, null, tvShow);
+      firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
     }
-
-    // Step 5: Fire property changes to update UI immediately
-    firePropertyChange(TV_SHOWS, null, tvShows);
-    firePropertyChange(REMOVED_TV_SHOW, null, tvShow);
-    firePropertyChange(TV_SHOW_COUNT, oldValue, tvShows.size());
-
-    // Step 6: Delete files safely asynchronously in a queued manner
-    // This way, the user sees the TV show removed from UI immediately
-    // and the file deletion happens in the background, one after another
-    DELETE_EXECUTOR.submit(() -> {
-      LOGGER.info("Starting asynchronous delete for TV show: {}", tvShow.getTitle());
-      try {
-        long startTime = System.currentTimeMillis();
-        tvShow.deleteFilesSafely();
-        long duration = System.currentTimeMillis() - startTime;
-        LOGGER.info("Asynchronous delete completed in {}ms for TV show: {}", duration, tvShow.getTitle());
-      }
-      catch (Exception e) {
-        LOGGER.error("Asynchronous delete failed for TV show '{}' - '{}'", tvShow.getTitle(), e.getMessage());
-      }
-    });
+    catch (Exception e) {
+      LOGGER.warn("Error during post-deletion UI/cache cleanup for '{}': {}", tvShow.getTitle(), e.getMessage());
+    }
   }
 
   /**
@@ -696,6 +702,9 @@ public final class TvShowList extends AbstractModelObject {
     toRemove.clear();
     ObjectReader seasonObjectReader = TvShowModuleManager.getInstance().getSeasonObjectReader();
 
+    // 跟踪每个电视剧已加载的季号，用于检测重复
+    Map<UUID, Map<Integer, UUID>> tvShowSeasonTracker = new HashMap<>();
+
     start = System.nanoTime();
     new ArrayList<>(seasonMap.keyList()).forEach(uuid -> {
       String json = "";
@@ -707,8 +716,20 @@ public final class TvShowList extends AbstractModelObject {
         // assign it to the right TV show
         TvShow tvShow = tvShowUuidMap.get(season.getTvShowDbId());
         if (tvShow != null) {
-          season.setTvShow(tvShow);
-          tvShow.addSeason(season);
+          // 检查是否已经加载了相同季号的季
+          Map<Integer, UUID> seasonNumberMap = tvShowSeasonTracker.computeIfAbsent(tvShow.getDbId(), k -> new HashMap<>());
+          int seasonNumber = season.getSeason();
+
+          if (seasonNumberMap.containsKey(seasonNumber)) {
+            // 发现重复季记录，删除这个重复的数据库记录
+            LOGGER.warn("发现重复季数据库记录: 电视剧='{}', 季号={}, UUID={}，将从数据库中删除", tvShow.getTitle(), seasonNumber, uuid);
+            toRemove.add(uuid);
+          }
+          else {
+            seasonNumberMap.put(seasonNumber, uuid);
+            season.setTvShow(tvShow);
+            tvShow.addSeason(season);
+          }
         }
         else {
           // or remove orphans
@@ -1454,7 +1475,7 @@ public final class TvShowList extends AbstractModelObject {
           decodedShowPath = decodedShowPath.endsWith("/") ? decodedShowPath.substring(0, decodedShowPath.length() - 1) : decodedShowPath;
 
           // Log comparison details (INFO level for visibility)
-          boolean equals = decodedShowPath.equals(decodedPathStr);
+          boolean equals = decodedShowPath.trim().equalsIgnoreCase(decodedPathStr.trim());
           LOGGER.trace("getTvShowByPath: comparing '{}' vs '{}' - equals={}", decodedPathStr, decodedShowPath, equals);
 
           if (equals) {

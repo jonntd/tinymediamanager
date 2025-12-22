@@ -20,6 +20,8 @@ import static org.tinymediamanager.core.bus.EventBus.TOPIC_TV_SHOWS;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import javax.swing.tree.TreeNode;
 
@@ -78,11 +80,32 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
 
     // check if existing
     TmmTreeNode tvShowNode = getNodeFromCache(tvShow);
+
+    if (tvShowNode == null) {
+      // 兜底方案：如果引用不匹配，尝试按 UUID 匹配（处理内存/数据库中存在重复对象实体的情况）
+      UUID id = tvShow.getDbId();
+      for (java.util.Map.Entry<Object, TmmTreeNode> entry : nodeMap.entrySet()) {
+        if (entry.getKey() instanceof TvShow t && Objects.equals(t.getDbId(), id)) {
+          tvShowNode = entry.getValue();
+          LOGGER.debug("processTvShow: Found node via UUID fallback for '{}' (Handled mismatching object reference)", tvShow.getTitle());
+          break;
+        }
+      }
+    }
+
     LOGGER.trace("processTvShow: nodeFromCache={}", tvShowNode != null ? "EXISTS" : "NULL");
 
     if (tvShowNode != null) {
       if (Event.TYPE_REMOVE.equals(eventType)) {
         // TV show deleted
+        // 如果我们是通过 UUID 找到的，需要从 nodeMap 中移除那个原始引用
+        if (getNodeFromCache(tvShow) == null) {
+          // 通过获取节点关联的真正对象来移除它
+          Object originalObject = tvShowNode.getUserObject();
+          if (originalObject != null) {
+            removeNodeFromCache(originalObject);
+          }
+        }
         removeTvShow(tvShow);
       }
       else {
@@ -94,7 +117,8 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     else {
       // TV show added OR missing in cache (recovery mode)
       if (!Event.TYPE_REMOVE.equals(eventType)) {
-        LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD", tvShow.getTitle(), eventType);
+        LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD. TvShow Hash={}", tvShow.getTitle(), eventType,
+            System.identityHashCode(tvShow));
         addTvShow(tvShow);
       }
     }
@@ -275,16 +299,24 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       List<TvShow> shows = new ArrayList<>(tvShowList.getTvShows());
       LOGGER.debug("getChildren(root): tvShowList.size={}", shows.size());
 
-      // 使用路径去重,防止同一路径的电视节目创建多个节点
+      // 使用规范化路径去重,防止同一路径的电视节目创建多个节点 (优先考虑 WebDAV 解码逻辑)
       java.util.Set<String> seenPaths = new java.util.HashSet<>();
       for (TvShow tvShow : shows) {
         String path = tvShow.getPath();
-        if (path != null && seenPaths.contains(path)) {
-          LOGGER.warn("getChildren: DUPLICATE PATH detected for '{}', path='{}', skipping", tvShow.getTitle(), path);
+        String normalizedPath = path;
+
+        if (org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(path)) {
+          normalizedPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(path);
+          normalizedPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedPath);
+        }
+
+        if (normalizedPath != null && seenPaths.contains(normalizedPath)) {
+          LOGGER.warn("getChildren: DUPLICATE NORM-PATH detected for '{}', path='{}', norm='{}', skipping. TvShow Hash={}", tvShow.getTitle(), path,
+              normalizedPath, System.identityHashCode(tvShow));
           continue;
         }
-        if (path != null) {
-          seenPaths.add(path);
+        if (normalizedPath != null) {
+          seenPaths.add(normalizedPath);
         }
 
         TmmTreeNode node = getOrCreateNode(tvShow);
@@ -295,9 +327,19 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       return nodes;
     }
     else if (parent.getUserObject() instanceof TvShow tvShow) {
+      LOGGER.debug("getChildren: 正在获取电视剧子节点。电视剧='{}' (UUID={}, Hash={}), 季数量={}", tvShow.getTitle(), tvShow.getDbId(),
+          System.identityHashCode(tvShow), tvShow.getSeasons().size());
       List<TmmTreeNode> nodes = new ArrayList<>();
+      // 使用季号去重，防止UI显示重复季
+      java.util.Set<Integer> seenSeasonNumbers = new java.util.HashSet<>();
       for (TvShowSeason season : tvShow.getSeasons()) {
         if (!season.getEpisodesForDisplay().isEmpty()) {
+          int seasonNumber = season.getSeason();
+          if (seenSeasonNumbers.contains(seasonNumber)) {
+            LOGGER.warn("getChildren: 跳过重复季，电视剧='{}', 季号={}, 季对象Hash={}", tvShow.getTitle(), seasonNumber, System.identityHashCode(season));
+            continue;
+          }
+          seenSeasonNumbers.add(seasonNumber);
           nodes.add(getOrCreateNode(season));
         }
       }
@@ -332,15 +374,10 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
 
     // add a new node
     TmmTreeNode node = new TvShowTreeNode(tvShow, this);
+    LOGGER.debug("addTvShow: CREATED NEW NODE for '{}', node={}, tvShow Hash={}", tvShow.getTitle(), System.identityHashCode(node),
+        System.identityHashCode(tvShow));
     putNodeToCache(tvShow, node);
     firePropertyChange(NODE_INSERTED, null, node);
-
-    // check if there are already seasons for this tv show
-    for (TvShowSeason season : tvShow.getSeasons()) {
-      if (!season.getEpisodesForDisplay().isEmpty()) {
-        addTvShowSeason(season);
-      }
-    }
 
     return node;
   }
@@ -394,6 +431,8 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
   }
 
   private TmmTreeNode addTvShowSeason(TvShowSeason season) {
+    LOGGER.debug("addTvShowSeason: 尝试添加季节点。电视剧='{}' (UUID={}, Hash={}), 季号={}, 季对象Hash={}", season.getTvShow().getTitle(),
+        season.getTvShow().getDbId(), System.identityHashCode(season.getTvShow()), season.getSeason(), System.identityHashCode(season));
     // check if this season has already been added
     TmmTreeNode cachedNode = getNodeFromCache(season);
     if (cachedNode != null) {
@@ -402,8 +441,11 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
 
     // Integrity Check: Ensure parent TV Show node exists
     if (getNodeFromCache(season.getTvShow()) == null) {
-      LOGGER.debug("addTvShowSeason: parent TvShow node missing for '{}' - auto-creating", season.getTvShow().getTitle());
+      LOGGER.debug("addTvShowSeason: parent TvShow node missing for '{}' (UUID={}, ShowHash={}) - auto-creating", season.getTvShow().getTitle(),
+          season.getTvShow().getDbId(), System.identityHashCode(season.getTvShow()));
       addTvShow(season.getTvShow());
+      // 电视剧节点创建后，其子季会自动通过 getChildren 加载，无需手动插入
+      return getNodeFromCache(season);
     }
 
     // add a new node (only if there is at least one EP inside)
@@ -429,6 +471,16 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     TmmTreeNode seasonNode = getNodeFromCache(episode.getTvShowSeason());
     if (seasonNode == null) {
       addTvShowSeason(episode.getTvShowSeason());
+      // 如果由于季节点缺失导致季/剧节点被延迟创建，这里通过 cache 返回
+      if (getNodeFromCache(episode) != null) {
+        return;
+      }
+    }
+
+    // 再次检查缓存，可能由于 addTvShowSeason 触发了完整的 TV show 刷新导致 episode 已被缓存
+    cachedNode = getNodeFromCache(episode);
+    if (cachedNode != null) {
+      return;
     }
 
     // add a new node
