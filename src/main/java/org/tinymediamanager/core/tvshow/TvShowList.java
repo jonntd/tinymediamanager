@@ -365,15 +365,17 @@ public final class TvShowList extends AbstractModelObject {
 
     // For WebDAV paths, use string comparison instead of Path comparison
     // because Paths.get() doesn't handle webdav:// URLs correctly
-    boolean isWebDav = path.startsWith("webdav://");
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(path);
 
     for (int i = tvShows.size() - 1; i >= 0; i--) {
       TvShow tvShow = tvShows.get(i);
       boolean matches;
 
       if (isWebDav) {
-        // For WebDAV, compare strings directly
-        matches = path.equals(tvShow.getDataSource());
+        // For WebDAV, compare normalized strings
+        String normalizedPath = WebDavDataSourceHelper.normalizeWebDavPath(path);
+        String normalizedDs = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getDataSource());
+        matches = normalizedPath.equals(normalizedDs);
       }
       else {
         // For local paths, use Path comparison
@@ -390,21 +392,63 @@ public final class TvShowList extends AbstractModelObject {
    * exchanges the given datasource in the entities/database with a new one
    */
   void exchangeDatasource(String oldDatasource, String newDatasource) {
-    Path oldPath = Paths.get(oldDatasource);
-    List<TvShow> tvShowsToChange = tvShows.stream().filter(tvShow -> oldPath.equals(Paths.get(tvShow.getDataSource()))).toList();
+    // 检测是否是 WebDAV 路径
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(oldDatasource) || WebDavDataSourceHelper.isWebDavPath(newDatasource);
+    List<TvShow> tvShowsToChange;
     List<MediaFile> imagesToCache = new ArrayList<>();
+
+    if (isWebDav) {
+      // WebDAV 路径使用字符串比较
+      String normalizedOldDs = WebDavDataSourceHelper.normalizeWebDavPath(oldDatasource);
+      tvShowsToChange = tvShows.stream()
+          .filter(tvShow -> {
+            String normalizedDs = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getDataSource());
+            return normalizedOldDs.equals(normalizedDs);
+          })
+          .toList();
+    }
+    else {
+      // 本地路径使用 Path 比较
+      Path oldPath = Paths.get(oldDatasource);
+      tvShowsToChange = tvShows.stream().filter(tvShow -> oldPath.equals(Paths.get(tvShow.getDataSource()))).toList();
+    }
 
     for (TvShow tvShow : tvShowsToChange) {
       Path oldTvShowPath = tvShow.getPathNIO();
       Path newTvShowPath;
 
-      try {
-        // try to _cleanly_ calculate the relative path
-        newTvShowPath = Paths.get(newDatasource, Paths.get(tvShow.getDataSource()).relativize(oldTvShowPath).toString());
+      if (isWebDav) {
+        // WebDAV 路径使用字符串操作
+        String normalizedOldPath = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getPath());
+        String normalizedOldDs = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getDataSource());
+        String normalizedNewDs = WebDavDataSourceHelper.normalizeWebDavPath(newDatasource);
+
+        // 计算相对路径部分
+        String relativePart = normalizedOldPath.startsWith(normalizedOldDs)
+            ? normalizedOldPath.substring(normalizedOldDs.length())
+            : "";
+        if (relativePart.startsWith("/")) {
+          relativePart = relativePart.substring(1);
+        }
+
+        // 构建新路径
+        String newPath = normalizedNewDs;
+        if (!newPath.endsWith("/")) {
+          newPath = newPath + "/";
+        }
+        if (!relativePart.isEmpty()) {
+          newPath = newPath + relativePart;
+        }
+        newTvShowPath = Paths.get(WebDavDataSourceHelper.normalizeWebDavPath(newPath));
       }
-      catch (Exception e) {
-        // if that fails (maybe migrate from windows to linux/macos), just try a simple string replacement
-        newTvShowPath = Paths.get(newDatasource, FilenameUtils.separatorsToSystem(tvShow.getPath().replace(tvShow.getDataSource(), "")));
+      else {
+        // 本地路径使用 Path 操作
+        try {
+          newTvShowPath = Paths.get(newDatasource, Paths.get(tvShow.getDataSource()).relativize(oldTvShowPath).toString());
+        }
+        catch (Exception e) {
+          newTvShowPath = Paths.get(newDatasource, FilenameUtils.separatorsToSystem(tvShow.getPath().replace(tvShow.getDataSource(), "")));
+        }
       }
 
       tvShow.setDataSource(newDatasource);
@@ -821,6 +865,82 @@ public final class TvShowList extends AbstractModelObject {
       tvShowsFromDb.remove(tvShow);
     }
 
+    //////////////////////////////////////////////////
+    // cleanup: merge duplicate path TvShows
+    // (this can happen after a folder merge where the source TvShow wasn't properly deleted)
+    //////////////////////////////////////////////////
+    java.util.Map<String, TvShow> pathToShowMap = new java.util.HashMap<>();
+    List<TvShow> duplicatesToRemove = new java.util.ArrayList<>();
+
+    for (TvShow tvShow : tvShowsFromDb) {
+      String path = tvShow.getPath();
+      if (StringUtils.isNotBlank(path)) {
+        String normalizedPath = getNormalizedPathForComparison(path);
+        TvShow existing = pathToShowMap.get(normalizedPath);
+
+        if (existing != null) {
+          // Found duplicate path - merge episodes into existing and mark for removal
+          LOGGER.info("DB Load: Found duplicate path TvShows - merging '{}' ({} episodes) into '{}' ({} episodes), path='{}'", tvShow.getTitle(),
+              tvShow.getEpisodeCount(), existing.getTitle(), existing.getEpisodeCount(), path);
+
+          // Merge episodes from duplicate into existing
+          for (TvShowEpisode episode : new java.util.ArrayList<>(tvShow.getEpisodes())) {
+            List<TvShowEpisode> existingEps = existing.getEpisode(episode.getSeason(), episode.getEpisode());
+            if (existingEps.isEmpty()) {
+              // Episode doesn't exist in target, move it (detach from source, attach to target)
+              tvShow.detachEpisode(episode);
+              episode.setTvShow(existing);
+              existing.addEpisode(episode);
+            }
+            else {
+              // Episode already exists - compare which one is better using enhanced comparison
+              TvShowEpisode existingEp = existingEps.get(0);
+              EpisodeComparisonResult comparison = compareEpisodes(episode, existingEp);
+
+              if (comparison == EpisodeComparisonResult.SOURCE_BETTER) {
+                // Source episode is better - replace target with source
+                existing.removeEpisode(existingEp);
+                tvShow.detachEpisode(episode);
+                episode.setTvShow(existing);
+                existing.addEpisode(episode);
+                LOGGER.debug("DB Load: Replacing episode S{}E{} - source is better", episode.getSeason(), episode.getEpisode());
+              }
+              else if (comparison == EpisodeComparisonResult.EQUAL) {
+                // Episodes are equal - prefer source (it may have updated paths)
+                existing.removeEpisode(existingEp);
+                tvShow.detachEpisode(episode);
+                episode.setTvShow(existing);
+                existing.addEpisode(episode);
+                LOGGER.debug("DB Load: Replacing episode S{}E{} - episodes are equal, using source", episode.getSeason(), episode.getEpisode());
+              }
+              // else: target is better, just skip (source will be removed with tvShow)
+            }
+          }
+
+          // Save the existing TvShow with merged episodes
+          existing.saveToDb();
+          // Also save each newly added episode to update their TvShow association
+          for (TvShowEpisode ep : existing.getEpisodes()) {
+            ep.saveToDb();
+          }
+          LOGGER.debug("DB Load: Saved existing TvShow '{}' with {} episodes after merge", existing.getTitle(), existing.getEpisodeCount());
+
+          duplicatesToRemove.add(tvShow);
+          // Also remove from DB
+          TvShowModuleManager.getInstance().removeTvShowFromDb(tvShow);
+        }
+        else {
+          pathToShowMap.put(normalizedPath, tvShow);
+        }
+      }
+    }
+
+    // Remove duplicates from the list
+    tvShowsFromDb.removeAll(duplicatesToRemove);
+    if (!duplicatesToRemove.isEmpty()) {
+      LOGGER.info("DB Load: Removed {} duplicate TvShows during startup", duplicatesToRemove.size());
+    }
+
     // and add all TV shows to the UI
     tvShows.addAll(tvShowsFromDb);
   }
@@ -879,6 +999,64 @@ public final class TvShowList extends AbstractModelObject {
       return true;
     }
     return false;
+  }
+
+  /**
+   * 剧集比较结果枚举
+   */
+  private enum EpisodeComparisonResult {
+    SOURCE_BETTER,  // 源剧集更好
+    TARGET_BETTER,  // 目标剧集更好
+    EQUAL           // 两者相等
+  }
+
+  /**
+   * 比较两个剧集，判断哪个更完整
+   * 比较策略：视频文件数量 > 总媒体文件数量 > 文件总大小
+   *
+   * @param source 源剧集
+   * @param target 目标剧集
+   * @return 比较结果
+   */
+  private EpisodeComparisonResult compareEpisodes(TvShowEpisode source, TvShowEpisode target) {
+    try {
+      // 1. 优先比较视频文件数量（视频是最重要的）
+      int sourceVideoCount = source.getMediaFiles(MediaFileType.VIDEO).size();
+      int targetVideoCount = target.getMediaFiles(MediaFileType.VIDEO).size();
+
+      if (sourceVideoCount != targetVideoCount) {
+        return sourceVideoCount > targetVideoCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      // 2. 视频数量相同，比较总媒体文件数量
+      int sourceTotalCount = source.getMediaFiles().size();
+      int targetTotalCount = target.getMediaFiles().size();
+
+      if (sourceTotalCount != targetTotalCount) {
+        return sourceTotalCount > targetTotalCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      // 3. 总数量相同，比较文件总大小
+      long sourceSize = 0;
+      long targetSize = 0;
+
+      for (MediaFile mf : source.getMediaFiles()) {
+        sourceSize += mf.getFilesize();
+      }
+      for (MediaFile mf : target.getMediaFiles()) {
+        targetSize += mf.getFilesize();
+      }
+
+      if (sourceSize != targetSize) {
+        return sourceSize > targetSize ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      return EpisodeComparisonResult.EQUAL;
+    }
+    catch (Exception e) {
+      LOGGER.error("Error comparing episodes S{}E{}: {}", source.getSeason(), source.getEpisode(), e.getMessage());
+      return EpisodeComparisonResult.EQUAL;
+    }
   }
 
   public void persistTvShow(TvShow tvShow) {
@@ -1463,16 +1641,9 @@ public final class TvShowList extends AbstractModelObject {
         // For WebDAV paths, compare strings directly (both decoded)
         // For local paths, use toAbsolutePath() for proper comparison
         if (isWebDav) {
-          // Decode both paths for comparison
-          String decodedPathStr = WebDavDataSourceHelper.decodeWebDavPath(pathStr);
-          String decodedShowPath = WebDavDataSourceHelper.decodeWebDavPath(showPath.toString());
-          // Apply NFC normalization for consistent comparison with stored paths
-          // (paths are stored in NFC format, so comparison must also use NFC)
-          decodedPathStr = WebDavDataSourceHelper.normalizeToNFC(decodedPathStr);
-          decodedShowPath = WebDavDataSourceHelper.normalizeToNFC(decodedShowPath);
-          // Normalize trailing slashes
-          decodedPathStr = decodedPathStr.endsWith("/") ? decodedPathStr.substring(0, decodedPathStr.length() - 1) : decodedPathStr;
-          decodedShowPath = decodedShowPath.endsWith("/") ? decodedShowPath.substring(0, decodedShowPath.length() - 1) : decodedShowPath;
+          // Use the unified normalization which handles decoding, NFC, and trailing slashes
+          String decodedPathStr = WebDavDataSourceHelper.normalizeWebDavPath(pathStr);
+          String decodedShowPath = WebDavDataSourceHelper.normalizeWebDavPath(showPath.toString());
 
           // Log comparison details (INFO level for visibility)
           boolean equals = decodedShowPath.trim().equalsIgnoreCase(decodedPathStr.trim());

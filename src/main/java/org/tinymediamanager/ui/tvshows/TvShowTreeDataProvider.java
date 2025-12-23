@@ -114,14 +114,51 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
         updateDummyEpisodes();
       }
     }
-    else {
-      // TV show added OR missing in cache (recovery mode)
-      if (!Event.TYPE_REMOVE.equals(eventType)) {
-        LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD. TvShow Hash={}", tvShow.getTitle(), eventType,
-            System.identityHashCode(tvShow));
-        addTvShow(tvShow);
+    // TV show added OR missing in cache (recovery mode)
+    if (!Event.TYPE_REMOVE.equals(eventType)) {
+      // 深度检查：即使节点引用和 UUID 为空，也要检查物理路径是否已存在 (解决 WebDAV 重复显示)
+      TmmTreeNode existingNode = findNodeByPath(tvShow);
+      if (existingNode != null) {
+        LOGGER.debug("processTvShow: DUPLICATE NODE PREVENTED for '{}' by path comparison. Existing node userObject Hash={}", tvShow.getTitle(),
+            System.identityHashCode(existingNode.getUserObject()));
+        // 如果物理路径节点已存在，但 ID 不匹配，手动将此 ID 关联到现有节点，防止刷新失败
+        putNodeToCache(tvShow, existingNode);
+        return;
+      }
+
+      LOGGER.debug("processTvShow: node missing for '{}' (event={}) - triggering RECOVERY/ADD. TvShow Hash={}", tvShow.getTitle(), eventType,
+          System.identityHashCode(tvShow));
+      addTvShow(tvShow);
+    }
+  }
+
+  /**
+   * 按物理路径寻找已存在的节点
+   */
+  private TmmTreeNode findNodeByPath(TvShow tvShow) {
+    String normToFind = getNormalizedPath(tvShow);
+    if (normToFind == null) {
+      return null;
+    }
+
+    // Create a snapshot to avoid ConcurrentModificationException
+    java.util.Map<Object, TmmTreeNode> snapshot;
+    synchronized (nodeMap) {
+      snapshot = new java.util.HashMap<>(nodeMap);
+    }
+
+    for (java.util.Map.Entry<Object, TmmTreeNode> entry : snapshot.entrySet()) {
+      if (entry.getKey() instanceof TvShow t) {
+        if (normToFind.equals(getNormalizedPath(t))) {
+          return entry.getValue();
+        }
       }
     }
+    return null;
+  }
+
+  private String getNormalizedPath(TvShow tvShow) {
+    return org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getPath());
   }
 
   private void processSeason(TvShowSeason season, String eventType) {
@@ -302,17 +339,11 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
       // 使用规范化路径去重,防止同一路径的电视节目创建多个节点 (优先考虑 WebDAV 解码逻辑)
       java.util.Set<String> seenPaths = new java.util.HashSet<>();
       for (TvShow tvShow : shows) {
-        String path = tvShow.getPath();
-        String normalizedPath = path;
-
-        if (org.tinymediamanager.core.webdav.WebDavDataSourceHelper.isWebDavPath(path)) {
-          normalizedPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.decodeWebDavPath(path);
-          normalizedPath = org.tinymediamanager.core.webdav.WebDavDataSourceHelper.normalizeToNFC(normalizedPath);
-        }
+        String normalizedPath = getNormalizedPath(tvShow);
 
         if (normalizedPath != null && seenPaths.contains(normalizedPath)) {
-          LOGGER.warn("getChildren: DUPLICATE NORM-PATH detected for '{}', path='{}', norm='{}', skipping. TvShow Hash={}", tvShow.getTitle(), path,
-              normalizedPath, System.identityHashCode(tvShow));
+          LOGGER.debug("getChildren: DUPLICATE NORM-PATH detected for '{}', path='{}', norm='{}', skipping. TvShow Hash={}", tvShow.getTitle(),
+              tvShow.getPath(), normalizedPath, System.identityHashCode(tvShow));
           continue;
         }
         if (normalizedPath != null) {
@@ -365,6 +396,14 @@ public class TvShowTreeDataProvider extends TmmTreeDataProvider<TmmTreeNode> {
     TmmTreeNode cachedNode = getNodeFromCache(tvShow);
     if (cachedNode != null) {
       return cachedNode;
+    }
+
+    // 按物理路径兜底检查，防止重复插入
+    TmmTreeNode existingNode = findNodeByPath(tvShow);
+    if (existingNode != null) {
+      LOGGER.warn("addTvShow: Prevented duplicate node insertion for '{}' by path check", tvShow.getTitle());
+      putNodeToCache(tvShow, existingNode);
+      return existingNode;
     }
 
     // 验证电视节目是否仍在 tvShowList 中，防止已删除的电视节目被重新添加到 UI

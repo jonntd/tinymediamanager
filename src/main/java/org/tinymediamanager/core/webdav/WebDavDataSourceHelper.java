@@ -157,10 +157,32 @@ public class WebDavDataSourceHelper {
         LOGGER.warn("Failed to normalize WebDAV path: {} - {}", result, e.getMessage());
       }
     }
+    else if (result.contains("%")) {
+      // Step 4: For non-webdav:// paths (pure remote paths), also ensure decoding
+      try {
+        String preservedPlus = result.replace("+", "%2B");
+        preservedPlus = escapeLonePercentSigns(preservedPlus);
+        result = java.net.URLDecoder.decode(preservedPlus, "UTF-8");
+      }
+      catch (Exception e) {
+        // ignore
+      }
+    }
 
     // Always apply NFC normalization and trim
     result = normalizeToNFC(result);
-    return result != null ? result.trim() : null;
+    if (result != null) {
+      result = result.trim();
+      // Normalize trailing slashes
+      while (result.endsWith("/") && result.length() > 1) {
+        // Optimization: for webdav:// paths, don't strip the triple slash if it's just the root
+        if (result.startsWith(WEBDAV_PREFIX) && result.length() <= WEBDAV_PREFIX.length()) {
+          break;
+        }
+        result = result.substring(0, result.length() - 1);
+      }
+    }
+    return result;
   }
 
   /**
@@ -485,31 +507,9 @@ public class WebDavDataSourceHelper {
    * @return the decoded path with readable characters
    */
   public static String decodeWebDavPath(String webDavPath) {
-    if (webDavPath == null || webDavPath.isEmpty()) {
-      return webDavPath;
-    }
-
-    // If it's a full WebDAV path, parse it first
-    if (isWebDavPath(webDavPath)) {
-      String[] parsed = parseWebDavPath(webDavPath);
-      if (parsed == null) {
-        return decodeUrlPath(webDavPath);
-      }
-
-      // Reconstruct with decoded path
-      String decodedRemotePath = decodeUrlPath(parsed[1]);
-
-      // Get source name if possible
-      WebDavSource source = getWebDavSource(parsed[0]);
-      if (source != null) {
-        return "webdav://" + parsed[0] + decodedRemotePath;
-      }
-
-      return "webdav://" + parsed[0] + decodedRemotePath;
-    }
-
-    // Otherwise just decode the path component
-    return decodeUrlPath(webDavPath);
+    // We leverage normalizeWebDavPath as it already handles all decoding, NFC normalization,
+    // and trailing slash removal, ensuring consistency across the application.
+    return normalizeWebDavPath(webDavPath);
   }
 
   /**

@@ -811,6 +811,23 @@ public class TvShow extends MediaEntity implements IMediaInformation {
   }
 
   /**
+   * Detaches an episode from this TvShow WITHOUT deleting it from the database. This is used when merging/moving episodes between TvShows. Unlike
+   * removeEpisode(), this method does NOT: - Delete the episode from the database - Trigger saveToDb() - Add dummy episodes
+   *
+   * @param episode
+   *          the episode to detach
+   */
+  public synchronized void detachEpisode(TvShowEpisode episode) {
+    if (episodes.contains(episode)) {
+      int oldValue = episodes.size();
+      removeFromSeason(episode);
+      episodes.remove(episode);
+      firePropertyChange(REMOVED_EPISODE, null, episode);
+      firePropertyChange(EPISODE_COUNT, oldValue, episodes.size());
+    }
+  }
+
+  /**
    * Gets the season for episode.
    *
    * @param episode
