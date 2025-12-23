@@ -699,4 +699,64 @@ public final class TvShowModuleManager implements ITmmModule {
   public void setDbVersion(int ver) {
     metadataMap.put(METADATA_VERSION, String.valueOf(ver));
   }
+
+  /**
+   * 开始一个新的事务
+   * 
+   * @return 事务ID
+   */
+  public String beginTransaction() {
+    lock.writeLock().lock();
+    try {
+      String transactionId = "TX-" + System.currentTimeMillis() + "-" + (int) (Math.random() * 10000);
+      LOGGER.debug("Starting transaction: {}", transactionId);
+      mvStore.commit();
+      return transactionId;
+    }
+    catch (Exception e) {
+      lock.writeLock().unlock();
+      LOGGER.error("Failed to begin transaction", e);
+      throw new RuntimeException("Failed to begin transaction", e);
+    }
+  }
+
+  /**
+   * 提交事务
+   * 
+   * @param transactionId 事务ID
+   */
+  public void commitTransaction(String transactionId) {
+    try {
+      LOGGER.debug("Committing transaction: {}", transactionId);
+      writePendingChanges(true);
+      mvStore.commit();
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed to commit transaction: {}", transactionId, e);
+      throw new RuntimeException("Failed to commit transaction", e);
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * 回滚事务
+   * 
+   * @param transactionId 事务ID
+   */
+  public void rollbackTransaction(String transactionId) {
+    try {
+      LOGGER.warn("Rolling back transaction: {}", transactionId);
+      mvStore.rollback();
+      pendingChanges.clear();
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed to rollback transaction: {}", transactionId, e);
+      throw new RuntimeException("Failed to rollback transaction", e);
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
 }

@@ -137,13 +137,17 @@ public class WebDavClient {
    *           if listing fails
    */
   public List<WebDavFile> list(String path) throws IOException {
-    return listWithRetry(path, true);
+    return listWithRetry(path, false, true);
+  }
+
+  public List<WebDavFile> list(String path, boolean includeSelf) throws IOException {
+    return listWithRetry(path, includeSelf, true);
   }
 
   /**
    * Internal list method with retry support for connection pool shutdown
    */
-  private List<WebDavFile> listWithRetry(String path, boolean allowRetry) throws IOException {
+  private List<WebDavFile> listWithRetry(String path, boolean includeSelf, boolean allowRetry) throws IOException {
     ensureConnected();
     String fullUrl = buildUrl(path);
     List<WebDavFile> files = new ArrayList<>();
@@ -188,7 +192,7 @@ public class WebDavClient {
           }
 
           // LOGGER.trace("Comparing href='{}' (decoded='{}') with urlPath='{}'", normalizedHref, decodedHref, urlPath);
-          if (decodedHref.equals(urlPath) || normalizedHref.equals(urlPath)) {
+          if (!includeSelf && (decodedHref.equals(urlPath) || normalizedHref.equals(urlPath))) {
             // LOGGER.trace("Skipping parent directory: {}", href);
             continue;
           }
@@ -203,7 +207,7 @@ public class WebDavClient {
         LOGGER.warn("WebDAV connection pool was shut down, attempting to reconnect...");
         try {
           reconnect();
-          return listWithRetry(path, false); // Retry once without further retries
+          return listWithRetry(path, includeSelf, false); // Retry once without further retries
         }
         catch (IOException reconnectError) {
           LOGGER.error("Failed to reconnect to WebDAV server: {}", reconnectError.getMessage());
@@ -225,7 +229,7 @@ public class WebDavClient {
         LOGGER.warn("WebDAV network error ('{}'), attempting to reconnect...", e.getMessage());
         try {
           reconnect();
-          return listWithRetry(path, false); // Retry once without further retries
+          return listWithRetry(path, includeSelf, false); // Retry once without further retries
         }
         catch (IOException reconnectError) {
           LOGGER.error("Failed to reconnect to WebDAV server: {}", reconnectError.getMessage());

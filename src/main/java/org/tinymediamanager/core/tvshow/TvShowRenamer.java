@@ -258,22 +258,164 @@ public class TvShowRenamer {
    *          the show
    */
   public static void renameTvShow(TvShow tvShow) {
-    MediaEntityFilenameHistory filenameHistory = new MediaEntityFilenameHistory();
-    // rename the TV show folder
-    renameTvShowRoot(tvShow, filenameHistory);
+    String transactionId = null;
+    String oldPathname = tvShow.getPathNIO().toString();
+    String newPathname = "";
+    Path srcDir = null;
+    Path destDir = null;
+    boolean directoryMoved = false;
 
-    // rename TV show media files
-    renameTvShowMediaFiles(tvShow, filenameHistory);
+    try {
+      transactionId = TvShowModuleManager.getInstance().beginTransaction();
 
-    tvShow.setRenameHistory(filenameHistory);
+      MediaEntityFilenameHistory filenameHistory = new MediaEntityFilenameHistory();
 
-    // rename the season media files
-    renameSeasonMediaFiles(tvShow);
+      LOGGER.info("Starting transactional rename for TV show '{}'", tvShow.getTitle());
 
-    // cleanup
-    cleanupUnwantedFiles(tvShow);
+      filenameHistory.setOldPath(oldPathname);
 
-    tvShow.saveToDb();
+      newPathname = getTvShowFoldername(TvShowModuleManager.getInstance().getSettings().getRenamerTvShowFoldername(), tvShow);
+
+      if (!newPathname.isEmpty()) {
+        srcDir = WebDavDataSourceHelper.getWebDavPath(oldPathname);
+        destDir = WebDavDataSourceHelper.getWebDavPath(newPathname);
+
+        String srcNormalized = WebDavDataSourceHelper.normalizeWebDavPath(srcDir.toString());
+        String destNormalized = WebDavDataSourceHelper.normalizeWebDavPath(destDir.toString());
+
+        boolean pathsEqual = WebDavDataSourceHelper.isWebDavPath(srcNormalized) ? srcNormalized.equals(destNormalized)
+            : srcDir.toAbsolutePath().toString().equals(destDir.toAbsolutePath().toString());
+
+        if (!pathsEqual) {
+          directoryMoved = moveDirectory(srcDir, destDir);
+          if (directoryMoved) {
+            if (WebDavDataSourceHelper.isWebDavPath(srcNormalized) && !srcNormalized.equals(destNormalized)) {
+              LOGGER.info("WebDAV Path Rename/Merge successful: '{}' -> '{}'", srcNormalized, destNormalized);
+            }
+
+            TvShow existingShow = TvShowList.getInstance().getTvShowByPath(destDir);
+            boolean shouldMergeToExisting = existingShow != null && existingShow != tvShow && !existingShow.getDbId().equals(tvShow.getDbId());
+
+            if (shouldMergeToExisting) {
+              LOGGER.info("Detected duplicate TvShow after merge: current='{}' (UUID={}), existing='{}' (UUID={}). Merging episodes...",
+                  tvShow.getTitle(), tvShow.getDbId(), existingShow.getTitle(), existingShow.getDbId());
+
+              for (TvShowEpisode episode : new ArrayList<>(tvShow.getEpisodes())) {
+                List<TvShowEpisode> existingEps = existingShow.getEpisode(episode.getSeason(), episode.getEpisode());
+                if (existingEps.isEmpty()) {
+                  tvShow.detachEpisode(episode);
+                  episode.setTvShow(existingShow);
+                  existingShow.addEpisode(episode);
+                  episode.saveToDb();
+                  LOGGER.debug("Moved episode S{}E{} from '{}' to '{}'", episode.getSeason(), episode.getEpisode(), tvShow.getTitle(),
+                      existingShow.getTitle());
+                }
+                else {
+                  TvShowEpisode existingEp = existingEps.get(0);
+                  EpisodeComparisonResult comparison = compareEpisodes(episode, existingEp);
+
+                  if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
+                        episode.getSeason(), episode.getEpisode(), comparison);
+
+                    existingShow.removeEpisode(existingEp);
+
+                    tvShow.detachEpisode(episode);
+                    episode.setTvShow(existingShow);
+                    existingShow.addEpisode(episode);
+                    episode.saveToDb();
+                  }
+                  else {
+                    tvShow.removeEpisode(episode);
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
+                        episode.getSeason(), episode.getEpisode(), tvShow.getTitle(), comparison);
+                  }
+                }
+              }
+
+              TvShowList.getInstance().removeTvShow(tvShow);
+              LOGGER.info("Removed duplicate TvShow '{}' after merging episodes to '{}'", tvShow.getTitle(), existingShow.getTitle());
+
+              existingShow.saveToDb();
+
+              existingShow.firePropertyChange("episodeCount", 0, existingShow.getEpisodes().size());
+              existingShow.firePropertyChange("seasons", null, existingShow.getSeasons());
+
+              TvShowModuleManager.getInstance().commitTransaction(transactionId);
+              return;
+            }
+
+            tvShow.updateMediaFilePath(srcDir, destDir);
+            tvShow.setPath(newPathname);
+            filenameHistory.setNewPath(newPathname);
+
+            for (TvShowSeason tvShowSeason : tvShow.getSeasons()) {
+              tvShowSeason.updateMediaFilePath(srcDir, destDir);
+            }
+
+            for (TvShowEpisode episode : tvShow.getEpisodes()) {
+              episode.replacePathForRenamedTvShowRoot(srcDir, destDir);
+              episode.updateMediaFilePath(srcDir, destDir);
+              episode.saveToDb();
+            }
+
+            if (Settings.getInstance().isImageCache()) {
+              for (MediaFile gfx : tvShow.getMediaFiles()) {
+                ImageCache.cacheImageSilently(gfx, false);
+              }
+            }
+          }
+        }
+      }
+
+      if (StringUtils.isBlank(filenameHistory.getNewPath())) {
+        filenameHistory.setNewPath(filenameHistory.getOldPath());
+      }
+
+      renameTvShowMediaFiles(tvShow, filenameHistory);
+
+      tvShow.setRenameHistory(filenameHistory);
+
+      renameSeasonMediaFiles(tvShow);
+
+      cleanupUnwantedFiles(tvShow);
+
+      tvShow.saveToDb();
+
+      TvShowModuleManager.getInstance().commitTransaction(transactionId);
+
+      LOGGER.info("Successfully completed transactional rename for TV show '{}'", tvShow.getTitle());
+    }
+    catch (Exception e) {
+      LOGGER.error("Error during transactional rename of TV show '{}', rolling back", tvShow.getTitle(), e);
+
+      if (transactionId != null) {
+        try {
+          TvShowModuleManager.getInstance().rollbackTransaction(transactionId);
+        }
+        catch (Exception rollbackEx) {
+          LOGGER.error("Failed to rollback transaction", rollbackEx);
+        }
+      }
+
+      if (directoryMoved && srcDir != null && destDir != null) {
+        try {
+          LOGGER.info("Attempting to rollback directory move: '{}' -> '{}'", destDir, srcDir);
+          moveDirectory(destDir, srcDir);
+          tvShow.setPath(oldPathname);
+          LOGGER.info("Successfully rolled back directory move");
+        }
+        catch (Exception rollbackEx) {
+          LOGGER.error("Failed to rollback directory move", rollbackEx);
+        }
+      }
+
+      MessageManager.getInstance()
+          .pushMessage(new Message(MessageLevel.ERROR, srcDir != null ? srcDir.toString() : oldPathname, "message.renamer.failedrename",
+              new String[] { ":", e.getLocalizedMessage() }));
+
+      throw new RuntimeException("Failed to rename TV show: " + e.getMessage(), e);
+    }
   }
 
   /**
@@ -315,6 +457,19 @@ public class TvShowRenamer {
         try {
           boolean ok = moveDirectory(srcDir, destDir);
           if (ok) {
+            // Check if it was a merge (source still exists or destination already had content)
+            if (WebDavDataSourceHelper.isWebDavPath(srcNormalized) && !srcNormalized.equals(destNormalized)) {
+              LOGGER.info("WebDAV Path Rename/Merge successful: '{}' -> '{}'", srcNormalized, destNormalized);
+            }
+
+            // ######################################################################
+            // ## IMPORTANT: Check for existing TvShow at destination BEFORE updating current show's path
+            // ## This must be done before setPath() to correctly identify duplicate
+            // ######################################################################
+            TvShow existingShow = TvShowList.getInstance().getTvShowByPath(destDir);
+            boolean shouldMergeToExisting = existingShow != null && existingShow != show && !existingShow.getDbId().equals(show.getDbId());
+
+            // Now update the current show's paths
             show.updateMediaFilePath(srcDir, destDir); // TvShow MFs
             show.setPath(newPathname);
             filenameHistory.setNewPath(newPathname);
@@ -327,6 +482,70 @@ public class TvShowRenamer {
               episode.replacePathForRenamedTvShowRoot(srcDir, destDir);
               episode.updateMediaFilePath(srcDir, destDir);
               episode.saveToDb();
+            }
+
+            // ######################################################################
+            // ## If we found an existing show at destination, merge episodes and delete current show
+            // ######################################################################
+            if (shouldMergeToExisting) {
+              LOGGER.info("Detected duplicate TvShow after merge: current='{}' (UUID={}), existing='{}' (UUID={}). Merging episodes...",
+                  show.getTitle(), show.getDbId(), existingShow.getTitle(), existingShow.getDbId());
+
+              // Move all episodes from current show to existing show
+              // IMPORTANT: Use detachEpisode() instead of removeEpisode() to avoid deleting from DB
+              for (TvShowEpisode episode : new ArrayList<>(show.getEpisodes())) {
+                // Check if existing show already has this episode (by S/E number)
+                List<TvShowEpisode> existingEps = existingShow.getEpisode(episode.getSeason(), episode.getEpisode());
+                if (existingEps.isEmpty()) {
+                  // Episode doesn't exist in target, move it (detach from source, attach to target)
+                  show.detachEpisode(episode);
+                  episode.setTvShow(existingShow);
+                  existingShow.addEpisode(episode);
+                  episode.saveToDb();
+                  LOGGER.debug("Moved episode S{}E{} from '{}' to '{}'", episode.getSeason(), episode.getEpisode(), show.getTitle(),
+                      existingShow.getTitle());
+                }
+                else {
+                  // Episode already exists - use enhanced comparison to determine which one to keep
+                  TvShowEpisode existingEp = existingEps.get(0);
+                  EpisodeComparisonResult comparison = compareEpisodes(episode, existingEp);
+
+                  if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
+                    // Source episode is better OR equal - replace target with source (source has updated path)
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
+                        episode.getSeason(), episode.getEpisode(), comparison);
+
+                    // Remove target episode from existingShow and DB
+                    existingShow.removeEpisode(existingEp);
+                    // NOTE: removeEpisode already calls removeEpisodeFromDb, no need to call again
+
+                    // Move source episode to target show (detach, don't delete)
+                    show.detachEpisode(episode);
+                    episode.setTvShow(existingShow);
+                    existingShow.addEpisode(episode);
+                    episode.saveToDb();
+                  }
+                  else {
+                    // Target episode is better - keep target, remove source
+                    show.removeEpisode(episode);
+                    // NOTE: removeEpisode already calls removeEpisodeFromDb, no need to call again
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
+                        episode.getSeason(), episode.getEpisode(), show.getTitle(), comparison);
+                  }
+                }
+              }
+
+              // Remove current show from database and list
+              TvShowList.getInstance().removeTvShow(show);
+              LOGGER.info("Removed duplicate TvShow '{}' after merging episodes to '{}'", show.getTitle(), existingShow.getTitle());
+
+              // Save the existing show with merged episodes
+              existingShow.saveToDb();
+
+              // Force UI refresh by firing property change events
+              existingShow.firePropertyChange("episodeCount", 0, existingShow.getEpisodes().size());
+              existingShow.firePropertyChange("seasons", null, existingShow.getSeasons());
+              return; // Exit early, we've handled everything
             }
 
             // ######################################################################
@@ -2637,13 +2856,29 @@ public class TvShowRenamer {
    * @return the cleaned up string
    */
   private static String cleanupDestination(String destination, Boolean spaceSubstitution, String spaceReplacement) {
+    // WebDAV 路径特殊处理：先规范化 WebDAV 路径，然后使用统一的正斜杠处理
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(destination);
+    if (isWebDav) {
+      destination = WebDavDataSourceHelper.normalizeWebDavPath(destination);
+    }
+
     // replace empty brackets
     destination = destination.replaceAll("\\([ ]?\\)", "");
     destination = destination.replaceAll("\\[[ ]?\\]", "");
     destination = destination.replaceAll("\\{[ ]?\\}", "");
 
     // if there are multiple file separators in a row - strip them out
-    if (SystemUtils.IS_OS_WINDOWS) {
+    if (isWebDav) {
+      // WebDAV 路径始终使用正斜杠，不区分操作系统
+      destination = destination.replaceAll("/{2,}", "/");
+      destination = destination.replaceAll("^/", "");
+      // trim whitespace around directory sep
+      destination = destination.replaceAll("\\s+/", "/");
+      destination = destination.replaceAll("/\\s+", "/");
+      // remove separators in front of path separators
+      destination = destination.replaceAll("[ \\.\\-_]+/", "/");
+    }
+    else if (SystemUtils.IS_OS_WINDOWS) {
       // we need to mask it in windows
       destination = destination.replaceAll("\\\\{2,}", "\\\\");
       destination = destination.replaceAll("^\\\\", "");
@@ -2939,17 +3174,32 @@ public class TvShowRenamer {
     String newPathStr = newFilename.toString();
 
     // 检测源路径是否包含本地缓存路径特征（artwork/tvshows, artwork/movies, cache/image）
+    // 或者包含嵌入的 tvshows/ movies/ 模式（如 webdav://xxx/.../电影名/tvshows/电影名/poster.jpg）
     // 这些路径是本地缓存目录结构，不应该存在于 WebDAV 上
     boolean isOldPathCacheLike = oldPathStr.contains("/artwork/tvshows/") || oldPathStr.contains("\\artwork\\tvshows\\")
         || oldPathStr.contains("/artwork/movies/") || oldPathStr.contains("\\artwork\\movies\\") || oldPathStr.contains("/cache/image/")
         || oldPathStr.contains("\\cache\\image\\");
 
+    // 额外检测：WebDAV 路径中嵌入了 /tvshows/ 或 /movies/ 子目录
+    // 这表明本地缓存目录结构被错误拼接到了 WebDAV 路径中
+    // 例如：webdav://aaa/转存1p/.../黑镜 (2011)/tvshows/黑镜 (2011)/poster.jpg
+    // 正确应该是：webdav://aaa/转存1p/.../黑镜 (2011)/poster.jpg
+    if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && !isOldPathCacheLike) {
+      // 检测是否在 WebDAV 路径中包含 /tvshows/ 或 /movies/ 这种本地目录模式
+      // 注意：这里的 tvshows/ movies/ 必须包含斜杠以避免误匹配文件名
+      if (oldPathStr.contains("/tvshows/") || oldPathStr.contains("/movies/")) {
+        isOldPathCacheLike = true;
+      }
+    }
+
     // 如果源路径包含缓存路径特征，即使被格式化为 WebDAV 路径，也跳过复制
     // 因为这个文件实际上不存在于 WebDAV 服务器上
     // 返回 false 以避免 renamer 用错误的路径替换原有的 MediaFile
     if (isOldPathCacheLike) {
-      LOGGER.warn("Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, or cache/image). "
-          + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.", oldPathStr);
+      LOGGER.warn(
+          "Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, cache/image, or embedded tvshows/movies). "
+              + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.",
+          oldPathStr);
       return false; // 返回 false 让 renamer 知道复制失败，不替换 MediaFile
     }
 
@@ -3224,6 +3474,83 @@ public class TvShowRenamer {
       // Default behavior: save to video folder
       LOGGER.debug("Using default video folder for TV show rename '{}': {}", tvShow.getTitle(), tvShow.getPathNIO());
       return tvShow.getPathNIO();
+    }
+  }
+
+  /**
+   * 剧集比较结果枚举
+   */
+  private enum EpisodeComparisonResult {
+    SOURCE_BETTER,  // 源剧集更好
+    TARGET_BETTER,  // 目标剧集更好
+    EQUAL           // 两者相等
+  }
+
+  /**
+   * 比较两个剧集的完整性，决定哪个应该被保留
+   * 比较策略：
+   * 1. 优先比较视频文件数量（视频是最重要的）
+   * 2. 视频数量相同，比较总媒体文件数量
+   * 3. 总数量相同，比较文件总大小
+   *
+   * @param source 源剧集
+   * @param target 目标剧集
+   * @return 比较结果
+   */
+  private static EpisodeComparisonResult compareEpisodes(TvShowEpisode source, TvShowEpisode target) {
+    try {
+      // 1. 优先比较视频文件数量（视频是最重要的）
+      int sourceVideoCount = source.getMediaFiles(MediaFileType.VIDEO).size();
+      int targetVideoCount = target.getMediaFiles(MediaFileType.VIDEO).size();
+
+      if (sourceVideoCount != targetVideoCount) {
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} videos, target has {} videos",
+            source.getSeason(), source.getEpisode(), sourceVideoCount, targetVideoCount);
+        return sourceVideoCount > targetVideoCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      // 2. 视频数量相同，比较总媒体文件数量
+      int sourceTotalCount = source.getMediaFiles().size();
+      int targetTotalCount = target.getMediaFiles().size();
+
+      if (sourceTotalCount != targetTotalCount) {
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} media files, target has {} media files",
+            source.getSeason(), source.getEpisode(), sourceTotalCount, targetTotalCount);
+        return sourceTotalCount > targetTotalCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      // 3. 总数量相同，比较文件总大小
+      long sourceSize = 0;
+      long targetSize = 0;
+
+      for (MediaFile mf : source.getMediaFiles()) {
+        try {
+          sourceSize += mf.getFileAsPath().toFile().length();
+        } catch (Exception e) {
+          LOGGER.warn("Failed to get size for source media file: {}", mf.getFilename());
+        }
+      }
+
+      for (MediaFile mf : target.getMediaFiles()) {
+        try {
+          targetSize += mf.getFileAsPath().toFile().length();
+        } catch (Exception e) {
+          LOGGER.warn("Failed to get size for target media file: {}", mf.getFilename());
+        }
+      }
+
+      if (sourceSize != targetSize) {
+        LOGGER.debug("Episode comparison: S{}E{} - source total size {} bytes, target total size {} bytes",
+            source.getSeason(), source.getEpisode(), sourceSize, targetSize);
+        return sourceSize > targetSize ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
+      }
+
+      LOGGER.debug("Episode comparison: S{}E{} - episodes are equal", source.getSeason(), source.getEpisode());
+      return EpisodeComparisonResult.EQUAL;
+    } catch (Exception e) {
+      LOGGER.error("Error comparing episodes S{}E{}: {}", source.getSeason(), source.getEpisode(), e.getMessage());
+      // 出错时默认返回相等，让原有逻辑处理
+      return EpisodeComparisonResult.EQUAL;
     }
   }
 }

@@ -321,25 +321,66 @@ public class TvShowEpisode extends MediaEntity implements Comparable<TvShowEpiso
       return;
     }
 
-    Path newPathToSet;
-    if (oldPath.equals(getPathNIO())) {
-      // episode is in TV show root -> just exchange
-      newPathToSet = newPath;
+    String oldPathStr = oldPath.toString();
+    String newPathStr = newPath.toString();
+    String currentPathStr = getPathNIO().toString();
+
+    // 检测是否是 WebDAV 路径
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr);
+
+    String newPathToSet;
+    if (isWebDav) {
+      // WebDAV 路径使用字符串操作
+      String normalizedOldPath = WebDavDataSourceHelper.normalizeWebDavPath(oldPathStr);
+      String normalizedNewPath = WebDavDataSourceHelper.normalizeWebDavPath(newPathStr);
+      String normalizedCurrentPath = WebDavDataSourceHelper.normalizeWebDavPath(currentPathStr);
+
+      if (normalizedOldPath.equals(normalizedCurrentPath)) {
+        // episode is in TV show root -> just exchange
+        newPathToSet = normalizedNewPath;
+      }
+      else {
+        // 计算相对路径部分
+        String relativePart = "";
+        if (normalizedCurrentPath.startsWith(normalizedOldPath)) {
+          relativePart = normalizedCurrentPath.substring(normalizedOldPath.length());
+          if (relativePart.startsWith("/")) {
+            relativePart = relativePart.substring(1);
+          }
+        }
+        else {
+          relativePart = normalizedCurrentPath;
+        }
+
+        // 构建新路径
+        if (!normalizedNewPath.endsWith("/")) {
+          normalizedNewPath = normalizedNewPath + "/";
+        }
+        newPathToSet = normalizedNewPath + relativePart;
+      }
     }
     else {
-      Path subPath = oldPath.relativize(getPathNIO()); // path relative to the TV show root
-      newPathToSet = newPath.resolve(subPath);
+      // 本地路径使用 Path 操作
+      Path newPathToSetPath;
+      if (oldPath.equals(getPathNIO())) {
+        // episode is in TV show root -> just exchange
+        newPathToSetPath = newPath;
+      }
+      else {
+        Path subPath = oldPath.relativize(getPathNIO()); // path relative to the TV show root
+        newPathToSetPath = newPath.resolve(subPath);
+      }
+      newPathToSet = newPathToSetPath.toAbsolutePath().toString();
     }
 
     LOGGER.trace("EP replace: ({}, {}) -> {} results in {}", oldPath, newPath, getPath(), newPathToSet);
 
     // For WebDAV paths, use normalized string instead of toAbsolutePath()
-    String newPathString = newPathToSet.toString();
-    if (WebDavDataSourceHelper.isWebDavPath(newPathString)) {
-      setPath(WebDavDataSourceHelper.normalizeWebDavPath(newPathString));
+    if (WebDavDataSourceHelper.isWebDavPath(newPathToSet)) {
+      setPath(WebDavDataSourceHelper.normalizeWebDavPath(newPathToSet));
     }
     else {
-      setPath(newPathToSet.toAbsolutePath().toString());
+      setPath(newPathToSet);
     }
   }
 

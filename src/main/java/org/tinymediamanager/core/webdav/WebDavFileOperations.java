@@ -15,6 +15,7 @@
  */
 package org.tinymediamanager.core.webdav;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -160,11 +161,28 @@ public class WebDavFileOperations {
         DIRECTORY_LOCKS.remove(lockKey, lock);
       }
 
-      // Check if destination file already exists and generate unique filename if needed
+      // Check if destination file already exists and handle accordingly
       String actualDestPath = destPath;
       if (client.exists(destPath)) {
+        boolean sourceIsDir = isWebDavDirectory(client, sourcePath);
+        boolean destIsDir = isWebDavDirectory(client, destPath);
+        LOGGER.debug("Conflict detected - sourceIsDir: {}, destIsDir: {}", sourceIsDir, destIsDir);
+
+        // Optimization: If both are directories, perform a "merge" instead of renaming the destination
+        if (sourceIsDir && destIsDir) {
+          LOGGER.info("Both source and destination are directories, merging content: '{}' -> '{}'", sourcePath, destPath);
+          if (mergeWebDavDirectories(client, sourcePath, destPath)) {
+            LOGGER.info("Successfully merged WebDAV directory from '{}' to '{}'", sourcePath, destPath);
+            return "webdav://" + destId + destPath;
+          }
+          else {
+            LOGGER.error("Failed to merge WebDAV directory from '{}' to '{}'", sourcePath, destPath);
+            return null;
+          }
+        }
+
         LOGGER.warn("Destination file already exists: {}", destPath);
-        // Generate unique filename by adding suffix
+        // Generate unique filename by adding suffix (fallback for files or failed directory merges)
         actualDestPath = generateUniqueDestPath(client, destPath);
         LOGGER.info("Using unique destination path: {}", actualDestPath);
       }
@@ -179,7 +197,7 @@ public class WebDavFileOperations {
       }
       else {
         // Fallback: Copy and Delete (Standard workaround for buggy WebDAV servers returning 500/409 on MOVE)
-        LOGGER.warn("Move failed (possible server error 500), attempting copy and delete fallback regarding '{}'", sourcePath);
+        LOGGER.warn("Move failed (possible server error 500/409), attempting copy and delete fallback regarding '{}'", sourcePath);
         if (client.copy(sourcePath, actualDestPath)) {
           if (client.delete(sourcePath)) {
             LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
@@ -208,6 +226,116 @@ public class WebDavFileOperations {
       if (client != null) {
         client.disconnect();
       }
+    }
+  }
+
+  /**
+   * Check if a path is a directory on WebDAV
+   * 
+   * @param client
+   *          the WebDAV client
+   * @param path
+   *          the path to check
+   * @return true if it is a directory
+   */
+  private static boolean isWebDavDirectory(WebDavClient client, String path) {
+    try {
+      // PROPFIND (list) on the path itself is the most reliable way.
+      // Sardine's list() returns the directory itself as the first element.
+      // We explicitly request to includeSelf to get the metadata of the path itself.
+      List<WebDavFile> response = client.list(path, true);
+      if (response != null && !response.isEmpty()) {
+        WebDavFile self = response.get(0);
+
+        // Use multiple comparison strategies to handle path format differences
+        String p1 = WebDavDataSourceHelper.normalizeWebDavPath(path);
+        String p2 = WebDavDataSourceHelper.normalizeWebDavPath(self.getPath());
+
+        // Strategy 1: Direct path comparison
+        if (p1.equals(p2)) {
+          boolean isDir = self.isDirectory();
+          LOGGER.trace("isWebDavDirectory: matched by full path '{}' - isDirectory={}", p1, isDir);
+          return isDir;
+        }
+
+        // Strategy 2: Compare by path ending (handles relative vs absolute path differences)
+        // Extract the ending part after the last common segment
+        String name1 = p1.contains("/") ? p1.substring(p1.lastIndexOf("/") + 1) : p1;
+        String name2 = p2.contains("/") ? p2.substring(p2.lastIndexOf("/") + 1) : p2;
+
+        if (!name1.isEmpty() && name1.equals(name2)) {
+          // Additional check: verify p1 ends with p2 or vice versa (for nested path scenarios)
+          if (p1.endsWith(p2) || p2.endsWith(p1) || p1.endsWith("/" + name2) || p2.endsWith("/" + name1)) {
+            boolean isDir = self.isDirectory();
+            LOGGER.trace("isWebDavDirectory: matched by name '{}' - isDirectory={}", name1, isDir);
+            return isDir;
+          }
+        }
+
+        LOGGER.trace("isWebDavDirectory: path mismatch! input='{}' (normalized='{}'), entity='{}' (normalized='{}')", path, p1, self.getPath(), p2);
+      }
+
+      // Heuristic fallback: TMM directories in DB often don't have extensions,
+      // but physically they might end with / on server.
+      return path.endsWith("/");
+    }
+    catch (Exception e) {
+      LOGGER.trace("Could not determine if '{}' is a directory: {}", path, e.getMessage());
+      return false;
+    }
+  }
+
+  /**
+   * Recursively merge source directory into destination directory
+   * 
+   * @param client
+   *          the WebDAV client
+   * @param sourcePath
+   *          source directory path
+   * @param destPath
+   *          destination directory path
+   * @return true if successful
+   */
+  private static boolean mergeWebDavDirectories(WebDavClient client, String sourcePath, String destPath) {
+    try {
+      List<WebDavFile> children = client.list(sourcePath);
+      for (WebDavFile child : children) {
+        String childName = child.getName();
+        String sourceChildPath = sourcePath + (sourcePath.endsWith("/") ? "" : "/") + childName;
+        String destChildPath = destPath + (destPath.endsWith("/") ? "" : "/") + childName;
+
+        if (child.isDirectory()) {
+          // If destination directory doesn't exist, we can just move the whole subdirectory
+          if (!client.exists(destChildPath)) {
+            if (!client.move(sourceChildPath, destChildPath)) {
+              return false;
+            }
+          }
+          else {
+            // Destination subdirectory exists, recurse
+            if (!mergeWebDavDirectories(client, sourceChildPath, destChildPath)) {
+              return false;
+            }
+          }
+        }
+        else {
+          // It's a file. If it exists in destination, we might want to overwrite or skip.
+          // For TV shows, usually these are NFOs or unique episode files. Overwriting is usually safe for NFOs.
+          if (client.exists(destChildPath)) {
+            LOGGER.debug("File already exists in destination, deleting to overwrite: {}", destChildPath);
+            client.delete(destChildPath);
+          }
+          if (!client.move(sourceChildPath, destChildPath)) {
+            return false;
+          }
+        }
+      }
+      // Finally delete the (now empty) source directory
+      return client.delete(sourcePath);
+    }
+    catch (Exception e) {
+      LOGGER.error("Failed to merge WebDAV directories '{}' -> '{}': {}", sourcePath, destPath, e.getMessage());
+      return false;
     }
   }
 
