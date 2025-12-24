@@ -28,9 +28,12 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmThreadPool;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 /**
  * The Class MovieRenameTask.
@@ -58,34 +61,85 @@ public class MovieRenameTask extends TmmThreadPool {
     try {
       LOGGER.info("Renaming '{}' movies", moviesToRename.size());
 
-      // 动态调整线程池大小，最多使用4个线程或可用处理器数量，以提高重命名速度
-      int threadCount = Math.min(4, Runtime.getRuntime().availableProcessors());
+      // 检测是否有 WebDAV 数据源，如果有则使用单线程避免并发冲突
+      boolean hasWebDav = MovieModuleManager.getInstance()
+          .getSettings()
+          .getMovieDataSource()
+          .stream()
+          .anyMatch(ds -> ds != null && ds.toLowerCase().startsWith("webdav://"));
+
+      // WebDAV 数据源使用单线程避免 423 Locked 和 500 错误，本地文件系统使用多线程提高性能
+      int threadCount = hasWebDav ? 1 : Math.min(4, Runtime.getRuntime().availableProcessors());
+      if (hasWebDav) {
+        LOGGER.info("WebDAV data source detected, using single thread to avoid concurrency conflicts");
+      }
       initThreadPool(threadCount, "rename");
 
-      List<MediaFile> imageFiles = new ArrayList<>();
+      // 性能优化：在 Task 级别初始化共享 WebDAV 客户端，跨多个 movie 复用同一连接
+      String webDavSourceId = null;
+      WebDavClient sharedClient = null;
 
-      // rename movies
-      for (Movie movie : moviesToRename) {
-        if (cancel) {
-          break;
+      if (hasWebDav && !moviesToRename.isEmpty()) {
+        try {
+          // 获取第一个 movie 的数据源来初始化共享客户端
+          Movie firstMovie = moviesToRename.get(0);
+          String moviePath = firstMovie.getPath();
+          if (WebDavDataSourceHelper.isWebDavPath(moviePath)) {
+            String[] parsed = WebDavDataSourceHelper.parseWebDavPath(moviePath);
+            if (parsed != null && parsed.length >= 1) {
+              sharedClient = WebDavDataSourceHelper.getClientForPath(moviePath);
+              if (sharedClient != null) {
+                webDavSourceId = parsed[0];
+                MovieRenamer.initSharedWebDavClient(sharedClient, webDavSourceId);
+                LOGGER.info("Initialized Task-level shared WebDAV client for batch rename (sourceId: {})", webDavSourceId);
+              }
+            }
+          }
         }
-        submitTask(new RenameMovieTask(movie));
-      }
-      waitForCompletionOrCancel();
-
-      if (cancel) {
-        return;
+        catch (Exception e) {
+          LOGGER.warn("Could not initialize Task-level shared WebDAV client: {}", e.getMessage());
+        }
       }
 
-      for (Movie movie : moviesToRename) {
-        imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());
-      }
-      // re-build the image cache afterward in an own thread
-      if (Settings.getInstance().isImageCache() && !imageFiles.isEmpty()) {
-        imageFiles.forEach(ImageCache::cacheImageAsync);
-      }
+      try {
+        List<MediaFile> imageFiles = new ArrayList<>();
 
-      LOGGER.info("Finished renaming movies - took {} ms", getRuntime());
+        // rename movies
+        for (Movie movie : moviesToRename) {
+          if (cancel) {
+            break;
+          }
+          submitTask(new RenameMovieTask(movie));
+        }
+        waitForCompletionOrCancel();
+
+        if (cancel) {
+          return;
+        }
+
+        for (Movie movie : moviesToRename) {
+          imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());
+        }
+        // re-build the image cache afterward in an own thread
+        if (Settings.getInstance().isImageCache() && !imageFiles.isEmpty()) {
+          imageFiles.forEach(ImageCache::cacheImageAsync);
+        }
+
+        LOGGER.info("Finished renaming movies - took {} ms", getRuntime());
+      }
+      finally {
+        // 清理 Task 级别的共享客户端
+        if (sharedClient != null) {
+          try {
+            MovieRenamer.clearSharedWebDavClient();
+            sharedClient.disconnect();
+            LOGGER.debug("Disconnected Task-level shared WebDAV client");
+          }
+          catch (Exception e) {
+            LOGGER.warn("Error disconnecting shared WebDAV client: {}", e.getMessage());
+          }
+        }
+      }
     }
     catch (Exception e) {
       LOGGER.error("Could not rename movies - '{}'", e.getMessage());

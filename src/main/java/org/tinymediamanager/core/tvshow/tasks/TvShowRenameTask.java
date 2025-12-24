@@ -32,6 +32,8 @@ import org.tinymediamanager.core.tvshow.TvShowRenamer;
 import org.tinymediamanager.core.tvshow.TvShowModuleManager;
 import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
+import org.tinymediamanager.core.webdav.WebDavClient;
+import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
 
 /**
  * The class MovieRenameTask. rename all chosen movies
@@ -102,25 +104,68 @@ public class TvShowRenameTask extends TmmThreadPool {
       }
       initThreadPool(threadCount, "rename");
 
-      // 1. episodes first (to get the right season folders for moving season artwork)
-      for (TvShowEpisode tvEpisodesToRename : episodesToRename) {
-        if (cancel) {
-          break;
+      // 性能优化：在 Task 级别初始化共享 WebDAV 客户端，跨多个 episode 复用同一连接
+      String webDavSourceId = null;
+      WebDavClient sharedClient = null;
+
+      if (hasWebDav && !episodesToRename.isEmpty()) {
+        try {
+          // 获取第一个 episode 的数据源来初始化共享客户端
+          TvShowEpisode firstEpisode = episodesToRename.get(0);
+          String episodePath = firstEpisode.getPath();
+          if (WebDavDataSourceHelper.isWebDavPath(episodePath)) {
+            String[] parsed = WebDavDataSourceHelper.parseWebDavPath(episodePath);
+            if (parsed != null && parsed.length >= 1) {
+              LOGGER.info("Connecting to WebDAV server for batch rename (this may take a moment)...");
+              sharedClient = WebDavDataSourceHelper.getClientForPath(episodePath);
+
+              if (sharedClient != null) {
+                webDavSourceId = parsed[0];
+                TvShowRenamer.initSharedWebDavClient(sharedClient, webDavSourceId);
+                LOGGER.info("Initialized Task-level shared WebDAV client for batch rename (sourceId: {})", webDavSourceId);
+              }
+            }
+          }
         }
-        submitTask(new RenameEpisodeTask(tvEpisodesToRename));
+        catch (Exception e) {
+          LOGGER.warn("Could not initialize Task-level shared WebDAV client: {}", e.getMessage());
+        }
       }
 
-      waitForCompletionOrCancel();
-      if (cancel) {
-        return;
-      }
+      try {
+        // 1. episodes first (to get the right season folders for moving season artwork)
+        for (TvShowEpisode tvEpisodesToRename : episodesToRename) {
+          if (cancel) {
+            break;
+          }
+          submitTask(new RenameEpisodeTask(tvEpisodesToRename));
+        }
 
-      // 2. rename TV show root
-      for (TvShow tvShow : tvShowsToRename) {
-        TvShowRenamer.renameTvShow(tvShow); // rename root and artwork and update ShowMFs
-      }
+        waitForCompletionOrCancel();
+        if (cancel) {
+          return;
+        }
 
-      LOGGER.info("Finished renaming TV shows/episodes - took {} ms", getRuntime());
+        // 2. rename TV show root
+        for (TvShow tvShow : tvShowsToRename) {
+          TvShowRenamer.renameTvShow(tvShow); // rename root and artwork and update ShowMFs
+        }
+
+        LOGGER.info("Finished renaming TV shows/episodes - took {} ms", getRuntime());
+      }
+      finally {
+        // 清理 Task 级别的共享客户端
+        if (sharedClient != null) {
+          try {
+            TvShowRenamer.clearSharedWebDavClient();
+            sharedClient.disconnect();
+            LOGGER.debug("Disconnected Task-level shared WebDAV client");
+          }
+          catch (Exception e) {
+            LOGGER.warn("Error disconnecting shared WebDAV client: {}", e.getMessage());
+          }
+        }
+      }
     }
     catch (Exception e) {
       LOGGER.error("Could not rename TV shows - '{}'", e.getMessage());

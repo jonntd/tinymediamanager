@@ -88,6 +88,7 @@ import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetRenderer;
 import org.tinymediamanager.core.movie.jmte.MovieNamedIndexOfMovieSetWithDummyRenderer;
 import org.tinymediamanager.core.threading.ThreadUtils;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavClient;
 import org.tinymediamanager.core.webdav.WebDavFileOperations;
 import org.tinymediamanager.core.webdav.WebDavPath;
 import org.tinymediamanager.scraper.util.StrgUtils;
@@ -125,8 +126,37 @@ public class MovieRenamer {
 
   private static final Map<String, String> TOKEN_MAP                   = createTokenMap();
 
+  // Static fields for sharing WebDAV client during batch rename operations (performance optimization)
+  // Using static fields instead of ThreadLocal because:
+  // 1. WebDAV scenario forces single-thread mode (threadCount = 1) to avoid 423/500 errors
+  // 2. Task initializes client in one thread, but rename workers run in thread pool
+  // 3. Static fields allow cross-thread access in single-thread pool scenario
+  private static volatile WebDavClient     SHARED_WEBDAV_CLIENT        = null;
+  private static volatile String           SHARED_WEBDAV_SOURCE_ID     = null;
+
   private MovieRenamer() {
     throw new IllegalAccessError();
+  }
+
+  /**
+   * 初始化 Task 级别的共享 WebDAV 客户端，跨多个 movie 重命名操作复用同一连接
+   *
+   * @param client
+   *          已连接的 WebDAV 客户端
+   * @param sourceId
+   *          数据源 ID
+   */
+  public static synchronized void initSharedWebDavClient(WebDavClient client, String sourceId) {
+    SHARED_WEBDAV_CLIENT = client;
+    SHARED_WEBDAV_SOURCE_ID = sourceId;
+  }
+
+  /**
+   * 清除 Task 级别的共享 WebDAV 客户端
+   */
+  public static synchronized void clearSharedWebDavClient() {
+    SHARED_WEBDAV_CLIENT = null;
+    SHARED_WEBDAV_SOURCE_ID = null;
   }
 
   /**
@@ -312,6 +342,55 @@ public class MovieRenamer {
     String moviePath = isWebDav ? movie.getPath() : movie.getPathNIO().toString();
     LOGGER.debug("movie path: {}", moviePath);
     LOGGER.debug("movie isWebDav: {}", isWebDav);
+
+    // 性能优化：对于 WebDAV 数据源，检查是否已有 Task 级别的共享客户端
+    // 如果没有，则为当前单个 movie 创建临时共享客户端
+    boolean createdClientHere = false;
+    if (isWebDav && SHARED_WEBDAV_CLIENT == null) {
+      try {
+        String[] parsed = WebDavDataSourceHelper.parseWebDavPath(movie.getPath());
+        if (parsed != null && parsed.length >= 1) {
+          WebDavClient client = WebDavDataSourceHelper.getClientForPath(movie.getPath());
+          if (client != null) {
+            SHARED_WEBDAV_CLIENT = client;
+            SHARED_WEBDAV_SOURCE_ID = parsed[0];
+            createdClientHere = true;
+            LOGGER.debug("Created movie-level shared WebDAV client for rename operations (performance optimization)");
+          }
+        }
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create shared WebDAV client, falling back to per-operation connections: {}", e.getMessage());
+      }
+    }
+
+    try {
+      renameMovieInternal(movie, isWebDav, moviePath, needed, cleanup, fileNameHistory, posterRenamed, fanartRenamed);
+    }
+    finally {
+      // 仅清理此方法创建的客户端，不清理 Task 级别的客户端
+      if (createdClientHere && SHARED_WEBDAV_CLIENT != null) {
+        try {
+          SHARED_WEBDAV_CLIENT.disconnect();
+          LOGGER.debug("Disconnected movie-level shared WebDAV client after rename");
+        }
+        catch (Exception e) {
+          LOGGER.warn("Error disconnecting shared WebDAV client: {}", e.getMessage());
+        }
+        finally {
+          SHARED_WEBDAV_CLIENT = null;
+          SHARED_WEBDAV_SOURCE_ID = null;
+        }
+      }
+    }
+
+  }
+
+  /**
+   * Internal implementation of renameMovie, separated to allow shared WebDAV client management.
+   */
+  private static void renameMovieInternal(Movie movie, boolean isWebDav, String moviePath, List<MediaFile> needed, List<MediaFile> cleanup,
+      MediaEntityFilenameHistory fileNameHistory, boolean posterRenamed, boolean fanartRenamed) {
 
     LOGGER.debug("movie isDisc?: {}", movie.isDisc());
     LOGGER.debug("movie isMulti?: {}", movie.isMultiMovieDir());
@@ -2307,6 +2386,28 @@ public class MovieRenamer {
       if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
         // Both are WebDAV paths - use WebDAV operations
         LOGGER.debug("Moving WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
+
+        // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
+        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
+        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+
+        if (sharedClient != null && sharedSourceId != null) {
+          String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);
+          String[] newParts = WebDavDataSourceHelper.parseWebDavPath(newPathStr);
+
+          if (oldParts != null && newParts != null && oldParts[0].equals(sharedSourceId)) {
+            String actualPath = WebDavFileOperations.moveWebDavFileWithClient(sharedClient, sharedSourceId, oldParts[1], newParts[1]);
+            if (actualPath != null) {
+              return true;
+            }
+            else {
+              LOGGER.error("Could not move WebDAV file '{}' to '{}' (using shared client)", oldPathStr, newPathStr);
+              return false;
+            }
+          }
+        }
+
+        // 回退：创建新连接（兼容非批量操作场景）
         String actualPath = WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
         if (actualPath != null) {
           if (!actualPath.equals(newPathStr)) {
@@ -2459,8 +2560,24 @@ public class MovieRenamer {
     if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) && WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
       // Both are WebDAV paths - use WebDAV operations
       LOGGER.debug("Copying WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
+
+      // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);
+        String[] newParts = WebDavDataSourceHelper.parseWebDavPath(newPathStr);
+
+        if (oldParts != null && newParts != null && oldParts[0].equals(sharedSourceId)) {
+          return WebDavFileOperations.copyWebDavFileWithClient(sharedClient, sharedSourceId, oldParts[1], newParts[1]);
+        }
+      }
+
+      // 回退：创建新连接（兼容非批量操作场景）
       return WebDavFileOperations.copyWebDavFile(oldPathStr, newPathStr);
     }
+
     else if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
       // One is WebDAV and one is local - not supported
       LOGGER.error("Cannot copy files between WebDAV and local file system: {} -> {}", oldPathStr, newPathStr);

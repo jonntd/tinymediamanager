@@ -34,6 +34,144 @@ public class WebDavFileOperations {
   private static final ConcurrentHashMap<String, Object> DIRECTORY_LOCKS = new ConcurrentHashMap<>();
 
   /**
+   * Move/rename a WebDAV file using a shared client (for batch operations). This avoids creating a new connection for each file, significantly
+   * improving performance.
+   * 
+   * @param client
+   *          the shared WebDAV client (must be already connected)
+   * @param sourceId
+   *          the source ID (UUID or name)
+   * @param sourcePath
+   *          the source path (relative to WebDAV root, e.g., "/folder/file.mkv")
+   * @param destPath
+   *          the destination path (relative to WebDAV root)
+   * @return the actual destination path if move was successful, or null if move failed
+   */
+  public static String moveWebDavFileWithClient(WebDavClient client, String sourceId, String sourcePath, String destPath) {
+    try {
+      // Check if source and destination are the same
+      if (sourcePath.equals(destPath)) {
+        LOGGER.debug("Source and destination are the same, skipping move: {}", sourcePath);
+        return "webdav://" + sourceId + destPath;
+      }
+
+      // Ensure parent directory exists
+      String destParent = getParentPath(destPath);
+      if (destParent != null && !destParent.isEmpty()) {
+        // Use per-directory lock to prevent concurrent creation of the same directory
+        String lockKey = sourceId + "/" + destParent;
+        Object lock = DIRECTORY_LOCKS.computeIfAbsent(lockKey, k -> new Object());
+
+        synchronized (lock) {
+          if (!client.exists(destParent)) {
+            LOGGER.debug("Creating parent directory: {}", destParent);
+            if (!client.createDirectory(destParent)) {
+              LOGGER.error("Failed to create parent directory: {}", destParent);
+              return null;
+            }
+          }
+        }
+        DIRECTORY_LOCKS.remove(lockKey, lock);
+      }
+
+      // Check if destination file already exists and handle accordingly
+      String actualDestPath = destPath;
+      if (client.exists(destPath)) {
+        boolean sourceIsDir = isWebDavDirectory(client, sourcePath);
+        boolean destIsDir = isWebDavDirectory(client, destPath);
+
+        // Optimization: If both are directories, perform a "merge"
+        if (sourceIsDir && destIsDir) {
+          LOGGER.info("Both source and destination are directories, merging content: '{}' -> '{}'", sourcePath, destPath);
+          if (mergeWebDavDirectories(client, sourcePath, destPath)) {
+            LOGGER.info("Successfully merged WebDAV directory from '{}' to '{}'", sourcePath, destPath);
+            return "webdav://" + sourceId + destPath;
+          }
+          else {
+            LOGGER.error("Failed to merge WebDAV directory from '{}' to '{}'", sourcePath, destPath);
+            return null;
+          }
+        }
+
+        LOGGER.warn("Destination file already exists: {}", destPath);
+        actualDestPath = generateUniqueDestPath(client, destPath);
+        LOGGER.info("Using unique destination path: {}", actualDestPath);
+      }
+
+      // Build the actual WebDAV path with prefix for return value
+      String actualDestWebDavPath = "webdav://" + sourceId + actualDestPath;
+
+      // Move the file
+      if (client.move(sourcePath, actualDestPath)) {
+        LOGGER.info("Moved WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+        return actualDestWebDavPath;
+      }
+      else {
+        // Fallback: Copy and Delete
+        LOGGER.warn("Move failed, attempting copy and delete fallback for '{}'", sourcePath);
+        if (client.copy(sourcePath, actualDestPath)) {
+          if (client.delete(sourcePath)) {
+            LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+            return actualDestWebDavPath;
+          }
+          else {
+            LOGGER.error("Failed to delete source file after copy: '{}'", sourcePath);
+            client.delete(actualDestPath);
+            return null;
+          }
+        }
+        LOGGER.error("Failed to move WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+        return null;
+      }
+    }
+    catch (Exception e) {
+      LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Copy a WebDAV file using a shared client (for batch operations). This avoids creating a new connection for each file, significantly improving
+   * performance.
+   * 
+   * @param client
+   *          the shared WebDAV client (must be already connected)
+   * @param sourceId
+   *          the source ID (UUID or name)
+   * @param sourcePath
+   *          the source path (relative to WebDAV root)
+   * @param destPath
+   *          the destination path (relative to WebDAV root)
+   * @return true if the copy was successful
+   */
+  public static boolean copyWebDavFileWithClient(WebDavClient client, String sourceId, String sourcePath, String destPath) {
+    try {
+      // Check if source and destination are the same
+      if (sourcePath.equals(destPath)) {
+        LOGGER.debug("Source and destination are the same, skipping copy: {}", sourcePath);
+        return true;
+      }
+
+      // Ensure parent directory exists
+      String destParent = getParentPath(destPath);
+      if (destParent != null && !destParent.isEmpty() && !client.exists(destParent)) {
+        LOGGER.debug("Creating parent directory: {}", destParent);
+        if (!client.createDirectory(destParent)) {
+          LOGGER.error("Failed to create parent directory: {}", destParent);
+          return false;
+        }
+      }
+
+      // Copy the file
+      return client.copy(sourcePath, destPath);
+    }
+    catch (Exception e) {
+      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
+      return false;
+    }
+  }
+
+  /**
    * Move/rename a WebDAV file
    * 
    * @param sourceWebDavPath
@@ -560,6 +698,28 @@ public class WebDavFileOperations {
       if (client != null) {
         client.disconnect();
       }
+    }
+  }
+
+  /**
+   * 递归删除 WebDAV 空目录，使用共享客户端（性能优化：避免创建新连接）
+   *
+   * @param client
+   *          已连接的 WebDAV 客户端
+   * @param basePath
+   *          相对路径（相对于 WebDAV 根目录）
+   * @return 删除的目录数量
+   */
+  public static int deleteEmptyDirectoriesRecursiveWithClient(WebDavClient client, String basePath) {
+    if (client == null || basePath == null) {
+      return 0;
+    }
+    try {
+      return deleteEmptyDirectoriesInternal(client, basePath);
+    }
+    catch (Exception e) {
+      LOGGER.warn("Error during WebDAV empty directory cleanup for '{}': {}", basePath, e.getMessage());
+      return 0;
     }
   }
 
