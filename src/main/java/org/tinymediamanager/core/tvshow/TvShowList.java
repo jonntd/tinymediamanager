@@ -400,12 +400,10 @@ public final class TvShowList extends AbstractModelObject {
     if (isWebDav) {
       // WebDAV 路径使用字符串比较
       String normalizedOldDs = WebDavDataSourceHelper.normalizeWebDavPath(oldDatasource);
-      tvShowsToChange = tvShows.stream()
-          .filter(tvShow -> {
-            String normalizedDs = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getDataSource());
-            return normalizedOldDs.equals(normalizedDs);
-          })
-          .toList();
+      tvShowsToChange = tvShows.stream().filter(tvShow -> {
+        String normalizedDs = WebDavDataSourceHelper.normalizeWebDavPath(tvShow.getDataSource());
+        return normalizedOldDs.equals(normalizedDs);
+      }).toList();
     }
     else {
       // 本地路径使用 Path 比较
@@ -424,9 +422,7 @@ public final class TvShowList extends AbstractModelObject {
         String normalizedNewDs = WebDavDataSourceHelper.normalizeWebDavPath(newDatasource);
 
         // 计算相对路径部分
-        String relativePart = normalizedOldPath.startsWith(normalizedOldDs)
-            ? normalizedOldPath.substring(normalizedOldDs.length())
-            : "";
+        String relativePart = normalizedOldPath.startsWith(normalizedOldDs) ? normalizedOldPath.substring(normalizedOldDs.length()) : "";
         if (relativePart.startsWith("/")) {
           relativePart = relativePart.substring(1);
         }
@@ -917,6 +913,9 @@ public final class TvShowList extends AbstractModelObject {
             }
           }
 
+          // 合并源 TvShow 的 MediaFiles（海报、fanart 等）到目标 TvShow
+          mergeMediaFilesOnLoad(tvShow, existing);
+
           // Save the existing TvShow with merged episodes
           existing.saveToDb();
           // Also save each newly added episode to update their TvShow association
@@ -1005,17 +1004,18 @@ public final class TvShowList extends AbstractModelObject {
    * 剧集比较结果枚举
    */
   private enum EpisodeComparisonResult {
-    SOURCE_BETTER,  // 源剧集更好
-    TARGET_BETTER,  // 目标剧集更好
-    EQUAL           // 两者相等
+    SOURCE_BETTER, // 源剧集更好
+    TARGET_BETTER, // 目标剧集更好
+    EQUAL // 两者相等
   }
 
   /**
-   * 比较两个剧集，判断哪个更完整
-   * 比较策略：视频文件数量 > 总媒体文件数量 > 文件总大小
+   * 比较两个剧集，判断哪个更完整 比较策略：视频文件数量 > 总媒体文件数量 > 文件总大小
    *
-   * @param source 源剧集
-   * @param target 目标剧集
+   * @param source
+   *          源剧集
+   * @param target
+   *          目标剧集
    * @return 比较结果
    */
   private EpisodeComparisonResult compareEpisodes(TvShowEpisode source, TvShowEpisode target) {
@@ -1056,6 +1056,45 @@ public final class TvShowList extends AbstractModelObject {
     catch (Exception e) {
       LOGGER.error("Error comparing episodes S{}E{}: {}", source.getSeason(), source.getEpisode(), e.getMessage());
       return EpisodeComparisonResult.EQUAL;
+    }
+  }
+
+  /**
+   * 合并源 TvShow 的 MediaFiles 到目标 TvShow（用于 DB 加载时） 如果目标没有某类型的 MediaFile，则从源复制 注意：DB 加载时路径无需更新，因为都指向同一目录
+   *
+   * @param source
+   *          源 TvShow（将被删除）
+   * @param target
+   *          目标 TvShow（保留）
+   */
+  private void mergeMediaFilesOnLoad(TvShow source, TvShow target) {
+    // 需要合并的 MediaFile 类型（TvShow 级别的艺术图和元数据文件）
+    MediaFileType[] typesToMerge = { MediaFileType.POSTER, MediaFileType.FANART, MediaFileType.BANNER, MediaFileType.THUMB, MediaFileType.CLEARLOGO,
+        MediaFileType.CLEARART, MediaFileType.CHARACTERART, MediaFileType.DISC, MediaFileType.KEYART, MediaFileType.NFO, MediaFileType.EXTRAFANART,
+        MediaFileType.EXTRATHUMB };
+
+    int mergedCount = 0;
+    for (MediaFileType type : typesToMerge) {
+      List<MediaFile> targetMfs = target.getMediaFiles(type);
+      List<MediaFile> sourceMfs = source.getMediaFiles(type);
+
+      // 如果目标没有这种类型的文件，从源复制
+      if (targetMfs.isEmpty() && !sourceMfs.isEmpty()) {
+        for (MediaFile sourceMf : sourceMfs) {
+          try {
+            target.addToMediaFiles(new MediaFile(sourceMf));
+            mergedCount++;
+            LOGGER.debug("DB Load: Merged MediaFile {} from source to target: {}", type, sourceMf.getFilename());
+          }
+          catch (Exception e) {
+            LOGGER.warn("DB Load: Failed to merge MediaFile {} from source: {}", type, e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (mergedCount > 0) {
+      LOGGER.info("DB Load: Merged {} MediaFiles from source TvShow '{}' to target TvShow '{}'", mergedCount, source.getTitle(), target.getTitle());
     }
   }
 

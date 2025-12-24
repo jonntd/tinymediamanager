@@ -516,4 +516,86 @@ public class WebDavFileOperations {
     // Fallback: use timestamp
     return basePath + "_" + System.currentTimeMillis() + extension;
   }
+
+  /**
+   * 递归删除 WebDAV 空目录 从指定路径开始，向下遍历并删除所有空的子目录
+   *
+   * @param webDavPath
+   *          WebDAV 路径 (格式: webdav://source-id/path)
+   * @return 删除的目录数量
+   */
+  public static int deleteEmptyDirectoriesRecursive(String webDavPath) {
+    WebDavClient client = null;
+    try {
+      // 解析 WebDAV 路径
+      String[] parts = WebDavDataSourceHelper.parseWebDavPath(webDavPath);
+      if (parts == null || parts.length < 2) {
+        LOGGER.debug("Invalid WebDAV path for empty directory cleanup: {}", webDavPath);
+        return 0;
+      }
+      String sourceId = parts[0];
+      String basePath = parts[1];
+
+      // 获取 WebDAV 源
+      WebDavSource source = WebDavDataSourceHelper.getWebDavSource(sourceId);
+      if (source == null) {
+        LOGGER.debug("WebDAV source not found for empty directory cleanup: {}", sourceId);
+        return 0;
+      }
+
+      // 创建客户端
+      client = WebDavDataSourceHelper.createClient(source);
+      if (client == null) {
+        LOGGER.debug("Failed to create WebDAV client for empty directory cleanup: {}", sourceId);
+        return 0;
+      }
+
+      return deleteEmptyDirectoriesInternal(client, basePath);
+    }
+    catch (Exception e) {
+      LOGGER.warn("Error during WebDAV empty directory cleanup for '{}': {}", webDavPath, e.getMessage());
+      return 0;
+    }
+    finally {
+      if (client != null) {
+        client.disconnect();
+      }
+    }
+  }
+
+  /**
+   * 内部递归删除空目录方法
+   */
+  private static int deleteEmptyDirectoriesInternal(WebDavClient client, String path) {
+    int deletedCount = 0;
+    try {
+      // 列出目录内容
+      List<WebDavFile> children = client.list(path);
+      if (children == null) {
+        return 0;
+      }
+
+      // 先递归处理子目录
+      for (WebDavFile child : children) {
+        if (child.isDirectory()) {
+          String childPath = path + (path.endsWith("/") ? "" : "/") + child.getName();
+          deletedCount += deleteEmptyDirectoriesInternal(client, childPath);
+        }
+      }
+
+      // 重新检查当前目录是否为空（子目录可能已被删除）
+      children = client.list(path);
+      if (children != null && children.isEmpty()) {
+        // 目录为空，删除它
+        if (client.delete(path)) {
+          LOGGER.debug("Deleted empty WebDAV directory: {}", path);
+          deletedCount++;
+        }
+      }
+    }
+    catch (Exception e) {
+      LOGGER.trace("Could not check/delete WebDAV directory '{}': {}", path, e.getMessage());
+    }
+    return deletedCount;
+  }
 }

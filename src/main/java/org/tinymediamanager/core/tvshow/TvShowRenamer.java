@@ -315,8 +315,8 @@ public class TvShowRenamer {
                   EpisodeComparisonResult comparison = compareEpisodes(episode, existingEp);
 
                   if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
-                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
-                        episode.getSeason(), episode.getEpisode(), comparison);
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)", episode.getSeason(),
+                        episode.getEpisode(), comparison);
 
                     existingShow.removeEpisode(existingEp);
 
@@ -327,11 +327,14 @@ public class TvShowRenamer {
                   }
                   else {
                     tvShow.removeEpisode(episode);
-                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
-                        episode.getSeason(), episode.getEpisode(), tvShow.getTitle(), comparison);
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target", episode.getSeason(),
+                        episode.getEpisode(), tvShow.getTitle(), comparison);
                   }
                 }
               }
+
+              // 合并源 TvShow 的 MediaFiles（海报、fanart 等）到目标 TvShow
+              mergeMediaFilesToExistingShow(tvShow, existingShow, srcDir, destDir);
 
               TvShowList.getInstance().removeTvShow(tvShow);
               LOGGER.info("Removed duplicate TvShow '{}' after merging episodes to '{}'", tvShow.getTitle(), existingShow.getTitle());
@@ -512,8 +515,8 @@ public class TvShowRenamer {
 
                   if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
                     // Source episode is better OR equal - replace target with source (source has updated path)
-                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
-                        episode.getSeason(), episode.getEpisode(), comparison);
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)", episode.getSeason(),
+                        episode.getEpisode(), comparison);
 
                     // Remove target episode from existingShow and DB
                     existingShow.removeEpisode(existingEp);
@@ -529,11 +532,14 @@ public class TvShowRenamer {
                     // Target episode is better - keep target, remove source
                     show.removeEpisode(episode);
                     // NOTE: removeEpisode already calls removeEpisodeFromDb, no need to call again
-                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
-                        episode.getSeason(), episode.getEpisode(), show.getTitle(), comparison);
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target", episode.getSeason(),
+                        episode.getEpisode(), show.getTitle(), comparison);
                   }
                 }
               }
+
+              // 合并源 TvShow 的 MediaFiles（海报、fanart 等）到目标 TvShow
+              mergeMediaFilesToExistingShow(show, existingShow, srcDir, destDir);
 
               // Remove current show from database and list
               TvShowList.getInstance().removeTvShow(show);
@@ -685,13 +691,19 @@ public class TvShowRenamer {
     }
 
     // delete empty subfolders
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      int deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShow.getPath());
+      }
+    }
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(tvShow.getPathNIO());
       }
       catch (Exception e) {
-        LOGGER.warn("cCould not delete empty subfolders of '{}' - '{}'", tvShow.getPathNIO(), e.getMessage());
+        LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", tvShow.getPathNIO(), e.getMessage());
       }
     }
 
@@ -1160,8 +1172,14 @@ public class TvShowRenamer {
     }
 
     // delete empty subfolders
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      int deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShow.getPath());
+      }
+    }
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(tvShow.getPathNIO());
       }
@@ -1988,11 +2006,20 @@ public class TvShowRenamer {
     episode.saveToDb();
 
     // cleanup old path
-    try {
-      Utils.deleteEmptyDirectoryRecursive(tvShowRoot);
+    String tvShowRootStr = tvShowRoot.toString();
+    if (WebDavDataSourceHelper.isWebDavPath(tvShowRootStr)) {
+      int deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShowRootStr);
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShowRootStr);
+      }
     }
-    catch (IOException e) {
-      LOGGER.warn("Eould not delete empty subfolders of '{}' - '{}'", tvShowRoot, e.getMessage());
+    else {
+      try {
+        Utils.deleteEmptyDirectoryRecursive(tvShowRoot);
+      }
+      catch (IOException e) {
+        LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", tvShowRoot, e.getMessage());
+      }
     }
   }
 
@@ -3090,8 +3117,14 @@ public class TvShowRenamer {
    */
   private static void removeEmptySubfolders(TvShowEpisode episode) {
     // check all subfolders if they're empty (recursively)
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      int deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(episode.getPath());
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, episode.getPath());
+      }
+    }
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(episode.getPathNIO());
       }
@@ -3481,20 +3514,18 @@ public class TvShowRenamer {
    * 剧集比较结果枚举
    */
   private enum EpisodeComparisonResult {
-    SOURCE_BETTER,  // 源剧集更好
-    TARGET_BETTER,  // 目标剧集更好
-    EQUAL           // 两者相等
+    SOURCE_BETTER, // 源剧集更好
+    TARGET_BETTER, // 目标剧集更好
+    EQUAL // 两者相等
   }
 
   /**
-   * 比较两个剧集的完整性，决定哪个应该被保留
-   * 比较策略：
-   * 1. 优先比较视频文件数量（视频是最重要的）
-   * 2. 视频数量相同，比较总媒体文件数量
-   * 3. 总数量相同，比较文件总大小
+   * 比较两个剧集的完整性，决定哪个应该被保留 比较策略： 1. 优先比较视频文件数量（视频是最重要的） 2. 视频数量相同，比较总媒体文件数量 3. 总数量相同，比较文件总大小
    *
-   * @param source 源剧集
-   * @param target 目标剧集
+   * @param source
+   *          源剧集
+   * @param target
+   *          目标剧集
    * @return 比较结果
    */
   private static EpisodeComparisonResult compareEpisodes(TvShowEpisode source, TvShowEpisode target) {
@@ -3504,8 +3535,8 @@ public class TvShowRenamer {
       int targetVideoCount = target.getMediaFiles(MediaFileType.VIDEO).size();
 
       if (sourceVideoCount != targetVideoCount) {
-        LOGGER.debug("Episode comparison: S{}E{} - source has {} videos, target has {} videos",
-            source.getSeason(), source.getEpisode(), sourceVideoCount, targetVideoCount);
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} videos, target has {} videos", source.getSeason(), source.getEpisode(),
+            sourceVideoCount, targetVideoCount);
         return sourceVideoCount > targetVideoCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
@@ -3514,8 +3545,8 @@ public class TvShowRenamer {
       int targetTotalCount = target.getMediaFiles().size();
 
       if (sourceTotalCount != targetTotalCount) {
-        LOGGER.debug("Episode comparison: S{}E{} - source has {} media files, target has {} media files",
-            source.getSeason(), source.getEpisode(), sourceTotalCount, targetTotalCount);
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} media files, target has {} media files", source.getSeason(), source.getEpisode(),
+            sourceTotalCount, targetTotalCount);
         return sourceTotalCount > targetTotalCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
@@ -3526,7 +3557,8 @@ public class TvShowRenamer {
       for (MediaFile mf : source.getMediaFiles()) {
         try {
           sourceSize += mf.getFileAsPath().toFile().length();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Failed to get size for source media file: {}", mf.getFilename());
         }
       }
@@ -3534,23 +3566,71 @@ public class TvShowRenamer {
       for (MediaFile mf : target.getMediaFiles()) {
         try {
           targetSize += mf.getFileAsPath().toFile().length();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Failed to get size for target media file: {}", mf.getFilename());
         }
       }
 
       if (sourceSize != targetSize) {
-        LOGGER.debug("Episode comparison: S{}E{} - source total size {} bytes, target total size {} bytes",
-            source.getSeason(), source.getEpisode(), sourceSize, targetSize);
+        LOGGER.debug("Episode comparison: S{}E{} - source total size {} bytes, target total size {} bytes", source.getSeason(), source.getEpisode(),
+            sourceSize, targetSize);
         return sourceSize > targetSize ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
       LOGGER.debug("Episode comparison: S{}E{} - episodes are equal", source.getSeason(), source.getEpisode());
       return EpisodeComparisonResult.EQUAL;
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Error comparing episodes S{}E{}: {}", source.getSeason(), source.getEpisode(), e.getMessage());
       // 出错时默认返回相等，让原有逻辑处理
       return EpisodeComparisonResult.EQUAL;
+    }
+  }
+
+  /**
+   * 合并源 TvShow 的 MediaFiles 到目标 TvShow 如果目标没有某类型的 MediaFile，则从源复制（更新路径后）
+   * 
+   * @param source
+   *          源 TvShow（将被删除）
+   * @param target
+   *          目标 TvShow（保留）
+   * @param srcDir
+   *          源目录路径
+   * @param destDir
+   *          目标目录路径
+   */
+  private static void mergeMediaFilesToExistingShow(TvShow source, TvShow target, Path srcDir, Path destDir) {
+    // 需要合并的 MediaFile 类型（TvShow 级别的艺术图和元数据文件）
+    MediaFileType[] typesToMerge = { MediaFileType.POSTER, MediaFileType.FANART, MediaFileType.BANNER, MediaFileType.THUMB, MediaFileType.CLEARLOGO,
+        MediaFileType.CLEARART, MediaFileType.CHARACTERART, MediaFileType.DISC, MediaFileType.KEYART, MediaFileType.NFO, MediaFileType.EXTRAFANART,
+        MediaFileType.EXTRATHUMB };
+
+    int mergedCount = 0;
+    for (MediaFileType type : typesToMerge) {
+      List<MediaFile> targetMfs = target.getMediaFiles(type);
+      List<MediaFile> sourceMfs = source.getMediaFiles(type);
+
+      // 如果目标没有这种类型的文件，从源复制
+      if (targetMfs.isEmpty() && !sourceMfs.isEmpty()) {
+        for (MediaFile sourceMf : sourceMfs) {
+          try {
+            // 创建新的 MediaFile 副本并更新路径到目标目录
+            MediaFile newMf = new MediaFile(sourceMf);
+            newMf.replacePathForRenamedFolder(srcDir, destDir);
+            target.addToMediaFiles(newMf);
+            mergedCount++;
+            LOGGER.debug("Merged MediaFile {} from source to target: {}", type, newMf.getFilename());
+          }
+          catch (Exception e) {
+            LOGGER.warn("Failed to merge MediaFile {} from source: {}", type, e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (mergedCount > 0) {
+      LOGGER.info("Merged {} MediaFiles from source TvShow '{}' to target TvShow '{}'", mergedCount, source.getTitle(), target.getTitle());
     }
   }
 }
