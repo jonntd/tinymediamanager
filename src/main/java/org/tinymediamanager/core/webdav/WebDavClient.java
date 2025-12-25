@@ -320,7 +320,7 @@ public class WebDavClient {
    * @return true if successful
    */
   public boolean move(String sourcePath, String destPath, boolean overwrite) {
-    return moveWithRetry(sourcePath, destPath, 5, overwrite);
+    return moveWithRetry(sourcePath, destPath, 7, overwrite);
   }
 
   /**
@@ -353,9 +353,9 @@ public class WebDavClient {
         // 对于 423 Locked 和服务器错误 (5xx)，可以重试
         // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
         if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
-          // 指数退避 + 随机抖动 (Jitter)：5s, 10s, 15s... + (0~2000ms)
+          // 指数退避 + 随机抖动 (Jitter)：8s, 16s, 24s... + (0~3000ms)
           // 增加基础等待时间和随机性，避免多个线程在同一秒重试导致服务器雪崩
-          long waitMs = (5000L * attempt) + (long) (Math.random() * 2000);
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV move failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -386,7 +386,7 @@ public class WebDavClient {
                 || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
                 || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
 
-          long waitMs = (5000L * attempt) + (long) (Math.random() * 2000);
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV move network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -437,7 +437,7 @@ public class WebDavClient {
    * @return true if successful
    */
   public boolean copy(String sourcePath, String destPath, boolean overwrite) {
-    return copyWithRetry(sourcePath, destPath, 5, overwrite);
+    return copyWithRetry(sourcePath, destPath, 7, overwrite);
   }
 
   /**
@@ -464,8 +464,8 @@ public class WebDavClient {
         // 对于 423 Locked 和服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
         // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
         if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
-          // 指数退避 + 随机抖动 (Jitter)：5s, 10s, 15s... + (0~2000ms)
-          long waitMs = (5000L * attempt) + (long) (Math.random() * 2000);
+          // 指数退避 + 随机抖动 (Jitter)：8s, 16s, 24s... + (0~3000ms)
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV copy failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
