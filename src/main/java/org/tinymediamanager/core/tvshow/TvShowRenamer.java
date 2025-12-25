@@ -111,32 +111,29 @@ import com.floreysoft.jmte.token.Token;
  * @author Myron Boyle
  */
 public class TvShowRenamer {
-  private static final Logger              LOGGER                  = LoggerFactory.getLogger(TvShowRenamer.class);
-  private static final Map<String, String> TOKEN_MAP               = createTokenMap();
+  private static final Logger                    LOGGER                  = LoggerFactory.getLogger(TvShowRenamer.class);
+  private static final Map<String, String>       TOKEN_MAP               = createTokenMap();
 
-  private static final String[]            seasonNumbers           = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
+  private static final String[]                  seasonNumbers           = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
       "episode.dvdSeason" };
-  private static final String[]            episodeNumbers          = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2", "episode.episode",
-      "episode.dvdEpisode", "absoluteNr", "absoluteNr2", "episode.absoluteNumber" };
-  private static final String[]            episodeTitles           = { "title", "originalTitle", "englishTitle", "titleSortable", "episode.title",
-      "episode.originalTitle", "episode.titleSortable", "episode.englishTitle" };
-  private static final String[]            episodeAired            = { "airedDate", "episode.firstAired" };
+  private static final String[]                  episodeNumbers          = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2",
+      "episode.episode", "episode.dvdEpisode", "absoluteNr", "absoluteNr2", "episode.absoluteNumber" };
+  private static final String[]                  episodeTitles           = { "title", "originalTitle", "englishTitle", "titleSortable",
+      "episode.title", "episode.originalTitle", "episode.titleSortable", "episode.englishTitle" };
+  private static final String[]                  episodeAired            = { "airedDate", "episode.firstAired" };
 
-  private static final Pattern             epDelimiter             = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}",
+  private static final Pattern                   epDelimiter             = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern             seDelimiter             = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}",
+  private static final Pattern                   seDelimiter             = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}",
       Pattern.CASE_INSENSITIVE);
 
-  private static final List<String>        DISC_FOLDERS            = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
-  private static final Pattern             MF_STACKING_PATTERN     = Pattern.compile(".*?([\\s._-]\\d)$");
+  private static final List<String>              DISC_FOLDERS            = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
+  private static final Pattern                   MF_STACKING_PATTERN     = Pattern.compile(".*?([\\s._-]\\d)$");
 
   // Static fields for sharing WebDAV client during batch rename operations (performance optimization)
-  // Using static fields instead of ThreadLocal because:
-  // 1. WebDAV scenario forces single-thread mode (threadCount = 1) to avoid 423/500 errors
-  // 2. Task initializes client in one thread, but rename workers run in thread pool
-  // 3. Static fields allow cross-thread access in single-thread pool scenario
-  private static volatile WebDavClient     SHARED_WEBDAV_CLIENT    = null;
-  private static volatile String           SHARED_WEBDAV_SOURCE_ID = null;
+  // Using ThreadLocal because we now support multi-threaded rename (e.g. 2 threads for AList)
+  private static final ThreadLocal<WebDavClient> SHARED_WEBDAV_CLIENT    = new ThreadLocal<>();
+  private static final ThreadLocal<String>       SHARED_WEBDAV_SOURCE_ID = new ThreadLocal<>();
 
   private TvShowRenamer() {
     throw new IllegalAccessError();
@@ -150,31 +147,31 @@ public class TvShowRenamer {
    * @param sourceId
    *          数据源 ID
    */
-  public static synchronized void initSharedWebDavClient(WebDavClient client, String sourceId) {
-    SHARED_WEBDAV_CLIENT = client;
-    SHARED_WEBDAV_SOURCE_ID = sourceId;
+  public static void initSharedWebDavClient(WebDavClient client, String sourceId) {
+    SHARED_WEBDAV_CLIENT.set(client);
+    SHARED_WEBDAV_SOURCE_ID.set(sourceId);
   }
 
   /**
    * 清除 Task 级别的共享 WebDAV 客户端
    */
-  public static synchronized void clearSharedWebDavClient() {
-    SHARED_WEBDAV_CLIENT = null;
-    SHARED_WEBDAV_SOURCE_ID = null;
+  public static void clearSharedWebDavClient() {
+    SHARED_WEBDAV_CLIENT.remove();
+    SHARED_WEBDAV_SOURCE_ID.remove();
   }
 
   /**
    * 获取共享 WebDAV 客户端
    */
   public static WebDavClient getSharedWebDavClient() {
-    return SHARED_WEBDAV_CLIENT;
+    return SHARED_WEBDAV_CLIENT.get();
   }
 
   /**
    * 获取共享 WebDAV 数据源 ID
    */
   public static String getSharedWebDavSourceId() {
-    return SHARED_WEBDAV_SOURCE_ID;
+    return SHARED_WEBDAV_SOURCE_ID.get();
   }
 
   /**
@@ -739,8 +736,10 @@ public class TvShowRenamer {
     if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
       // WebDAV 路径使用专门的方法删除空目录
       // 优先使用共享客户端
-      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
       int deleted = 0;
 
       if (sharedClient != null && sharedSourceId != null) {
@@ -1238,8 +1237,10 @@ public class TvShowRenamer {
     if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
       // WebDAV 路径使用专门的方法删除空目录
       // 优先使用共享客户端
-      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
       int deleted = 0;
 
       if (sharedClient != null && sharedSourceId != null) {
@@ -1357,18 +1358,17 @@ public class TvShowRenamer {
 
     LOGGER.info("Renaming TvShow '{}', episode S{} E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
 
-    // 性能优化：对于 WebDAV 数据源，检查是否已有 Task 级别的共享客户端
+    // 性能优化：对于 WebDAV 数据源，检查是否已有共享客户端
     // 如果没有，则为当前单个 episode 创建临时共享客户端
     boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(episode.getTvShow().getPath());
     boolean createdClientHere = false;
-    if (isWebDav && SHARED_WEBDAV_CLIENT == null) {
+    if (isWebDav && SHARED_WEBDAV_CLIENT.get() == null) {
       try {
         String[] parsed = WebDavDataSourceHelper.parseWebDavPath(episode.getTvShow().getPath());
         if (parsed != null && parsed.length >= 1) {
           WebDavClient client = WebDavDataSourceHelper.getClientForPath(episode.getTvShow().getPath());
           if (client != null) {
-            SHARED_WEBDAV_CLIENT = client;
-            SHARED_WEBDAV_SOURCE_ID = parsed[0];
+            initSharedWebDavClient(client, parsed[0]);
             createdClientHere = true;
             LOGGER.debug("Created episode-level shared WebDAV client for rename operations (performance optimization)");
           }
@@ -1384,17 +1384,19 @@ public class TvShowRenamer {
     }
     finally {
       // 仅清理此方法创建的客户端，不清理 Task 级别的客户端
-      if (createdClientHere && SHARED_WEBDAV_CLIENT != null) {
+      if (createdClientHere) {
         try {
-          SHARED_WEBDAV_CLIENT.disconnect();
+          WebDavClient client = SHARED_WEBDAV_CLIENT.get();
+          if (client != null) {
+            client.disconnect();
+          }
           LOGGER.debug("Disconnected episode-level shared WebDAV client after rename");
         }
         catch (Exception e) {
           LOGGER.warn("Error disconnecting shared WebDAV client: {}", e.getMessage());
         }
         finally {
-          SHARED_WEBDAV_CLIENT = null;
-          SHARED_WEBDAV_SOURCE_ID = null;
+          clearSharedWebDavClient();
         }
       }
     }
@@ -2138,8 +2140,10 @@ public class TvShowRenamer {
     String tvShowRootStr = tvShowRoot.toString();
     if (WebDavDataSourceHelper.isWebDavPath(tvShowRootStr)) {
       // 优先使用共享客户端
-      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
       int deleted = 0;
 
       if (sharedClient != null && sharedSourceId != null) {
@@ -3267,8 +3271,10 @@ public class TvShowRenamer {
     if (WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
       // WebDAV 路径使用专门的方法删除空目录
       // 优先使用共享客户端
-      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
       int deleted = 0;
 
       if (sharedClient != null && sharedSourceId != null) {
@@ -3324,8 +3330,9 @@ public class TvShowRenamer {
         LOGGER.debug("Moving WebDAV file '{}' to '{}'", oldPath, newPath);
 
         // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
-        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
 
         if (sharedClient != null && sharedSourceId != null) {
           // 解析路径获取相对路径
@@ -3432,8 +3439,9 @@ public class TvShowRenamer {
       LOGGER.debug("Copying WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
 
       // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
-      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
 
       if (sharedClient != null && sharedSourceId != null) {
         String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);
@@ -3519,8 +3527,9 @@ public class TvShowRenamer {
         LOGGER.debug("Moving WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
 
         // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
-        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT;
-        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID;
+        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
 
         if (sharedClient != null && sharedSourceId != null) {
           String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);

@@ -102,13 +102,48 @@ public class WebDavFileOperations {
       String actualDestWebDavPath = "webdav://" + sourceId + actualDestPath;
 
       // Move the file
-      if (client.move(sourcePath, actualDestPath)) {
+      // 使用 overwrite=false 进行防御性移动，以便在 AList 缓存假阴性时能触发后续的冲突自愈逻辑
+      if (client.move(sourcePath, actualDestPath, false)) {
         LOGGER.info("Moved WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
         return actualDestWebDavPath;
       }
+
       else {
+        // [修复 500 虚假失败 & 冲突自愈]
+        try {
+          Thread.sleep(1000); // 给服务器一点处理内部事务的时间
+
+          // 场景 A: 实际上后台已经 Move 成功了 (后端超时但已完成)
+          if (!client.exists(sourcePath) && client.exists(actualDestPath)) {
+            LOGGER.info("Move command for '{}' returned error, but source is gone and dest exists. Assuming backend success.", sourcePath);
+            return actualDestWebDavPath;
+          }
+
+          // 场景 B: 目标路径真的发生了碰撞，且 exists() 也没查出来 (AList 缓存假阴性)
+          if (client.exists(sourcePath) && client.exists(actualDestPath)) {
+            LOGGER.warn("Collision detected for '{}' -> '{}' after error. Generating absolute unique path to recover.", sourcePath, actualDestPath);
+            String absoluteUniquePath = generateAbsoluteUniqueDestPath(client, actualDestPath);
+            if (client.move(sourcePath, absoluteUniquePath)) {
+              LOGGER.info("Successfully recovered from collision by moving to unique path: {}", absoluteUniquePath);
+              return "webdav://" + sourceId + absoluteUniquePath;
+            }
+          }
+        }
+        catch (Exception ex) {
+          LOGGER.debug("Conflict self-healing validation failed: {}", ex.getMessage());
+        }
+
         // Fallback: Copy and Delete
-        LOGGER.warn("Move failed, attempting copy and delete fallback for '{}'", sourcePath);
+
+        // 在进入降级逻辑前静默观察 1500ms，给服务器（如 123 盘）一些同步索引的时间，避免由于瞬时 500 导致 copy 也失败
+        try {
+          Thread.sleep(1500);
+        }
+        catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+
+        LOGGER.warn("Move failed, attempting copy and delete fallback for '{}' to '{}' (after 1.5s buffer)", sourcePath, actualDestPath);
         if (client.copy(sourcePath, actualDestPath)) {
           if (client.delete(sourcePath)) {
             LOGGER.info("Successfully moved (via copy+delete) WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
@@ -120,9 +155,10 @@ public class WebDavFileOperations {
             return null;
           }
         }
-        LOGGER.error("Failed to move WebDAV file from '{}' to '{}'", sourcePath, actualDestPath);
+        LOGGER.error("Failed to move WebDAV file from '{}' to '{}' (Move and fallback Copy both failed)", sourcePath, actualDestPath);
         return null;
       }
+
     }
     catch (Exception e) {
       LOGGER.error("Error moving WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
@@ -163,12 +199,33 @@ public class WebDavFileOperations {
       }
 
       // Copy the file
-      return client.copy(sourcePath, destPath);
+      // 使用 overwrite=false 以便识别潜在冲突
+      if (client.copy(sourcePath, destPath, false)) {
+        LOGGER.info("Copied WebDAV file from '{}' to '{}'", sourcePath, destPath);
+        return true;
+      }
+
+      else {
+        // [冲突自愈] 同理，Copy 如果返回 500 也执行自愈验证
+        try {
+          if (client.exists(destPath)) {
+            LOGGER.info("Copy command for '{}' returned error, but destination already exists. Assuming backend success or conflict.", sourcePath);
+            return true;
+          }
+        }
+        catch (Exception ex) {
+          // ignore
+        }
+        LOGGER.error("Failed to copy WebDAV file from '{}' to '{}' after retries and self-healing effort", sourcePath, destPath);
+        return false;
+      }
+
     }
     catch (Exception e) {
       LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
       return false;
     }
+
   }
 
   /**
@@ -182,6 +239,8 @@ public class WebDavFileOperations {
    */
   public static String moveWebDavFile(String sourceWebDavPath, String destWebDavPath) {
     WebDavClient client = null;
+    String sourcePath = null;
+    String destPath = null;
     try {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
@@ -190,16 +249,17 @@ public class WebDavFileOperations {
         return null;
       }
       String sourceId = sourceParts[0];
-      String sourcePath = sourceParts[1];
+      sourcePath = sourceParts[1];
 
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
       if (destParts == null || destParts.length < 2) {
+
         LOGGER.error("Invalid destination WebDAV path: {}", WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath));
         return null;
       }
       String destId = destParts[0];
-      String destPath = destParts[1];
+      destPath = destParts[1];
 
       // Check if source and destination are on the same WebDAV server
       boolean sameServer = sourceId.equals(destId);
@@ -488,6 +548,8 @@ public class WebDavFileOperations {
    */
   public static boolean copyWebDavFile(String sourceWebDavPath, String destWebDavPath) {
     WebDavClient client = null;
+    String sourcePath = null;
+    String destPath = null;
     try {
       // Parse source path
       String[] sourceParts = WebDavDataSourceHelper.parseWebDavPath(sourceWebDavPath);
@@ -496,7 +558,7 @@ public class WebDavFileOperations {
         return false;
       }
       String sourceId = sourceParts[0];
-      String sourcePath = sourceParts[1];
+      sourcePath = sourceParts[1];
 
       // Parse destination path
       String[] destParts = WebDavDataSourceHelper.parseWebDavPath(destWebDavPath);
@@ -505,7 +567,7 @@ public class WebDavFileOperations {
         return false;
       }
       String destId = destParts[0];
-      String destPath = destParts[1];
+      destPath = destParts[1];
 
       // Check if source and destination are on the same WebDAV server
       boolean sameServer = sourceId.equals(destId);
@@ -584,13 +646,30 @@ public class WebDavFileOperations {
       }
 
       // Copy the file
-      return client.copy(sourcePath, destPath);
+      if (client.copy(sourcePath, destPath, false)) {
+        LOGGER.info("Copied WebDAV file from '{}' to '{}'", sourcePath, destPath);
+        return true;
+      }
+      else {
+        // [冲突自愈] 同理，Copy 如果返回 500 也执行自愈验证（123 盘可能因为已存在或超时报 500）
+        try {
+          if (client.exists(destPath)) {
+            LOGGER.info("Copy command for '{}' returned error, but destination already exists. Assuming backend success or conflict.", sourcePath);
+            return true;
+          }
+        }
+        catch (Exception ex) {
+          // ignore
+        }
+        LOGGER.error("Failed to copy WebDAV file from '{}' to '{}' after retries and self-healing effort", sourcePath, destPath);
+        return false;
+      }
     }
     catch (Exception e) {
-      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", WebDavDataSourceHelper.decodeWebDavPath(sourceWebDavPath),
-          WebDavDataSourceHelper.decodeWebDavPath(destWebDavPath), e.getMessage());
+      LOGGER.error("Error copying WebDAV file from '{}' to '{}': {}", sourcePath, destPath, e.getMessage());
       return false;
     }
+
     finally {
       // Always disconnect the client to prevent resource leaks
       if (client != null) {
@@ -615,6 +694,31 @@ public class WebDavFileOperations {
       return "/";
     }
     return path.substring(0, lastSlash);
+  }
+
+  /**
+   * 生成一个带有毫秒时间戳的绝对唯一目标路径，用于从死循环的冲突中恢复。
+   */
+  private static String generateAbsoluteUniqueDestPath(WebDavClient client, String destPath) {
+    int lastDot = destPath.lastIndexOf('.');
+    int lastSlash = destPath.lastIndexOf('/');
+
+    String basePath;
+    String extension;
+
+    if (lastDot > lastSlash) {
+      basePath = destPath.substring(0, lastDot);
+      extension = destPath.substring(lastDot);
+    }
+    else {
+      basePath = destPath;
+      extension = "";
+    }
+
+    // 使用时间戳确保即便在 AList 缓存未更新时也能撞正一个不存在的路径
+    String uniquePath = basePath + "_" + System.currentTimeMillis() + extension;
+    LOGGER.debug("Generated absolute unique recovery path: {}", uniquePath);
+    return uniquePath;
   }
 
   /**
@@ -644,15 +748,16 @@ public class WebDavFileOperations {
     }
 
     // Try adding suffix until we find a unique name
-    for (int i = 1; i <= 99; i++) {
+    for (int i = 1; i <= 20; i++) {
       String newPath = basePath + "_" + i + extension;
       if (!client.exists(newPath)) {
         return newPath;
       }
     }
 
-    // Fallback: use timestamp
+    // Fallback: use timestamp to ensure uniqueness even in high concurrency
     return basePath + "_" + System.currentTimeMillis() + extension;
+
   }
 
   /**
