@@ -373,9 +373,9 @@ public class WebDavClient {
           continue;
         }
 
-        // 对于客户端错误 (4xx) 或重试次数用尽，直接失败
-        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-        LOGGER.error("Exception details: {}", e.toString());
+        // 对于客户端错误 (4xx) 或重试次数用尽，记录警告（上层会进行容错验证）
+        LOGGER.warn("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.warn("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
         return false;
       }
@@ -403,8 +403,8 @@ public class WebDavClient {
           continue;
         }
 
-        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-        LOGGER.error("Exception details: {}", e.toString());
+        LOGGER.warn("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.warn("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
         return false;
       }

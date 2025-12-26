@@ -3424,10 +3424,8 @@ public class TvShowRenamer {
     // 因为这个文件实际上不存在于 WebDAV 服务器上
     // 返回 false 以避免 renamer 用错误的路径替换原有的 MediaFile
     if (isOldPathCacheLike) {
-      LOGGER.warn(
-          "Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, cache/image, or embedded tvshows/movies). "
-              + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.",
-          oldPathStr);
+      // 预期行为：本地缓存的海报/封面不存在于 WebDAV 上，无需复制
+      LOGGER.debug("Skipping cache artwork copy (not on WebDAV): {}", oldPathStr);
       return false; // 返回 false 让 renamer 知道复制失败，不替换 MediaFile
     }
 

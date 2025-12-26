@@ -394,6 +394,45 @@ public class WebDavFileOperations {
         return actualDestWebDavPath;
       }
       else {
+        // [容错验证] 检查是否实际上已经成功了（后端超时但已完成，或之前的操作已移动）
+        try {
+          Thread.sleep(1000); // 给服务器一点处理内部事务的时间
+
+          // 场景 A: 源已消失 + 原始目标已存在（可能之前的操作已移动到目标位置）
+          if (!client.exists(sourcePath) && client.exists(destPath)) {
+            LOGGER.info("Move command for '{}' returned error, but source is gone and original dest '{}' exists. Assuming previous success.",
+                sourcePath, destPath);
+            return "webdav://" + destId + destPath;
+          }
+
+          // 场景 B: 源已消失 + 实际目标已存在（刚才的操作成功了）
+          if (!client.exists(sourcePath) && client.exists(actualDestPath)) {
+            LOGGER.info("Move command for '{}' returned error, but source is gone and dest exists. Assuming backend success.", sourcePath);
+            return actualDestWebDavPath;
+          }
+
+          // 场景 C: 源和目标都存在（冲突，尝试自愈）
+          if (client.exists(sourcePath) && client.exists(actualDestPath)) {
+            LOGGER.warn("Collision detected for '{}' -> '{}' after error. Generating unique path to recover.", sourcePath, actualDestPath);
+            String absoluteUniquePath = generateAbsoluteUniqueDestPath(client, actualDestPath);
+            if (client.move(sourcePath, absoluteUniquePath)) {
+              LOGGER.info("Successfully recovered from collision by moving to unique path: {}", absoluteUniquePath);
+              return "webdav://" + destId + absoluteUniquePath;
+            }
+          }
+        }
+        catch (Exception ex) {
+          LOGGER.debug("Conflict self-healing validation failed: {}", ex.getMessage());
+        }
+
+        // 在进入降级逻辑前静默观察，给服务器一些同步索引的时间
+        try {
+          Thread.sleep(1500);
+        }
+        catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+
         // Fallback: Copy and Delete (Standard workaround for buggy WebDAV servers returning 500/409 on MOVE)
         LOGGER.warn("Move failed (possible server error 500/409), attempting copy and delete fallback regarding '{}'", sourcePath);
         if (client.copy(sourcePath, actualDestPath)) {
