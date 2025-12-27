@@ -479,8 +479,34 @@ public class TvShowEpisodeAndSeasonParser {
   private static final Pattern CHINESE_PART_PATTERN           = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])部分?", Pattern.CASE_INSENSITIVE);
   private static final Pattern CHINESE_CHAPTER_PATTERN        = Pattern.compile("第([一二三四五六七八九十\\d{1,2}])章", Pattern.CASE_INSENSITIVE);
 
+  // 中文剧名直接跟数字的格式（如"少年包青天01"、"熊出没12"）
+  // 匹配规则：中文字符 + 0/1/2位数字（01-999），数字不能以0开头（除非是01-09），且后面不能再跟数字
+  // 优化后：使用零宽断言避免误匹配年份（如"2006"不应被识别）
+  private static final Pattern CHINESE_TITLE_EPISODE_PATTERN  = Pattern.compile("[\\u4e00-\\u9fa5](\\d{2,3})(?!\\d)", Pattern.CASE_INSENSITIVE);
+
+  // 纯数字集数格式（如"07.mkv"、"12.mkv"、"13 .mkv"）- 用于文件名只有数字的情况
+  // 匹配规则：以2-3位数字结尾（允许尾部有空格），且前面是非数字或字符串开头
+  private static final Pattern PURE_NUMBER_EPISODE_PATTERN    = Pattern.compile("(?:^|[^\\d])(\\d{2,3})\\s*$", Pattern.CASE_INSENSITIVE);
+
+  // 数字 + 分隔符 + 标题格式（如"07.张开你的嘴巴"、"12_剧集标题"）
+  // 匹配规则：以2-3位数字开头，后面跟分隔符（.、_、-、空格）
+  private static final Pattern NUMBER_TITLE_EPISODE_PATTERN   = Pattern.compile("^(\\d{2,3})[._\\-\\s]", Pattern.CASE_INSENSITIVE);
+
+  // 数字 + 中文字符（无分隔符）格式（如"17变生不测凤姐泼醋"）
+  // 匹配规则：以2-3位数字开头，后面直接跟中文字符
+  private static final Pattern NUMBER_CHINESE_EPISODE_PATTERN = Pattern.compile("^(\\d{2,3})[\\u4e00-\\u9fa5]", Pattern.CASE_INSENSITIVE);
+
+  // 英文缩写/字母 + 数字格式（如"ZXGH07"、"EP12"）
+  // 匹配规则：英文字母后直接跟2-3位数字，数字后面不能再跟数字
+  private static final Pattern ALPHA_EPISODE_PATTERN          = Pattern.compile("[a-zA-Z](\\d{2,3})(?!\\d)", Pattern.CASE_INSENSITIVE);
+
+  // 括号格式的集数（如"逆水寒 (20).MP4"、"剧名(3).mkv"）
+  // 匹配规则：括号内是1-3位数字，支持空格
+  private static final Pattern PARENTHESIS_EPISODE_PATTERN    = Pattern.compile("[（(]\\s*(\\d{1,3})\\s*[）)]", Pattern.CASE_INSENSITIVE);
+
   // 特殊格式模式 - 罗马数字必须紧跟在中文字符后面（如"大海战II"），避免误匹配其他位置的字母
-  private static final Pattern ROMAN_NUMERAL_PATTERN          = Pattern.compile("([\\u4e00-\\u9fa5])([IVX]{1,5})(?:\\s|$|[^a-zA-Z])",
+  // 排除罗马数字后面跟阿拉伯数字的情况（如"风云II17"中的II不应匹配，17才是集数）
+  private static final Pattern ROMAN_NUMERAL_PATTERN          = Pattern.compile("([\\u4e00-\\u9fa5])([IVX]{1,5})(?:\\s|$|[^a-zA-Z0-9])",
       Pattern.CASE_INSENSITIVE);
   private static final Pattern DOCUMENTARY_PATTERN            = Pattern.compile("(\\d{1,2})(?:of|/)(\\d{1,2})", Pattern.CASE_INSENSITIVE);
   // (1/6) with normal or unicode slash!
@@ -770,9 +796,15 @@ public class TvShowEpisodeAndSeasonParser {
       }
     }
 
-    // 尝试"第X部分"格式
+    // 尝试"第X部分"格式 - 仅在文件名部分匹配，避免误匹配目录名（如"第一部听风"）
     if (result.episodes.isEmpty()) {
-      m = CHINESE_PART_PATTERN.matcher(name);
+      // 提取文件名部分（最后一个斜杠后的内容）
+      String filenameOnly = name;
+      int lastSlash = name.lastIndexOf('/');
+      if (lastSlash >= 0 && lastSlash < name.length() - 1) {
+        filenameOnly = name.substring(lastSlash + 1);
+      }
+      m = CHINESE_PART_PATTERN.matcher(filenameOnly);
       if (m.find()) {
         try {
           int part = chineseNumberToInt(m.group(1));
@@ -787,9 +819,15 @@ public class TvShowEpisodeAndSeasonParser {
       }
     }
 
-    // 尝试"第X章"格式
+    // 尝试"第X章"格式 - 仅在文件名部分匹配
     if (result.episodes.isEmpty()) {
-      m = CHINESE_CHAPTER_PATTERN.matcher(name);
+      // 提取文件名部分
+      String filenameOnly = name;
+      int lastSlash = name.lastIndexOf('/');
+      if (lastSlash >= 0 && lastSlash < name.length() - 1) {
+        filenameOnly = name.substring(lastSlash + 1);
+      }
+      m = CHINESE_CHAPTER_PATTERN.matcher(filenameOnly);
       if (m.find()) {
         try {
           int chapter = chineseNumberToInt(m.group(1));
@@ -818,6 +856,126 @@ public class TvShowEpisodeAndSeasonParser {
         }
         catch (Exception e) {
           // 忽略解析错误
+        }
+      }
+    }
+
+    // 尝试中文剧名直接跟数字的格式（如"少年包青天01"、"熊出没12"、"续01险渡通天河"）
+    // 这是最后的回退策略，在其他格式都无法匹配时使用
+    if (result.episodes.isEmpty()) {
+      LOGGER.debug("Trying CHINESE_TITLE_EPISODE_PATTERN on: '{}'", name);
+      m = CHINESE_TITLE_EPISODE_PATTERN.matcher(name);
+      if (m.find()) {
+        LOGGER.debug("CHINESE_TITLE_EPISODE_PATTERN matched! group(0)='{}', group(1)='{}'", m.group(0), m.group(1));
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          // 排除年份（1900-2099）
+          if (episode > 0 && episode <= 999 && !(episode >= 1900 && episode <= 2099)) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed Chinese title-episode format: Episode {} from '{}'", episode, name);
+          }
+          else {
+            LOGGER.debug("Episode {} rejected (year range exclusion)", episode);
+          }
+        }
+        catch (NumberFormatException e) {
+          LOGGER.debug("Failed to parse episode number: {}", e.getMessage());
+        }
+      }
+      else {
+        LOGGER.debug("CHINESE_TITLE_EPISODE_PATTERN did not match: '{}'", name);
+      }
+    }
+
+    // 尝试 数字+分隔符+标题 格式（如"07.张开你的嘴巴"、"12_剧集标题"）
+    if (result.episodes.isEmpty()) {
+      m = NUMBER_TITLE_EPISODE_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          if (episode > 0 && episode <= 999) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed number-title format: Episode {} from '{}'", episode, name);
+          }
+        }
+        catch (NumberFormatException e) {
+          // 忽略
+        }
+      }
+    }
+
+    // 尝试 数字+中文（无分隔符）格式（如"17变生不测凤姐泼醋"）
+    if (result.episodes.isEmpty()) {
+      m = NUMBER_CHINESE_EPISODE_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          if (episode > 0 && episode <= 999) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed number-chinese format: Episode {} from '{}'", episode, name);
+          }
+        }
+        catch (NumberFormatException e) {
+          // 忽略
+        }
+      }
+    }
+
+    // 尝试 英文字母+数字 格式（如"ZXGH07"、"EP12"）
+    // 排除编码格式：H264、H265、x264、x265、AV1 等
+    if (result.episodes.isEmpty()) {
+      m = ALPHA_EPISODE_PATTERN.matcher(name);
+      while (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          // 排除编码格式标识符（264、265 是 H264/H265/x264/x265 的一部分，不是集数）
+          if (episode == 264 || episode == 265) {
+            LOGGER.debug("Skipping codec identifier: {} from '{}'", episode, name);
+            continue;
+          }
+          if (episode > 0 && episode <= 999) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed alpha-episode format: Episode {} from '{}'", episode, name);
+            break; // 找到有效集数后停止
+          }
+        }
+        catch (NumberFormatException e) {
+          // 忽略
+        }
+      }
+    }
+
+    // 尝试 纯数字 格式（如"07"、"12"）- 作为最后的回退
+    // 尝试 括号格式 的集数（如"逆水寒 (20).MP4"、"剧名(3).mkv"）
+    if (result.episodes.isEmpty()) {
+      m = PARENTHESIS_EPISODE_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          if (episode > 0 && episode <= 999) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed parenthesis format: Episode {} from '{}'", episode, name);
+          }
+        }
+        catch (NumberFormatException e) {
+          // 忽略
+        }
+      }
+    }
+
+    // 尝试 纯数字 格式（如"07"、"12"）- 作为最后的回退
+    if (result.episodes.isEmpty()) {
+      m = PURE_NUMBER_EPISODE_PATTERN.matcher(name);
+      if (m.find()) {
+        try {
+          int episode = Integer.parseInt(m.group(1));
+          if (episode > 0 && episode <= 999) {
+            result.episodes.add(episode);
+            LOGGER.info("Parsed pure number format: Episode {} from '{}'", episode, name);
+          }
+        }
+        catch (NumberFormatException e) {
+          // 忽略
         }
       }
     }
@@ -1248,7 +1406,14 @@ public class TvShowEpisodeAndSeasonParser {
     }
     else {
       // 【优先解析中文格式】- 确保中文格式（如"第51话"）被优先识别，避免被 Anime 模式误匹配
-      result = parseChineseEpisodeFormat(result, nameNoExt);
+      // 预处理：移除方括号标签（如 [H265]、[AI修复] 等），避免干扰集数识别
+      String cleanedName = nameNoExt.replaceAll("\\[.*?\\]", "").trim();
+      // 如果完全被清理掉了，使用原始文件名
+      if (cleanedName.isEmpty()) {
+        cleanedName = nameNoExt;
+      }
+
+      result = parseChineseEpisodeFormat(result, cleanedName);
       if (!result.episodes.isEmpty()) {
         LOGGER.debug("Chinese format parsed successfully for: {}", name);
         // 尝试从路径中提取季号 (如: 熊出没之探险日记(2) 中的 2)

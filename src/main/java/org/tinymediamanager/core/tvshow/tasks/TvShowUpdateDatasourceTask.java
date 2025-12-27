@@ -992,6 +992,33 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
             String videoBaseName = FilenameUtils.getBaseName(file.getName());
             cleanupIncorrectlyAssociatedFiles(existingEpisode, videoBaseName);
 
+            // [NEW] 自动重新解析集数：如果现有剧集的集数为 -1（表示之前解析失败），则重新解析
+            if (existingEpisode.getEpisode() == -1) {
+              LOGGER.info("Existing episode '{}' has episode=-1, attempting to re-parse...", file.getName());
+
+              // 计算相对路径
+              String showRoot = dirPath.endsWith("/") ? dirPath : dirPath + "/";
+              String relativePath = file.getPath();
+              if (relativePath.startsWith(showRoot)) {
+                relativePath = relativePath.substring(showRoot.length());
+              }
+
+              // 重新解析集数
+              EpisodeMatchingResult result = TvShowEpisodeAndSeasonParser.detectEpisodeHybrid(relativePath, tvShow.getTitle(), false);
+
+              if (!result.episodes.isEmpty()) {
+                int seasonNum = result.season != -1 ? result.season : 1;
+                int episodeNum = result.episodes.get(0);
+                MediaEpisodeNumber epNum = new MediaEpisodeNumber(MediaEpisodeGroup.DEFAULT_AIRED, seasonNum, episodeNum);
+                existingEpisode.setEpisode(epNum);
+                existingEpisode.saveToDb();
+                LOGGER.info("Re-parsed episode '{}' successfully: S{}E{}", file.getName(), seasonNum, episodeNum);
+              }
+              else {
+                LOGGER.debug("Re-parse failed for '{}', keeping episode=-1", file.getName());
+              }
+            }
+
             // Also check for and add any missing associated files (subtitles, etc.)
             String filePath = file.getPath();
             String parentPath = filePath.substring(0, filePath.lastIndexOf('/'));

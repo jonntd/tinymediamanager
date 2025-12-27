@@ -3418,6 +3418,21 @@ public class TvShowRenamer {
       if (oldPathStr.contains("/tvshows/") || oldPathStr.contains("/movies/")) {
         isOldPathCacheLike = true;
       }
+
+      // 额外检测：路径中存在嵌套的 "/<Title (Year)>/artwork.jpg" 模式
+      // 例如：.../乔家大院 (2006) [tmdb-33342]/乔家大院 (2006)/poster.jpg
+      // 这种模式表明本地缓存的艺术作品路径被错误地拼接到了 WebDAV 路径
+      // 检测规则：路径以 /<Title (Year)>/poster.jpg 或类似艺术作品文件结尾，且 <Title (Year)> 匹配年份格式
+      if (!isOldPathCacheLike) {
+        // 匹配 /<任意名称> (<4位年份>)/<artwork文件> 模式
+        // 例如：/乔家大院 (2006)/poster.jpg, /黑镜 (2011)/fanart.jpg
+        java.util.regex.Pattern cacheDirPattern = java.util.regex.Pattern.compile(
+            "/[^/]+\\s\\(\\d{4}\\)/(?:poster|fanart|banner|thumb|clearlogo|clearart|characterart|keyart|disc|logo|landscape)\\.(?:jpg|png|webp)$",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+        if (cacheDirPattern.matcher(oldPathStr).find()) {
+          isOldPathCacheLike = true;
+        }
+      }
     }
 
     // 如果源路径包含缓存路径特征，即使被格式化为 WebDAV 路径，也跳过复制
