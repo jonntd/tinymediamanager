@@ -225,6 +225,19 @@ public final class TvShowSettings extends AbstractSettings {
     firePropertyChange("skipEpisodeListOnScrape", oldValue, newValue);
   }
 
+  // 检测到 ID 时自动刮削（更新媒体库时）
+  boolean scrapeOnIdDetection = true; // 默认启用
+
+  public boolean isScrapeOnIdDetection() {
+    return scrapeOnIdDetection;
+  }
+
+  public void setScrapeOnIdDetection(boolean newValue) {
+    boolean oldValue = this.scrapeOnIdDetection;
+    this.scrapeOnIdDetection = newValue;
+    firePropertyChange("scrapeOnIdDetection", oldValue, newValue);
+  }
+
   // artwork scraper
   final List<MediaLanguages>                     imageScraperLanguages               = ObservableCollections.observableList(new ArrayList<>());
 
