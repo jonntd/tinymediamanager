@@ -95,8 +95,8 @@ public class TvShowRenameTask extends TmmThreadPool {
           .stream()
           .anyMatch(ds -> ds != null && ds.toLowerCase().startsWith("webdav://"));
 
-      // WebDAV 即使启用多线程也建议保持较低的并发，这里设为 3 线程
-      int threadCount = hasWebDav ? 3 : Math.min(4, Runtime.getRuntime().availableProcessors());
+      // WebDAV 即使启用多线程也建议保持较低的并发，这里设为 2 线程
+      int threadCount = hasWebDav ? 2 : Math.min(4, Runtime.getRuntime().availableProcessors());
       if (hasWebDav) {
         LOGGER.info("WebDAV data source detected, using {} threads for parallel rename", threadCount);
       }
