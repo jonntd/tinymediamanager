@@ -87,6 +87,9 @@ import org.tinymediamanager.core.tvshow.entities.TvShow;
 import org.tinymediamanager.core.tvshow.entities.TvShowEpisode;
 import org.tinymediamanager.core.tvshow.entities.TvShowSeason;
 import org.tinymediamanager.core.tvshow.services.BatchChatGPTEpisodeRecognitionService;
+import org.tinymediamanager.core.tvshow.TvShowSearchAndScrapeOptions;
+import org.tinymediamanager.core.tvshow.TvShowScraperMetadataConfig;
+import org.tinymediamanager.core.tvshow.TvShowEpisodeScraperMetadataConfig;
 import org.tinymediamanager.core.Message;
 import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Message.MessageLevel;
@@ -157,6 +160,9 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
 
   // 实时进度反馈
   private final ProgressReporter               progressReporter          = new ProgressReporter();
+
+  // 收集检测到 ID 需要自动刮削的电视剧
+  private final List<TvShow>                   tvShowsToAutoScrape       = Collections.synchronizedList(new ArrayList<>());
 
   // 配置热更新支持
   private volatile AIConfigurationSnapshot     currentAIConfig           = null;
@@ -780,6 +786,40 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
         TmmTaskManager.getInstance().addUnnamedTask(task);
       }
 
+      // ========== 自动刮削：检测到 ID 的电视剧 ==========
+      if (!tvShowsToAutoScrape.isEmpty() && !cancel) {
+        LOGGER.info("Starting auto-scrape for {} TV shows with detected IDs", tvShowsToAutoScrape.size());
+        MessageManager.getInstance()
+            .pushMessage(new Message(MessageLevel.INFO, "update.datasource", String.format("检测到 %d 部电视剧有 ID，开始自动刮削...", tvShowsToAutoScrape.size())));
+
+        try {
+          // 创建刮削参数 - 不搜索，直接使用已有 ID
+          TvShowSearchAndScrapeOptions scrapeOptions = new TvShowSearchAndScrapeOptions();
+          scrapeOptions.loadDefaults();
+
+          List<TvShowScraperMetadataConfig> tvShowScraperConfig = new ArrayList<>(
+              TvShowModuleManager.getInstance().getSettings().getTvShowScraperMetadataConfig());
+          List<TvShowEpisodeScraperMetadataConfig> episodeScraperConfig = new ArrayList<>(
+              TvShowModuleManager.getInstance().getSettings().getEpisodeScraperMetadataConfig());
+
+          TvShowScrapeTask.TvShowScrapeParams scrapeParams = new TvShowScrapeTask.TvShowScrapeParams(new ArrayList<>(tvShowsToAutoScrape),
+              scrapeOptions, tvShowScraperConfig, episodeScraperConfig);
+          scrapeParams.setDoSearch(false); // 不搜索，直接使用 ID
+          scrapeParams.setOverwriteExistingItems(false);
+
+          TvShowScrapeTask scrapeTask = new TvShowScrapeTask(scrapeParams);
+          TmmTaskManager.getInstance().addMainTask(scrapeTask);
+
+          LOGGER.info("Auto-scrape task submitted for {} TV shows", tvShowsToAutoScrape.size());
+        }
+        catch (Exception e) {
+          LOGGER.error("Failed to create auto-scrape task: {}", e.getMessage());
+        }
+        finally {
+          tvShowsToAutoScrape.clear();
+        }
+      }
+
       stopWatch.stop();
       LOGGER.info("Finished updating data sources :) - took {} ms", stopWatch);
 
@@ -944,6 +984,21 @@ public class TvShowUpdateDatasourceTask extends TmmThreadPool {
       if (StringUtils.isNotBlank(tvdbId)) {
         tvShow.setId(MediaMetadata.TVDB, tvdbId);
         LOGGER.debug("Detected TVDB ID '{}' from folder name: {}", tvdbId, folderName);
+      }
+    }
+
+    // 如果启用了"检测到 ID 时自动刮削"，且电视剧有 TMDB/TVDB ID
+    // 则添加到自动刮削列表（使用 originalTitle 判断是否已刮削过，因为刮削后必有 originalTitle）
+    if (TvShowModuleManager.getInstance().getSettings().isScrapeOnIdDetection()) {
+      boolean hasId = tvShow.getTmdbId() > 0 || tvShow.getIdAsInt(MediaMetadata.TVDB) > 0;
+      // 使用 originalTitle 为空来判断是否已刮削过（刮削后必有 originalTitle）
+      boolean isNotScraped = StringUtils.isBlank(tvShow.getOriginalTitle());
+      LOGGER.debug("Auto-scrape check: show='{}', hasId={}, isNotScraped={}, tmdb={}, tvdb={}, originalTitle='{}'", tvShow.getTitle(), hasId,
+          isNotScraped, tvShow.getTmdbId(), tvShow.getIdAsInt(MediaMetadata.TVDB), tvShow.getOriginalTitle());
+      if (hasId && isNotScraped && !tvShowsToAutoScrape.contains(tvShow)) {
+        tvShowsToAutoScrape.add(tvShow);
+        LOGGER.info("Added TV show '{}' to auto-scrape list (TMDB={}, TVDB={})", tvShow.getTitle(), tvShow.getTmdbId(),
+            tvShow.getIdAsInt(MediaMetadata.TVDB));
       }
     }
 

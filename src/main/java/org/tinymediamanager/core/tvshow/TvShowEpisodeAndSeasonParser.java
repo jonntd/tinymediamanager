@@ -746,6 +746,40 @@ public class TvShowEpisodeAndSeasonParser {
   private static EpisodeMatchingResult parseChineseEpisodeFormat(EpisodeMatchingResult result, String name) {
     Matcher m;
 
+    // 【快速路径】处理常见的非标准格式 - 最高优先级
+    String trimmedName = name.trim();
+
+    // 1. 纯数字文件名（如 "13"、"01"、"123"）
+    if (trimmedName.matches("^\\d{1,3}$")) {
+      try {
+        int episode = Integer.parseInt(trimmedName);
+        if (episode > 0 && episode <= 999) {
+          result.episodes.add(episode);
+          LOGGER.info("Parsed pure numeric filename: Episode {} from '{}'", episode, name);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略
+      }
+    }
+
+    // 2. 数字+分隔符开头的文件名（如 "01.大红灯笼"、"01_标题"、"01 标题"、"01-标题"）
+    java.util.regex.Matcher numSepMatcher = Pattern.compile("^(\\d{1,3})[._\\-\\s]").matcher(trimmedName);
+    if (numSepMatcher.find()) {
+      try {
+        int episode = Integer.parseInt(numSepMatcher.group(1));
+        if (episode > 0 && episode <= 999) {
+          result.episodes.add(episode);
+          LOGGER.info("Parsed number-separator format (fast path): Episode {} from '{}'", episode, name);
+          return result;
+        }
+      }
+      catch (NumberFormatException e) {
+        // 忽略
+      }
+    }
+
     // 先尝试完整的"第X季第Y集"格式
     m = CHINESE_SEASON_EPISODE_PATTERN.matcher(name);
     if (m.find()) {
@@ -889,8 +923,10 @@ public class TvShowEpisodeAndSeasonParser {
 
     // 尝试 数字+分隔符+标题 格式（如"07.张开你的嘴巴"、"12_剧集标题"）
     if (result.episodes.isEmpty()) {
+      LOGGER.debug("Trying NUMBER_TITLE_EPISODE_PATTERN on: '{}'", name);
       m = NUMBER_TITLE_EPISODE_PATTERN.matcher(name);
       if (m.find()) {
+        LOGGER.debug("NUMBER_TITLE_EPISODE_PATTERN matched! group(1)='{}'", m.group(1));
         try {
           int episode = Integer.parseInt(m.group(1));
           if (episode > 0 && episode <= 999) {
@@ -901,6 +937,9 @@ public class TvShowEpisodeAndSeasonParser {
         catch (NumberFormatException e) {
           // 忽略
         }
+      }
+      else {
+        LOGGER.debug("NUMBER_TITLE_EPISODE_PATTERN did not match for: '{}'", name);
       }
     }
 
@@ -965,8 +1004,10 @@ public class TvShowEpisodeAndSeasonParser {
 
     // 尝试 纯数字 格式（如"07"、"12"）- 作为最后的回退
     if (result.episodes.isEmpty()) {
+      LOGGER.debug("Trying PURE_NUMBER_EPISODE_PATTERN on: '{}'", name);
       m = PURE_NUMBER_EPISODE_PATTERN.matcher(name);
       if (m.find()) {
+        LOGGER.debug("PURE_NUMBER_EPISODE_PATTERN matched! group(0)='{}', group(1)='{}'", m.group(0), m.group(1));
         try {
           int episode = Integer.parseInt(m.group(1));
           if (episode > 0 && episode <= 999) {
@@ -977,6 +1018,9 @@ public class TvShowEpisodeAndSeasonParser {
         catch (NumberFormatException e) {
           // 忽略
         }
+      }
+      else {
+        LOGGER.debug("PURE_NUMBER_EPISODE_PATTERN did not match for: '{}'", name);
       }
     }
 
@@ -1262,44 +1306,57 @@ public class TvShowEpisodeAndSeasonParser {
    * @return 解析结果
    */
   public static EpisodeMatchingResult detectEpisodeHybrid(String filename, String tvShowTitle, boolean enableAI) {
+    // 【重要】从路径中提取纯文件名，确保只从文件名解析集数
+    // 例如：01英雄本色/01.mkv -> 01.mkv
+    String pureFilename = filename;
+    if (filename.contains("/")) {
+      pureFilename = filename.substring(filename.lastIndexOf('/') + 1);
+    }
+    else if (filename.contains("\\")) {
+      pureFilename = filename.substring(filename.lastIndexOf('\\') + 1);
+    }
+    if (!pureFilename.equals(filename)) {
+      LOGGER.debug("detectEpisodeHybrid: Extracted filename from path '{}' -> '{}'", filename, pureFilename);
+    }
+
     // 创建缓存键，包含文件名和剧集名
-    String cacheKey = generateCacheKey("hybrid", filename, tvShowTitle);
+    String cacheKey = generateCacheKey("hybrid", pureFilename, tvShowTitle);
 
     // 检查缓存（带TTL验证）
     SmartCachedEpisodeResult cachedEntry = PARSING_CACHE.get(cacheKey);
     if (cachedEntry != null) {
       if (!cachedEntry.isExpired()) {
         long hits = cacheHits.incrementAndGet();
-        LOGGER.debug("Using cached hybrid parsing result for: {} (Cache hits: {})", filename, hits);
+        LOGGER.debug("Using cached hybrid parsing result for: {} (Cache hits: {})", pureFilename, hits);
         return cachedEntry.result;
       }
       else {
         // 缓存已过期，移除
         PARSING_CACHE.remove(cacheKey);
-        LOGGER.debug("Hybrid cache entry expired for: {}", filename);
+        LOGGER.debug("Hybrid cache entry expired for: {}", pureFilename);
       }
     }
     cacheMisses.incrementAndGet();
 
     // 首先尝试传统解析
-    EpisodeMatchingResult traditionalResult = detectEpisodeFromFilename(filename, tvShowTitle);
+    EpisodeMatchingResult traditionalResult = detectEpisodeFromFilename(pureFilename, tvShowTitle);
 
     // 检查传统解析是否成功
     if (traditionalResult.season != -1 && !traditionalResult.episodes.isEmpty()) {
-      LOGGER.debug("Traditional parsing successful for: {}", filename);
+      LOGGER.debug("Traditional parsing successful for: {}", pureFilename);
       // 缓存成功的传统解析结果
       smartCacheStore(cacheKey, traditionalResult);
       return traditionalResult;
     }
 
     // 传统解析失败，尝试中文格式解析
-    LOGGER.debug("Traditional parsing failed, trying Chinese format parsing for: {}", filename);
+    LOGGER.debug("Traditional parsing failed, trying Chinese format parsing for: {}", pureFilename);
     EpisodeMatchingResult chineseResult = new EpisodeMatchingResult();
-    chineseResult = parseChineseEpisodeFormat(chineseResult, filename);
+    chineseResult = parseChineseEpisodeFormat(chineseResult, pureFilename);
 
     // 检查中文解析是否成功
     if (!chineseResult.episodes.isEmpty()) {
-      LOGGER.info("Chinese format parsing successful for: {}", filename);
+      LOGGER.info("Chinese format parsing successful for: {}", pureFilename);
 
       // 如果没有季数，默认为第1季
       if (chineseResult.season == -1) {
@@ -1307,7 +1364,7 @@ public class TvShowEpisodeAndSeasonParser {
       }
 
       // 发送中文解析成功消息
-      String successMsg = String.format("中文格式解析: %s → S%02dE%02d", filename, chineseResult.season, chineseResult.episodes.get(0));
+      String successMsg = String.format("中文格式解析: %s → S%02dE%02d", pureFilename, chineseResult.season, chineseResult.episodes.get(0));
       MessageManager.getInstance().pushMessage(new Message(MessageLevel.INFO, "中文格式解析", successMsg));
 
       return chineseResult;
@@ -1315,7 +1372,7 @@ public class TvShowEpisodeAndSeasonParser {
 
     // 如果禁用AI，直接返回中文解析结果
     if (!enableAI) {
-      LOGGER.debug("AI recognition disabled, returning Chinese parsing result for: {}", filename);
+      LOGGER.debug("AI recognition disabled, returning Chinese parsing result for: {}", pureFilename);
       // 缓存中文解析结果
       smartCacheStore(cacheKey, chineseResult);
       return chineseResult;
@@ -1394,7 +1451,19 @@ public class TvShowEpisodeAndSeasonParser {
     cacheMisses.incrementAndGet();
 
     EpisodeMatchingResult result = new EpisodeMatchingResult();
-    String nameNoExt = name.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
+
+    // 【重要】从路径中提取纯文件名，确保只从文件名解析集数
+    // 例如：01英雄本色/01.mkv -> 01.mkv
+    String pureFilename = name;
+    if (name.contains("/")) {
+      pureFilename = name.substring(name.lastIndexOf('/') + 1);
+    }
+    else if (name.contains("\\")) {
+      pureFilename = name.substring(name.lastIndexOf('\\') + 1);
+    }
+    LOGGER.debug("Extracting filename from path: '{}' -> '{}'", name, pureFilename);
+
+    String nameNoExt = pureFilename.replaceFirst("\\.\\w{1,4}$", ""); // remove extension if 1-4 chars
 
     // 【标准 SxxExx 格式优先】- 如果文件名包含明确的 SxxExx 格式，直接使用标准解析
     // 避免被中文格式解析中的罗马数字等误匹配
