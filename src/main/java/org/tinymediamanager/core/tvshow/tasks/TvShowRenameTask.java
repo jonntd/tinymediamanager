@@ -95,32 +95,46 @@ public class TvShowRenameTask extends TmmThreadPool {
           .stream()
           .anyMatch(ds -> ds != null && ds.toLowerCase().startsWith("webdav://"));
 
-      // WebDAV 数据源使用单线程避免 423 Locked 和 500 错误，本地文件系统使用多线程提高性能
-      int threadCount = hasWebDav ? 1 : Math.min(4, Runtime.getRuntime().availableProcessors());
+      // WebDAV 即使启用多线程也建议保持较低的并发，这里设为 3 线程
+      int threadCount = hasWebDav ? 3 : Math.min(4, Runtime.getRuntime().availableProcessors());
       if (hasWebDav) {
-        LOGGER.info("WebDAV data source detected, using single thread to avoid concurrency conflicts");
+        LOGGER.info("WebDAV data source detected, using {} threads for parallel rename", threadCount);
       }
       initThreadPool(threadCount, "rename");
 
-      // 1. episodes first (to get the right season folders for moving season artwork)
-      for (TvShowEpisode tvEpisodesToRename : episodesToRename) {
-        if (cancel) {
-          break;
+      // 注意：多线程模式下不使用共享客户端，每个工作线程创建自己的连接
+      // 这样可以并发执行多个重命名操作
+
+      try {
+
+        // 注意：预检测已移除以提高性能。如需检测冲突，请使用"重命名预览"功能。
+        // 运行时的冲突通过自愈机制处理（如自动生成唯一路径）。
+
+        // 1. episodes first (to get the right season folders for moving season artwork)
+        for (TvShowEpisode tvEpisodesToRename : episodesToRename) {
+          if (cancel) {
+            break;
+          }
+          submitTask(new RenameEpisodeTask(tvEpisodesToRename));
         }
-        submitTask(new RenameEpisodeTask(tvEpisodesToRename));
+
+        waitForCompletionOrCancel();
+        if (cancel) {
+          return;
+        }
+
+        // 2. rename TV show root
+        for (TvShow tvShow : tvShowsToRename) {
+          TvShowRenamer.renameTvShow(tvShow); // rename root and artwork and update ShowMFs
+        }
+
+        LOGGER.info("Finished renaming TV shows/episodes - took {} ms", getRuntime());
+      }
+      finally {
+        // 多线程模式下，每个工作线程管理自己的 WebDAV 连接
+        // 不需要在这里清理共享客户端
       }
 
-      waitForCompletionOrCancel();
-      if (cancel) {
-        return;
-      }
-
-      // 2. rename TV show root
-      for (TvShow tvShow : tvShowsToRename) {
-        TvShowRenamer.renameTvShow(tvShow); // rename root and artwork and update ShowMFs
-      }
-
-      LOGGER.info("Finished renaming TV shows/episodes - took {} ms", getRuntime());
     }
     catch (Exception e) {
       LOGGER.error("Could not rename TV shows - '{}'", e.getMessage());

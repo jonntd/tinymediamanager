@@ -191,16 +191,43 @@ public class TvShowRenamerPreviewDialog extends TmmDialog {
         List<TvShow> selectedTvShows1 = new ArrayList<>();
         List<TvShowEpisode> selectedEpisodes = new ArrayList<>();
         List<RenamerPreviewContainer> selectedResults = new ArrayList<>(resultSelectionModel.selectedResults);
+        int skippedCount = 0;
+
         for (RenamerPreviewContainer result : selectedResults) {
+          // 跳过有预览问题的条目
+          if (result.hasRenamerProblems()) {
+            skippedCount++;
+            continue;
+          }
           selectedTvShows1.add((TvShow) result.get());
           selectedEpisodes.addAll(((TvShow) result.get()).getEpisodes());
+        }
+
+        // 如果有被跳过的条目，弹出警告
+        if (skippedCount > 0) {
+          JOptionPane.showMessageDialog(TvShowRenamerPreviewDialog.this,
+              TmmResourceBundle.getString("renamer.problemfound") + "\n"
+                  + String.format(TmmResourceBundle.getString("renamer.skipped"), skippedCount),
+              TmmResourceBundle.getString("tmm.warning"), JOptionPane.WARNING_MESSAGE);
+        }
+
+        // 如果没有可执行的条目，直接返回
+        if (selectedTvShows1.isEmpty()) {
+          return;
         }
 
         // rename
         TmmThreadPool renameTask = new TvShowRenameTask(selectedTvShows1, selectedEpisodes);
         TmmTaskManager.getInstance().addMainTask(renameTask);
-        results.removeAll(selectedResults);
+
+        // 仅从结果中移除已执行的条目（保留有问题的以便用户处理）
+        for (RenamerPreviewContainer result : selectedResults) {
+          if (!result.hasRenamerProblems()) {
+            results.remove(result);
+          }
+        }
       });
+
       addButton(btnRename);
 
       JButton btnClose = new JButton(TmmResourceBundle.getString("Button.close"));

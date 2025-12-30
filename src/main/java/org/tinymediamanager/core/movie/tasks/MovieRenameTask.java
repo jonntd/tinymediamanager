@@ -28,6 +28,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.TmmResourceBundle;
 import org.tinymediamanager.core.entities.MediaFile;
+import org.tinymediamanager.core.movie.MovieModuleManager;
 import org.tinymediamanager.core.movie.MovieRenamer;
 import org.tinymediamanager.core.movie.entities.Movie;
 import org.tinymediamanager.core.threading.TmmThreadPool;
@@ -58,34 +59,56 @@ public class MovieRenameTask extends TmmThreadPool {
     try {
       LOGGER.info("Renaming '{}' movies", moviesToRename.size());
 
-      // 动态调整线程池大小，最多使用4个线程或可用处理器数量，以提高重命名速度
-      int threadCount = Math.min(4, Runtime.getRuntime().availableProcessors());
+      // 检测是否有 WebDAV 数据源，如果有则使用单线程避免并发冲突
+      boolean hasWebDav = MovieModuleManager.getInstance()
+          .getSettings()
+          .getMovieDataSource()
+          .stream()
+          .anyMatch(ds -> ds != null && ds.toLowerCase().startsWith("webdav://"));
+
+      // WebDAV 即使启用多线程也建议保持较低的并发，这里设为 3 线程
+      int threadCount = hasWebDav ? 3 : Math.min(4, Runtime.getRuntime().availableProcessors());
+      if (hasWebDav) {
+        LOGGER.info("WebDAV data source detected, using {} threads for parallel rename", threadCount);
+      }
       initThreadPool(threadCount, "rename");
 
-      List<MediaFile> imageFiles = new ArrayList<>();
+      // 注意：多线程模式下不使用共享客户端，每个工作线程创建自己的连接
 
-      // rename movies
-      for (Movie movie : moviesToRename) {
-        if (cancel) {
-          break;
+      try {
+        List<MediaFile> imageFiles = new ArrayList<>();
+
+        // 注意：预检测已移除以提高性能。如需检测冲突，请使用“重命名预览”功能。
+        // 运行时的冲突通过自愈机制处理（如自动生成唯一路径）。
+
+        // rename movies
+        for (Movie movie : moviesToRename) {
+          if (cancel) {
+            break;
+          }
+          submitTask(new RenameMovieTask(movie));
         }
-        submitTask(new RenameMovieTask(movie));
-      }
-      waitForCompletionOrCancel();
+        waitForCompletionOrCancel();
 
-      if (cancel) {
-        return;
+        if (cancel) {
+          return;
+        }
+
+        for (Movie movie : moviesToRename) {
+          imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());
+        }
+        // re-build the image cache afterward in an own thread
+        if (Settings.getInstance().isImageCache() && !imageFiles.isEmpty()) {
+          imageFiles.forEach(ImageCache::cacheImageAsync);
+        }
+
+        LOGGER.info("Finished renaming movies - took {} ms", getRuntime());
+      }
+      finally {
+        // 多线程模式下，每个工作线程管理自己的 WebDAV 连接
+        // 不需要在这里清理共享客户端
       }
 
-      for (Movie movie : moviesToRename) {
-        imageFiles.addAll(movie.getMediaFiles().stream().filter(MediaFile::isGraphic).toList());
-      }
-      // re-build the image cache afterward in an own thread
-      if (Settings.getInstance().isImageCache() && !imageFiles.isEmpty()) {
-        imageFiles.forEach(ImageCache::cacheImageAsync);
-      }
-
-      LOGGER.info("Finished renaming movies - took {} ms", getRuntime());
     }
     catch (Exception e) {
       LOGGER.error("Could not rename movies - '{}'", e.getMessage());

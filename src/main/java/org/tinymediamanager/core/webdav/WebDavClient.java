@@ -305,13 +305,29 @@ public class WebDavClient {
    * @return true if the move was successful
    */
   public boolean move(String sourcePath, String destPath) {
-    return moveWithRetry(sourcePath, destPath, 3); // 最多重试 3 次
+    return move(sourcePath, destPath, true);
+  }
+
+  /**
+   * Move/rename a WebDAV file with overwrite control
+   *
+   * @param sourcePath
+   *          the source path
+   * @param destPath
+   *          the destination path
+   * @param overwrite
+   *          whether to overwrite existing file
+   * @return true if successful
+   */
+  public boolean move(String sourcePath, String destPath, boolean overwrite) {
+    return moveWithRetry(sourcePath, destPath, 7, overwrite);
   }
 
   /**
    * Internal move method with retry support for transient server errors (5xx)
    */
-  private boolean moveWithRetry(String sourcePath, String destPath, int maxRetries) {
+  private boolean moveWithRetry(String sourcePath, String destPath, int maxRetries, boolean overwrite) {
+
     ensureConnected();
     String sourceUrl = buildUrl(sourcePath);
     String destUrl = buildUrl(destPath);
@@ -326,35 +342,40 @@ public class WebDavClient {
     while (attempt < maxRetries) {
       attempt++;
       try {
-        LOGGER.debug("Moving WebDAV file from '{}' to '{}' (attempt {}/{})", safeDecode(sourcePath), safeDecode(destPath), attempt, maxRetries);
-        sardine.move(sourceUrl, destUrl);
+        LOGGER.debug("Moving WebDAV file from '{}' to '{}' (attempt {}/{}, overwrite={})", safeDecode(sourcePath), safeDecode(destPath), attempt,
+            maxRetries, overwrite);
+        sardine.move(sourceUrl, destUrl, overwrite);
         return true;
       }
+
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
         // 对于 423 Locked 和服务器错误 (5xx)，可以重试
         // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
         if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
-          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
+          // 指数退避 + 随机抖动 (Jitter)：8s, 16s, 24s... + (0~3000ms)
+          // 增加基础等待时间和随机性，避免多个线程在同一秒重试导致服务器雪崩
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV move failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
-            // 重新连接以刷新连接状态
             reconnect();
           }
           catch (InterruptedException ie) {
+            // 真实中断识别：如果是任务管理器要求取消，则停止重试
             Thread.currentThread().interrupt();
-            LOGGER.warn("Retry interrupted");
+            LOGGER.warn("Retry interrupted - task may have been cancelled");
             break;
           }
           catch (IOException reconnectError) {
-            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+            LOGGER.warn("Reconnect failed during move retry: {}", reconnectError.getMessage());
           }
           continue;
         }
-        // 对于客户端错误 (4xx) 或重试次数用尽，直接失败
-        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-        LOGGER.error("Exception details: {}", e.toString());
+
+        // 对于客户端错误 (4xx) 或重试次数用尽，记录警告（上层会进行容错验证）
+        LOGGER.warn("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.warn("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
         return false;
       }
@@ -365,7 +386,7 @@ public class WebDavClient {
                 || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
                 || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
 
-          long waitMs = 2000L * attempt;
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV move network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -373,17 +394,17 @@ public class WebDavClient {
           }
           catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            LOGGER.warn("Retry interrupted");
+            LOGGER.warn("Retry interrupted - task may have been cancelled");
             break;
           }
           catch (IOException reconnectError) {
-            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+            LOGGER.warn("Reconnect failed during move retry: {}", reconnectError.getMessage());
           }
           continue;
         }
 
-        LOGGER.error("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
-        LOGGER.error("Exception details: {}", e.toString());
+        LOGGER.warn("Failed to move WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
+        LOGGER.warn("Exception details: {}", e.toString());
         LOGGER.debug("Full stack trace:", e);
         return false;
       }
@@ -401,13 +422,29 @@ public class WebDavClient {
    * @return true if the copy was successful
    */
   public boolean copy(String sourcePath, String destPath) {
-    return copyWithRetry(sourcePath, destPath, 3); // 最多重试 3 次
+    return copy(sourcePath, destPath, true);
+  }
+
+  /**
+   * Copy a WebDAV file with overwrite control
+   *
+   * @param sourcePath
+   *          the source path
+   * @param destPath
+   *          the destination path
+   * @param overwrite
+   *          whether to overwrite existing file
+   * @return true if successful
+   */
+  public boolean copy(String sourcePath, String destPath, boolean overwrite) {
+    return copyWithRetry(sourcePath, destPath, 7, overwrite);
   }
 
   /**
    * Internal copy method with retry support for transient server errors (5xx)
    */
-  private boolean copyWithRetry(String sourcePath, String destPath, int maxRetries) {
+  private boolean copyWithRetry(String sourcePath, String destPath, int maxRetries, boolean overwrite) {
+
     ensureConnected();
     String sourceUrl = buildUrl(sourcePath);
     String destUrl = buildUrl(destPath);
@@ -416,32 +453,35 @@ public class WebDavClient {
     while (attempt < maxRetries) {
       attempt++;
       try {
-        LOGGER.debug("Copying WebDAV file from '{}' to '{}' (attempt {}/{})", safeDecode(sourcePath), safeDecode(destPath), attempt, maxRetries);
-        sardine.copy(sourceUrl, destUrl);
+        LOGGER.debug("Copying WebDAV file from '{}' to '{}' (attempt {}/{}, overwrite={})", safeDecode(sourcePath), safeDecode(destPath), attempt,
+            maxRetries, overwrite);
+        sardine.copy(sourceUrl, destUrl, overwrite);
         return true;
       }
+
       catch (com.github.sardine.impl.SardineException e) {
         int statusCode = e.getStatusCode();
         // 对于 423 Locked 和服务器错误 (5xx)，可以重试；但对于 404（源文件不存在）则直接失败
         // 423 表示资源被其他并发操作锁定，等待后重试通常可成功
         if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
-          long waitMs = 2000L * attempt; // 指数退避：2s, 4s, 6s... (增加等待时间以适应慢速服务器)
+          // 指数退避 + 随机抖动 (Jitter)：8s, 16s, 24s... + (0~3000ms)
+          long waitMs = (8000L * attempt) + (long) (Math.random() * 3000);
           LOGGER.warn("WebDAV copy failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
-            // 重新连接以刷新连接状态
             reconnect();
           }
           catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            LOGGER.warn("Retry interrupted");
+            LOGGER.warn("Retry interrupted - task may have been cancelled");
             break;
           }
           catch (IOException reconnectError) {
-            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+            LOGGER.warn("Reconnect failed during copy retry: {}", reconnectError.getMessage());
           }
           continue;
         }
+
         // 对于客户端错误 (4xx) 或重试次数用尽，直接失败
         LOGGER.error("Failed to copy WebDAV file from '{}' to '{}': {}", safeDecode(sourcePath), safeDecode(destPath), e.getMessage());
         return false;
@@ -453,7 +493,7 @@ public class WebDavClient {
                 || e.getMessage().contains("unexpected end of stream") || e.getMessage().contains("Socket closed")
                 || e.getMessage().contains("Connection closed") || e instanceof java.net.SocketException)) {
 
-          long waitMs = 2000L * attempt;
+          long waitMs = (5000L * attempt) + (long) (Math.random() * 2000);
           LOGGER.warn("WebDAV copy network error ('{}') (attempt {}/{}), retrying in {}ms...", e.getMessage(), attempt, maxRetries, waitMs);
           try {
             Thread.sleep(waitMs);
@@ -461,11 +501,11 @@ public class WebDavClient {
           }
           catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            LOGGER.warn("Retry interrupted");
+            LOGGER.warn("Retry interrupted - task may have been cancelled");
             break;
           }
           catch (IOException reconnectError) {
-            LOGGER.warn("Reconnect failed during retry: {}", reconnectError.getMessage());
+            LOGGER.warn("Reconnect failed during copy retry: {}", reconnectError.getMessage());
           }
           continue;
         }
@@ -484,24 +524,89 @@ public class WebDavClient {
    *          the directory path (relative to WebDAV root)
    * @return true if the directory was created successfully
    */
+  /**
+   * Create a directory on the WebDAV server with retry support
+   *
+   * @param path
+   *          the directory path (relative to WebDAV root)
+   * @return true if the directory was created successfully or already exists
+   */
   public boolean createDirectory(String path) {
+    return createDirectoryWithRetry(path, 3);
+  }
+
+  /**
+   * Internal create directory method with retry and idempotency check
+   */
+  private boolean createDirectoryWithRetry(String path, int maxRetries) {
     ensureConnected();
-    try {
-      String url = buildUrl(path);
-      LOGGER.debug("Creating WebDAV directory '{}'", safeDecode(url));
-      sardine.createDirectory(url);
-      return true;
-    }
-    catch (IOException e) {
-      // 423 Locked is common in concurrent operations - log as warning instead of error
-      if (e.getMessage() != null && e.getMessage().contains("423")) {
-        LOGGER.warn("WebDAV directory '{}' is locked (concurrent operation): {}", safeDecode(path), e.getMessage());
+    String url = buildUrl(path);
+    int attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        LOGGER.debug("Creating WebDAV directory '{}' (attempt {}/{})", safeDecode(path), attempt, maxRetries);
+        sardine.createDirectory(url);
+        return true;
       }
-      else {
+      catch (com.github.sardine.impl.SardineException e) {
+        int statusCode = e.getStatusCode();
+
+        // 场景：目录已存在。405 Method Not Allowed 或 409 Conflict 在 WebDAV 中常表示资源已存在
+        if (statusCode == 405 || statusCode == 409) {
+          try {
+            if (exists(path)) {
+              LOGGER.debug("WebDAV directory '{}' already exists, treating as success", safeDecode(path));
+              return true;
+            }
+          }
+          catch (Exception ex) {
+            // ignore exists check error
+          }
+        }
+
+        // 对于 423 Locked 或 服务器错误 (500-599)，进行重试
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = (3000L * attempt) + (long) (Math.random() * 1000);
+          LOGGER.warn("WebDAV createDirectory failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+          catch (IOException ignore) {
+          }
+          continue;
+        }
+
         LOGGER.error("Failed to create WebDAV directory '{}': {}", safeDecode(path), e.getMessage());
+        return false;
       }
-      return false;
+      catch (IOException e) {
+        if (attempt < maxRetries) {
+          long waitMs = (3000L * attempt) + (long) (Math.random() * 1000);
+          LOGGER.warn("WebDAV createDirectory network error (attempt {}/{}), retrying in {}ms...", attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+          catch (IOException ignore) {
+          }
+          continue;
+        }
+        LOGGER.error("Failed to create WebDAV directory '{}': {}", safeDecode(path), e.getMessage());
+        return false;
+      }
     }
+    return false;
   }
 
   /**
@@ -511,18 +616,94 @@ public class WebDavClient {
    *          the path to delete (relative to WebDAV root)
    * @return true if the deletion was successful
    */
+  /**
+   * Delete a file or directory on the WebDAV server with retry support
+   *
+   * @param path
+   *          the path to delete (relative to WebDAV root)
+   * @return true if the deletion was successful or the resource is already gone
+   */
   public boolean delete(String path) {
+    return deleteWithRetry(path, 3);
+  }
+
+  /**
+   * Internal delete method with retry and idempotency check
+   */
+  private boolean deleteWithRetry(String path, int maxRetries) {
     ensureConnected();
-    try {
-      String url = buildUrl(path);
-      LOGGER.debug("Deleting WebDAV file/directory '{}'", safeDecode(url));
-      sardine.delete(url);
-      return true;
+    String url = buildUrl(path);
+    int attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        LOGGER.debug("Deleting WebDAV file/directory '{}' (attempt {}/{})", safeDecode(path), attempt, maxRetries);
+        sardine.delete(url);
+        return true;
+      }
+      catch (com.github.sardine.impl.SardineException e) {
+        int statusCode = e.getStatusCode();
+
+        // 场景：资源已不存在。404 Not Found 视为成功（幂等性）
+        if (statusCode == 404) {
+          LOGGER.debug("WebDAV resource '{}' already gone, treating delete as success", safeDecode(path));
+          return true;
+        }
+
+        // 对于 423 Locked 或 服务器错误 (500-599)，进行重试
+        if ((statusCode == 423 || (statusCode >= 500 && statusCode < 600)) && attempt < maxRetries) {
+          long waitMs = (3000L * attempt) + (long) (Math.random() * 1000);
+          LOGGER.warn("WebDAV delete failed with status {} (attempt {}/{}), retrying in {}ms...", statusCode, attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+          catch (IOException ignore) {
+          }
+          continue;
+        }
+
+        // 如果最后一次尝试失败，且报 500，做一次后置校验
+        if (attempt >= maxRetries) {
+          try {
+            if (!exists(path)) {
+              LOGGER.info("WebDAV delete for '{}' returned error, but resource is gone. Assuming success.", safeDecode(path));
+              return true;
+            }
+          }
+          catch (Exception ex) {
+            /* ignored */ }
+        }
+
+        LOGGER.error("Failed to delete WebDAV file/directory '{}': {}", safeDecode(path), e.getMessage());
+        return false;
+      }
+      catch (IOException e) {
+        if (attempt < maxRetries) {
+          long waitMs = (3000L * attempt) + (long) (Math.random() * 1000);
+          LOGGER.warn("WebDAV delete network error (attempt {}/{}), retrying in {}ms...", attempt, maxRetries, waitMs);
+          try {
+            Thread.sleep(waitMs);
+            reconnect();
+          }
+          catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+          catch (IOException ignore) {
+          }
+          continue;
+        }
+        LOGGER.error("Failed to delete WebDAV file/directory '{}': {}", safeDecode(path), e.getMessage());
+        return false;
+      }
     }
-    catch (IOException e) {
-      LOGGER.error("Failed to delete WebDAV file/directory '{}': {}", safeDecode(path), e.getMessage());
-      return false;
-    }
+    return false;
   }
 
   /**

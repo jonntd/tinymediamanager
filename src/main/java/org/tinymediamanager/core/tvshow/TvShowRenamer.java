@@ -57,6 +57,7 @@ import org.tinymediamanager.core.MessageManager;
 import org.tinymediamanager.core.Settings;
 import org.tinymediamanager.core.Utils;
 import org.tinymediamanager.core.webdav.WebDavDataSourceHelper;
+import org.tinymediamanager.core.webdav.WebDavClient;
 import org.tinymediamanager.core.webdav.WebDavFileOperations;
 import org.tinymediamanager.core.entities.MediaEntity;
 import org.tinymediamanager.core.entities.MediaEntityFilenameHistory;
@@ -110,26 +111,67 @@ import com.floreysoft.jmte.token.Token;
  * @author Myron Boyle
  */
 public class TvShowRenamer {
-  private static final Logger              LOGGER              = LoggerFactory.getLogger(TvShowRenamer.class);
-  private static final Map<String, String> TOKEN_MAP           = createTokenMap();
+  private static final Logger                    LOGGER                  = LoggerFactory.getLogger(TvShowRenamer.class);
+  private static final Map<String, String>       TOKEN_MAP               = createTokenMap();
 
-  private static final String[]            seasonNumbers       = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
+  private static final String[]                  seasonNumbers           = { "seasonNr", "seasonNr2", "seasonNrDvd", "seasonNrDvd2", "episode.season",
       "episode.dvdSeason" };
-  private static final String[]            episodeNumbers      = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2", "episode.episode",
-      "episode.dvdEpisode", "absoluteNr", "absoluteNr2", "episode.absoluteNumber" };
-  private static final String[]            episodeTitles       = { "title", "originalTitle", "englishTitle", "titleSortable", "episode.title",
-      "episode.originalTitle", "episode.titleSortable", "episode.englishTitle" };
-  private static final String[]            episodeAired        = { "airedDate", "episode.firstAired" };
+  private static final String[]                  episodeNumbers          = { "episodeNr", "episodeNr2", "episodeNrDvd", "episodeNrDvd2",
+      "episode.episode", "episode.dvdEpisode", "absoluteNr", "absoluteNr2", "episode.absoluteNumber" };
+  private static final String[]                  episodeTitles           = { "title", "originalTitle", "englishTitle", "titleSortable",
+      "episode.title", "episode.originalTitle", "episode.titleSortable", "episode.englishTitle" };
+  private static final String[]                  episodeAired            = { "airedDate", "episode.firstAired" };
 
-  private static final Pattern             epDelimiter         = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}",
+  private static final Pattern                   epDelimiter             = Pattern.compile("(\\s?(folge|episode|[epx]+)\\s?)\\$\\{.*?\\}",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern             seDelimiter         = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}", Pattern.CASE_INSENSITIVE);
+  private static final Pattern                   seDelimiter             = Pattern.compile("((staffel|season|s)\\s?)\\$\\{.*?\\}",
+      Pattern.CASE_INSENSITIVE);
 
-  private static final List<String>        DISC_FOLDERS        = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
-  private static final Pattern             MF_STACKING_PATTERN = Pattern.compile(".*?([\\s._-]\\d)$");
+  private static final List<String>              DISC_FOLDERS            = Arrays.asList("bdmv", "video_ts", "hvdvd_ts");
+  private static final Pattern                   MF_STACKING_PATTERN     = Pattern.compile(".*?([\\s._-]\\d)$");
+
+  // Static fields for sharing WebDAV client during batch rename operations (performance optimization)
+  // Using ThreadLocal because we now support multi-threaded rename (e.g. 2 threads for AList)
+  private static final ThreadLocal<WebDavClient> SHARED_WEBDAV_CLIENT    = new ThreadLocal<>();
+  private static final ThreadLocal<String>       SHARED_WEBDAV_SOURCE_ID = new ThreadLocal<>();
 
   private TvShowRenamer() {
     throw new IllegalAccessError();
+  }
+
+  /**
+   * 初始化 Task 级别的共享 WebDAV 客户端，跨多个 episode 重命名操作复用同一连接
+   *
+   * @param client
+   *          已连接的 WebDAV 客户端
+   * @param sourceId
+   *          数据源 ID
+   */
+  public static void initSharedWebDavClient(WebDavClient client, String sourceId) {
+    SHARED_WEBDAV_CLIENT.set(client);
+    SHARED_WEBDAV_SOURCE_ID.set(sourceId);
+  }
+
+  /**
+   * 清除 Task 级别的共享 WebDAV 客户端
+   */
+  public static void clearSharedWebDavClient() {
+    SHARED_WEBDAV_CLIENT.remove();
+    SHARED_WEBDAV_SOURCE_ID.remove();
+  }
+
+  /**
+   * 获取共享 WebDAV 客户端
+   */
+  public static WebDavClient getSharedWebDavClient() {
+    return SHARED_WEBDAV_CLIENT.get();
+  }
+
+  /**
+   * 获取共享 WebDAV 数据源 ID
+   */
+  public static String getSharedWebDavSourceId() {
+    return SHARED_WEBDAV_SOURCE_ID.get();
   }
 
   /**
@@ -315,8 +357,8 @@ public class TvShowRenamer {
                   EpisodeComparisonResult comparison = compareEpisodes(episode, existingEp);
 
                   if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
-                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
-                        episode.getSeason(), episode.getEpisode(), comparison);
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)", episode.getSeason(),
+                        episode.getEpisode(), comparison);
 
                     existingShow.removeEpisode(existingEp);
 
@@ -327,11 +369,14 @@ public class TvShowRenamer {
                   }
                   else {
                     tvShow.removeEpisode(episode);
-                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
-                        episode.getSeason(), episode.getEpisode(), tvShow.getTitle(), comparison);
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target", episode.getSeason(),
+                        episode.getEpisode(), tvShow.getTitle(), comparison);
                   }
                 }
               }
+
+              // 合并源 TvShow 的 MediaFiles（海报、fanart 等）到目标 TvShow
+              mergeMediaFilesToExistingShow(tvShow, existingShow, srcDir, destDir);
 
               TvShowList.getInstance().removeTvShow(tvShow);
               LOGGER.info("Removed duplicate TvShow '{}' after merging episodes to '{}'", tvShow.getTitle(), existingShow.getTitle());
@@ -512,8 +557,8 @@ public class TvShowRenamer {
 
                   if (comparison == EpisodeComparisonResult.SOURCE_BETTER || comparison == EpisodeComparisonResult.EQUAL) {
                     // Source episode is better OR equal - replace target with source (source has updated path)
-                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)",
-                        episode.getSeason(), episode.getEpisode(), comparison);
+                    LOGGER.debug("Replacing episode S{}E{}: comparison result={}, keeping source (path updated)", episode.getSeason(),
+                        episode.getEpisode(), comparison);
 
                     // Remove target episode from existingShow and DB
                     existingShow.removeEpisode(existingEp);
@@ -529,11 +574,14 @@ public class TvShowRenamer {
                     // Target episode is better - keep target, remove source
                     show.removeEpisode(episode);
                     // NOTE: removeEpisode already calls removeEpisodeFromDb, no need to call again
-                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target",
-                        episode.getSeason(), episode.getEpisode(), show.getTitle(), comparison);
+                    LOGGER.debug("Removed duplicate episode S{}E{} from '{}': comparison result={}, keeping target", episode.getSeason(),
+                        episode.getEpisode(), show.getTitle(), comparison);
                   }
                 }
               }
+
+              // 合并源 TvShow 的 MediaFiles（海报、fanart 等）到目标 TvShow
+              mergeMediaFilesToExistingShow(show, existingShow, srcDir, destDir);
 
               // Remove current show from database and list
               TvShowList.getInstance().removeTvShow(show);
@@ -685,13 +733,39 @@ public class TvShowRenamer {
     }
 
     // delete empty subfolders
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      // 优先使用共享客户端
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+      int deleted = 0;
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] parts = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
+        if (parts != null && parts.length >= 2 && parts[0].equals(sharedSourceId)) {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursiveWithClient(sharedClient, parts[1]);
+        }
+        else {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+        }
+      }
+      else {
+        deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+      }
+
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShow.getPath());
+      }
+    }
+
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(tvShow.getPathNIO());
       }
       catch (Exception e) {
-        LOGGER.warn("cCould not delete empty subfolders of '{}' - '{}'", tvShow.getPathNIO(), e.getMessage());
+        LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", tvShow.getPathNIO(), e.getMessage());
       }
     }
 
@@ -1160,8 +1234,34 @@ public class TvShowRenamer {
     }
 
     // delete empty subfolders
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(tvShow.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      // 优先使用共享客户端
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+      int deleted = 0;
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] parts = WebDavDataSourceHelper.parseWebDavPath(tvShow.getPath());
+        if (parts != null && parts.length >= 2 && parts[0].equals(sharedSourceId)) {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursiveWithClient(sharedClient, parts[1]);
+        }
+        else {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+        }
+      }
+      else {
+        deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShow.getPath());
+      }
+
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShow.getPath());
+      }
+    }
+
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(tvShow.getPathNIO());
       }
@@ -1258,6 +1358,55 @@ public class TvShowRenamer {
 
     LOGGER.info("Renaming TvShow '{}', episode S{} E{}", episode.getTvShow().getTitle(), episode.getSeason(), episode.getEpisode());
 
+    // 性能优化：对于 WebDAV 数据源，检查是否已有共享客户端
+    // 如果没有，则为当前单个 episode 创建临时共享客户端
+    boolean isWebDav = WebDavDataSourceHelper.isWebDavPath(episode.getTvShow().getPath());
+    boolean createdClientHere = false;
+    if (isWebDav && SHARED_WEBDAV_CLIENT.get() == null) {
+      try {
+        String[] parsed = WebDavDataSourceHelper.parseWebDavPath(episode.getTvShow().getPath());
+        if (parsed != null && parsed.length >= 1) {
+          WebDavClient client = WebDavDataSourceHelper.getClientForPath(episode.getTvShow().getPath());
+          if (client != null) {
+            initSharedWebDavClient(client, parsed[0]);
+            createdClientHere = true;
+            LOGGER.debug("Created episode-level shared WebDAV client for rename operations (performance optimization)");
+          }
+        }
+      }
+      catch (Exception e) {
+        LOGGER.warn("Could not create shared WebDAV client, falling back to per-operation connections: {}", e.getMessage());
+      }
+    }
+
+    try {
+      renameEpisodeInternal(episode, originalVideoMediaFile);
+    }
+    finally {
+      // 仅清理此方法创建的客户端，不清理 Task 级别的客户端
+      if (createdClientHere) {
+        try {
+          WebDavClient client = SHARED_WEBDAV_CLIENT.get();
+          if (client != null) {
+            client.disconnect();
+          }
+          LOGGER.debug("Disconnected episode-level shared WebDAV client after rename");
+        }
+        catch (Exception e) {
+          LOGGER.warn("Error disconnecting shared WebDAV client: {}", e.getMessage());
+        }
+        finally {
+          clearSharedWebDavClient();
+        }
+      }
+    }
+
+  }
+
+  /**
+   * Internal implementation of renameEpisode, separated to allow shared WebDAV client management.
+   */
+  private static void renameEpisodeInternal(TvShowEpisode episode, MediaFile originalVideoMediaFile) {
     if (episode.isDisc()) {
       renameEpisodeAsDisc(episode);
       return;
@@ -1988,11 +2137,40 @@ public class TvShowRenamer {
     episode.saveToDb();
 
     // cleanup old path
-    try {
-      Utils.deleteEmptyDirectoryRecursive(tvShowRoot);
+    String tvShowRootStr = tvShowRoot.toString();
+    if (WebDavDataSourceHelper.isWebDavPath(tvShowRootStr)) {
+      // 优先使用共享客户端
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+      int deleted = 0;
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] parts = WebDavDataSourceHelper.parseWebDavPath(tvShowRootStr);
+        if (parts != null && parts.length >= 2 && parts[0].equals(sharedSourceId)) {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursiveWithClient(sharedClient, parts[1]);
+        }
+        else {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShowRootStr);
+        }
+      }
+      else {
+        deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(tvShowRootStr);
+      }
+
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, tvShowRootStr);
+      }
     }
-    catch (IOException e) {
-      LOGGER.warn("Eould not delete empty subfolders of '{}' - '{}'", tvShowRoot, e.getMessage());
+
+    else {
+      try {
+        Utils.deleteEmptyDirectoryRecursive(tvShowRoot);
+      }
+      catch (IOException e) {
+        LOGGER.warn("Could not delete empty subfolders of '{}' - '{}'", tvShowRoot, e.getMessage());
+      }
     }
   }
 
@@ -3090,8 +3268,34 @@ public class TvShowRenamer {
    */
   private static void removeEmptySubfolders(TvShowEpisode episode) {
     // check all subfolders if they're empty (recursively)
-    // Skip for WebDAV paths (not supported for virtual paths)
-    if (!WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
+    if (WebDavDataSourceHelper.isWebDavPath(episode.getPath())) {
+      // WebDAV 路径使用专门的方法删除空目录
+      // 优先使用共享客户端
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+      int deleted = 0;
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] parts = WebDavDataSourceHelper.parseWebDavPath(episode.getPath());
+        if (parts != null && parts.length >= 2 && parts[0].equals(sharedSourceId)) {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursiveWithClient(sharedClient, parts[1]);
+        }
+        else {
+          deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(episode.getPath());
+        }
+      }
+      else {
+        deleted = WebDavFileOperations.deleteEmptyDirectoriesRecursive(episode.getPath());
+      }
+
+      if (deleted > 0) {
+        LOGGER.debug("Deleted {} empty WebDAV directories under '{}'", deleted, episode.getPath());
+      }
+    }
+
+    else {
       try {
         Utils.deleteEmptyDirectoryRecursive(episode.getPathNIO());
       }
@@ -3124,6 +3328,30 @@ public class TvShowRenamer {
         }
 
         LOGGER.debug("Moving WebDAV file '{}' to '{}'", oldPath, newPath);
+
+        // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
+        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+        if (sharedClient != null && sharedSourceId != null) {
+          // 解析路径获取相对路径
+          String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPath);
+          String[] newParts = WebDavDataSourceHelper.parseWebDavPath(newPath);
+
+          if (oldParts != null && newParts != null && oldParts[0].equals(sharedSourceId)) {
+            String actualPath = WebDavFileOperations.moveWebDavFileWithClient(sharedClient, sharedSourceId, oldParts[1], newParts[1]);
+            if (actualPath != null) {
+              return true;
+            }
+            else {
+              LOGGER.error("Could not move WebDAV file '{}' to '{}' (using shared client)", oldPath, newPath);
+              return false;
+            }
+          }
+        }
+
+        // 回退：创建新连接（兼容非批量操作场景）
         String actualPath = WebDavFileOperations.moveWebDavFile(oldPath, newPath);
         if (actualPath != null) {
           if (!actualPath.equals(newPath)) {
@@ -3190,16 +3418,29 @@ public class TvShowRenamer {
       if (oldPathStr.contains("/tvshows/") || oldPathStr.contains("/movies/")) {
         isOldPathCacheLike = true;
       }
+
+      // 额外检测：路径中存在嵌套的 "/<Title (Year)>/artwork.jpg" 模式
+      // 例如：.../乔家大院 (2006) [tmdb-33342]/乔家大院 (2006)/poster.jpg
+      // 这种模式表明本地缓存的艺术作品路径被错误地拼接到了 WebDAV 路径
+      // 检测规则：路径以 /<Title (Year)>/poster.jpg 或类似艺术作品文件结尾，且 <Title (Year)> 匹配年份格式
+      if (!isOldPathCacheLike) {
+        // 匹配 /<任意名称> (<4位年份>)/<artwork文件> 模式
+        // 例如：/乔家大院 (2006)/poster.jpg, /黑镜 (2011)/fanart.jpg
+        java.util.regex.Pattern cacheDirPattern = java.util.regex.Pattern.compile(
+            "/[^/]+\\s\\(\\d{4}\\)/(?:poster|fanart|banner|thumb|clearlogo|clearart|characterart|keyart|disc|logo|landscape)\\.(?:jpg|png|webp)$",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+        if (cacheDirPattern.matcher(oldPathStr).find()) {
+          isOldPathCacheLike = true;
+        }
+      }
     }
 
     // 如果源路径包含缓存路径特征，即使被格式化为 WebDAV 路径，也跳过复制
     // 因为这个文件实际上不存在于 WebDAV 服务器上
     // 返回 false 以避免 renamer 用错误的路径替换原有的 MediaFile
     if (isOldPathCacheLike) {
-      LOGGER.warn(
-          "Skipping copy: source path '{}' contains local cache path pattern (artwork/tvshows, artwork/movies, cache/image, or embedded tvshows/movies). "
-              + "This file does not exist on WebDAV. Consider re-scraping artwork for this TV show.",
-          oldPathStr);
+      // 预期行为：本地缓存的海报/封面不存在于 WebDAV 上，无需复制
+      LOGGER.debug("Skipping cache artwork copy (not on WebDAV): {}", oldPathStr);
       return false; // 返回 false 让 renamer 知道复制失败，不替换 MediaFile
     }
 
@@ -3209,8 +3450,25 @@ public class TvShowRenamer {
         return true; // same file, nothing to do
       }
       LOGGER.debug("Copying WebDAV file from '{}' to '{}'", oldPathStr, newPathStr);
+
+      // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
+      WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+      String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+      if (sharedClient != null && sharedSourceId != null) {
+        String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);
+        String[] newParts = WebDavDataSourceHelper.parseWebDavPath(newPathStr);
+
+        if (oldParts != null && newParts != null && oldParts[0].equals(sharedSourceId)) {
+          return WebDavFileOperations.copyWebDavFileWithClient(sharedClient, sharedSourceId, oldParts[1], newParts[1]);
+        }
+      }
+
+      // 回退：创建新连接（兼容非批量操作场景）
       return WebDavFileOperations.copyWebDavFile(oldPathStr, newPathStr);
     }
+
     else if (WebDavDataSourceHelper.isWebDavPath(oldPathStr) || WebDavDataSourceHelper.isWebDavPath(newPathStr)) {
       // One is WebDAV and one is local - not supported
       LOGGER.error("Cannot copy files between WebDAV and local file system: {} -> {}", oldPathStr, newPathStr);
@@ -3280,6 +3538,29 @@ public class TvShowRenamer {
       // Handle WebDAV paths specially
       if (WebDavDataSourceHelper.isWebDavPath(oldPathStr)) {
         LOGGER.debug("Moving WebDAV directory '{}' to '{}'", oldPathStr, newPathStr);
+
+        // 优先使用共享客户端（性能优化：避免每次操作都创建新连接）
+        WebDavClient sharedClient = SHARED_WEBDAV_CLIENT.get();
+
+        String sharedSourceId = SHARED_WEBDAV_SOURCE_ID.get();
+
+        if (sharedClient != null && sharedSourceId != null) {
+          String[] oldParts = WebDavDataSourceHelper.parseWebDavPath(oldPathStr);
+          String[] newParts = WebDavDataSourceHelper.parseWebDavPath(newPathStr);
+
+          if (oldParts != null && newParts != null && oldParts[0].equals(sharedSourceId)) {
+            String actualPath = WebDavFileOperations.moveWebDavFileWithClient(sharedClient, sharedSourceId, oldParts[1], newParts[1]);
+            if (actualPath != null) {
+              return true;
+            }
+            else {
+              LOGGER.error("Could not move WebDAV directory '{}' to '{}' (using shared client)", oldPathStr, newPathStr);
+              return false;
+            }
+          }
+        }
+
+        // 回退：创建新连接
         String actualPath = WebDavFileOperations.moveWebDavFile(oldPathStr, newPathStr);
         if (actualPath != null) {
           if (!actualPath.equals(newPathStr)) {
@@ -3481,20 +3762,18 @@ public class TvShowRenamer {
    * 剧集比较结果枚举
    */
   private enum EpisodeComparisonResult {
-    SOURCE_BETTER,  // 源剧集更好
-    TARGET_BETTER,  // 目标剧集更好
-    EQUAL           // 两者相等
+    SOURCE_BETTER, // 源剧集更好
+    TARGET_BETTER, // 目标剧集更好
+    EQUAL // 两者相等
   }
 
   /**
-   * 比较两个剧集的完整性，决定哪个应该被保留
-   * 比较策略：
-   * 1. 优先比较视频文件数量（视频是最重要的）
-   * 2. 视频数量相同，比较总媒体文件数量
-   * 3. 总数量相同，比较文件总大小
+   * 比较两个剧集的完整性，决定哪个应该被保留 比较策略： 1. 优先比较视频文件数量（视频是最重要的） 2. 视频数量相同，比较总媒体文件数量 3. 总数量相同，比较文件总大小
    *
-   * @param source 源剧集
-   * @param target 目标剧集
+   * @param source
+   *          源剧集
+   * @param target
+   *          目标剧集
    * @return 比较结果
    */
   private static EpisodeComparisonResult compareEpisodes(TvShowEpisode source, TvShowEpisode target) {
@@ -3504,8 +3783,8 @@ public class TvShowRenamer {
       int targetVideoCount = target.getMediaFiles(MediaFileType.VIDEO).size();
 
       if (sourceVideoCount != targetVideoCount) {
-        LOGGER.debug("Episode comparison: S{}E{} - source has {} videos, target has {} videos",
-            source.getSeason(), source.getEpisode(), sourceVideoCount, targetVideoCount);
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} videos, target has {} videos", source.getSeason(), source.getEpisode(),
+            sourceVideoCount, targetVideoCount);
         return sourceVideoCount > targetVideoCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
@@ -3514,8 +3793,8 @@ public class TvShowRenamer {
       int targetTotalCount = target.getMediaFiles().size();
 
       if (sourceTotalCount != targetTotalCount) {
-        LOGGER.debug("Episode comparison: S{}E{} - source has {} media files, target has {} media files",
-            source.getSeason(), source.getEpisode(), sourceTotalCount, targetTotalCount);
+        LOGGER.debug("Episode comparison: S{}E{} - source has {} media files, target has {} media files", source.getSeason(), source.getEpisode(),
+            sourceTotalCount, targetTotalCount);
         return sourceTotalCount > targetTotalCount ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
@@ -3526,7 +3805,8 @@ public class TvShowRenamer {
       for (MediaFile mf : source.getMediaFiles()) {
         try {
           sourceSize += mf.getFileAsPath().toFile().length();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Failed to get size for source media file: {}", mf.getFilename());
         }
       }
@@ -3534,23 +3814,71 @@ public class TvShowRenamer {
       for (MediaFile mf : target.getMediaFiles()) {
         try {
           targetSize += mf.getFileAsPath().toFile().length();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           LOGGER.warn("Failed to get size for target media file: {}", mf.getFilename());
         }
       }
 
       if (sourceSize != targetSize) {
-        LOGGER.debug("Episode comparison: S{}E{} - source total size {} bytes, target total size {} bytes",
-            source.getSeason(), source.getEpisode(), sourceSize, targetSize);
+        LOGGER.debug("Episode comparison: S{}E{} - source total size {} bytes, target total size {} bytes", source.getSeason(), source.getEpisode(),
+            sourceSize, targetSize);
         return sourceSize > targetSize ? EpisodeComparisonResult.SOURCE_BETTER : EpisodeComparisonResult.TARGET_BETTER;
       }
 
       LOGGER.debug("Episode comparison: S{}E{} - episodes are equal", source.getSeason(), source.getEpisode());
       return EpisodeComparisonResult.EQUAL;
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOGGER.error("Error comparing episodes S{}E{}: {}", source.getSeason(), source.getEpisode(), e.getMessage());
       // 出错时默认返回相等，让原有逻辑处理
       return EpisodeComparisonResult.EQUAL;
+    }
+  }
+
+  /**
+   * 合并源 TvShow 的 MediaFiles 到目标 TvShow 如果目标没有某类型的 MediaFile，则从源复制（更新路径后）
+   * 
+   * @param source
+   *          源 TvShow（将被删除）
+   * @param target
+   *          目标 TvShow（保留）
+   * @param srcDir
+   *          源目录路径
+   * @param destDir
+   *          目标目录路径
+   */
+  private static void mergeMediaFilesToExistingShow(TvShow source, TvShow target, Path srcDir, Path destDir) {
+    // 需要合并的 MediaFile 类型（TvShow 级别的艺术图和元数据文件）
+    MediaFileType[] typesToMerge = { MediaFileType.POSTER, MediaFileType.FANART, MediaFileType.BANNER, MediaFileType.THUMB, MediaFileType.CLEARLOGO,
+        MediaFileType.CLEARART, MediaFileType.CHARACTERART, MediaFileType.DISC, MediaFileType.KEYART, MediaFileType.NFO, MediaFileType.EXTRAFANART,
+        MediaFileType.EXTRATHUMB };
+
+    int mergedCount = 0;
+    for (MediaFileType type : typesToMerge) {
+      List<MediaFile> targetMfs = target.getMediaFiles(type);
+      List<MediaFile> sourceMfs = source.getMediaFiles(type);
+
+      // 如果目标没有这种类型的文件，从源复制
+      if (targetMfs.isEmpty() && !sourceMfs.isEmpty()) {
+        for (MediaFile sourceMf : sourceMfs) {
+          try {
+            // 创建新的 MediaFile 副本并更新路径到目标目录
+            MediaFile newMf = new MediaFile(sourceMf);
+            newMf.replacePathForRenamedFolder(srcDir, destDir);
+            target.addToMediaFiles(newMf);
+            mergedCount++;
+            LOGGER.debug("Merged MediaFile {} from source to target: {}", type, newMf.getFilename());
+          }
+          catch (Exception e) {
+            LOGGER.warn("Failed to merge MediaFile {} from source: {}", type, e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (mergedCount > 0) {
+      LOGGER.info("Merged {} MediaFiles from source TvShow '{}' to target TvShow '{}'", mergedCount, source.getTitle(), target.getTitle());
     }
   }
 }
