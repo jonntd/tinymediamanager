@@ -110,10 +110,13 @@ public class WebDavSettingsPanel extends JPanel {
           WebDavSourcePanel sourcePanel = new WebDavSourcePanel(editSource);
 
           popupPanel.setOnCloseHandler(() -> {
+            org.slf4j.LoggerFactory.getLogger(WebDavSettingsPanel.class).info("!!! WebDavSettingsPanel CloseHandler TRIGGERED !!!");
             source.setName(editSource.getName());
             source.setUrl(editSource.getUrl());
             source.setUsername(editSource.getUsername());
             source.setPassword(editSource.getPassword());
+            org.slf4j.LoggerFactory.getLogger(WebDavSettingsPanel.class).info("!!! calling forceSaveSettings !!!");
+            settings.forceSaveSettings();
           });
 
           popupPanel.setContent(sourcePanel);
@@ -170,4 +173,3 @@ public class WebDavSettingsPanel extends JPanel {
     jTableBinding.bind();
   }
 }
-

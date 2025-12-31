@@ -113,6 +113,20 @@ public class WebDavDataSourceHelper {
         missingSlashDetected = true;
         problemIndex = nonAsciiIndex;
       }
+      // Case 3: Check if a known source ID is directly followed by path content without slash
+      // Example: "cd2115open/..." should be "cd2/115open/..." if "cd2" is a known source
+      else if (slashIndex > 0) {
+        // 从已知 WebDAV 源列表中查找匹配的 source ID 前缀
+        String beforeSlash = afterPrefix.substring(0, slashIndex);
+        String matchedSourceId = findMatchingSourceIdPrefix(beforeSlash);
+        if (matchedSourceId != null && matchedSourceId.length() < beforeSlash.length()) {
+          // 找到了匹配的 source ID，且它比 slashIndex 之前的字符串短
+          // 说明 source ID 后跟着路径内容但缺少斜杠
+          missingSlashDetected = true;
+          problemIndex = matchedSourceId.length();
+          LOGGER.debug("Detected missing slash after source ID '{}' in path: {}", matchedSourceId, afterPrefix);
+        }
+      }
 
       if (missingSlashDetected && problemIndex > 0) {
         String sourceId;
@@ -336,6 +350,49 @@ public class WebDavDataSourceHelper {
     }
 
     return -1;
+  }
+
+  /**
+   * Find a known WebDAV source ID or name that is a prefix of the given string. This is used to detect malformed paths where source ID is directly
+   * followed by path content without a separating slash (e.g., "cd2115open" should be "cd2/115open" if "cd2" is a known source).
+   * 
+   * @param text
+   *          the text to search for a prefix match
+   * @return the matching source ID/name if found, or null if no match
+   */
+  private static String findMatchingSourceIdPrefix(String text) {
+    if (text == null || text.isEmpty()) {
+      return null;
+    }
+
+    // Get all WebDAV sources from settings
+    List<WebDavSource> sources = Settings.getInstance().getWebDavSources();
+    if (sources == null || sources.isEmpty()) {
+      return null;
+    }
+
+    String bestMatch = null;
+
+    for (WebDavSource source : sources) {
+      // Check if the text starts with this source's ID
+      String sourceId = source.getId();
+      if (sourceId != null && text.startsWith(sourceId) && text.length() > sourceId.length()) {
+        // Make sure the matched ID is the longest match (to avoid matching partial IDs)
+        if (bestMatch == null || sourceId.length() > bestMatch.length()) {
+          bestMatch = sourceId;
+        }
+      }
+
+      // Also check by name (display name)
+      String sourceName = source.getName();
+      if (sourceName != null && text.startsWith(sourceName) && text.length() > sourceName.length()) {
+        if (bestMatch == null || sourceName.length() > bestMatch.length()) {
+          bestMatch = sourceName;
+        }
+      }
+    }
+
+    return bestMatch;
   }
 
   /**

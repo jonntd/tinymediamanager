@@ -124,7 +124,7 @@ public class WebDavFileBrowserDialog extends TmmDialog {
 
         // Build the UI
         JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new MigLayout("", "[200lp][600lp,grow]", "[][][][400lp,grow][]"));
+        contentPanel.setLayout(new MigLayout("", "[300lp][700lp,grow]", "[][][][500lp,grow][]"));
         getContentPane().add(contentPanel, BorderLayout.CENTER);
 
         // Title with source name
@@ -285,10 +285,14 @@ public class WebDavFileBrowserDialog extends TmmDialog {
         buttonPanel.add(btnClose);
 
         // Set dialog size
-        setMinimumSize(new Dimension(600, 500));
-        setPreferredSize(new Dimension(800, 600));
+        // Set dialog size
+        setMinimumSize(new Dimension(900, 600));
+        setPreferredSize(new Dimension(1100, 800));
         pack();
+        // Force size after pack just in case
+        setSize(new Dimension(1100, 800));
         setLocationRelativeTo(MainWindow.getInstance());
+        LOGGER.info("!!! WebDavFileBrowserDialog RESIZED - 1100x800 !!!");
 
         // Initialize client and load initial directory
         initializeAndLoadDirectory(currentPath);

@@ -254,8 +254,27 @@ public class WebDavClient {
    */
   public boolean exists(String path) {
     ensureConnected();
+    String url = buildUrl(path);
     try {
-      return sardine.exists(buildUrl(path));
+      return sardine.exists(url);
+    }
+    catch (com.github.sardine.impl.SardineException e) {
+      // 某些 WebDAV 服务器（如 AList）不支持 HEAD 请求，返回 405 Method Not Allowed
+      // 在这种情况下，使用 PROPFIND (depth 0) 作为备用方法检测路径是否存在
+      if (e.getStatusCode() == 405) {
+        try {
+          List<DavResource> resources = sardine.list(url, 0);
+          return resources != null && !resources.isEmpty();
+        }
+        catch (IOException fallbackError) {
+          // 记录在 DEBUG 级别以避免日志污染，因为"路径不存在"是常见的预期情况
+          LOGGER.debug("PROPFIND fallback for exists check failed: {} - {}", safeDecode(path), fallbackError.getMessage());
+          return false;
+        }
+      }
+      // 其他 HTTP 错误按原逻辑处理
+      LOGGER.warn("Error checking if path exists: status code: {}, reason phrase: {}", e.getStatusCode(), e.getResponsePhrase());
+      return false;
     }
     catch (IOException e) {
       LOGGER.warn("Error checking if path exists: {}", e.getMessage());

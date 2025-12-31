@@ -54,13 +54,15 @@ public class WebDavBrowserPanel extends AbstractModalInputPanel {
   private final JLabel           lblStatus;
 
   private String                 selectedPath;
-  private volatile WebDavClient  client;  // volatile for thread safety
+  private volatile WebDavClient  client;                                                    // volatile for thread safety
 
   public WebDavBrowserPanel(WebDavSource source) {
     super();
     this.source = source;
 
-    setLayout(new MigLayout("", "[400lp,grow]", "[][300lp,grow][]"));
+    // Increased size for better usability
+    setLayout(new MigLayout("", "[850lp,grow]", "[][600lp,grow][]"));
+    LOGGER.info("!!! WebDavBrowserPanel INITIALIZED with INCREASED SIZE !!!");
 
     // Title
     JLabel lblTitle = new JLabel(TmmResourceBundle.getString("webdav.browser.title") + ": " + source.getDisplayName());
@@ -123,8 +125,7 @@ public class WebDavBrowserPanel extends AbstractModalInputPanel {
 
           for (WebDavFile file : files) {
             if (file.isDirectory()) {
-              DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(
-                  new WebDavTreeNode(file.getName(), file.getPath(), true));
+              DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(new WebDavTreeNode(file.getName(), file.getPath(), true));
               childNode.add(new DefaultMutableTreeNode(TmmResourceBundle.getString("webdav.browser.loading")));
               rootNode.add(childNode);
             }
@@ -175,8 +176,7 @@ public class WebDavBrowserPanel extends AbstractModalInputPanel {
 
           for (WebDavFile file : files) {
             if (file.isDirectory()) {
-              DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(
-                  new WebDavTreeNode(file.getName(), file.getPath(), true));
+              DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(new WebDavTreeNode(file.getName(), file.getPath(), true));
               childNode.add(new DefaultMutableTreeNode(TmmResourceBundle.getString("webdav.browser.loading")));
               parentNode.add(childNode);
             }
@@ -268,4 +268,3 @@ public class WebDavBrowserPanel extends AbstractModalInputPanel {
     }
   }
 }
-

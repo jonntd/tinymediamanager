@@ -78,9 +78,9 @@ public class TmmHttpClient {
     builder.connectionPool(new ConnectionPool(5, 5000, TimeUnit.MILLISECONDS));
 
     // timeouts
-    builder.connectTimeout(60, TimeUnit.SECONDS);
-    builder.writeTimeout(60, TimeUnit.SECONDS);
-    builder.readTimeout(60, TimeUnit.SECONDS);
+    builder.connectTimeout(120, TimeUnit.SECONDS);
+    builder.writeTimeout(120, TimeUnit.SECONDS);
+    builder.readTimeout(120, TimeUnit.SECONDS);
 
     // proxy
     if ((ProxySettings.INSTANCE.useProxy())) {

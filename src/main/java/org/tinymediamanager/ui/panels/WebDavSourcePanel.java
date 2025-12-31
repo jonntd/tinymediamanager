@@ -148,19 +148,31 @@ public class WebDavSourcePanel extends AbstractModalInputPanel {
 
   @Override
   protected void onClose() {
-    // Validate required fields
-    if (StringUtils.isBlank(tfUrl.getText())) {
-      JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.error.urlrequired"));
-      return;
+    try {
+      org.slf4j.LoggerFactory.getLogger(WebDavSourcePanel.class).info("!!! WebDavSourcePanel onClose TRIGGERED !!!");
+
+      String url = tfUrl.getText();
+      org.slf4j.LoggerFactory.getLogger(WebDavSourcePanel.class).info("URL value: '{}'", url);
+
+      // Validate required fields
+      if (StringUtils.isBlank(url)) {
+        org.slf4j.LoggerFactory.getLogger(WebDavSourcePanel.class).warn("URL is blank, showing error");
+        JOptionPane.showMessageDialog(this, TmmResourceBundle.getString("webdav.error.urlrequired"));
+        return;
+      }
+
+      // Update the source object
+      source.setName(tfName.getText().trim());
+      source.setUrl(url.trim());
+      source.setUsername(tfUsername.getText().trim());
+      source.setPassword(new String(tfPassword.getPassword()));
+
+      org.slf4j.LoggerFactory.getLogger(WebDavSourcePanel.class).info("!!! WebDavSourcePanel hiding now !!!");
+      setVisible(false);
     }
-
-    // Update the source object
-    source.setName(tfName.getText().trim());
-    source.setUrl(tfUrl.getText().trim());
-    source.setUsername(tfUsername.getText().trim());
-    source.setPassword(new String(tfPassword.getPassword()));
-
-    setVisible(false);
+    catch (Exception e) {
+      org.slf4j.LoggerFactory.getLogger(WebDavSourcePanel.class).error("CRASH in onClose", e);
+      JOptionPane.showMessageDialog(this, "Error saving: " + e.getMessage());
+    }
   }
 }
-
